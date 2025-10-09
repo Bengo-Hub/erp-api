@@ -13,9 +13,14 @@ jobs:
       registry_server: docker.io
       registry_namespace: codevertex
       values_file_path: apps/erp-api/values.yaml
-      deploy: true
+      deploy: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
       namespace: erp
       ssh_deploy: false
+      setup_databases: true
+      db_types: postgres,redis
+      env_secret_name: erp-api-env
+      provider: contabo
+      contabo_api: true
     secrets:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
