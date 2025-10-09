@@ -5,6 +5,8 @@ on:
 
 jobs:
   deploy:
+    permissions:
+      contents: read
     uses: codevertex/devops-k8s/.github/workflows/reusable-build-deploy.yml@main
     with:
       app_name: erp-api
