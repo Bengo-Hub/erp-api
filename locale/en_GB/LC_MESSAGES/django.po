@@ -1,0 +1,478 @@
+# Django translation file for English (UK)
+# Copyright (C) 2024 BengoBox ERP
+# This file is distributed under the same license as the BengoBox ERP project.
+msgid ""
+msgstr ""
+"Project-Id-Version: BengoBox ERP 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-08-28 10:54+0000\n"
+"PO-Revision-Date: 2024-08-28 10:54+0000\n"
+"Last-Translator: BengoBox ERP Team\n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: templates/admin/login.html:15
+msgid "Welcome Back"
+msgstr "Welcome Back"
+
+#: templates/admin/login.html:16
+msgid "Sign in to your BengoBox ERP account"
+msgstr "Sign in to your BengoBox ERP account"
+
+#: templates/admin/login.html:25
+msgid "Username"
+msgstr "Username"
+
+#: templates/admin/login.html:30
+msgid "Password"
+msgstr "Password"
+
+#: templates/admin/login.html:35
+msgid "Sign In"
+msgstr "Sign In"
+
+#: templates/admin/login.html:42
+msgid "© 2024 BengoBox ERP. All rights reserved."
+msgstr "© 2024 BengoBox ERP. All rights reserved."
+
+#: jazzmin.py:25
+msgid "Welcome to BengoBox ERP Administration"
+msgstr "Welcome to BengoBox ERP Administration"
+
+#: jazzmin.py:28
+msgid "© 2024 BengoBox ERP. All rights reserved."
+msgstr "© 2024 BengoBox ERP. All rights reserved."
+
+# Common admin messages
+msgid "Save"
+msgstr "Save"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Add"
+msgstr "Add"
+
+msgid "Change"
+msgstr "Change"
+
+msgid "View"
+msgstr "View"
+
+msgid "Search"
+msgstr "Search"
+
+msgid "Filter"
+msgstr "Filter"
+
+msgid "Actions"
+msgstr "Actions"
+
+msgid "Yes"
+msgstr "Yes"
+
+msgid "No"
+msgstr "No"
+
+msgid "Loading..."
+msgstr "Loading..."
+
+msgid "Success"
+msgstr "Success"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Warning"
+msgstr "Warning"
+
+msgid "Info"
+msgstr "Info"
+
+# Date and time formats (UK style)
+msgid "Date"
+msgstr "Date"
+
+msgid "Time"
+msgstr "Time"
+
+msgid "Today"
+msgstr "Today"
+
+msgid "Yesterday"
+msgstr "Yesterday"
+
+msgid "This week"
+msgstr "This week"
+
+msgid "Last week"
+msgstr "Last week"
+
+msgid "This month"
+msgstr "This month"
+
+msgid "Last month"
+msgstr "Last month"
+
+msgid "This year"
+msgstr "This year"
+
+msgid "Last year"
+msgstr "Last year"
+
+# Navigation
+msgid "Dashboard"
+msgstr "Dashboard"
+
+msgid "Home"
+msgstr "Home"
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Profile"
+msgstr "Profile"
+
+msgid "Logout"
+msgstr "Logout"
+
+msgid "Help"
+msgstr "Help"
+
+msgid "Documentation"
+msgstr "Documentation"
+
+msgid "Support"
+msgstr "Support"
+
+# Form validation messages
+msgid "This field is required."
+msgstr "This field is required."
+
+msgid "Enter a valid email address."
+msgstr "Enter a valid email address."
+
+msgid "Enter a valid URL."
+msgstr "Enter a valid URL."
+
+msgid "Enter a valid integer."
+msgstr "Enter a valid integer."
+
+msgid "Enter a valid decimal number."
+msgstr "Enter a valid decimal number."
+
+msgid "Enter a valid date."
+msgstr "Enter a valid date."
+
+msgid "Enter a valid time."
+msgstr "Enter a valid time."
+
+msgid "Enter a valid date and time."
+msgstr "Enter a valid date and time."
+
+# Business specific terms
+msgid "Customer"
+msgstr "Customer"
+
+msgid "Order"
+msgstr "Order"
+
+msgid "Product"
+msgstr "Product"
+
+msgid "Invoice"
+msgstr "Invoice"
+
+msgid "Payment"
+msgstr "Payment"
+
+msgid "Employee"
+msgstr "Employee"
+
+msgid "Payroll"
+msgstr "Payroll"
+
+msgid "Inventory"
+msgstr "Inventory"
+
+msgid "Sales"
+msgstr "Sales"
+
+msgid "Purchase"
+msgstr "Purchase"
+
+msgid "Supplier"
+msgstr "Supplier"
+
+msgid "Analytics"
+msgstr "Analytics"
+
+msgid "Reports"
+msgstr "Reports"
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Configuration"
+msgstr "Configuration"
+
+msgid "System"
+msgstr "System"
+
+msgid "Administration"
+msgstr "Administration"
+
+msgid "Management"
+msgstr "Management"
+
+msgid "Overview"
+msgstr "Overview"
+
+msgid "Details"
+msgstr "Details"
+
+msgid "Summary"
+msgstr "Summary"
+
+msgid "Statistics"
+msgstr "Statistics"
+
+msgid "Metrics"
+msgstr "Metrics"
+
+msgid "Performance"
+msgstr "Performance"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Active"
+msgstr "Active"
+
+msgid "Inactive"
+msgstr "Inactive"
+
+msgid "Pending"
+msgstr "Pending"
+
+msgid "Completed"
+msgstr "Completed"
+
+msgid "Cancelled"
+msgstr "Cancelled"
+
+msgid "Draft"
+msgstr "Draft"
+
+msgid "Published"
+msgstr "Published"
+
+msgid "Archived"
+msgstr "Archived"
+
+msgid "Deleted"
+msgstr "Deleted"
+
+msgid "Created"
+msgstr "Created"
+
+msgid "Updated"
+msgstr "Updated"
+
+msgid "Modified"
+msgstr "Modified"
+
+msgid "Created by"
+msgstr "Created by"
+
+msgid "Updated by"
+msgstr "Updated by"
+
+msgid "Created at"
+msgstr "Created at"
+
+msgid "Updated at"
+msgstr "Updated at"
+
+msgid "Modified at"
+msgstr "Modified at"
+
+msgid "Last modified"
+msgstr "Last modified"
+
+msgid "Last updated"
+msgstr "Last updated"
+
+msgid "Last accessed"
+msgstr "Last accessed"
+
+msgid "Last login"
+msgstr "Last login"
+
+msgid "Last activity"
+msgstr "Last activity"
+
+msgid "Last sync"
+msgstr "Last sync"
+
+msgid "Last backup"
+msgstr "Last backup"
+
+msgid "Last export"
+msgstr "Last export"
+
+msgid "Last import"
+msgstr "Last import"
+
+msgid "Last scan"
+msgstr "Last scan"
+
+msgid "Last check"
+msgstr "Last check"
+
+msgid "Last review"
+msgstr "Last review"
+
+msgid "Last approval"
+msgstr "Last approval"
+
+msgid "Last rejection"
+msgstr "Last rejection"
+
+msgid "Last submission"
+msgstr "Last submission"
+
+msgid "Last notification"
+msgstr "Last notification"
+
+msgid "Last reminder"
+msgstr "Last reminder"
+
+msgid "Last alert"
+msgstr "Last alert"
+
+msgid "Last warning"
+msgstr "Last warning"
+
+msgid "Last error"
+msgstr "Last error"
+
+msgid "Last failure"
+msgstr "Last failure"
+
+msgid "Last success"
+msgstr "Last success"
+
+msgid "Last completion"
+msgstr "Last completion"
+
+msgid "Last start"
+msgstr "Last start"
+
+msgid "Last stop"
+msgstr "Last stop"
+
+msgid "Last pause"
+msgstr "Last pause"
+
+msgid "Last resume"
+msgstr "Last resume"
+
+msgid "Last restart"
+msgstr "Last restart"
+
+msgid "Last shutdown"
+msgstr "Last shutdown"
+
+msgid "Last boot"
+msgstr "Last boot"
+
+msgid "Last reboot"
+msgstr "Last reboot"
+
+msgid "Last maintenance"
+msgstr "Last maintenance"
+
+msgid "Last cleanup"
+msgstr "Last cleanup"
+
+msgid "Last optimisation"
+msgstr "Last optimisation"
+
+msgid "Last defragmentation"
+msgstr "Last defragmentation"
+
+msgid "Last compression"
+msgstr "Last compression"
+
+msgid "Last encryption"
+msgstr "Last encryption"
+
+msgid "Last decryption"
+msgstr "Last decryption"
+
+msgid "Last authentication"
+msgstr "Last authentication"
+
+msgid "Last authorisation"
+msgstr "Last authorisation"
+
+msgid "Last validation"
+msgstr "Last validation"
+
+msgid "Last verification"
+msgstr "Last verification"
+
+msgid "Last confirmation"
+msgstr "Last confirmation"
+
+msgid "Last cancellation"
+msgstr "Last cancellation"
+
+msgid "Last suspension"
+msgstr "Last suspension"
+
+msgid "Last reactivation"
+msgstr "Last reactivation"
+
+msgid "Last deactivation"
+msgstr "Last deactivation"
+
+msgid "Last activation"
+msgstr "Last activation"
+
+msgid "Last registration"
+msgstr "Last registration"
+
+msgid "Last deregistration"
+msgstr "Last deregistration"
+
+msgid "Last enrolment"
+msgstr "Last enrolment"
+
+msgid "Last withdrawal"
+msgstr "Last withdrawal"
+
+msgid "Last admission"
+msgstr "Last admission"
+
+msgid "Last discharge"
+msgstr "Last discharge"
+
+msgid "Last admission"
+msgstr "Last admission"
+
+msgid "Last discharge"
+msgstr "Last discharge"
+
+msgid "Last admission"
+msgstr "Last admission"
+
+msgid "Last discharge"
+msgstr "Last discharge"

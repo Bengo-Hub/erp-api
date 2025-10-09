@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll Approval Required - Bengo ERP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .button {
+            display: inline-block;
+            background: #f39c12;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .approval-details {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #27ae60;
+        }
+        .urgent {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Payroll Approval Required</h1>
+        <p>Action Required - Bengo ERP</p>
+    </div>
+    
+    <div class="content">
+        <h2>Hello {approver_name}!</h2>
+        
+        <p>A payroll approval requires your attention. Please review the details below and take the necessary action.</p>
+        
+        <div class="approval-details">
+            <h3>Payroll Details</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Employee:</td>
+                    <td style="padding: 8px 0;">{employee_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Employee ID:</td>
+                    <td style="padding: 8px 0;">{employee_id}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Payroll Type:</td>
+                    <td style="padding: 8px 0;">{payroll_type}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Pay Period:</td>
+                    <td style="padding: 8px 0;">{pay_period}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Amount:</td>
+                    <td style="padding: 8px 0;" class="amount">KES {amount}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Step:</td>
+                    <td style="padding: 8px 0;">{step_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Requested:</td>
+                    <td style="padding: 8px 0;">{requested_at}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Due Date:</td>
+                    <td style="padding: 8px 0;">{due_date}</td>
+                </tr>
+            </table>
+        </div>
+        
+        {# Show urgent notice if due soon #}
+        {% if is_urgent %}
+        <div class="urgent">
+            <strong>⚠️ URGENT:</strong> This approval is due soon. Please review and take action as soon as possible.
+        </div>
+        {% endif %}
+        
+        <p><strong>Next Steps:</strong></p>
+        <ol>
+            <li>Review the payroll details above</li>
+            <li>Verify the calculations and amounts</li>
+            <li>Approve or reject the payroll request</li>
+            <li>Add any comments if necessary</li>
+        </ol>
+        
+        <a href="{action_url}" class="button">Review Payroll Request</a>
+        
+        <p><strong>Additional Information:</strong></p>
+        <ul>
+            <li>You can view the full payroll details by clicking the button above</li>
+            <li>If you have questions, contact the HR department</li>
+            <li>This approval is part of the {approval_workflow} workflow</li>
+        </ul>
+        
+        <p>Thank you for your attention to this matter.</p>
+    </div>
+    
+    <div class="footer">
+        <p>This email was sent to {approver_email}. If you're not the intended recipient, please contact HR.</p>
+        <p>&copy; 2024 Bengo ERP. All rights reserved.</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,8 @@
+CREATE USER 'bengoboxuser'@'%' IDENTIFIED BY '@Bengomall123';
+GRANT ALL PRIVILEGES ON *.* TO 'bengoboxuser'@'%';
+FLUSH PRIVILEGES;
+
+
+CREATE USER 'dqitsuser'@'%' IDENTIFIED BY 'DQITs@123';
+GRANT ALL PRIVILEGES ON *.* TO 'dqitsuser'@'%';
+FLUSH PRIVILEGES;

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Bengo ERP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Welcome to Bengo ERP!</h1>
+        <p>Your comprehensive business management solution</p>
+    </div>
+    
+    <div class="content">
+        <h2>Hello {first_name}!</h2>
+        
+        <p>Welcome to Bengo ERP! We're excited to have you on board. Your account has been successfully created and you're ready to start managing your business operations efficiently.</p>
+        
+        <p><strong>Your Account Details:</strong></p>
+        <ul>
+            <li><strong>Username:</strong> {username}</li>
+            <li><strong>Email:</strong> {email}</li>
+            <li><strong>Account Type:</strong> {account_type}</li>
+        </ul>
+        
+        <p>To get started, please log in to your account and complete your profile setup. If you have any questions or need assistance, our support team is here to help.</p>
+        
+        <a href="{login_url}" class="button">Login to Your Account</a>
+        
+        <p><strong>What's Next?</strong></p>
+        <ul>
+            <li>Complete your profile information</li>
+            <li>Set up your business preferences</li>
+            <li>Explore the different modules available</li>
+            <li>Contact support if you need help</li>
+        </ul>
+        
+        <p>Thank you for choosing Bengo ERP. We look forward to helping you streamline your business operations!</p>
+    </div>
+    
+    <div class="footer">
+        <p>This email was sent to {email}. If you didn't create an account, please ignore this email.</p>
+        <p>&copy; 2024 Bengo ERP. All rights reserved.</p>
+    </div>
+</body>
+</html>

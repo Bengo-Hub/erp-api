@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payslip Generated - Bengo ERP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .button {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .payslip-summary {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #27ae60;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Payslip Generated</h1>
+        <p>Your payslip is ready for review</p>
+    </div>
+    
+    <div class="content">
+        <h2>Hello {employee_name}!</h2>
+        
+        <p>Your payslip for {pay_period} has been generated and is ready for review. You can access it through the employee portal or download it directly.</p>
+        
+        <div class="payslip-summary">
+            <h3>Payslip Summary</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Employee ID:</td>
+                    <td style="padding: 8px 0;">{employee_id}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Pay Period:</td>
+                    <td style="padding: 8px 0;">{pay_period}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Gross Pay:</td>
+                    <td style="padding: 8px 0;" class="amount">KES {gross_pay}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Total Deductions:</td>
+                    <td style="padding: 8px 0;">KES {total_deductions}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Net Pay:</td>
+                    <td style="padding: 8px 0;" class="amount">KES {net_pay}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Generated Date:</td>
+                    <td style="padding: 8px 0;">{generated_date}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <p><strong>What's Next?</strong></p>
+        <ul>
+            <li>Review your payslip details</li>
+            <li>Check all earnings and deductions</li>
+            <li>Download or print a copy for your records</li>
+            <li>Contact HR if you have any questions</li>
+        </ul>
+        
+        <a href="{payslip_url}" class="button">View Payslip</a>
+        
+        <p><strong>Important Notes:</strong></p>
+        <ul>
+            <li>Keep this payslip for your tax records</li>
+            <li>All amounts are in Kenyan Shillings (KES)</li>
+            <li>If you notice any discrepancies, contact HR immediately</li>
+            <li>This payslip is confidential and should not be shared</li>
+        </ul>
+        
+        <p>Thank you for your hard work!</p>
+    </div>
+    
+    <div class="footer">
+        <p>This email was sent to {employee_email}. If you're not the intended recipient, please contact HR.</p>
+        <p>&copy; 2024 Bengo ERP. All rights reserved.</p>
+    </div>
+</body>
+</html>

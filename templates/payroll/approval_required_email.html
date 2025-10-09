@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll Approval Required</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #dc3545;
+            margin: 10px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .urgent {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Payroll Approval Required</h1>
+        <p>Hello {{ approver_name }},</p>
+    </div>
+    
+    <div class="content">
+        <p>A payroll approval requires your attention:</p>
+        
+        <div class="urgent">
+            <strong>⚠️ Action Required</strong>
+        </div>
+        
+        <h3>Approval Details:</h3>
+        <ul>
+            <li><strong>Employee:</strong> {{ employee_name }}</li>
+            <li><strong>Payroll Type:</strong> {{ payroll_type }}</li>
+            <li><strong>Amount:</strong> <span class="amount">KES {{ amount|floatformat:2 }}</span></li>
+            <li><strong>Step:</strong> {{ step_name }}</li>
+            <li><strong>Requested:</strong> {{ requested_at|date:"F j, Y g:i A" }}</li>
+        </ul>
+        
+        <p>Please review and approve or reject this payroll item as soon as possible.</p>
+        
+        <a href="{{ action_url }}" class="button">Review Approval</a>
+        
+        <p><strong>Note:</strong> This approval is part of a multi-step workflow. Your decision will determine if the process continues to the next level.</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated notification from {{ company_name }}. Please do not reply to this email.</p>
+        <p>If you have any questions, please contact your HR department.</p>
+    </div>
+</body>
+</html>

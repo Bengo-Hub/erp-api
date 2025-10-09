@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payslip Generated</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #d4edda;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            margin: 10px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✅ Payslip Generated</h1>
+        <p>Hello {{ employee_name }},</p>
+    </div>
+    
+    <div class="content">
+        <p>Your payslip for <strong>{{ payroll_period }}</strong> has been generated and is now available for review.</p>
+        
+        <div class="summary">
+            <h3>Payroll Summary:</h3>
+            <ul>
+                <li><strong>Payroll Period:</strong> {{ payroll_period }}</li>
+                <li><strong>Gross Pay:</strong> KES {{ gross_pay|floatformat:2 }}</li>
+                <li><strong>Net Pay:</strong> <span class="amount">KES {{ net_pay|floatformat:2 }}</span></li>
+                <li><strong>Generated:</strong> {{ timestamp|date:"F j, Y g:i A" }}</li>
+            </ul>
+        </div>
+        
+        <p>You can now view and download your payslip from the system.</p>
+        
+        <a href="{{ action_url }}" class="button">View Payslip</a>
+        
+        <p><strong>Important Notes:</strong></p>
+        <ul>
+            <li>Please review your payslip for accuracy</li>
+            <li>Contact HR if you notice any discrepancies</li>
+            <li>Your payslip will be available for download for 12 months</li>
+        </ul>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated notification from {{ company_name }}. Please do not reply to this email.</p>
+        <p>If you have any questions about your payslip, please contact your HR department.</p>
+    </div>
+</body>
+</html>

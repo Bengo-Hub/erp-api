@@ -1,0 +1,22 @@
+name: Build and Deploy ERP API
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    uses: codevertex/devops-k8s/.github/workflows/reusable-build-deploy.yml@main
+    with:
+      app_name: erp-api
+      registry_server: docker.io
+      registry_namespace: codevertex
+      values_file_path: apps/erp-api/values.yaml
+      deploy: true
+      namespace: erp
+      ssh_deploy: false
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+
+
