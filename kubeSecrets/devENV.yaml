@@ -5,8 +5,53 @@ metadata:
   namespace: erp
 type: Opaque
 stringData:
-  DATABASE_URL: ""
-  REDIS_URL: ""
-  JWT_SECRET: ""
+  # ============================================
+  # DATABASE CONFIGURATION
+  # ============================================
+  # Option 1: In-Cluster PostgreSQL (Recommended)
+  # After running: devops-k8s/scripts/install-databases.sh
+  # Update PASSWORD with actual password from installation output
+  DATABASE_URL: "postgresql://postgres:PASSWORD@postgresql.erp.svc.cluster.local:5432/bengo_erp"
+  DB_HOST: "postgresql.erp.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_NAME: "bengo_erp"
+  DB_USER: "postgres"
+  DB_PASSWORD: "PASSWORD"  # Replace with actual password
+  
+  # Option 2: External VPS PostgreSQL
+  # Uncomment and update if using external database
+  # DATABASE_URL: "postgresql://erp_user:PASSWORD@VPS_IP:5432/bengo_erp"
+  # DB_HOST: "VPS_IP_OR_HOSTNAME"
+  # DB_PORT: "5432"
+  # DB_NAME: "bengo_erp"
+  # DB_USER: "erp_user"
+  # DB_PASSWORD: "PASSWORD"
+  
+  # ============================================
+  # REDIS CONFIGURATION
+  # ============================================
+  # Option 1: In-Cluster Redis (Recommended)
+  # Cache (DB 0) and Celery broker/backend (DB 1)
+  REDIS_URL: "redis://:REDIS_PASSWORD@redis-master.erp.svc.cluster.local:6379/0"
+  CELERY_BROKER_URL: "redis://:REDIS_PASSWORD@redis-master.erp.svc.cluster.local:6379/0"
+  CELERY_RESULT_BACKEND: "redis://:REDIS_PASSWORD@redis-master.erp.svc.cluster.local:6379/0"
+  
+  # Option 2: External VPS Redis
+  # Uncomment and update if using external Redis
+  # REDIS_URL: "redis://:REDIS_PASSWORD@VPS_IP:6379/0"
+  # CELERY_BROKER_URL: "redis://:REDIS_PASSWORD@VPS_IP:6379/0"
+  # CELERY_RESULT_BACKEND: "redis://:REDIS_PASSWORD@VPS_IP:6379/0"
+  
+  # ============================================
+  # DJANGO CONFIGURATION
+  # ============================================
+  DJANGO_SECRET_KEY: ""  # Generate with: openssl rand -base64 50
+  DEBUG: "False"
+  ALLOWED_HOSTS: "erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
+  
+  # ============================================
+  # SECURITY & JWT
+  # ============================================
+  JWT_SECRET: "changeme"  # Generate with: openssl rand -base64 32 
 
 
