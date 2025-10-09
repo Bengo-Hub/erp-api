@@ -7,7 +7,7 @@ jobs:
   deploy:
     permissions:
       contents: read
-    uses: codevertex/devops-k8s/.github/workflows/reusable-build-deploy.yml@main
+    uses: Bengo-Hub/devops-k8s/.github/workflows/reusable-build-deploy.yml@main
     with:
       app_name: erp-api
       registry_server: docker.io
