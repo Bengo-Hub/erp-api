@@ -8,44 +8,48 @@ stringData:
   # ============================================
   # DATABASE CONFIGURATION (In-Cluster)
   # ============================================
-  DATABASE_URL: "postgresql://postgres:TFRodWXeeh@postgresql.erp.svc.cluster.local:5432/bengo_erp"
+  # NOTE: These will be dynamically updated during deployment
+  # DATABASE_URL will be set by build.sh based on actual database setup
+  DATABASE_URL: "postgresql://postgres:__DYNAMIC_PASSWORD__@postgresql.erp.svc.cluster.local:5432/bengo_erp"
   DB_HOST: "postgresql.erp.svc.cluster.local"
   DB_PORT: "5432"
   DB_NAME: "bengo_erp"
   DB_USER: "postgres"
-  DB_PASSWORD: "TFRodWXeeh"
-  
+  DB_PASSWORD: "__DYNAMIC_DB_PASSWORD__"
+
   # ============================================
   # REDIS CONFIGURATION (In-Cluster)
   # ============================================
-  REDIS_URL: "redis://:6rBAAUdugT@redis-master.erp.svc.cluster.local:6379/0"
+  # NOTE: These will be dynamically updated during deployment
+  REDIS_URL: "redis://:__DYNAMIC_REDIS_PASSWORD__@redis-master.erp.svc.cluster.local:6379/0"
   REDIS_HOST: "redis-master.erp.svc.cluster.local"
   REDIS_PORT: "6379"
-  REDIS_PASSWORD: "6rBAAUdugT"
-  CELERY_BROKER_URL: "redis://:6rBAAUdugT@redis-master.erp.svc.cluster.local:6379/0"
-  CELERY_RESULT_BACKEND: "redis://:6rBAAUdugT@redis-master.erp.svc.cluster.local:6379/1"
-  
+  REDIS_PASSWORD: "__DYNAMIC_REDIS_PASSWORD__"
+  CELERY_BROKER_URL: "redis://:__DYNAMIC_REDIS_PASSWORD__@redis-master.erp.svc.cluster.local:6379/0"
+  CELERY_RESULT_BACKEND: "redis://:__DYNAMIC_REDIS_PASSWORD__@redis-master.erp.svc.cluster.local:6379/1"
+
   # ============================================
   # DJANGO CONFIGURATION
   # ============================================
-  DJANGO_SECRET_KEY: "prod-erp-secret-key-CHANGE-IN-PRODUCTION-ab3d9f8e2c1a5b7d4f6g8h9j0k1l2m3n4p5q6r7s8t9u0v1w2x3y4z5"
+  DJANGO_SECRET_KEY: "__DYNAMIC_DJANGO_SECRET__"
   DJANGO_SETTINGS_MODULE: "ProcureProKEAPI.settings"
   DEBUG: "False"
   DJANGO_ENV: "production"
   ALLOWED_HOSTS: "erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
-  
+
   # ============================================
   # SECURITY & JWT
   # ============================================
-  JWT_SECRET: "prod-jwt-secret-CHANGE-IN-PRODUCTION-xyz789abc123def456ghi789jkl012mno345pqr678stu901vwx234"
-  SECRET_KEY: "prod-secret-CHANGE-IN-PRODUCTION-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567"
-  
+  # NOTE: JWT_SECRET will be dynamically generated during deployment
+  JWT_SECRET: "__DYNAMIC_JWT_SECRET__"
+  SECRET_KEY: "__DYNAMIC_SECRET_KEY__"
+
   # ============================================
   # CORS & FRONTEND
   # ============================================
   CORS_ALLOWED_ORIGINS: "https://erp.masterspace.co.ke,http://localhost:3000,*.masterspace.co.ke"
   FRONTEND_URL: "https://erp.masterspace.co.ke"
-  
+
   # ============================================
   # EMAIL CONFIGURATION (Optional)
   # ============================================
