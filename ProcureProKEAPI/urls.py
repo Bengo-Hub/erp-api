@@ -22,12 +22,16 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from hrm.employees.management.commands.tasks import check_expiring_contracts
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+# Prometheus metrics
+from django_prometheus.exports import ExportToDjangoView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('i18n/', include('django.conf.urls.i18n')), # Add the language switching URL pattern
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema')), 
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema')),
+    path('metrics/', ExportToDjangoView, name='prometheus-metrics'),  # Prometheus metrics endpoint
+    # v1 namespace 
     # v1 namespace
     path('api/v1/auth/', include(('authmanagement.urls', 'auth'), namespace='v1-auth')),
     path('api/v1/', include(('assets.urls', 'assets'), namespace='v1-assets')),
