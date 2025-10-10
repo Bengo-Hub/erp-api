@@ -6,52 +6,53 @@ metadata:
 type: Opaque
 stringData:
   # ============================================
-  # DATABASE CONFIGURATION
+  # DATABASE CONFIGURATION (In-Cluster)
   # ============================================
-  # Option 1: In-Cluster PostgreSQL (Recommended)
-  # After running: devops-k8s/scripts/install-databases.sh
-  # Update PASSWORD with actual password from installation output
-  DATABASE_URL: "postgresql://postgres:PASSWORD@postgresql.erp.svc.cluster.local:5432/bengo_erp"
+  DATABASE_URL: "postgresql://postgres:TFRodWXeeh@postgresql.erp.svc.cluster.local:5432/bengo_erp"
   DB_HOST: "postgresql.erp.svc.cluster.local"
   DB_PORT: "5432"
   DB_NAME: "bengo_erp"
   DB_USER: "postgres"
-  DB_PASSWORD: "PASSWORD"  # Replace with actual password
-  
-  # Option 2: External VPS PostgreSQL
-  # Uncomment and update if using external database
-  # DATABASE_URL: "postgresql://erp_user:PASSWORD@VPS_IP:5432/bengo_erp"
-  # DB_HOST: "VPS_IP_OR_HOSTNAME"
-  # DB_PORT: "5432"
-  # DB_NAME: "bengo_erp"
-  # DB_USER: "erp_user"
-  # DB_PASSWORD: "PASSWORD"
+  DB_PASSWORD: "TFRodWXeeh"
   
   # ============================================
-  # REDIS CONFIGURATION
+  # REDIS CONFIGURATION (In-Cluster)
   # ============================================
-  # Option 1: In-Cluster Redis (Recommended)
-  # Cache (DB 0) and Celery broker/backend (DB 1)
-  REDIS_URL: "redis://:REDIS_PASSWORD@redis-master.erp.svc.cluster.local:6379/0"
-  CELERY_BROKER_URL: "redis://:REDIS_PASSWORD@redis-master.erp.svc.cluster.local:6379/0"
-  CELERY_RESULT_BACKEND: "redis://:REDIS_PASSWORD@redis-master.erp.svc.cluster.local:6379/0"
-  
-  # Option 2: External VPS Redis
-  # Uncomment and update if using external Redis
-  # REDIS_URL: "redis://:REDIS_PASSWORD@VPS_IP:6379/0"
-  # CELERY_BROKER_URL: "redis://:REDIS_PASSWORD@VPS_IP:6379/0"
-  # CELERY_RESULT_BACKEND: "redis://:REDIS_PASSWORD@VPS_IP:6379/0"
+  REDIS_URL: "redis://:6rBAAUdugT@redis-master.erp.svc.cluster.local:6379/0"
+  REDIS_HOST: "redis-master.erp.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: "6rBAAUdugT"
+  CELERY_BROKER_URL: "redis://:6rBAAUdugT@redis-master.erp.svc.cluster.local:6379/0"
+  CELERY_RESULT_BACKEND: "redis://:6rBAAUdugT@redis-master.erp.svc.cluster.local:6379/1"
   
   # ============================================
   # DJANGO CONFIGURATION
   # ============================================
-  DJANGO_SECRET_KEY: ""  # Generate with: openssl rand -base64 50
+  DJANGO_SECRET_KEY: "prod-erp-secret-key-CHANGE-IN-PRODUCTION-ab3d9f8e2c1a5b7d4f6g8h9j0k1l2m3n4p5q6r7s8t9u0v1w2x3y4z5"
+  DJANGO_SETTINGS_MODULE: "ProcureProKEAPI.settings"
   DEBUG: "False"
+  DJANGO_ENV: "production"
   ALLOWED_HOSTS: "erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
   
   # ============================================
   # SECURITY & JWT
   # ============================================
-  JWT_SECRET: "changeme"  # Generate with: openssl rand -base64 32 
-
-
+  JWT_SECRET: "prod-jwt-secret-CHANGE-IN-PRODUCTION-xyz789abc123def456ghi789jkl012mno345pqr678stu901vwx234"
+  SECRET_KEY: "prod-secret-CHANGE-IN-PRODUCTION-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567"
+  
+  # ============================================
+  # CORS & FRONTEND
+  # ============================================
+  CORS_ALLOWED_ORIGINS: "https://erp.masterspace.co.ke,http://localhost:3000,*.masterspace.co.ke"
+  FRONTEND_URL: "https://erp.masterspace.co.ke"
+  
+  # ============================================
+  # EMAIL CONFIGURATION (Optional)
+  # ============================================
+  EMAIL_BACKEND: "django.core.mail.backends.smtp.EmailBackend"
+  EMAIL_HOST: "smtp.gmail.com"
+  EMAIL_PORT: "587"
+  EMAIL_USE_TLS: "True"
+  EMAIL_HOST_USER: "info@codevertexitsolutions.com"
+  EMAIL_HOST_PASSWORD: "CHANGE_ME_GMAIL_APP_PASSWORD"
+  DEFAULT_FROM_EMAIL: "info@codevertexitsolutions.com"

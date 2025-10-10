@@ -6,12 +6,13 @@ on:
 jobs:
   deploy:
     permissions:
-      contents: read
+      contents: write
+      id-token: write
     uses: Bengo-Hub/devops-k8s/.github/workflows/reusable-build-deploy.yml@main
     with:
       app_name: erp-api
       registry_server: docker.io
-      registry_namespace: codevertex
+      registry_namespace: Bengo-Hub
       values_file_path: apps/erp-api/values.yaml
       deploy: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
       namespace: erp
