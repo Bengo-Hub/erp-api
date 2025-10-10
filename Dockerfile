@@ -16,6 +16,13 @@ RUN apt-get update \
         curl \
         libpq-dev \
         gcc \
+        libcairo2-dev \
+        libpango1.0-dev \
+        libgobject-2.0-dev \
+        libpangocairo-1.0-0 \
+        pkg-config \
+        cmake \
+        git \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base AS deps
@@ -23,18 +30,22 @@ COPY requirements.txt .
 RUN python -m pip install --upgrade pip \
     && pip install -r requirements.txt
 
+FROM base AS source
+WORKDIR /app
+COPY . .
+
 FROM base AS runtime
 WORKDIR /app
 
 # Non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
-# Copy venv/libs
+# Copy Python packages (cached layer)
 COPY --from=deps /usr/local/lib/python3.11 /usr/local/lib/python3.11
 COPY --from=deps /usr/local/bin /usr/local/bin
 
-# Copy source
-COPY . .
+# Copy source code
+COPY --from=source /app .
 
 # Environment defaults
 ENV DJANGO_SETTINGS_MODULE=ProcureProKEAPI.settings \
