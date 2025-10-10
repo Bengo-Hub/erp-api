@@ -121,8 +121,6 @@ matplotlib-inline==0.1.7
 msgpack==1.1.0
 multidict==6.4.3
 mypy_extensions==1.1.0
-mysql-connector-python==9.3.0
-mysqlclient==2.2.7
 numpy==1.26.4
 oauthlib==3.2.2
 olefile==0.47
