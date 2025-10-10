@@ -122,12 +122,35 @@ if [[ -n "${DOCKER_SSH_KEY:-}" ]]; then
     echo "$DOCKER_SSH_KEY" | base64 -d > ~/.ssh/id_rsa
     chmod 0600 ~/.ssh/id_rsa
     ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-    eval "$(ssh-agent)"
-    ssh-add ~/.ssh/id_rsa
-    SSH_CONFIGURED=true
-    log_success "SSH configured for Docker build"
+
+    # For CI/CD environments, try non-interactive SSH key addition
+    # Use DISPLAY and SSH_ASKPASS to avoid passphrase prompts
+    if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+        log_info "Running in CI/CD environment, using non-interactive SSH setup"
+
+        # Try to add key without passphrase (common for CI/CD)
+        if SSH_ASKPASS=/bin/false ssh-add ~/.ssh/id_rsa 2>/dev/null; then
+            SSH_CONFIGURED=true
+            log_success "SSH configured for Docker build"
+        else
+            log_warning "SSH key requires passphrase in CI/CD, building without SSH"
+            rm -f ~/.ssh/id_rsa
+            SSH_CONFIGURED=false
+        fi
+    else
+        # Interactive environment - try normal ssh-add with timeout
+        if timeout 10 ssh-add ~/.ssh/id_rsa 2>/dev/null; then
+            SSH_CONFIGURED=true
+            log_success "SSH configured for Docker build"
+        else
+            log_warning "SSH key has passphrase or failed to add to agent, building without SSH"
+            rm -f ~/.ssh/id_rsa
+            SSH_CONFIGURED=false
+        fi
+    fi
 else
     log_info "No SSH key provided, building without SSH"
+    SSH_CONFIGURED=false
 fi
 
 # =============================================================================
