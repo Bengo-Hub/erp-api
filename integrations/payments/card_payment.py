@@ -9,8 +9,9 @@ from ..utils import Crypto
 logger = logging.getLogger(__name__)
 
 # Configure stripe with default settings in case no settings found in DB
-DEFAULT_STRIPE_KEY = getattr(settings, 'STRIPE_SECRET_KEY', 'sk_test_yourkeyhere')
-stripe.api_key = DEFAULT_STRIPE_KEY
+DEFAULT_STRIPE_KEY = getattr(settings, 'STRIPE_SECRET_KEY', None)
+if DEFAULT_STRIPE_KEY:
+    stripe.api_key = DEFAULT_STRIPE_KEY
 
 
 class CardPaymentService:
