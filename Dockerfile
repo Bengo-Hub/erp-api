@@ -25,6 +25,8 @@ RUN apt-get update \
         pkg-config \
         cmake \
         git \
+        libxml2-dev \
+        libxslt-dev \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base AS deps
