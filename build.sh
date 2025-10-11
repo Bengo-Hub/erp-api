@@ -56,8 +56,8 @@ DEVOPS_REPO="Bengo-Hub/devops-k8s"
 VALUES_FILE_PATH="apps/erp-api/values.yaml"
 
 # Git configuration
-GIT_EMAIL=${GIT_EMAIL:-"devops@bot.local"}
-GIT_USER=${GIT_USER:-"DevOps Bot"}
+GIT_EMAIL=${GIT_EMAIL:-"titusowuor30@gmail.com"}
+GIT_USER=${GIT_USER:-"Titus Owuor"}
 
 # Security scanning
 TRIVY_ECODE=${TRIVY_ECODE:-1}
@@ -420,9 +420,12 @@ if [[ "$DEPLOY" == "true" ]]; then
 
             git add "$VALUES_FILE_PATH"
             git commit -m "${APP_NAME}:${GIT_COMMIT_ID} released" || log_info "No changes to commit"
-            git push
-
-            log_success "Helm deployment updated"
+            if git push; then
+                log_success "Helm deployment updated"
+            else
+                log_warning "Failed to push Helm changes to git (not critical for deployment)"
+                log_info "Deployment will continue despite git push failure"
+            fi
         else
             log_warning "Helm values file not found: $VALUES_FILE_PATH"
         fi
