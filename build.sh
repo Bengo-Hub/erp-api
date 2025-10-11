@@ -412,17 +412,17 @@ if [[ "$DEPLOY" == "true" ]]; then
         # Configure git
         git config user.name "$GIT_USER"
         git config user.email "$GIT_EMAIL"
-        git pull --rebase
 
-        # Update Helm values
-        if [[ -f "$VALUES_FILE_PATH" ]]; then
-            log_info "Updating Helm values with new image"
-            yq -i ".image.repository = \"${IMAGE_REPO}\" | .image.tag = \"${GIT_COMMIT_ID}\"" "$VALUES_FILE_PATH"
+        # Set up GitHub token authentication if available
+        if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+            log_info "Setting up GitHub token authentication"
+            git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${DEVOPS_REPO}.git"
+        fi
 
-            git add "$VALUES_FILE_PATH"
-            git commit -m "${APP_NAME}:${GIT_COMMIT_ID} released" || log_info "No changes to commit"
-            if ! update_helm_deployment; then
-                log_critical "Helm deployment update failed, initiating rollback..."
+        # Pull latest changes
+        if ! git pull --rebase; then
+            log_warning "Failed to pull latest changes, continuing with local repo"
+        fi
                 rollback_deployment
                 exit 1
             fi
@@ -430,6 +430,14 @@ if [[ "$DEPLOY" == "true" ]]; then
             # Refresh ArgoCD application to trigger deployment
             log_info "Refreshing ArgoCD application to trigger deployment..."
             if kubectl get application "$APP_NAME" -n argocd >/dev/null 2>&1; then
+                log_info "Found ArgoCD application: $APP_NAME"
+
+                # Check application status before refresh
+                APP_STATUS=$(kubectl get application "$APP_NAME" -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown")
+                APP_HEALTH=$(kubectl get application "$APP_NAME" -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null || echo "Unknown")
+
+                log_info "Application status: $APP_STATUS, Health: $APP_HEALTH"
+
                 if kubectl patch application "$APP_NAME" -n argocd -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}' --type=merge; then
                     log_success "ArgoCD application refreshed - deployment should start"
 
@@ -441,7 +449,8 @@ if [[ "$DEPLOY" == "true" ]]; then
                             break
                         fi
                         if [[ $i -eq 30 ]]; then
-                            log_warning "ArgoCD deployment not detected after 30 seconds - may need manual sync"
+                            log_warning "ArgoCD deployment not detected after 30 seconds - checking application status"
+                            kubectl get application "$APP_NAME" -n argocd -o yaml | grep -A 10 -B 5 "status:" || true
                         fi
                         sleep 2
                     done
@@ -449,7 +458,33 @@ if [[ "$DEPLOY" == "true" ]]; then
                     log_warning "Failed to refresh ArgoCD application"
                 fi
             else
-                log_warning "ArgoCD application $APP_NAME not found - may need manual sync"
+                log_warning "ArgoCD application $APP_NAME not found in argocd namespace"
+                log_info "Checking if it exists in other namespaces..."
+                kubectl get applications -A | grep "$APP_NAME" || log_warning "ArgoCD application $APP_NAME not found in any namespace"
+
+                # Try to create the application if it doesn't exist
+                log_info "Attempting to create ArgoCD application..."
+                # Try multiple possible paths for the ArgoCD application file
+                APP_CREATED=false
+                for app_path in "$TEMP_DIR/apps/$APP_NAME/app.yaml" "$TEMP_DIR/apps/erp-api/app.yaml" "$TEMP_DIR/erp-api/app.yaml"; do
+                    if [[ -f "$app_path" ]]; then
+                        if kubectl apply -f "$app_path" 2>/dev/null; then
+                            log_success "ArgoCD application created successfully from $app_path"
+                            APP_CREATED=true
+                            sleep 5
+                            # Retry the refresh
+                            if kubectl patch application "$APP_NAME" -n argocd -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}' --type=merge; then
+                                log_success "ArgoCD application refreshed after creation"
+                            fi
+                            break
+                        fi
+                    fi
+                done
+
+                if [[ "$APP_CREATED" == "false" ]]; then
+                    log_error "Failed to create ArgoCD application - application files not found in expected locations"
+                    log_info "Expected paths: $TEMP_DIR/apps/$APP_NAME/app.yaml, $TEMP_DIR/apps/erp-api/app.yaml, $TEMP_DIR/erp-api/app.yaml"
+                fi
             fi
         else
             log_warning "Helm values file not found: $VALUES_FILE_PATH"
