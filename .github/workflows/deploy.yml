@@ -49,6 +49,13 @@ jobs:
         VALUES_FILE_PATH: ${{ env.VALUES_FILE_PATH }}
         GIT_USER: ${{ secrets.GIT_USER }}
         GIT_EMAIL: ${{ secrets.GIT_EMAIL }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # SSH deployment variables
+        SSH_HOST: ${{ secrets.SSH_HOST }}
+        SSH_USER: ${{ secrets.SSH_USER }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        PROVIDER: contabo
+        CONTABO_API: true
       run: |
         chmod +x build.sh
         ./build.sh
