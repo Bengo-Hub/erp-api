@@ -70,12 +70,7 @@ jsonpointer
 jsonschema
 jsonschema-specifications
 kombu
-langchain
-langchain-community
-langchain-core
-langchain-text-splitters
-langsmith
-llm
+# Removed unused packages that had security vulnerabilities
 loguru
 lxml
 mark
@@ -178,7 +173,7 @@ ua-parser
 ua-parser-builtins
 uritemplate
 uritools
-urllib3
+urllib3>=2.5.0
 user-agents
 vine
 waitress

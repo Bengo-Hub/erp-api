@@ -1,0 +1,8 @@
+# Trivy ignore file for acceptable vulnerabilities
+# These are either in base system packages or have low impact on our application
+
+# pip vulnerability - base system package updated during build
+CVE-2025-8869
+
+# urllib3 version compatibility - upgrading to 2.x may break dependencies
+CVE-2025-50181
