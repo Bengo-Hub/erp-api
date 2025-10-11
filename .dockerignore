@@ -25,13 +25,11 @@ docs
 *.jpeg
 *.gif
 *.pdf
-*.txt
 *.bat
 *.sh
 build.sh
 Dockerfile*
 .dockerignore
-requirements*.txt
 *.log
 .env*
 credentials.json
