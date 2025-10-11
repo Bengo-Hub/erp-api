@@ -18,8 +18,11 @@ RUN apt-get update \
         gcc \
         libcairo2-dev \
         libpango1.0-dev \
-        libgobject-2.0-dev \
-        libpangocairo-1.0-0 \
+        libglib2.0-dev \
+        libpangocairo-1.0-dev \
+        libffi-dev \
+        libjpeg-dev \
+        libpng-dev \
         pkg-config \
         cmake \
         git \
