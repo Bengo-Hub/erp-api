@@ -416,7 +416,7 @@ if [[ "$DEPLOY" == "true" ]]; then
         # Update Helm values
         if [[ -f "$VALUES_FILE_PATH" ]]; then
             log_info "Updating Helm values with new image"
-            yq -yi ".image.repository = \"${IMAGE_REPO}\" | .image.tag = \"${GIT_COMMIT_ID}\"" "$VALUES_FILE_PATH"
+            yq -i ".image.repository = \"${IMAGE_REPO}\" | .image.tag = \"${GIT_COMMIT_ID}\"" "$VALUES_FILE_PATH"
 
             git add "$VALUES_FILE_PATH"
             git commit -m "${APP_NAME}:${GIT_COMMIT_ID} released" || log_info "No changes to commit"
