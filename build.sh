@@ -463,6 +463,51 @@ else
     log_info "Deploy mode disabled (DEPLOY=${DEPLOY}). Build completed but not deployed."
 fi
 
+get_service_urls() {
+    if [[ -z "${KUBE_CONFIG:-}" ]]; then
+        echo ""
+        return 0
+    fi
+
+    local urls=""
+
+    # Get ingress URLs for the application
+    if kubectl get ingress -n "$NAMESPACE" >/dev/null 2>&1; then
+        while IFS= read -r ingress; do
+            if [[ -n "$ingress" ]]; then
+                # Extract host from ingress
+                local host
+                host=$(kubectl get ingress "$ingress" -n "$NAMESPACE" -o jsonpath='{.spec.rules[0].host}' 2>/dev/null)
+
+                if [[ -n "$host" ]]; then
+                    # Determine protocol (default to http, but check for TLS)
+                    local protocol="http"
+                    if kubectl get ingress "$ingress" -n "$NAMESPACE" -o jsonpath='{.spec.tls}' 2>/dev/null | grep -q "hosts"; then
+                        protocol="https"
+                    fi
+
+                    urls="${urls}${protocol}://${host}\n"
+                fi
+            fi
+        done < <(kubectl get ingress -n "$NAMESPACE" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)
+    fi
+
+    # If no ingress URLs found, try to get service URLs
+    if [[ -z "$urls" ]]; then
+        if kubectl get svc "$APP_NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
+            local service_port
+            service_port=$(kubectl get svc "$APP_NAME" -n "$NAMESPACE" -o jsonpath='{.spec.ports[0].port}' 2>/dev/null)
+
+            if [[ -n "$service_port" ]]; then
+                urls="http://${APP_NAME}.${NAMESPACE}.svc.cluster.local:${service_port}\n"
+                urls="${urls}(Cluster internal URL - configure ingress for external access)"
+            fi
+        fi
+    fi
+
+    echo -e "$urls" | sed '/^$/d' | head -5
+}
+
 # =============================================================================
 # DEPLOYMENT SUMMARY
 # =============================================================================
@@ -478,6 +523,20 @@ echo "SSH Support: $([[ "$SSH_CONFIGURED" == "true" ]] && echo '✅ Enabled' || 
 echo "Databases: $([[ "$SETUP_DATABASES" == "true" ]] && echo "✅ $DB_TYPES" || echo '❌ Disabled')"
 echo "K8s Secrets: $([[ -n "${KUBE_CONFIG:-}" ]] && echo '✅ Applied' || echo '❌ Skipped')"
 echo "Helm Update: $([[ "$DEPLOY" == "true" ]] && echo '✅ Updated' || echo '❌ Skipped')"
+echo ""
+
+# Show service URLs if deployed
+if [[ "$DEPLOY" == "true" && -n "${KUBE_CONFIG:-}" ]]; then
+    echo "🌐 Service URLs:"
+    service_urls=$(get_service_urls)
+    if [[ -n "$service_urls" ]]; then
+        echo -e "$service_urls"
+    else
+        echo "   No service URLs found"
+        echo "   Check that ingress is properly configured"
+    fi
+fi
+
 echo "=========================================="
 
 log_success "BengoERP API deployment process completed!"
