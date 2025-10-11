@@ -47,6 +47,8 @@ jobs:
         REGISTRY_SERVER: ${{ env.REGISTRY_SERVER }}
         REGISTRY_NAMESPACE: ${{ env.REGISTRY_NAMESPACE }}
         VALUES_FILE_PATH: ${{ env.VALUES_FILE_PATH }}
+        GIT_USER: ${{ secrets.GIT_USER }}
+        GIT_EMAIL: ${{ secrets.GIT_EMAIL }}
       run: |
         chmod +x build.sh
         ./build.sh
