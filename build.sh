@@ -206,8 +206,62 @@ if [[ "$DEPLOY" == "true" ]]; then
     if [[ -n "${KUBE_CONFIG:-}" ]]; then
         log_step "Setting up Kubernetes access..."
 
+        # Validate kubeconfig format
+        if ! echo "$KUBE_CONFIG" | base64 -d >/dev/null 2>&1; then
+            log_error "Invalid Kubernetes configuration (not valid base64)"
+            exit 1
+        fi
+
+        # Set up kubeconfig
         mkdir -p ~/.kube
-        echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+        if ! echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config 2>/dev/null; then
+            log_error "Failed to decode Kubernetes configuration"
+            exit 1
+        fi
+        chmod 600 ~/.kube/config
+
+        # Set current context if not set or if current context is invalid
+        if ! kubectl config current-context >/dev/null 2>&1; then
+            log_warning "No current context set in kubeconfig"
+        fi
+
+        CURRENT_CONTEXT=$(kubectl config current-context 2>/dev/null || echo "none")
+        log_info "Current context before validation: $CURRENT_CONTEXT"
+
+        # If current context is not set or invalid, try to set a valid one
+        if [[ "$CURRENT_CONTEXT" == "none" ]] || ! kubectl config get-contexts "$CURRENT_CONTEXT" >/dev/null 2>&1; then
+            log_warning "Current context '$CURRENT_CONTEXT' is not valid, finding a valid context"
+
+            # Try to set the first available context
+            if FIRST_CONTEXT=$(kubectl config get-contexts -o name 2>/dev/null | head -1); then
+                if kubectl config use-context "$FIRST_CONTEXT" >/dev/null 2>&1; then
+                    log_info "Set current context to: $FIRST_CONTEXT"
+                else
+                    log_error "Failed to set context to: $FIRST_CONTEXT"
+                    exit 1
+                fi
+            else
+                log_error "No valid contexts found in kubeconfig"
+                log_info "Available contexts:"
+                kubectl config get-contexts || true
+                exit 1
+            fi
+        fi
+
+        # Debug: Show current context and cluster info
+        CURRENT_CONTEXT=$(kubectl config current-context 2>/dev/null || echo "none")
+        log_info "Current context: $CURRENT_CONTEXT"
+
+        # Validate cluster connectivity
+        if ! kubectl cluster-info >/dev/null 2>&1; then
+            log_error "Cannot connect to Kubernetes cluster"
+            log_info "Check that your kubeconfig is valid and the cluster is accessible"
+            log_info "Cluster info:"
+            kubectl cluster-info || true
+            exit 1
+        fi
+
+        log_success "Kubernetes access configured successfully"
 
         # Ensure namespace exists
         if kubectl get namespace "$NAMESPACE" &>/dev/null; then
