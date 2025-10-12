@@ -128,12 +128,12 @@ if [[ -n "${DOCKER_SSH_KEY:-}" ]]; then
     if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
         log_info "Running in CI/CD environment, using non-interactive SSH setup"
 
-        # Try to add key without passphrase (common for CI/CD)
-        if SSH_ASKPASS=/bin/false ssh-add ~/.ssh/id_rsa 2>/dev/null; then
+        # Try to add key with passphrase "codevertex"
+        if echo "codevertex" | SSH_ASKPASS=/bin/echo ssh-add ~/.ssh/id_rsa 2>/dev/null; then
             SSH_CONFIGURED=true
             log_success "SSH configured for Docker build"
         else
-            log_warning "SSH key requires passphrase in CI/CD, building without SSH"
+            log_warning "SSH key passphrase incorrect or failed to add to agent, building without SSH"
             rm -f ~/.ssh/id_rsa
             SSH_CONFIGURED=false
         fi
@@ -473,7 +473,7 @@ if [[ "$DEPLOY" == "true" ]]; then
                 log_info "Attempting to create ArgoCD application..."
                 # Try multiple possible paths for the ArgoCD application file
                 APP_CREATED=false
-                for app_path in "$temp_dir/apps/$APP_NAME/app.yaml" "$temp_dir/apps/erp-api/app.yaml" "$temp_dir/erp-api/app.yaml"; do
+                for app_path in "devops-repo/apps/$APP_NAME/app.yaml" "devops-repo/apps/erp-api/app.yaml" "devops-repo/erp-api/app.yaml"; do
                     if [[ -f "$app_path" ]]; then
                         if kubectl apply -f "$app_path" 2>/dev/null; then
                             log_success "ArgoCD application created successfully from $app_path"
@@ -490,7 +490,7 @@ if [[ "$DEPLOY" == "true" ]]; then
 
                 if [[ "$APP_CREATED" == "false" ]]; then
                     log_error "Failed to create ArgoCD application - application files not found in expected locations"
-                    log_info "Expected paths: $temp_dir/apps/$APP_NAME/app.yaml, $temp_dir/apps/erp-api/app.yaml, $temp_dir/erp-api/app.yaml"
+                    log_info "Expected paths: devops-repo/apps/$APP_NAME/app.yaml, devops-repo/apps/erp-api/app.yaml, devops-repo/erp-api/app.yaml"
                 fi
             fi
         else
