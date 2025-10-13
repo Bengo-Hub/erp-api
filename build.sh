@@ -234,10 +234,20 @@ if [[ "$DEPLOY" == "true" ]]; then
                 case "$db" in
                     postgres)
                         log_info "Installing PostgreSQL..."
-                        helm upgrade --install postgresql bitnami/postgresql -n "$NAMESPACE" \
-                            --set global.postgresql.auth.postgresPassword="$POSTGRES_PASSWORD" \
-                            --set global.postgresql.auth.database="appdb" \
-                            --wait --timeout=300s || log_warning "PostgreSQL installation failed"
+                        # Avoid immutable spec updates: reuse existing chart values on upgrade
+                        if helm -n "$NAMESPACE" status postgresql >/dev/null 2>&1; then
+                            log_info "PostgreSQL release exists; performing safe upgrade with --reuse-values"
+                            helm upgrade postgresql bitnami/postgresql -n "$NAMESPACE" \
+                                --reuse-values \
+                                --wait --timeout=600s || log_warning "PostgreSQL safe upgrade failed"
+                        else
+                            log_info "PostgreSQL not found; installing fresh"
+                            DB_NAME="${PG_DATABASE:-bengo_erp}"
+                            helm install postgresql bitnami/postgresql -n "$NAMESPACE" \
+                                --set global.postgresql.auth.postgresPassword="$POSTGRES_PASSWORD" \
+                                --set global.postgresql.auth.database="$DB_NAME" \
+                                --wait --timeout=600s || log_warning "PostgreSQL installation failed"
+                        fi
                         ;;
                     redis)
                         log_info "Installing Redis..."
@@ -253,8 +263,9 @@ if [[ "$DEPLOY" == "true" ]]; then
 
             # Create environment secret with database URLs
             if [[ -n "${POSTGRES_PASSWORD:-}" ]]; then
+                DB_NAME="${PG_DATABASE:-bengo_erp}"
                 kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" \
-                    --from-literal=DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@postgresql.${NAMESPACE}.svc.cluster.local:5432/appdb" \
+                    --from-literal=DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${DB_NAME}" \
                     --dry-run=client -o yaml | kubectl apply -f - || log_warning "Failed to create DB secret"
             fi
 
@@ -287,6 +298,16 @@ if [[ "$DEPLOY" == "true" ]]; then
                     kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" --from-literal=JWT_SECRET="$JWT_SECRET"
                 fi
                 log_success "JWT secret configured"
+            fi
+
+            # Create/Update docker registry pull secret if credentials are provided
+            if [[ -n "${REGISTRY_USERNAME:-}" && -n "${REGISTRY_PASSWORD:-}" ]]; then
+                log_step "Configuring image pull secret for registry ${REGISTRY_SERVER}"
+                kubectl -n "$NAMESPACE" create secret docker-registry registry-credentials \
+                  --docker-server="${REGISTRY_SERVER}" \
+                  --docker-username="${REGISTRY_USERNAME}" \
+                  --docker-password="${REGISTRY_PASSWORD}" \
+                  --dry-run=client -o yaml | kubectl apply -f - || log_warning "Failed to create image pull secret"
             fi
         fi
 
@@ -330,6 +351,11 @@ if [[ "$DEPLOY" == "true" ]]; then
                     # Update both the values.yaml file and the ArgoCD application manifest
                     yq eval '.image.repository = "'${IMAGE_REPO}'" | .image.tag = "'${GIT_COMMIT_ID}'"' "$VALUES_FILE_PATH" -i
 
+                    # If registry credentials exist, ensure image pull secret is referenced in Helm values
+                    if [[ -n "${REGISTRY_USERNAME:-}" && -n "${REGISTRY_PASSWORD:-}" ]]; then
+                        yq eval '.image.pullSecrets = [{"name":"registry-credentials"}]' -i "$VALUES_FILE_PATH"
+                    fi
+
                     # Update the ArgoCD application manifest with the new image tag
                     if [[ -f "apps/erp-api/app.yaml" ]]; then
                         # Use yq to update the image tag in the ArgoCD application
@@ -344,32 +370,27 @@ if [[ "$DEPLOY" == "true" ]]; then
                         git commit -m "${APP_NAME}:${GIT_COMMIT_ID} released" || log_warning "Git commit failed"
 
                         # Use appropriate authentication method for push with better error handling
-                        if [[ -n "${DOCKER_SSH_KEY:-}" ]]; then
+                        # Prefer HTTPS token if available; fallback to SSH
+                        if [[ -n "${GITHUB_TOKEN:-${GH_PAT:-}}" ]]; then
+                            log_info "Pushing via HTTPS authentication"
+                            if git remote | grep -q push-origin; then git remote remove push-origin || true; fi
+                            git remote add push-origin "https://x-access-token:${GITHUB_TOKEN:-${GH_PAT:-}}@github.com/${DEVOPS_REPO}.git"
+                            if git push push-origin HEAD:main 2>&1 | tee /tmp/git-push.log; then
+                                log_success "Git push successful"
+                            else
+                                GIT_ERROR=$(cat /tmp/git-push.log)
+                                log_warning "Git push failed: $GIT_ERROR"
+                            fi
+                        elif [[ -n "${DOCKER_SSH_KEY:-}" ]]; then
                             log_info "Pushing via SSH authentication"
-                        if git push 2>&1 | tee /tmp/git-push.log; then
+                            if git push 2>&1 | tee /tmp/git-push.log; then
                                 log_success "Git push successful"
                             else
                                 GIT_ERROR=$(cat /tmp/git-push.log)
                                 log_warning "Git push failed: $GIT_ERROR"
                             fi
                         else
-                            log_info "Pushing via HTTPS authentication"
-                            # Ensure token is properly formatted and not empty
-                            if [[ -z "${GITHUB_TOKEN:-${GH_PAT:-}}" ]]; then
-                                log_error "GitHub token not available for HTTPS authentication"
-                                log_warning "Git push skipped - manual push may be required"
-                            else
-                            # Use dedicated origin for pushing with token to avoid interfering with fetch origin
-                            if git remote | grep -q push-origin; then git remote remove push-origin || true; fi
-                            git remote add push-origin "https://x-access-token:${GITHUB_TOKEN:-${GH_PAT:-}}@github.com/${DEVOPS_REPO}.git"
-                            if git push push-origin HEAD:main 2>&1 | tee /tmp/git-push.log; then
-                                    log_success "Git push successful"
-                                else
-                                    GIT_ERROR=$(cat /tmp/git-push.log)
-                                    log_warning "Git push failed: $GIT_ERROR"
-                                    log_info "You may need to push manually: git push"
-                                fi
-                            fi
+                            log_warning "No credentials found for git push; skipping automatic push"
                         fi
                     fi
                 fi
@@ -403,11 +424,20 @@ spec:
             name: ${ENV_SECRET_NAME}
 EOF
 
+            set +e
             kubectl apply -f /tmp/migrate-job.yaml
-            kubectl wait --for=condition=complete job/${APP_NAME}-migrate-${GIT_COMMIT_ID} -n ${NAMESPACE} --timeout=300s || {
-                log_warning "Migration job failed or timed out"
-                kubectl logs job/${APP_NAME}-migrate-${GIT_COMMIT_ID} -n ${NAMESPACE} --tail=50 || true
-            }
+            kubectl wait --for=condition=complete job/${APP_NAME}-migrate-${GIT_COMMIT_ID} -n ${NAMESPACE} --timeout=300s
+            JOB_STATUS=$?
+            kubectl logs job/${APP_NAME}-migrate-${GIT_COMMIT_ID} -n ${NAMESPACE} --tail=200 || true
+            if [[ $JOB_STATUS -ne 0 ]]; then
+                log_error "Migration job failed or timed out"
+                MIGRATE_POD=$(kubectl get pods -n ${NAMESPACE} -l job-name=${APP_NAME}-migrate-${GIT_COMMIT_ID} -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+                if [[ -n "$MIGRATE_POD" ]]; then
+                  kubectl logs -n ${NAMESPACE} "$MIGRATE_POD" --tail=200 || true
+                fi
+                exit 1
+            fi
+            set -e
             log_success "Database migrations completed"
         fi
 
@@ -442,7 +472,7 @@ EOF
                 log_info "Please check ArgoCD interface - applications should sync automatically"
                 SERVICE_URLS="Applications are syncing via ArgoCD - check ArgoCD interface for status"
             else
-                # Wait for ingress to be ready and get URLs
+                # Wait for ingress to be ready and get URLs (API hosts only)
                 SERVICE_URLS=""
                 MAX_WAIT=300  # 5 minutes
                 WAIT_INTERVAL=15  # Increased interval since ArgoCD sync takes time
@@ -454,8 +484,8 @@ EOF
                     INGRESS_INFO=$(kubectl get ingress -n "$NAMESPACE" -o json 2>/dev/null || echo "")
 
                     if [[ -n "$INGRESS_INFO" && "$INGRESS_INFO" != "No resources found" ]]; then
-                        # Extract URLs from ingress using basic shell commands instead of jq
-                        URLS=$(kubectl get ingress -n "$NAMESPACE" -o jsonpath='{.items[*].spec.rules[*].host}' 2>/dev/null | tr ' ' '\n' | grep -v '^$' | head -5 | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+                        # Extract API URLs (erpapi.*) from ingress
+                        URLS=$(kubectl get ingress -n "$NAMESPACE" -o jsonpath='{.items[*].spec.rules[*].host}' 2>/dev/null | tr ' ' '\n' | grep -v '^$' | grep -E '^erpapi(\.|$)' | head -5 | tr '\n' ' ' | sed 's/[[:space:]]*$//')
 
                         if [[ -n "$URLS" ]]; then
                             SERVICE_URLS="$URLS"
