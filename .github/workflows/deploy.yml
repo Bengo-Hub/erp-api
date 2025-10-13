@@ -31,6 +31,9 @@ jobs:
         echo "REGISTRY_SERVER=docker.io" >> $GITHUB_ENV
         echo "REGISTRY_NAMESPACE=codevertex" >> $GITHUB_ENV
         echo "VALUES_FILE_PATH=apps/erp-api/values.yaml" >> $GITHUB_ENV
+        echo "DEPLOYMENT_SUMMARY_TITLE=BengoERP API Deployment Summary" >> $GITHUB_ENV
+        echo "DEPLOYMENT_SUCCESS_MESSAGE=BengoERP API deployment completed! The API should be accessible via the URLs above." >> $GITHUB_ENV
+        echo "APPLICATION_DISPLAY_NAME=BengoERP API" >> $GITHUB_ENV
 
     - name: Run production deployment
       env:
@@ -40,22 +43,84 @@ jobs:
         REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         GITHUB_SHA: ${{ github.sha }}
         DEPLOY: true
-        SETUP_DATABASES: ${{ env.SETUP_DATABASES }}
-        DB_TYPES: ${{ env.DB_TYPES }}
-        NAMESPACE: ${{ env.NAMESPACE }}
-        ENV_SECRET_NAME: ${{ env.ENV_SECRET_NAME }}
-        REGISTRY_SERVER: ${{ env.REGISTRY_SERVER }}
-        REGISTRY_NAMESPACE: ${{ env.REGISTRY_NAMESPACE }}
-        VALUES_FILE_PATH: ${{ env.VALUES_FILE_PATH }}
+        SETUP_DATABASES: true
+        DB_TYPES: postgres,redis
+        NAMESPACE: erp
+        ENV_SECRET_NAME: erp-api-env
+        REGISTRY_SERVER: docker.io
+        REGISTRY_NAMESPACE: codevertex
+        VALUES_FILE_PATH: apps/erp-api/values.yaml
         GIT_USER: ${{ secrets.GIT_USER }}
         GIT_EMAIL: ${{ secrets.GIT_EMAIL }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_PAT: ${{ secrets.GH_PAT }}
         # SSH deployment variables
         SSH_HOST: ${{ secrets.SSH_HOST }}
         SSH_USER: ${{ secrets.SSH_USER }}
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         PROVIDER: contabo
         CONTABO_API: true
+        # Database secrets
+        POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+        # Contabo secrets
+        CONTABO_CLIENT_ID: ${{ secrets.CONTABO_CLIENT_ID }}
+        CONTABO_CLIENT_SECRET: ${{ secrets.CONTABO_CLIENT_SECRET }}
+        CONTABO_API_USERNAME: ${{ secrets.CONTABO_API_USERNAME }}
+        CONTABO_API_PASSWORD: ${{ secrets.CONTABO_API_PASSWORD }}
+        # Deployment variables
+        DEPLOYMENT_SUMMARY_TITLE: BengoERP API Deployment Summary
+        DEPLOYMENT_SUCCESS_MESSAGE: BengoERP API deployment completed! The API should be accessible via the URLs above.
+        APPLICATION_DISPLAY_NAME: BengoERP API
       run: |
         chmod +x build.sh
         ./build.sh
+
+    - name: Run database migrations (Django apps)
+      if: success()
+      env:
+        NS: erp
+        IMAGE_REPO: docker.io/codevertex/erp-api
+        SHORT_SHA: ${{ github.sha }}
+        KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG }}
+        ENV_SECRET_NAME: erp-api-env
+      run: |
+        # Only run migrations if KUBE_CONFIG is available
+        if [ -z "${{ secrets.KUBE_CONFIG }}" ]; then
+          echo "⏭️ Skipping migrations - no KUBE_CONFIG available"
+          exit 0
+        fi
+
+        echo "::group::Running database migrations"
+        mkdir -p ~/.kube
+        echo "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
+
+        # Create migration job
+        cat > /tmp/migrate-job.yaml <<EOF
+        apiVersion: batch/v1
+        kind: Job
+        metadata:
+          name: erp-migrate-${SHORT_SHA::8}
+          namespace: ${NS}
+        spec:
+          ttlSecondsAfterFinished: 600
+          template:
+            spec:
+              restartPolicy: Never
+              containers:
+              - name: migrate
+                image: ${IMAGE_REPO}:${SHORT_SHA::8}
+                command: ["python", "manage.py", "migrate"]
+                envFrom:
+                - secretRef:
+                    name: ${ENV_SECRET_NAME}
+        EOF
+
+        kubectl apply -f /tmp/migrate-job.yaml
+        kubectl wait --for=condition=complete job/erp-migrate-${SHORT_SHA::8} -n ${NS} --timeout=300s || {
+          echo "Migration job logs:"
+          kubectl logs job/erp-migrate-${SHORT_SHA::8} -n ${NS} || true
+          exit 1
+        }
+        echo "✅ Database migrations completed"
+        echo "::endgroup::"
