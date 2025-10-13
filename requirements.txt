@@ -71,6 +71,11 @@ jsonschema
 jsonschema-specifications
 celery>=5.3,<6
 kombu>=5.3,<6
+# ASGI and websockets stack
+channels>=4.1.0
+channels-redis>=4.2.0
+daphne
+channels-redis
 # Removed unused packages that had security vulnerabilities
 loguru
 # Pin lxml to a stable prebuilt wheel to avoid source build on alpine/debian slim

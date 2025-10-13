@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+from urllib.parse import urlparse
 from .jazzmin import JAZZMIN_SETTINGS
 from .jazzmin_ui import JAZZMIN_UI_TWEAKS
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -22,10 +23,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-za0e7int-c)lv7ko1b%9i&h64g&p%32!3#qm70dh956h)v)enf'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or os.getenv('SECRET_KEY') or 'django-insecure-za0e7int-c)lv7ko1b%9i&h64g&p%32!3#qm70dh956h)v)enf'
+
+def env_bool(name: str, default: bool = False) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return str(val).strip().lower() in ('1', 'true', 'yes', 'on')
+
+def env_list(name: str, default: list[str] | None = None) -> list[str]:
+    raw = os.getenv(name)
+    if not raw:
+        return default or []
+    return [item.strip() for item in raw.split(',') if item.strip()]
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+DEBUG = env_bool('DEBUG', default=False)
+
+# Hosts and CORS/CSRF configuration from environment for production
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default=['*' if DEBUG else 'localhost'])
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # Application definition
@@ -52,7 +68,6 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'drf_spectacular_sidecar',
     'tinymce',
-    'channels',
     #custom apps
     ##auth
     'authmanagement',
@@ -274,22 +289,59 @@ WSGI_APPLICATION = 'ProcureProKEAPI.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-#postgres db set up
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'bengo_erp',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'localhost',
-        'PORT': '5432',
-        'CONN_MAX_AGE': 600,  # 10 minutes connection lifetime
-        # Database connection options
+# Database configuration: prefer DATABASE_URL when provided
+def build_db_from_url(url: str):
+    parsed = urlparse(url)
+    engine_map = {
+        'postgres': 'django.db.backends.postgresql',
+        'postgresql': 'django.db.backends.postgresql',
+        'postgresql+psycopg2': 'django.db.backends.postgresql',
+        'mysql': 'django.db.backends.mysql',
+        'sqlite': 'django.db.backends.sqlite3',
+        'sqlite3': 'django.db.backends.sqlite3',
+    }
+    engine = engine_map.get(parsed.scheme)
+    if not engine:
+        # Fallback to postgres if unknown but URL present
+        engine = 'django.db.backends.postgresql'
+    if engine.endswith('sqlite3'):
+        db_name = parsed.path[1:] if parsed.path else os.path.join(BASE_DIR, 'db.sqlite3')
+        return {
+            'ENGINE': engine,
+            'NAME': db_name or os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
+    return {
+        'ENGINE': engine,
+        'NAME': (parsed.path or '/')[1:],
+        'USER': parsed.username or '',
+        'PASSWORD': parsed.password or '',
+        'HOST': parsed.hostname or 'localhost',
+        'PORT': str(parsed.port or '5432'),
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '600')),
         'OPTIONS': {
-            'connect_timeout': 10,
+            'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '10')),
         },
     }
-}
+
+DATABASES = {}
+if os.getenv('DATABASE_URL'):
+    DATABASES['default'] = build_db_from_url(os.getenv('DATABASE_URL'))
+else:
+    # Development defaults
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'bengo_erp'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '600')),
+            'OPTIONS': {
+                'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '10')),
+            },
+        }
+    }
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
@@ -343,7 +395,7 @@ LOCALE_PATHS = [
 ]
 # CORS configuration - comprehensive setup for development
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', default=[
     'http://127.0.0.1:5173',
     'http://localhost:5173',
     'http://127.0.0.1:3000',
@@ -352,10 +404,10 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:8080',
     'http://127.0.0.1:4173',
     'http://localhost:4173',
-]
+])
 
 # CSRF trusted origins for frontend
-CSRF_TRUSTED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', default=[
     'http://127.0.0.1:5173',
     'http://localhost:5173',
     'http://127.0.0.1:3000',
@@ -364,7 +416,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8080',
     'http://127.0.0.1:4173',
     'http://localhost:4173',
-]
+])
 
 # Allow all methods including OPTIONS for preflight
 CORS_ALLOW_METHODS = [
@@ -547,6 +599,10 @@ else:
 # Channels Configuration for WebSocket support
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': os.getenv('CHANNEL_BACKEND', 'channels.layers.InMemoryChannelLayer'),
+        # For Redis backend in production, set:
+        # CHANNEL_BACKEND=channels_redis.core.RedisChannelLayer
+        # and CHANNEL_URL=redis://:password@host:6379/2
+        **({'CONFIG': { 'hosts': [os.getenv('CHANNEL_URL')] }} if os.getenv('CHANNEL_URL') else {})
     }
 }
