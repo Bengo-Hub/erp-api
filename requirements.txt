@@ -26,12 +26,12 @@ djangorestframework-csv
 dnspython
 drf-spectacular
 drf-spectacular-sidecar
-eventlet
+eventlet>=0.33.3
 executing
 Faker
 faker
 firebase-admin
-flower
+flower>=2.0.0
 frozenlist
 future
 geek
@@ -69,7 +69,8 @@ jsonpatch
 jsonpointer
 jsonschema
 jsonschema-specifications
-kombu
+celery>=5.3,<6
+kombu>=5.3,<6
 # Removed unused packages that had security vulnerabilities
 loguru
 # Pin lxml to a stable prebuilt wheel to avoid source build on alpine/debian slim
@@ -96,8 +97,8 @@ phonenumbers
 pillow
 pluggy
 polars
-prometheus-client
-prometheus_client
+# 'prometheus-client' and 'prometheus_client' refer to the same package; keep one
+# Keep only 'prometheus-client'
 prompt_toolkit
 propcache
 proto-plus
@@ -174,9 +175,9 @@ ua-parser
 ua-parser-builtins
 uritemplate
 uritools
-urllib3>=2.5.0
+urllib3>=1.26.18,<3
 user-agents
-vine
+vine>=5.0.0
 waitress
 wcwidth
 webencodings
