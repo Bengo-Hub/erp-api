@@ -39,6 +39,9 @@ jobs:
       env:
         DOCKER_SSH_KEY: ${{ secrets.DOCKER_SSH_KEY }}
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        # Use GH token for HTTPS auth fallback in build.sh
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_PAT: ${{ secrets.GH_PAT }}
         REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
         REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         GITHUB_SHA: ${{ github.sha }}
@@ -52,8 +55,6 @@ jobs:
         VALUES_FILE_PATH: apps/erp-api/values.yaml
         GIT_USER: ${{ secrets.GIT_USER }}
         GIT_EMAIL: ${{ secrets.GIT_EMAIL }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GH_PAT: ${{ secrets.GH_PAT }}
         # SSH deployment variables
         SSH_HOST: ${{ secrets.SSH_HOST }}
         SSH_USER: ${{ secrets.SSH_USER }}
