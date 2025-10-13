@@ -72,7 +72,8 @@ jsonschema-specifications
 kombu
 # Removed unused packages that had security vulnerabilities
 loguru
-lxml
+# Pin lxml to a stable prebuilt wheel to avoid source build on alpine/debian slim
+lxml==4.9.4
 mark
 Markdown
 markdownify

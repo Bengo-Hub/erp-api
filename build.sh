@@ -296,7 +296,25 @@ if [[ "$DEPLOY" == "true" ]]; then
 
             # Clone or update devops-k8s repo
             if [[ ! -d "devops-k8s" ]]; then
-                git clone "https://github.com/${DEVOPS_REPO}.git" devops-k8s || log_warning "Failed to clone devops-k8s"
+                # Try SSH first, fallback to HTTPS if SSH fails
+                if [[ -n "${DOCKER_SSH_KEY:-}" ]]; then
+                    log_info "Attempting SSH authentication for git operations"
+                    if git clone "git@github.com:${DEVOPS_REPO}.git" devops-k8s 2>/dev/null; then
+                        log_success "SSH clone successful"
+                    else
+                        log_warning "SSH clone failed, trying HTTPS authentication"
+                        git clone "https://${GITHUB_TOKEN:-${GH_PAT:-}}@github.com/${DEVOPS_REPO}.git" devops-k8s || {
+                            log_error "Failed to clone devops-k8s repository"
+                            exit 1
+                        }
+                    fi
+                else
+                    log_info "Using HTTPS authentication for git operations"
+                    git clone "https://${GITHUB_TOKEN:-${GH_PAT:-}}@github.com/${DEVOPS_REPO}.git" devops-k8s || {
+                        log_error "Failed to clone devops-k8s repository"
+                        exit 1
+                    }
+                fi
             fi
 
             if [[ -d "devops-k8s" ]]; then
@@ -309,13 +327,50 @@ if [[ "$DEPLOY" == "true" ]]; then
 
                 # Update values file
                 if [[ -f "$VALUES_FILE_PATH" ]]; then
+                    # Update both the values.yaml file and the ArgoCD application manifest
                     yq eval '.image.repository = "'${IMAGE_REPO}'" | .image.tag = "'${GIT_COMMIT_ID}'"' "$VALUES_FILE_PATH" -i
-                    if git diff --quiet HEAD "$VALUES_FILE_PATH"; then
+
+                    # Update the ArgoCD application manifest with the new image tag
+                    if [[ -f "apps/erp-api/app.yaml" ]]; then
+                        # Use yq to update the image tag in the ArgoCD application
+                        yq eval '(.spec.source.helm.values | select(. != null) | .image.tag) = "'${GIT_COMMIT_ID}'"' "apps/erp-api/app.yaml" -i
+                    fi
+
+                    if git diff --quiet HEAD "$VALUES_FILE_PATH" || [[ -f "apps/erp-api/app.yaml" && $(git diff --quiet HEAD "apps/erp-api/app.yaml") ]]; then
                         log_info "No changes to commit"
                     else
                         git add "$VALUES_FILE_PATH"
+                        [[ -f "apps/erp-api/app.yaml" ]] && git add "apps/erp-api/app.yaml"
                         git commit -m "${APP_NAME}:${GIT_COMMIT_ID} released" || log_warning "Git commit failed"
-                        git push || log_warning "Git push failed"
+
+                        # Use appropriate authentication method for push with better error handling
+                        if [[ -n "${DOCKER_SSH_KEY:-}" ]]; then
+                            log_info "Pushing via SSH authentication"
+                        if git push 2>&1 | tee /tmp/git-push.log; then
+                                log_success "Git push successful"
+                            else
+                                GIT_ERROR=$(cat /tmp/git-push.log)
+                                log_warning "Git push failed: $GIT_ERROR"
+                            fi
+                        else
+                            log_info "Pushing via HTTPS authentication"
+                            # Ensure token is properly formatted and not empty
+                            if [[ -z "${GITHUB_TOKEN:-${GH_PAT:-}}" ]]; then
+                                log_error "GitHub token not available for HTTPS authentication"
+                                log_warning "Git push skipped - manual push may be required"
+                            else
+                            # Use dedicated origin for pushing with token to avoid interfering with fetch origin
+                            if git remote | grep -q push-origin; then git remote remove push-origin || true; fi
+                            git remote add push-origin "https://x-access-token:${GITHUB_TOKEN:-${GH_PAT:-}}@github.com/${DEVOPS_REPO}.git"
+                            if git push push-origin HEAD:main 2>&1 | tee /tmp/git-push.log; then
+                                    log_success "Git push successful"
+                                else
+                                    GIT_ERROR=$(cat /tmp/git-push.log)
+                                    log_warning "Git push failed: $GIT_ERROR"
+                                    log_info "You may need to push manually: git push"
+                                fi
+                            fi
+                        fi
                     fi
                 fi
                 cd ..
@@ -356,7 +411,75 @@ EOF
             log_success "Database migrations completed"
         fi
 
+        # Note: ArgoCD applications are configured with automated sync
+        # They will automatically detect git changes and sync when repository is updated
+        log_info "ArgoCD applications configured for automated sync - no manual intervention needed"
+
         log_success "Enhanced deployment process completed!"
+
+        # Wait for service URLs and retrieve them
+        if [[ -n "${KUBE_CONFIG:-}" ]]; then
+            log_step "Retrieving service URLs..."
+
+            # Setup kubeconfig
+            mkdir -p ~/.kube
+            echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+            chmod 600 ~/.kube/config
+            export KUBECONFIG=~/.kube/config
+
+            # Check if there are any resources in the namespace first
+            # Use kubectl to count resources without jq dependency - simplified approach
+            if kubectl get all,ingress -n "$NAMESPACE" --ignore-not-found=true -o name >/dev/null 2>&1; then
+                # Count the lines to determine if resources exist
+                NAMESPACE_RESOURCES=$(kubectl get all,ingress -n "$NAMESPACE" --ignore-not-found=true -o name 2>/dev/null | wc -l | tr -d ' ')
+            else
+                NAMESPACE_RESOURCES="0"
+            fi
+
+            if [[ "$NAMESPACE_RESOURCES" == "0" ]]; then
+                log_warning "No resources found in namespace $NAMESPACE yet"
+                log_info "This is normal if ArgoCD applications haven't synced yet"
+                log_info "Please check ArgoCD interface - applications should sync automatically"
+                SERVICE_URLS="Applications are syncing via ArgoCD - check ArgoCD interface for status"
+            else
+                # Wait for ingress to be ready and get URLs
+                SERVICE_URLS=""
+                MAX_WAIT=300  # 5 minutes
+                WAIT_INTERVAL=15  # Increased interval since ArgoCD sync takes time
+
+                for i in $(seq 1 $((MAX_WAIT / WAIT_INTERVAL))); do
+                    log_info "Checking for ingress resources (attempt $i/$((MAX_WAIT / WAIT_INTERVAL)))"
+
+                    # Check if ingress exists and get URLs
+                    INGRESS_INFO=$(kubectl get ingress -n "$NAMESPACE" -o json 2>/dev/null || echo "")
+
+                    if [[ -n "$INGRESS_INFO" && "$INGRESS_INFO" != "No resources found" ]]; then
+                        # Extract URLs from ingress using basic shell commands instead of jq
+                        URLS=$(kubectl get ingress -n "$NAMESPACE" -o jsonpath='{.items[*].spec.rules[*].host}' 2>/dev/null | tr ' ' '\n' | grep -v '^$' | head -5 | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+
+                        if [[ -n "$URLS" ]]; then
+                            SERVICE_URLS="$URLS"
+                            log_success "Service URLs retrieved: $SERVICE_URLS"
+                            break
+                        fi
+                    fi
+
+                    if [[ $i -lt $((MAX_WAIT / WAIT_INTERVAL)) ]]; then
+                        log_info "Waiting ${WAIT_INTERVAL}s before next check..."
+                        sleep $WAIT_INTERVAL
+                    fi
+                done
+
+                if [[ -z "$SERVICE_URLS" ]]; then
+                    log_warning "Could not retrieve service URLs within timeout"
+                    log_info "This may be normal if applications are still syncing"
+                    SERVICE_URLS="Applications are syncing - check ArgoCD interface for application status and URLs"
+                fi
+            fi
+
+            # Export for summary
+            export SERVICE_URLS
+        fi
     fi
 
 else
@@ -388,3 +511,6 @@ fi
 echo "=========================================="
 
 log_success "BengoERP API deployment process completed!"
+
+# Exit with success code - don't fail if service URL retrieval had issues
+exit 0
