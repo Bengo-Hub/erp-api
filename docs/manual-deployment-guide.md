@@ -12,16 +12,28 @@ This phase builds the API container locally and pushes it to your registry, then
 
 ### 0.1 Set environment
 ```bash
-# Choose your image repo and tag
+# Application configuration
+export APP_NAME=erp-api
 export REGISTRY_SERVER=docker.io
 export REGISTRY_NAMESPACE=codevertex
-export APP_NAME=erp-api
 export IMAGE_REPO="$REGISTRY_SERVER/$REGISTRY_NAMESPACE/$APP_NAME"
 export IMAGE_TAG=$(git rev-parse --short=8 HEAD)
+export NAMESPACE=erp
 
-# devops repo info
+# DevOps repository
 export DEVOPS_REPO=https://github.com/Bengo-Hub/devops-k8s.git
 export DEVOPS_DIR=~/devops-k8s
+export VALUES_FILE_PATH="apps/${APP_NAME}/values.yaml"
+
+# REQUIRED for cross-repo push (deploy keys DON'T work)
+export GH_PAT="ghp_..."      # GitHub PAT with repo:write to Bengo-Hub/devops-k8s
+
+# REQUIRED for private registry
+export REGISTRY_USERNAME="codevertex"
+export REGISTRY_PASSWORD="your-registry-token"
+
+# REQUIRED for kubectl operations
+export KUBE_CONFIG="$(cat ~/.kube/config | base64 -w0)"
 ```
 
 ### 0.2 Log in to registry
@@ -36,7 +48,24 @@ docker build -t "$IMAGE_REPO:$IMAGE_TAG" .
 docker push "$IMAGE_REPO:$IMAGE_TAG"
 ```
 
-### 0.4 Update devops-k8s values with new tag
+### 0.4 Create registry pull secret in cluster
+```bash
+# Decode kubeconfig
+mkdir -p ~/.kube
+echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+
+# Create namespace if needed
+kubectl get ns $NAMESPACE >/dev/null 2>&1 || kubectl create ns $NAMESPACE
+
+# Create imagePullSecret for private registry
+kubectl -n $NAMESPACE create secret docker-registry registry-credentials \
+  --docker-server=$REGISTRY_SERVER \
+  --docker-username=$REGISTRY_USERNAME \
+  --docker-password=$REGISTRY_PASSWORD \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+### 0.5 Update devops-k8s values with new tag
 ```bash
 # Clone devops repo if needed
 [ -d "$DEVOPS_DIR" ] || git clone "$DEVOPS_REPO" "$DEVOPS_DIR"
@@ -45,20 +74,27 @@ cd "$DEVOPS_DIR"
 # Ensure yq is installed
 yq --version || (echo "Install yq: https://github.com/mikefarah/yq" && exit 1)
 
-# Update image repo and tag (env-injection)
+# Update image repo, tag, and imagePullSecrets (env-injection)
 IMAGE_REPO="$IMAGE_REPO" IMAGE_TAG="$IMAGE_TAG" \
 yq e -i '.image.repository = env(IMAGE_REPO) | .image.tag = env(IMAGE_TAG)' apps/erp-api/values.yaml
 
-# Commit and push (use GH_PAT/GITHUB_TOKEN with repo write)
+yq e -i '.image.pullSecrets = [{"name":"registry-credentials"}]' apps/erp-api/values.yaml
+
+# Commit and push (MUST use GH_PAT - deploy keys don't work for cross-repo)
 git fetch origin main
 git checkout main || git checkout -b main
 git add apps/erp-api/values.yaml
 git commit -m "erp-api:$IMAGE_TAG released" || echo "No changes to commit"
 git pull --rebase origin main || true
+
+# Set remote with PAT token for push
+git remote set-url origin "https://x-access-token:${GH_PAT}@github.com/Bengo-Hub/devops-k8s.git"
 git push origin HEAD:main
 ```
 
-After pushing, ArgoCD (if configured) will detect the change and sync automatically. You can also trigger sync manually (see Phase 2).
+**Important**: Deploy keys on devops-k8s won't work when pushing from another repo. You MUST use a PAT token with repo:write scope.
+
+After pushing, ArgoCD will detect the change and sync automatically with zero-downtime rolling update.
 
 ### Phase 2: Initial ArgoCD Application Deployment
 ### Phase 3: Application Sync Monitoring
