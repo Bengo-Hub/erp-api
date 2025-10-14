@@ -430,11 +430,31 @@ if [[ "$DEPLOY" == "true" ]]; then
             fi
         fi
 
-        # Database migrations (ensure env secret present before running)
+        # Database migrations (ensure DBs ready and env secret exists before running)
         if [[ "$SETUP_DATABASES" == "true" && -n "${KUBE_CONFIG:-}" ]]; then
             log_step "Running database migrations..."
 
-            # Create migration job
+            # Wait for databases to be ready
+            log_info "Waiting for PostgreSQL to be ready..."
+            kubectl -n "$NAMESPACE" rollout status statefulset/postgresql --timeout=180s || log_warning "PostgreSQL not fully ready"
+            
+            log_info "Waiting for Redis to be ready..."
+            kubectl -n "$NAMESPACE" rollout status statefulset/redis-master --timeout=120s || log_warning "Redis not fully ready"
+            
+            # Verify env secret exists
+            if ! kubectl -n "$NAMESPACE" get secret "$ENV_SECRET_NAME" >/dev/null 2>&1; then
+                log_error "Environment secret ${ENV_SECRET_NAME} not found; cannot run migrations"
+                exit 1
+            fi
+            log_info "Environment secret ${ENV_SECRET_NAME} verified"
+
+            # Create migration job with imagePullSecrets if needed
+            PULL_SECRETS_YAML=""
+            if kubectl -n "$NAMESPACE" get secret registry-credentials >/dev/null 2>&1; then
+                PULL_SECRETS_YAML="      imagePullSecrets:
+      - name: registry-credentials"
+            fi
+
             cat > /tmp/migrate-job.yaml <<EOF
 apiVersion: batch/v1
 kind: Job
@@ -443,16 +463,11 @@ metadata:
   namespace: ${NAMESPACE}
 spec:
   ttlSecondsAfterFinished: 600
+  backoffLimit: 2
   template:
     spec:
       restartPolicy: Never
-      initContainers:
-      - name: wait-env
-        image: busybox:1.36
-        command: ["/bin/sh","-c"]
-        args:
-        - >-
-          for i in $(seq 1 30); do kubectl -n ${NAMESPACE} get secret ${ENV_SECRET_NAME} >/dev/null 2>&1 && exit 0; echo "waiting for env secret..."; sleep 5; done; echo "env secret not found"; exit 1
+${PULL_SECRETS_YAML}
       containers:
       - name: migrate
         image: ${IMAGE_REPO}:${GIT_COMMIT_ID}
