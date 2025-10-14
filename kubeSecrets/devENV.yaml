@@ -51,6 +51,27 @@ stringData:
   FRONTEND_URL: "https://erp.masterspace.co.ke"
 
   # ============================================
+  # MEDIA STORAGE CONFIGURATION (Optional)
+  # ============================================
+  # Option 1: Use S3 for media files (recommended for production multi-replica deployments)
+  # USE_S3: "true"
+  # AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE"
+  # AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  # AWS_STORAGE_BUCKET_NAME: "bengo-erp-media"
+  # AWS_S3_REGION_NAME: "us-east-1"
+  # AWS_S3_CUSTOM_DOMAIN: "media.bengoerp.com"
+  
+  # Option 2: Use PersistentVolume (default, configured in Helm chart)
+  # Media files stored in /app/media mounted via PVC
+  # Good for single-region deployments with ReadWriteMany support
+  MEDIA_ROOT: "/app/media"
+  MEDIA_URL: "/media/"
+
+  # Static files (served by WhiteNoise in-memory, no volume needed)
+  STATIC_ROOT: "/app/staticfiles"
+  STATIC_URL: "/static/"
+
+  # ============================================
   # EMAIL CONFIGURATION (Optional)
   # ============================================
   EMAIL_BACKEND: "django.core.mail.backends.smtp.EmailBackend"

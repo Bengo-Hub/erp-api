@@ -21,6 +21,14 @@ jobs:
     - name: Install DevOps Tools
       uses: Bengo-Hub/devops-k8s/.github/actions/install-devops-tools@main
 
+    - name: Debug available secrets
+      run: |
+        echo "Checking which tokens are available..."
+        [[ -n "${{ secrets.GH_PAT }}" ]] && echo "✅ GH_PAT is set" || echo "❌ GH_PAT not found"
+        [[ -n "${{ secrets.GITHUB_SECRET }}" ]] && echo "✅ GITHUB_SECRET is set" || echo "❌ GITHUB_SECRET not found"
+        [[ -n "${{ secrets.GITHUB_TOKEN }}" ]] && echo "✅ GITHUB_TOKEN is set (default, may lack cross-repo write)" || echo "❌ GITHUB_TOKEN not found"
+        echo "Note: At least GH_PAT or GITHUB_SECRET must be set for cross-repo push to devops-k8s"
+
     - name: Set deployment variables
       run: |
         echo "DEPLOY=true" >> $GITHUB_ENV

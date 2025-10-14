@@ -57,10 +57,15 @@ ENV DJANGO_SETTINGS_MODULE=ProcureProKEAPI.settings \
     PORT=4000 \
     DJANGO_ENV=production
 
-# Static dir (optional)
-RUN mkdir -p /app/staticfiles && chown -R appuser:appgroup /app
+# Create static and media directories
+# Static files are baked into image via collectstatic at runtime (whitenoise serves them)
+# Media files should be persisted via PersistentVolume in production
+RUN mkdir -p /app/staticfiles /app/media && chown -R appuser:appgroup /app
 
 USER appuser
+
+# Volume mount point for media uploads (use PVC in k8s)
+VOLUME ["/app/media"]
 
 EXPOSE 4000
 

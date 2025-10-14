@@ -6,6 +6,7 @@ defusedxml
 distro
 Django
 django-appconf
+django-storages[s3]
 django-apscheduler
 django-compressor
 django-cors-headers
