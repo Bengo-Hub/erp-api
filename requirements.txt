@@ -191,3 +191,6 @@ whitenoise
 win32_setctime
 yarl
 zipp
+boto3
+fcm-django
+apns2

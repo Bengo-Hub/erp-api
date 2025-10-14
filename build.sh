@@ -237,6 +237,11 @@ if [[ "$DEPLOY" == "true" ]]; then
                         # Avoid immutable spec updates: reuse existing chart values on upgrade
                         if helm -n "$NAMESPACE" status postgresql >/dev/null 2>&1; then
                             log_info "PostgreSQL release exists; performing safe upgrade with --reuse-values"
+                            # Patch existing secret to include 'password' key if missing (compat with newer chart)
+                            EXISTING_PG_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+                            if [[ -n "$EXISTING_PG_PASS" ]]; then
+                                kubectl -n "$NAMESPACE" patch secret postgresql --type merge -p "{\"stringData\":{\"password\":\"$EXISTING_PG_PASS\"}}" 2>/dev/null || true
+                            fi
                             helm upgrade postgresql bitnami/postgresql -n "$NAMESPACE" \
                                 --reuse-values \
                                 --wait --timeout=600s || log_warning "PostgreSQL safe upgrade failed"
@@ -371,10 +376,10 @@ if [[ "$DEPLOY" == "true" ]]; then
 
                         # Use appropriate authentication method for push with better error handling
                         # Prefer HTTPS token if available; fallback to SSH
-                        if [[ -n "${GITHUB_TOKEN:-${GH_PAT:-}}" ]]; then
+                        if [[ -n "${GH_PAT:-${GITHUB_TOKEN:-}}" ]]; then
                             log_info "Pushing via HTTPS authentication"
                             if git remote | grep -q push-origin; then git remote remove push-origin || true; fi
-                            git remote add push-origin "https://x-access-token:${GITHUB_TOKEN:-${GH_PAT:-}}@github.com/${DEVOPS_REPO}.git"
+                            git remote add push-origin "https://x-access-token:${GH_PAT:-${GITHUB_TOKEN:-}}@github.com/${DEVOPS_REPO}.git"
                             if git push push-origin HEAD:main 2>&1 | tee /tmp/git-push.log; then
                                 log_success "Git push successful"
                             else
