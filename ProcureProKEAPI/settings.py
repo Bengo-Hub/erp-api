@@ -395,7 +395,7 @@ LOCALE_PATHS = [
 ]
 # CORS configuration - comprehensive setup for development
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', default=[
+_raw_cors = env_list('CORS_ALLOWED_ORIGINS', default=[
     'http://127.0.0.1:5173',
     'http://localhost:5173',
     'http://127.0.0.1:3000',
@@ -405,17 +405,27 @@ CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', default=[
     'http://127.0.0.1:4173',
     'http://localhost:4173',
 ])
+# Split into explicit origins (must include scheme) and wildcard patterns handled via regex
+CORS_ALLOWED_ORIGINS = [o for o in _raw_cors if '://' in o]
+CORS_ALLOWED_ORIGIN_REGEXES = []
+for o in _raw_cors:
+    if '://' in o:
+        continue
+    # Handle wildcard like *.example.com
+    if o.startswith('*.'):
+        domain = o[2:].replace('.', '\\.')
+        CORS_ALLOWED_ORIGIN_REGEXES.append(rf'^https?://([^.]+\.)*{domain}$')
+    elif o:
+        dom = o.replace('.', '\\.')
+        CORS_ALLOWED_ORIGIN_REGEXES.append(rf'^https?://{dom}$')
 
 # CSRF trusted origins for frontend
 CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', default=[
+    'https://erp.masterspace.co.ke',
     'http://127.0.0.1:5173',
     'http://localhost:5173',
     'http://127.0.0.1:3000',
     'http://localhost:3000',
-    'http://127.0.0.1:8080',
-    'http://localhost:8080',
-    'http://127.0.0.1:4173',
-    'http://localhost:4173',
 ])
 
 # Allow all methods including OPTIONS for preflight
