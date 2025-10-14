@@ -267,12 +267,33 @@ if [[ "$DEPLOY" == "true" ]]; then
                 esac
             done
 
-            # Create environment secret with database URLs
-            if [[ -n "${POSTGRES_PASSWORD:-}" ]]; then
-                DB_NAME="${PG_DATABASE:-bengo_erp}"
-                kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" \
-                    --from-literal=DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${DB_NAME}" \
-                    --dry-run=client -o yaml | kubectl apply -f - || log_warning "Failed to create DB secret"
+            # Ensure DB & Redis are ready; retrieve credentials from existing secrets
+            kubectl -n "$NAMESPACE" rollout status statefulset/postgresql --timeout=180s || true
+            # Prefer application user (erp_user) over admin for DATABASE_URL
+            APP_DB_USER="erp_user"
+            APP_DB_NAME="${PG_DATABASE:-bengo_erp}"
+            APP_DB_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || true)
+            if [[ -z "$APP_DB_PASS" ]]; then
+              # Fallback to admin if app user password not present
+              APP_DB_USER="postgres"
+              APP_DB_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+            fi
+            REDIS_PASS=$(kubectl -n "$NAMESPACE" get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
+
+            SECRET_ARGS=()
+            if [[ -n "$APP_DB_PASS" ]]; then
+              SECRET_ARGS+=(--from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}")
+            fi
+            if [[ -n "$REDIS_PASS" ]]; then
+              SECRET_ARGS+=(--from-literal=REDIS_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
+              SECRET_ARGS+=(--from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
+              SECRET_ARGS+=(--from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1")
+            fi
+            if [[ ${#SECRET_ARGS[@]} -gt 0 ]]; then
+              kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" "${SECRET_ARGS[@]}" \
+                --dry-run=client -o yaml | kubectl apply -f - || log_warning "Failed to create/update env secret"
+            else
+              log_warning "Could not resolve DB/Redis credentials; skipping secret update"
             fi
 
             log_success "Database setup completed"
@@ -323,6 +344,12 @@ if [[ "$DEPLOY" == "true" ]]; then
 
             # Clone or update devops-k8s repo into DEVOPS_DIR using token when available
             TOKEN="${GH_PAT:-${GITHUB_TOKEN:-}}"
+            ORIGIN_REPO="${GITHUB_REPOSITORY:-}"
+            if [[ -n "$ORIGIN_REPO" && "$DEVOPS_REPO" != "$ORIGIN_REPO" && -z "${GH_PAT:-}" ]]; then
+                log_error "GH_PAT is required to push to ${DEVOPS_REPO} from ${ORIGIN_REPO}."
+                log_error "Add a repository secret GH_PAT with repo:write on ${DEVOPS_REPO}."
+                exit 1
+            fi
             CLONE_URL="https://github.com/${DEVOPS_REPO}.git"
             [[ -n "$TOKEN" ]] && CLONE_URL="https://x-access-token:${TOKEN}@github.com/${DEVOPS_REPO}.git"
             if [[ ! -d "$DEVOPS_DIR" ]]; then
@@ -361,7 +388,7 @@ if [[ "$DEPLOY" == "true" ]]; then
             fi
         fi
 
-        # Database migrations (moved from reusable workflow)
+        # Database migrations (ensure env secret present before running)
         if [[ "$SETUP_DATABASES" == "true" && -n "${KUBE_CONFIG:-}" ]]; then
             log_step "Running database migrations..."
 
@@ -377,6 +404,13 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      initContainers:
+      - name: wait-env
+        image: busybox:1.36
+        command: ["/bin/sh","-c"]
+        args:
+        - >-
+          for i in $(seq 1 30); do kubectl -n ${NAMESPACE} get secret ${ENV_SECRET_NAME} >/dev/null 2>&1 && exit 0; echo "waiting for env secret..."; sleep 5; done; echo "env secret not found"; exit 1
       containers:
       - name: migrate
         image: ${IMAGE_REPO}:${GIT_COMMIT_ID}
