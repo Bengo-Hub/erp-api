@@ -482,15 +482,22 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'ProcurePro API',
     'VERSION': '1.0.0',
 }
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")#hosting
-STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),)#local
-MEDIA_URL = '/media/'  # This is just for url i.e https://l.me/media/l.jpg
-# This is the folder the image will be uploaded
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+STATIC_URL = os.getenv('STATIC_URL', "/static/")
+STATIC_ROOT = os.getenv('STATIC_ROOT', os.path.join(BASE_DIR, "staticfiles"))
+
+# Only include STATICFILES_DIRS if the directory exists (dev mode)
+_static_dev_dir = os.path.join(BASE_DIR, "static")
+STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),) if os.path.isdir(_static_dev_dir) else ()
+
+# Media files configuration
+# In production, use S3/CDN or shared PersistentVolume
+# In development, use local directory
+MEDIA_URL = os.getenv('MEDIA_URL', '/media/')
+MEDIA_ROOT = os.getenv('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -550,23 +557,31 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CDN and Image Optimization Configuration
 CDN_CONFIG = {
-    'ENABLED': os.environ.get('CDN_ENABLED', 'False').lower() == 'true',
-    'PROVIDER': os.environ.get('CDN_PROVIDER', 'cloudfront'),  # cloudfront, cloudinary, imagekit
-    'DOMAIN': os.environ.get('CDN_DOMAIN', 'localhost'),
-    'SECURE': os.environ.get('CDN_SECURE', 'True').lower() == 'true',
+    'ENABLED': env_bool('CDN_ENABLED', default=False),
+    'PROVIDER': os.getenv('CDN_PROVIDER', 'cloudfront'),  # cloudfront, cloudinary, imagekit
+    'DOMAIN': os.getenv('CDN_DOMAIN', ''),
+    'SECURE': env_bool('CDN_SECURE', default=True),
 }
 
-# AWS S3 Configuration for CDN
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
-AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'us-east-1')
-AWS_S3_CUSTOM_DOMAIN = os.environ.get('AWS_S3_CUSTOM_DOMAIN', '')
+# AWS S3 Configuration for CDN and Media Storage
+# Enable S3 for media files in production by setting USE_S3=true
+USE_S3 = env_bool('USE_S3', default=False)
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', '')
+AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', '')
+AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN', '')
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
-AWS_DEFAULT_ACL = 'public-read'
-AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL = os.getenv('AWS_DEFAULT_ACL', 'public-read')
+AWS_QUERYSTRING_AUTH = env_bool('AWS_QUERYSTRING_AUTH', default=False)
+
+# Use S3 for media storage if configured
+if USE_S3 and AWS_STORAGE_BUCKET_NAME:
+    # Requires django-storages: pip install django-storages[s3]
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN or f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"}/'
 
 # CloudFront Configuration
 CLOUDFRONT_DOMAIN = os.environ.get('CLOUDFRONT_DOMAIN', '')
