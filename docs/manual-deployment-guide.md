@@ -45,16 +45,16 @@ cd "$DEVOPS_DIR"
 # Ensure yq is installed
 yq --version || (echo "Install yq: https://github.com/mikefarah/yq" && exit 1)
 
-# Update image repo and tag
-yq -yi \
-  ".image.repository = \"$IMAGE_REPO\" | .image.tag = \"$IMAGE_TAG\"" \
-  apps/erp-api/values.yaml
+# Update image repo and tag (env-injection)
+IMAGE_REPO="$IMAGE_REPO" IMAGE_TAG="$IMAGE_TAG" \
+yq e -i '.image.repository = env(IMAGE_REPO) | .image.tag = env(IMAGE_TAG)' apps/erp-api/values.yaml
 
-# Commit and push
+# Commit and push (use GH_PAT/GITHUB_TOKEN with repo write)
+git fetch origin main
 git checkout main || git checkout -b main
-git pull --rebase || true
 git add apps/erp-api/values.yaml
-git commit -m "erp-api:$IMAGE_TAG released"
+git commit -m "erp-api:$IMAGE_TAG released" || echo "No changes to commit"
+git pull --rebase origin main || true
 git push origin HEAD:main
 ```
 

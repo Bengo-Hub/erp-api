@@ -37,7 +37,7 @@ log_debug()   { echo -e "${CYAN}[DEBUG]${NC} $1"; }
 
 # Application configuration
 APP_NAME="erp-api"
-DEPLOY=${DEPLOY:-false}
+DEPLOY=${DEPLOY:-true}
 SETUP_DATABASES=${SETUP_DATABASES:-true}
 DB_TYPES=${DB_TYPES:-postgres,redis}
 NAMESPACE=${NAMESPACE:-erp}
@@ -53,6 +53,7 @@ IMAGE_REPO="${REGISTRY_SERVER}/${REGISTRY_NAMESPACE}/${APP_NAME}"
 
 # DevOps repository
 DEVOPS_REPO="Bengo-Hub/devops-k8s"
+DEVOPS_DIR=${DEVOPS_DIR:-"$HOME/devops-k8s"}
 VALUES_FILE_PATH="apps/erp-api/values.yaml"
 
 # Git configuration
@@ -320,86 +321,42 @@ if [[ "$DEPLOY" == "true" ]]; then
         if [[ -n "${KUBE_CONFIG:-}" ]]; then
             log_step "Updating Helm values..."
 
-            # Clone or update devops-k8s repo
-            if [[ ! -d "devops-k8s" ]]; then
-                # Try SSH first, fallback to HTTPS if SSH fails
-                if [[ -n "${DOCKER_SSH_KEY:-}" ]]; then
-                    log_info "Attempting SSH authentication for git operations"
-                    if git clone "git@github.com:${DEVOPS_REPO}.git" devops-k8s 2>/dev/null; then
-                        log_success "SSH clone successful"
-                    else
-                        log_warning "SSH clone failed, trying HTTPS authentication"
-                        git clone "https://${GITHUB_TOKEN:-${GH_PAT:-}}@github.com/${DEVOPS_REPO}.git" devops-k8s || {
-                            log_error "Failed to clone devops-k8s repository"
-                            exit 1
-                        }
-                    fi
-                else
-                    log_info "Using HTTPS authentication for git operations"
-                    git clone "https://${GITHUB_TOKEN:-${GH_PAT:-}}@github.com/${DEVOPS_REPO}.git" devops-k8s || {
-                        log_error "Failed to clone devops-k8s repository"
-                        exit 1
-                    }
-                fi
+            # Clone or update devops-k8s repo into DEVOPS_DIR using token when available
+            TOKEN="${GH_PAT:-${GITHUB_TOKEN:-}}"
+            CLONE_URL="https://github.com/${DEVOPS_REPO}.git"
+            [[ -n "$TOKEN" ]] && CLONE_URL="https://x-access-token:${TOKEN}@github.com/${DEVOPS_REPO}.git"
+            if [[ ! -d "$DEVOPS_DIR" ]]; then
+                log_info "Cloning devops repo into $DEVOPS_DIR"
+                git clone "$CLONE_URL" "$DEVOPS_DIR" || { log_error "Failed to clone devops-k8s"; exit 1; }
             fi
 
-            if [[ -d "devops-k8s" ]]; then
-                cd devops-k8s
+            if [[ -d "$DEVOPS_DIR" ]]; then
+                cd "$DEVOPS_DIR"
                 git config user.name "$GIT_USER"
                 git config user.email "$GIT_EMAIL"
 
-                # Pull latest changes
-                git pull --rebase || log_warning "Git pull failed"
+                git fetch origin main || true
+                git checkout main || git checkout -b main
 
-                # Update values file
                 if [[ -f "$VALUES_FILE_PATH" ]]; then
-                    # Update both the values.yaml file and the ArgoCD application manifest
-                    yq eval '.image.repository = "'${IMAGE_REPO}'" | .image.tag = "'${GIT_COMMIT_ID}'"' "$VALUES_FILE_PATH" -i
-
-                    # If registry credentials exist, ensure image pull secret is referenced in Helm values
+                    IMAGE_REPO_ENV="$IMAGE_REPO" IMAGE_TAG_ENV="$GIT_COMMIT_ID" \
+                    yq e -i '.image.repository = env(IMAGE_REPO_ENV) | .image.tag = env(IMAGE_TAG_ENV)' "$VALUES_FILE_PATH"
                     if [[ -n "${REGISTRY_USERNAME:-}" && -n "${REGISTRY_PASSWORD:-}" ]]; then
-                        yq eval '.image.pullSecrets = [{"name":"registry-credentials"}]' -i "$VALUES_FILE_PATH"
+                        yq e -i '.image.pullSecrets = [{"name":"registry-credentials"}]' "$VALUES_FILE_PATH"
                     fi
-
-                    # Update the ArgoCD application manifest with the new image tag
-                    if [[ -f "apps/erp-api/app.yaml" ]]; then
-                        # Use yq to update the image tag in the ArgoCD application
-                        yq eval '(.spec.source.helm.values | select(. != null) | .image.tag) = "'${GIT_COMMIT_ID}'"' "apps/erp-api/app.yaml" -i
-                    fi
-
-                    if git diff --quiet HEAD "$VALUES_FILE_PATH" || [[ -f "apps/erp-api/app.yaml" && $(git diff --quiet HEAD "apps/erp-api/app.yaml") ]]; then
-                        log_info "No changes to commit"
+                    git add "$VALUES_FILE_PATH"
+                    git commit -m "${APP_NAME}:${GIT_COMMIT_ID} released" || echo "No changes to commit"
+                    git pull --rebase origin main || true
+                    if [[ -z "$TOKEN" ]]; then
+                        log_error "No GitHub token (GH_PAT/GITHUB_TOKEN) available for devops-k8s push"
+                        log_warning "Skipping git push; set GH_PAT with repo write perms to Bengo-Hub/devops-k8s"
                     else
-                        git add "$VALUES_FILE_PATH"
-                        [[ -f "apps/erp-api/app.yaml" ]] && git add "apps/erp-api/app.yaml"
-                        git commit -m "${APP_NAME}:${GIT_COMMIT_ID} released" || log_warning "Git commit failed"
-
-                        # Use appropriate authentication method for push with better error handling
-                        # Prefer HTTPS token if available; fallback to SSH
-                        if [[ -n "${GH_PAT:-${GITHUB_TOKEN:-}}" ]]; then
-                            log_info "Pushing via HTTPS authentication"
-                            if git remote | grep -q push-origin; then git remote remove push-origin || true; fi
-                            git remote add push-origin "https://x-access-token:${GH_PAT:-${GITHUB_TOKEN:-}}@github.com/${DEVOPS_REPO}.git"
-                            if git push push-origin HEAD:main 2>&1 | tee /tmp/git-push.log; then
-                                log_success "Git push successful"
-                            else
-                                GIT_ERROR=$(cat /tmp/git-push.log)
-                                log_warning "Git push failed: $GIT_ERROR"
-                            fi
-                        elif [[ -n "${DOCKER_SSH_KEY:-}" ]]; then
-                            log_info "Pushing via SSH authentication"
-                            if git push 2>&1 | tee /tmp/git-push.log; then
-                                log_success "Git push successful"
-                            else
-                                GIT_ERROR=$(cat /tmp/git-push.log)
-                                log_warning "Git push failed: $GIT_ERROR"
-                            fi
-                        else
-                            log_warning "No credentials found for git push; skipping automatic push"
-                        fi
+                        if git remote | grep -q push-origin; then git remote remove push-origin || true; fi
+                        git remote add push-origin "https://x-access-token:${TOKEN}@github.com/${DEVOPS_REPO}.git"
+                        git push push-origin HEAD:main || log_warning "Git push failed"
                     fi
                 fi
-                cd ..
+                cd - >/dev/null 2>&1 || true
                 log_success "Helm values updated"
             fi
         fi
