@@ -70,9 +70,10 @@ jobs:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         PROVIDER: contabo
         CONTABO_API: true
-        # Database secrets
+        # Database secrets and configuration
         POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+        PG_DATABASE: bengo_erp
         # Contabo secrets
         CONTABO_CLIENT_ID: ${{ secrets.CONTABO_CLIENT_ID }}
         CONTABO_CLIENT_SECRET: ${{ secrets.CONTABO_CLIENT_SECRET }}
