@@ -42,6 +42,7 @@ jobs:
         # Use GH token for HTTPS auth fallback in build.sh
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_PAT: ${{ secrets.GH_PAT }}
+        GITHUB_SECRET: ${{ secrets.GITHUB_SECRET }}
         REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
         REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         GITHUB_SHA: ${{ github.sha }}

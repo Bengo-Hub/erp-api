@@ -343,11 +343,11 @@ if [[ "$DEPLOY" == "true" ]]; then
             log_step "Updating Helm values..."
 
             # Clone or update devops-k8s repo into DEVOPS_DIR using token when available
-            TOKEN="${GH_PAT:-${GITHUB_TOKEN:-}}"
+            TOKEN="${GH_PAT:-${GITHUB_TOKEN:-${GITHUB_SECRET:-}}}"
             ORIGIN_REPO="${GITHUB_REPOSITORY:-}"
-            if [[ -n "$ORIGIN_REPO" && "$DEVOPS_REPO" != "$ORIGIN_REPO" && -z "${GH_PAT:-}" ]]; then
-                log_error "GH_PAT is required to push to ${DEVOPS_REPO} from ${ORIGIN_REPO}."
-                log_error "Add a repository secret GH_PAT with repo:write on ${DEVOPS_REPO}."
+            if [[ -n "$ORIGIN_REPO" && "$DEVOPS_REPO" != "$ORIGIN_REPO" && -z "$TOKEN" ]]; then
+                log_error "A GitHub token is required to push to ${DEVOPS_REPO} from ${ORIGIN_REPO}."
+                log_error "Add a repository/org secret GH_PAT (preferred) or set GITHUB_SECRET/GITHUB_TOKEN with repo:write on ${DEVOPS_REPO}."
                 exit 1
             fi
             CLONE_URL="https://github.com/${DEVOPS_REPO}.git"
@@ -375,8 +375,8 @@ if [[ "$DEPLOY" == "true" ]]; then
                     git commit -m "${APP_NAME}:${GIT_COMMIT_ID} released" || echo "No changes to commit"
                     git pull --rebase origin main || true
                     if [[ -z "$TOKEN" ]]; then
-                        log_error "No GitHub token (GH_PAT/GITHUB_TOKEN) available for devops-k8s push"
-                        log_warning "Skipping git push; set GH_PAT with repo write perms to Bengo-Hub/devops-k8s"
+                        log_error "No GitHub token (GH_PAT/GITHUB_TOKEN/GITHUB_SECRET) available for devops-k8s push"
+                        log_warning "Skipping git push; set GH_PAT (preferred) with repo write perms to Bengo-Hub/devops-k8s"
                     else
                         if git remote | grep -q push-origin; then git remote remove push-origin || true; fi
                         git remote add push-origin "https://x-access-token:${TOKEN}@github.com/${DEVOPS_REPO}.git"
