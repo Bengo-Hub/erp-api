@@ -125,17 +125,30 @@ if [[ -n "${DOCKER_SSH_KEY:-}" ]]; then
     ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
 
     # For CI/CD environments, try non-interactive SSH key addition
-    # Use DISPLAY and SSH_ASKPASS to avoid passphrase prompts
     if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
         log_info "Running in CI/CD environment, using non-interactive SSH setup"
 
-        # Try to add key with passphrase "codevertex"
-        if echo "codevertex" | SSH_ASKPASS=/bin/echo ssh-add ~/.ssh/id_rsa 2>/dev/null; then
+        # Start ssh-agent
+        eval "$(ssh-agent -s)" >/dev/null 2>&1
+        
+        # Create wrapper script for SSH_ASKPASS
+        cat > /tmp/ssh-askpass.sh << 'EOF'
+#!/bin/sh
+echo "codevertex"
+EOF
+        chmod +x /tmp/ssh-askpass.sh
+        
+        # Add key with passphrase using SSH_ASKPASS
+        export SSH_ASKPASS=/tmp/ssh-askpass.sh
+        export SSH_ASKPASS_REQUIRE=force
+        export DISPLAY=:0
+        
+        if setsid ssh-add ~/.ssh/id_rsa < /dev/null >/dev/null 2>&1; then
             SSH_CONFIGURED=true
-            log_success "SSH configured for Docker build"
+            log_success "SSH configured for Docker build with passphrase"
         else
-            log_warning "SSH key passphrase incorrect or failed to add to agent, building without SSH"
-            rm -f ~/.ssh/id_rsa
+            log_warning "SSH key add failed, building without SSH (this is normal if key has no passphrase)"
+            rm -f ~/.ssh/id_rsa /tmp/ssh-askpass.sh
             SSH_CONFIGURED=false
         fi
     else
@@ -343,12 +356,41 @@ if [[ "$DEPLOY" == "true" ]]; then
             log_step "Updating Helm values..."
 
             # Clone or update devops-k8s repo into DEVOPS_DIR using token when available
-            TOKEN="${GH_PAT:-${GITHUB_TOKEN:-${GITHUB_SECRET:-}}}"
+            TOKEN="${GH_PAT:-${GITHUB_SECRET:-${GITHUB_TOKEN:-}}}"
             ORIGIN_REPO="${GITHUB_REPOSITORY:-}"
-            if [[ -n "$ORIGIN_REPO" && "$DEVOPS_REPO" != "$ORIGIN_REPO" && -z "$TOKEN" ]]; then
-                log_error "A GitHub token is required to push to ${DEVOPS_REPO} from ${ORIGIN_REPO}."
-                log_error "Add a repository/org secret GH_PAT (preferred) or set GITHUB_SECRET/GITHUB_TOKEN with repo:write on ${DEVOPS_REPO}."
-                exit 1
+            
+            # Debug: log which token source is being used (without revealing value)
+            if [[ -n "${GH_PAT:-}" ]]; then
+                log_info "Using GH_PAT for git operations"
+            elif [[ -n "${GITHUB_SECRET:-}" ]]; then
+                log_info "Using GITHUB_SECRET for git operations"
+            elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
+                log_info "Using GITHUB_TOKEN for git operations (may lack cross-repo write)"
+            else
+                log_warning "No GitHub token found"
+            fi
+            
+            # For cross-repo pushes, we REQUIRE a PAT (deploy keys and GITHUB_TOKEN don't work)
+            if [[ -n "$ORIGIN_REPO" && "$DEVOPS_REPO" != "$ORIGIN_REPO" ]]; then
+                if [[ -z "${GH_PAT:-${GITHUB_SECRET:-}}" ]]; then
+                    log_error "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    log_error "CRITICAL: GH_PAT or GITHUB_SECRET required for cross-repo push"
+                    log_error "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    log_error "You are pushing from: ${ORIGIN_REPO}"
+                    log_error "         to repository: ${DEVOPS_REPO}"
+                    log_error ""
+                    log_error "Default GITHUB_TOKEN does NOT have cross-repo write access."
+                    log_error "Deploy keys also do NOT work for pushing to other repos."
+                    log_error ""
+                    log_error "ACTION REQUIRED:"
+                    log_error "1. Create a Personal Access Token (PAT) at:"
+                    log_error "   https://github.com/settings/tokens/new"
+                    log_error "2. Select scope: 'repo' (full control)"
+                    log_error "3. Add as repository secret named 'GH_PAT' or 'GITHUB_SECRET'"
+                    log_error "4. Re-run this workflow"
+                    log_error "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    exit 1
+                fi
             fi
             CLONE_URL="https://github.com/${DEVOPS_REPO}.git"
             [[ -n "$TOKEN" ]] && CLONE_URL="https://x-access-token:${TOKEN}@github.com/${DEVOPS_REPO}.git"
