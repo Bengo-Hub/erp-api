@@ -282,31 +282,61 @@ if [[ "$DEPLOY" == "true" ]]; then
 
             # Ensure DB & Redis are ready; retrieve credentials from existing secrets
             kubectl -n "$NAMESPACE" rollout status statefulset/postgresql --timeout=180s || true
-            # Prefer application user (erp_user) over admin for DATABASE_URL
-            APP_DB_USER="erp_user"
+            
+            # Bitnami PostgreSQL chart creates secrets with these keys:
+            # - postgres-password: superuser password
+            # - password: application user password (if custom user created)
+            # We need to use the postgres user since that's what's configured by default
+            
+            APP_DB_USER="postgres"
             APP_DB_NAME="${PG_DATABASE:-bengo_erp}"
-            APP_DB_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.password}' 2>/dev/null | base64 -d || true)
-            if [[ -z "$APP_DB_PASS" ]]; then
-              # Fallback to admin if app user password not present
-              APP_DB_USER="postgres"
-              APP_DB_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+            
+            # Try to get the postgres password from the secret
+            APP_DB_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+            
+            # If postgres-password doesn't exist, try to read from env var used during install
+            if [[ -z "$APP_DB_PASS" && -n "${POSTGRES_PASSWORD:-}" ]]; then
+                log_info "Using POSTGRES_PASSWORD from environment"
+                APP_DB_PASS="$POSTGRES_PASSWORD"
             fi
+            
+            # Get Redis password
             REDIS_PASS=$(kubectl -n "$NAMESPACE" get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
+            if [[ -z "$REDIS_PASS" && -n "${REDIS_PASSWORD:-}" ]]; then
+                log_info "Using REDIS_PASSWORD from environment"
+                REDIS_PASS="$REDIS_PASSWORD"
+            fi
+
+            log_info "Database credentials retrieved: user=${APP_DB_USER}, db=${APP_DB_NAME}, pass_set=${APP_DB_PASS:+yes}"
+            log_info "Redis credentials retrieved: pass_set=${REDIS_PASS:+yes}"
 
             SECRET_ARGS=()
             if [[ -n "$APP_DB_PASS" ]]; then
               SECRET_ARGS+=(--from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}")
+              SECRET_ARGS+=(--from-literal=DB_HOST="postgresql.${NAMESPACE}.svc.cluster.local")
+              SECRET_ARGS+=(--from-literal=DB_PORT="5432")
+              SECRET_ARGS+=(--from-literal=DB_NAME="${APP_DB_NAME}")
+              SECRET_ARGS+=(--from-literal=DB_USER="${APP_DB_USER}")
+              SECRET_ARGS+=(--from-literal=DB_PASSWORD="${APP_DB_PASS}")
+            else
+              log_error "Failed to retrieve PostgreSQL password!"
             fi
             if [[ -n "$REDIS_PASS" ]]; then
               SECRET_ARGS+=(--from-literal=REDIS_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
               SECRET_ARGS+=(--from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
               SECRET_ARGS+=(--from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1")
+              SECRET_ARGS+=(--from-literal=REDIS_HOST="redis-master.${NAMESPACE}.svc.cluster.local")
+              SECRET_ARGS+=(--from-literal=REDIS_PORT="6379")
+              SECRET_ARGS+=(--from-literal=REDIS_PASSWORD="${REDIS_PASS}")
             fi
             if [[ ${#SECRET_ARGS[@]} -gt 0 ]]; then
+              log_info "Updating ${ENV_SECRET_NAME} secret with database credentials..."
               kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" "${SECRET_ARGS[@]}" \
-                --dry-run=client -o yaml | kubectl apply -f - || log_warning "Failed to create/update env secret"
+                --dry-run=client -o yaml | kubectl apply -f - || log_error "Failed to create/update env secret"
+              log_success "Environment secret updated with DB credentials"
             else
-              log_warning "Could not resolve DB/Redis credentials; skipping secret update"
+              log_error "Could not resolve DB/Redis credentials; migrations will fail!"
+              exit 1
             fi
 
             log_success "Database setup completed"
