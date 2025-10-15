@@ -25,6 +25,9 @@ export DEVOPS_REPO=https://github.com/Bengo-Hub/devops-k8s.git
 export DEVOPS_DIR=~/devops-k8s
 export VALUES_FILE_PATH="apps/${APP_NAME}/values.yaml"
 
+# Kubernetes secret for application environment (used by migrations and runtime)
+export ENV_SECRET_NAME=erp-api-env
+
 # REQUIRED for cross-repo push (deploy keys DON'T work)
 export GH_PAT="ghp_..."      # GitHub PAT with repo:write to Bengo-Hub/devops-k8s
 
@@ -46,6 +49,15 @@ docker login $REGISTRY_SERVER
 # From the API project root
 docker build -t "$IMAGE_REPO:$IMAGE_TAG" .
 docker push "$IMAGE_REPO:$IMAGE_TAG"
+```
+
+### 0.3.1 Security scans (optional but recommended)
+```bash
+# Filesystem scan (Trivy)
+trivy fs . --exit-code 0 --format table --skip-files "localhost*.pem,*.key,*.crt"
+
+# Image scan (respects .trivyignore when present)
+trivy image "$IMAGE_REPO:$IMAGE_TAG" --exit-code 0 --format table --ignorefile .trivyignore
 ```
 
 ### 0.4 Create registry pull secret in cluster
@@ -95,6 +107,70 @@ git push origin HEAD:main
 **Important**: Deploy keys on devops-k8s won't work when pushing from another repo. You MUST use a PAT token with repo:write scope.
 
 After pushing, ArgoCD will detect the change and sync automatically with zero-downtime rolling update.
+
+### 0.6 Optional: Database setup (PostgreSQL and Redis)
+```bash
+# Ensure namespace exists
+kubectl get ns $NAMESPACE >/dev/null 2>&1 || kubectl create ns $NAMESPACE
+
+# Add/update Helm repos
+helm repo add bitnami https://charts.bitnami.com/bitnami || true
+helm repo update
+
+# Set required passwords (if not already exported)
+export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-"change-me-strong"}
+export REDIS_PASSWORD=${REDIS_PASSWORD:-"change-me-strong"}
+export PG_DATABASE=${PG_DATABASE:-bengo_erp}
+
+# Install/upgrade PostgreSQL
+helm upgrade --install postgresql bitnami/postgresql -n $NAMESPACE \
+  --set global.postgresql.auth.postgresPassword="$POSTGRES_PASSWORD" \
+  --set global.postgresql.auth.database="$PG_DATABASE" \
+  --wait --timeout=600s
+
+# Install/upgrade Redis
+helm upgrade --install redis bitnami/redis -n $NAMESPACE \
+  --set global.redis.password="$REDIS_PASSWORD" \
+  --wait --timeout=300s
+
+# Create/update app env secret with DB/Redis URLs
+kubectl -n $NAMESPACE create secret generic $ENV_SECRET_NAME \
+  --from-literal=DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${PG_DATABASE}" \
+  --from-literal=REDIS_URL="redis://:${REDIS_PASSWORD}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0" \
+  --from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASSWORD}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0" \
+  --from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASSWORD}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+### 0.7 Run database migrations (manual job)
+```bash
+SHORT_TAG=${IMAGE_TAG}
+cat > /tmp/migrate-job.yaml <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: erp-migrate-${SHORT_TAG}
+  namespace: ${NAMESPACE}
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: migrate
+        image: ${IMAGE_REPO}:${SHORT_TAG}
+        command: ["python", "manage.py", "migrate"]
+        envFrom:
+        - secretRef:
+            name: ${ENV_SECRET_NAME}
+EOF
+
+kubectl apply -f /tmp/migrate-job.yaml
+kubectl wait --for=condition=complete job/erp-migrate-${SHORT_TAG} -n ${NAMESPACE} --timeout=300s || {
+  echo "Migration job logs:" && kubectl logs job/erp-migrate-${SHORT_TAG} -n ${NAMESPACE} || true
+  exit 1
+}
+```
 
 ### Phase 2: Initial ArgoCD Application Deployment
 ### Phase 3: Application Sync Monitoring
@@ -167,6 +243,8 @@ kubectl apply -f apps/erp-ui/app.yaml -n argocd
 # Verify applications were created
 kubectl get applications.argoproj.io -n argocd
 ```
+
+Note: The ArgoCD application `apps/erp-api/app.yaml` uses `helm.valueFiles` to reference `apps/erp-api/values.yaml`. This enables automated updates of image tags by CI/CD.
 
 **Expected Output:**
 ```bash
