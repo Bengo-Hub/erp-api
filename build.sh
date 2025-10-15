@@ -653,16 +653,39 @@ EOF
 
             set +e
             kubectl apply -f /tmp/migrate-job.yaml
-            kubectl wait --for=condition=complete job/${APP_NAME}-migrate-${GIT_COMMIT_ID} -n ${NAMESPACE} --timeout=300s
-            JOB_STATUS=$?
-            kubectl logs job/${APP_NAME}-migrate-${GIT_COMMIT_ID} -n ${NAMESPACE} --tail=200 || true
-            if [[ $JOB_STATUS -ne 0 ]]; then
-                log_error "Migration job failed or timed out"
-                MIGRATE_POD=$(kubectl get pods -n ${NAMESPACE} -l job-name=${APP_NAME}-migrate-${GIT_COMMIT_ID} -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-                if [[ -n "$MIGRATE_POD" ]]; then
-                  kubectl logs -n ${NAMESPACE} "$MIGRATE_POD" --tail=200 || true
-                fi
-                exit 1
+            
+            # Stream logs in real-time while waiting for job
+            log_info "Streaming migration logs (waiting for pod to start)..."
+            for i in {1..30}; do
+              MIGRATE_POD=$(kubectl get pods -n ${NAMESPACE} -l job-name=${APP_NAME}-migrate-${GIT_COMMIT_ID} -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+              if [[ -n "$MIGRATE_POD" ]]; then
+                log_info "Migration pod started: $MIGRATE_POD"
+                break
+              fi
+              sleep 2
+            done
+            
+            if [[ -n "$MIGRATE_POD" ]]; then
+              # Follow logs in background while waiting for completion
+              kubectl logs -n ${NAMESPACE} -f "$MIGRATE_POD" 2>/dev/null &
+              LOGS_PID=$!
+              
+              kubectl wait --for=condition=complete job/${APP_NAME}-migrate-${GIT_COMMIT_ID} -n ${NAMESPACE} --timeout=300s
+              JOB_STATUS=$?
+              
+              # Stop log streaming
+              kill $LOGS_PID 2>/dev/null || true
+              wait $LOGS_PID 2>/dev/null || true
+              
+              if [[ $JOB_STATUS -ne 0 ]]; then
+                  log_error "Migration job failed or timed out"
+                  log_info "Final migration logs:"
+                  kubectl logs -n ${NAMESPACE} "$MIGRATE_POD" --tail=100 || true
+                  exit 1
+              fi
+            else
+              log_error "Migration pod never started"
+              exit 1
             fi
             set -e
             log_success "Database migrations completed"
@@ -693,11 +716,40 @@ EOF
 
             set +e
             kubectl apply -f /tmp/seed-job.yaml
-            kubectl wait --for=condition=complete job/${APP_NAME}-seed-${GIT_COMMIT_ID} -n ${NAMESPACE} --timeout=300s || {
-              echo "Seed job logs:"
-              kubectl logs job/${APP_NAME}-seed-${GIT_COMMIT_ID} -n ${NAMESPACE} || true
+            
+            # Stream seed logs in real-time while waiting for job
+            log_info "Streaming seed logs (waiting for pod to start)..."
+            for i in {1..30}; do
+              SEED_POD=$(kubectl get pods -n ${NAMESPACE} -l job-name=${APP_NAME}-seed-${GIT_COMMIT_ID} -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+              if [[ -n "$SEED_POD" ]]; then
+                log_info "Seed pod started: $SEED_POD"
+                break
+              fi
+              sleep 2
+            done
+            
+            if [[ -n "$SEED_POD" ]]; then
+              # Follow logs in background while waiting for completion
+              kubectl logs -n ${NAMESPACE} -f "$SEED_POD" 2>/dev/null &
+              SEED_LOGS_PID=$!
+              
+              kubectl wait --for=condition=complete job/${APP_NAME}-seed-${GIT_COMMIT_ID} -n ${NAMESPACE} --timeout=300s
+              SEED_STATUS=$?
+              
+              # Stop log streaming
+              kill $SEED_LOGS_PID 2>/dev/null || true
+              wait $SEED_LOGS_PID 2>/dev/null || true
+              
+              if [[ $SEED_STATUS -ne 0 ]]; then
+                log_error "Seed job failed or timed out"
+                log_info "Final seed logs:"
+                kubectl logs -n ${NAMESPACE} "$SEED_POD" --tail=100 || true
+                exit 1
+              fi
+            else
+              log_error "Seed pod never started"
               exit 1
-            }
+            fi
             set -e
             log_success "Initial data seeding completed"
         fi

@@ -192,10 +192,39 @@ spec:
 EOF
 
 kubectl apply -f /tmp/migrate-job.yaml
-kubectl wait --for=condition=complete job/erp-migrate-${SHORT_TAG} -n ${NAMESPACE} --timeout=300s || {
-  echo "Migration job logs:" && kubectl logs job/erp-migrate-${SHORT_TAG} -n ${NAMESPACE} || true
+
+# Stream logs in real-time while waiting for job
+echo "Streaming migration logs (waiting for pod to start)..."
+for i in {1..30}; do
+  MIGRATE_POD=$(kubectl get pods -n ${NAMESPACE} -l job-name=erp-migrate-${SHORT_TAG} -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  if [[ -n "$MIGRATE_POD" ]]; then
+    echo "Migration pod started: $MIGRATE_POD"
+    break
+  fi
+  sleep 2
+done
+
+if [[ -n "$MIGRATE_POD" ]]; then
+  # Follow logs in real-time
+  kubectl logs -n ${NAMESPACE} -f "$MIGRATE_POD" &
+  LOGS_PID=$!
+  
+  kubectl wait --for=condition=complete job/erp-migrate-${SHORT_TAG} -n ${NAMESPACE} --timeout=300s
+  JOB_STATUS=$?
+  
+  # Stop log streaming
+  kill $LOGS_PID 2>/dev/null || true
+  wait $LOGS_PID 2>/dev/null || true
+  
+  if [[ $JOB_STATUS -ne 0 ]]; then
+    echo "Migration job failed or timed out"
+    kubectl logs -n ${NAMESPACE} "$MIGRATE_POD" --tail=100 || true
+    exit 1
+  fi
+else
+  echo "Migration pod never started"
   exit 1
-}
+fi
 
 # Optional: Seed minimal initial data after migrations
 cat > /tmp/seed-job.yaml <<EOF
@@ -219,10 +248,39 @@ spec:
 EOF
 
 kubectl apply -f /tmp/seed-job.yaml
-kubectl wait --for=condition=complete job/erp-seed-${SHORT_TAG} -n ${NAMESPACE} --timeout=300s || {
-  echo "Seed job logs:" && kubectl logs job/erp-seed-${SHORT_TAG} -n ${NAMESPACE} || true
+
+# Stream seed logs in real-time
+echo "Streaming seed logs (waiting for pod to start)..."
+for i in {1..30}; do
+  SEED_POD=$(kubectl get pods -n ${NAMESPACE} -l job-name=erp-seed-${SHORT_TAG} -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  if [[ -n "$SEED_POD" ]]; then
+    echo "Seed pod started: $SEED_POD"
+    break
+  fi
+  sleep 2
+done
+
+if [[ -n "$SEED_POD" ]]; then
+  # Follow logs in real-time
+  kubectl logs -n ${NAMESPACE} -f "$SEED_POD" &
+  SEED_LOGS_PID=$!
+  
+  kubectl wait --for=condition=complete job/erp-seed-${SHORT_TAG} -n ${NAMESPACE} --timeout=300s
+  SEED_STATUS=$?
+  
+  # Stop log streaming
+  kill $SEED_LOGS_PID 2>/dev/null || true
+  wait $SEED_LOGS_PID 2>/dev/null || true
+  
+  if [[ $SEED_STATUS -ne 0 ]]; then
+    echo "Seed job failed or timed out"
+    kubectl logs -n ${NAMESPACE} "$SEED_POD" --tail=100 || true
+    exit 1
+  fi
+else
+  echo "Seed pod never started"
   exit 1
-}
+fi
 ```
 
 ### Phase 2: Initial ArgoCD Application Deployment
