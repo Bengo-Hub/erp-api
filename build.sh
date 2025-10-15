@@ -760,6 +760,11 @@ EOF
             fi
             set -e
             log_success "Initial data seeding completed"
+
+            # Restart API deployment to pick up updated environment secret
+            log_step "Restarting API deployment to pick updated secrets"
+            kubectl -n "$NAMESPACE" rollout restart deployment/erp-api || true
+            kubectl -n "$NAMESPACE" rollout status deployment/erp-api --timeout=300s || log_warning "API deployment rollout not ready in time"
         fi
 
         # Note: ArgoCD applications are configured with automated sync
