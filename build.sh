@@ -498,6 +498,23 @@ EOF
             fi
         fi
 
+        # Handle immutable app PVCs (media/static) safely; NEVER touch database PVCs
+        if [[ -n "${KUBE_CONFIG:-}" ]]; then
+            MEDIA_PVC_NAME=${MEDIA_PVC_NAME:-"erp-api-media"}
+            STATIC_PVC_NAME=${STATIC_PVC_NAME:-"erp-api-static"}
+            ALLOW_RECREATE_MEDIA_PVC=${ALLOW_RECREATE_MEDIA_PVC:-true}
+
+            if [[ "${ALLOW_RECREATE_MEDIA_PVC}" == "true" ]]; then
+                log_step "Reconciling immutable app PVCs (media/static)"
+                # Delete only app-owned PVCs that are safe to recreate; do not touch DB PVCs
+                kubectl -n "$NAMESPACE" delete pvc "${MEDIA_PVC_NAME}" --ignore-not-found || true
+                kubectl -n "$NAMESPACE" delete pvc "${STATIC_PVC_NAME}" --ignore-not-found || true
+                log_info "Requested deletion of media/static PVCs (if present). ArgoCD/Helm will recreate them."
+            else
+                log_info "Skipping app PVC reconciliation (ALLOW_RECREATE_MEDIA_PVC=${ALLOW_RECREATE_MEDIA_PVC})"
+            fi
+        fi
+
         # Database migrations (ensure DBs ready and env secret exists before running)
         if [[ "$SETUP_DATABASES" == "true" && -n "${KUBE_CONFIG:-}" ]]; then
             log_step "Running database migrations..."
@@ -564,6 +581,40 @@ EOF
             fi
             set -e
             log_success "Database migrations completed"
+
+            # Seed initial data after migrations
+            log_step "Seeding initial data (minimal mode for safety)"
+            cat > /tmp/seed-job.yaml <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${APP_NAME}-seed-${GIT_COMMIT_ID}
+  namespace: ${NAMESPACE}
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+${PULL_SECRETS_YAML}
+      containers:
+      - name: seed
+        image: ${IMAGE_REPO}:${GIT_COMMIT_ID}
+        command: ["python", "manage.py", "seed_all", "--minimal"]
+        envFrom:
+        - secretRef:
+            name: ${ENV_SECRET_NAME}
+EOF
+
+            set +e
+            kubectl apply -f /tmp/seed-job.yaml
+            kubectl wait --for=condition=complete job/${APP_NAME}-seed-${GIT_COMMIT_ID} -n ${NAMESPACE} --timeout=300s || {
+              echo "Seed job logs:"
+              kubectl logs job/${APP_NAME}-seed-${GIT_COMMIT_ID} -n ${NAMESPACE} || true
+              exit 1
+            }
+            set -e
+            log_success "Initial data seeding completed"
         fi
 
         # Note: ArgoCD applications are configured with automated sync
