@@ -134,15 +134,18 @@ class BusinessConfigs:
                     for branch in business_branches:
                         location = branch.location
                         
-                        # Get or create delivery region for this location
-                        region, created = DeliveryRegion.objects.get_or_create(
+                        # Resolve an existing delivery region (avoid MultipleObjectsReturned)
+                        region = DeliveryRegion.objects.filter(
                             name=location.city,
-                            county=location.county,
-                            defaults={
-                                'delivery_charge': 300,
-                                'estimated_delivery_days': 3
-                            }
-                        )
+                            county=location.county
+                        ).first()
+                        if not region:
+                            region = DeliveryRegion.objects.create(
+                                name=location.city,
+                                county=location.county,
+                                delivery_charge=300,
+                                estimated_delivery_days=3
+                            )
                         
                         # Check if a pickup station already exists for this business and region
                         pickup_exists = PickupStations.objects.filter(
