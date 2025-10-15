@@ -133,13 +133,39 @@ helm upgrade --install redis bitnami/redis -n $NAMESPACE \
   --set global.redis.password="$REDIS_PASSWORD" \
   --wait --timeout=300s
 
-# Create/update app env secret with DB/Redis URLs
+# Create/update app env secret with DB/Redis URLs and production config
+# Generate a secure Django secret key if not already set
+export DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-$(openssl rand -hex 50)}
+
 kubectl -n $NAMESPACE create secret generic $ENV_SECRET_NAME \
   --from-literal=DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${PG_DATABASE}" \
+  --from-literal=DB_HOST="postgresql.${NAMESPACE}.svc.cluster.local" \
+  --from-literal=DB_PORT="5432" \
+  --from-literal=DB_NAME="${PG_DATABASE}" \
+  --from-literal=DB_USER="postgres" \
+  --from-literal=DB_PASSWORD="${POSTGRES_PASSWORD}" \
   --from-literal=REDIS_URL="redis://:${REDIS_PASSWORD}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0" \
+  --from-literal=REDIS_HOST="redis-master.${NAMESPACE}.svc.cluster.local" \
+  --from-literal=REDIS_PORT="6379" \
+  --from-literal=REDIS_PASSWORD="${REDIS_PASSWORD}" \
   --from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASSWORD}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0" \
   --from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASSWORD}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1" \
+  --from-literal=DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}" \
+  --from-literal=SECRET_KEY="${DJANGO_SECRET_KEY}" \
+  --from-literal=DJANGO_SETTINGS_MODULE="ProcureProKEAPI.settings" \
+  --from-literal=DEBUG="False" \
+  --from-literal=DJANGO_ENV="production" \
+  --from-literal=ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke" \
+  --from-literal=CORS_ALLOWED_ORIGINS="https://erp.masterspace.co.ke,http://localhost:3000,*.masterspace.co.ke" \
+  --from-literal=FRONTEND_URL="https://erp.masterspace.co.ke" \
+  --from-literal=CSRF_TRUSTED_ORIGINS="https://erp.masterspace.co.ke,https://erpapi.masterspace.co.ke" \
+  --from-literal=MEDIA_ROOT="/app/media" \
+  --from-literal=MEDIA_URL="/media/" \
+  --from-literal=STATIC_ROOT="/app/staticfiles" \
+  --from-literal=STATIC_URL="/static/" \
   --dry-run=client -o yaml | kubectl apply -f -
+
+echo "✅ Environment secret created/updated with production configuration"
 ```
 
 ### 0.7 Run database migrations (manual job)
@@ -237,9 +263,8 @@ docker login docker.io
 git clone https://github.com/Bengo-Hub/devops-k8s.git
 cd devops-k8s
 
-# Verify you can access the applications
+# Verify you can access the API application
 ls -la apps/erp-api/
-ls -la apps/erp-ui/
 ```
 
 **If any prerequisite fails, stop here and resolve the issue before proceeding.**
@@ -248,7 +273,7 @@ ls -la apps/erp-ui/
 
 ## Phase 2: Initial ArgoCD Application Deployment
 
-Now we'll deploy the ArgoCD applications that will manage your ERP services.
+Now we'll deploy the ArgoCD application that will manage the ERP API service.
 
 ### 2.1 Navigate to DevOps Repository
 ```bash
@@ -259,16 +284,13 @@ cd /path/to/devops-k8s
 pwd  # Should show: /path/to/devops-k8s
 ```
 
-### 2.2 Deploy ArgoCD Applications
+### 2.2 Deploy ArgoCD Application
 ```bash
-# Deploy the ERP API ArgoCD application first
+# Deploy the ERP API ArgoCD application
 kubectl apply -f apps/erp-api/app.yaml -n argocd
 
-# Deploy the ERP UI ArgoCD application
-kubectl apply -f apps/erp-ui/app.yaml -n argocd
-
-# Verify applications were created
-kubectl get applications.argoproj.io -n argocd
+# Verify application was created
+kubectl get application erp-api -n argocd
 ```
 
 Note: The ArgoCD application `apps/erp-api/app.yaml` uses `helm.valueFiles` to reference `apps/erp-api/values.yaml`. This enables automated updates of image tags by CI/CD.
@@ -277,27 +299,19 @@ Note: The ArgoCD application `apps/erp-api/app.yaml` uses `helm.valueFiles` to r
 ```bash
 NAME     SYNC STATUS   HEALTH STATUS
 erp-api  OutOfSync     Missing
-erp-ui   OutOfSync     Missing
 ```
 
 ### 2.3 Initial Application Sync
 ```bash
-# Sync the API application first (creates namespace and basic resources)
+# Sync the API application (creates namespace and basic resources)
 argocd app sync erp-api
-
-# Wait a moment for resources to be created
-sleep 30
-
-# Sync the UI application
-argocd app sync erp-ui
 
 # Check sync status
 argocd app get erp-api
-argocd app get erp-ui
 ```
 
 **Expected progression:**
-1. `OutOfSync` → `Synced` (applications created)
+1. `OutOfSync` → `Synced` (application created)
 2. Resources appear in `erp` namespace
 3. `Health Status` changes from `Missing` to `Healthy`
 
@@ -305,16 +319,15 @@ argocd app get erp-ui
 
 ## Phase 3: Application Sync Monitoring
 
-Monitor the applications until they're fully deployed and healthy.
+Monitor the API application until it's fully deployed and healthy.
 
 ### 3.1 Real-time Monitoring
 ```bash
 # Watch application status in real-time
-kubectl get applications.argoproj.io -n argocd -w
+kubectl get application erp-api -n argocd -w
 
-# Or monitor specific application
+# Or monitor with ArgoCD CLI
 argocd app get erp-api --watch
-argocd app get erp-ui --watch
 ```
 
 ### 3.2 Resource Creation Verification
@@ -345,13 +358,12 @@ kubectl get svc -n erp
 
 ### 3.4 Wait for Full Deployment
 ```bash
-# Wait for all resources to be ready
+# Wait for API deployment to be ready
 kubectl wait --for=condition=available --timeout=600s deployment/erp-api -n erp
-kubectl wait --for=condition=available --timeout=600s deployment/erp-ui -n erp
 
-# Verify all pods are running
-kubectl get pods -n erp
-# Expected: All pods show "Running" with 2/2 READY
+# Verify API pods are running
+kubectl get pods -n erp -l app=erp-api-app
+# Expected: Pods show "Running" with READY status
 ```
 
 ---
@@ -364,11 +376,9 @@ Once applications show `Synced` and `Healthy`, verify everything is working.
 ```bash
 # Get detailed application information
 argocd app get erp-api --health
-argocd app get erp-ui --health
 
 # Check application conditions
-kubectl get applications.argoproj.io erp-api -n argocd -o jsonpath='{.status.conditions}'
-kubectl get applications.argoproj.io erp-ui -n argocd -o jsonpath='{.status.conditions}'
+kubectl get application erp-api -n argocd -o jsonpath='{.status.conditions}'
 ```
 
 ### 4.2 Service Verification
@@ -376,13 +386,11 @@ kubectl get applications.argoproj.io erp-ui -n argocd -o jsonpath='{.status.cond
 # Check all deployed resources
 kubectl get all,ingress,secrets,pvc -n erp
 
-# Verify specific services
+# Verify API deployment and service
 kubectl get deployment erp-api -n erp
 kubectl get service erp-api -n erp
-kubectl get deployment erp-ui -n erp
-kubectl get service erp-ui -n erp
 
-# Check ingress configuration
+# Check API ingress configuration
 kubectl get ingress -n erp -o yaml
 ```
 
@@ -400,28 +408,26 @@ kubectl get secret erp-masterspace-tls -n erp
 
 ### 4.4 DNS and SSL Testing
 ```bash
-# Check DNS resolution
+# Check DNS resolution for API
 nslookup erpapi.masterspace.co.ke
-nslookup erp.masterspace.co.ke
 
 # Get LoadBalancer IP
 kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 
-# Test SSL certificate
+# Test SSL certificate for API
 echo | openssl s_client -servername erpapi.masterspace.co.ke -connect erpapi.masterspace.co.ke:443
 
 # Test HTTPS connectivity
 curl -k https://erpapi.masterspace.co.ke/api/v1/health/
-curl -k https://erp.masterspace.co.ke/
 ```
 
-### 4.5 Application Health Checks
+### 4.5 API Health Checks
 ```bash
 # Test API health endpoint
 curl -k https://erpapi.masterspace.co.ke/api/v1/health/
 
-# Test UI health endpoint
-curl -k https://erp.masterspace.co.ke/health
+# Or test via core health endpoint
+curl -k https://erpapi.masterspace.co.ke/api/v1/core/health/
 
 # Verify LoadBalancer IP assignment
 LB_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
@@ -442,12 +448,11 @@ kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-application-controll
 # Check application controller logs
 kubectl logs -f deployment/argocd-application-controller -n argocd
 
-# Check application events
+# Check API application events
 kubectl get events -n argocd --field-selector involvedObject.name=erp-api
-kubectl get events -n argocd --field-selector involvedObject.name=erp-ui
 
-# Check for stuck applications
-kubectl get applications.argoproj.io erp-api -n argocd -o jsonpath='{.status.sync.status}'
+# Check for stuck application
+kubectl get application erp-api -n argocd -o jsonpath='{.status.sync.status}'
 ```
 
 ### 5.2 Resource Creation Issues
@@ -467,16 +472,14 @@ kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-repo-server
 
 ### 5.3 Pod Startup Issues
 ```bash
-# Check pod logs for errors
+# Check API pod logs for errors
 kubectl logs -f deployment/erp-api -n erp
-kubectl logs -f deployment/erp-ui -n erp
 
-# Check pod events
-kubectl describe pod -n erp -l app=erp-api
-kubectl describe pod -n erp -l app=erp-ui
+# Check API pod events
+kubectl describe pod -n erp -l app=erp-api-app
 
 # Check resource constraints
-kubectl top pods -n erp
+kubectl top pods -n erp -l app=erp-api-app
 kubectl top nodes
 ```
 
@@ -512,16 +515,15 @@ kubectl wait --for=condition=available --timeout=300s deployment/ingress-nginx-c
 
 ### 5.6 Network Connectivity Issues
 ```bash
-# Test service accessibility from within cluster
-kubectl run test-pod --rm -i --tty --image curlimages/curl -- curl -k http://erp-api.erp.svc.cluster.local:8000/health/
+# Test API service accessibility from within cluster
+kubectl run test-pod --rm -i --tty --image curlimages/curl -- curl -k http://erp-api.erp.svc.cluster.local:80/api/v1/health/
 
 # Port forward for local testing
 kubectl port-forward svc/erp-api 8000:80 -n erp
-kubectl port-forward svc/erp-ui 3000:80 -n erp
 
 # Test locally
 curl http://localhost:8000/api/v1/health/
-curl http://localhost:3000/health
+curl http://localhost:8000/api/v1/core/health/
 ```
 
 ---
@@ -530,39 +532,32 @@ curl http://localhost:3000/health
 
 ### Force Application Recreation
 ```bash
-# Delete and recreate applications if they're stuck
+# Delete and recreate API application if it's stuck
 kubectl delete application erp-api -n argocd
-kubectl delete application erp-ui -n argocd
 
 # Wait a moment, then recreate
 kubectl apply -f apps/erp-api/app.yaml -n argocd
-kubectl apply -f apps/erp-ui/app.yaml -n argocd
 
 # Force sync
 argocd app sync erp-api --force
-argocd app sync erp-ui --force
 ```
 
 ### Application Rollback
 ```bash
 # List available revisions
 argocd app history erp-api
-argocd app history erp-ui
 
 # Rollback to previous working version
 argocd app rollback erp-api PREV
-argocd app rollback erp-ui PREV
 ```
 
-### Scale Applications
+### Scale API Application
 ```bash
 # Scale down for maintenance
 kubectl scale deployment erp-api -n erp --replicas=0
-kubectl scale deployment erp-ui -n erp --replicas=0
 
 # Scale back up
 kubectl scale deployment erp-api -n erp --replicas=2
-kubectl scale deployment erp-ui -n erp --replicas=2
 ```
 
 ---
@@ -572,23 +567,22 @@ kubectl scale deployment erp-ui -n erp --replicas=2
 ### Status Check
 ```bash
 # Quick status overview
-kubectl get applications.argoproj.io -n argocd
+kubectl get application erp-api -n argocd
 kubectl get all,ingress -n erp
 kubectl get certificates -n erp
 ```
 
 ### Health Check
 ```bash
-# Test endpoints
+# Test API endpoints
 curl -k https://erpapi.masterspace.co.ke/api/v1/health/
-curl -k https://erp.masterspace.co.ke/health
+curl -k https://erpapi.masterspace.co.ke/api/v1/core/health/
 ```
 
 ### Common Fixes
 ```bash
-# Restart applications
+# Restart API application
 kubectl rollout restart deployment/erp-api -n erp
-kubectl rollout restart deployment/erp-ui -n erp
 
 # Force certificate renewal
 kubectl annotate certificate erp-masterspace-tls -n erp cert-manager.io/issue-temporary-certificate="true"

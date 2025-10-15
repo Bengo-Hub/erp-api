@@ -280,92 +280,9 @@ if [[ "$DEPLOY" == "true" ]]; then
                 esac
             done
 
-            # Ensure DB & Redis are ready; retrieve credentials from existing secrets
+            # Ensure DB & Redis are ready after installation
             kubectl -n "$NAMESPACE" rollout status statefulset/postgresql --timeout=180s || true
-            
-            # Bitnami PostgreSQL chart creates secrets with these keys:
-            # - postgres-password: superuser password
-            # - password: application user password (if custom user created)
-            # We need to use the postgres user since that's what's configured by default
-            
-            APP_DB_USER="postgres"
-            APP_DB_NAME="${PG_DATABASE:-bengo_erp}"
-            
-            # Try to get the postgres password from the secret (may be out of sync with actual DB if PVC reused)
-            APP_DB_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
-            
-            # If postgres-password doesn't exist, try to read from env var used during install
-            if [[ -z "$APP_DB_PASS" && -n "${POSTGRES_PASSWORD:-}" ]]; then
-                log_info "Using POSTGRES_PASSWORD from environment"
-                APP_DB_PASS="$POSTGRES_PASSWORD"
-            fi
-            
-            # Get Redis password
-            REDIS_PASS=$(kubectl -n "$NAMESPACE" get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
-            if [[ -z "$REDIS_PASS" && -n "${REDIS_PASSWORD:-}" ]]; then
-                log_info "Using REDIS_PASSWORD from environment"
-                REDIS_PASS="$REDIS_PASSWORD"
-            fi
-
-            # Validate the effective PostgreSQL password by attempting a psql connection inside the cluster
-            EFFECTIVE_PG_PASS="$APP_DB_PASS"
-            try_psql() {
-              local PASS="$1"
-              if [[ -z "$PASS" ]]; then return 1; fi
-              # Use the default 'postgres' database for credential validation
-              set +e
-              kubectl -n "$NAMESPACE" run pgpass-test-${GIT_COMMIT_ID} \
-                --image=registry-1.docker.io/bitnami/postgresql:15 \
-                --restart=Never --rm -i --quiet \
-                --env PGPASSWORD="$PASS" \
-                --command -- psql -h postgresql."$NAMESPACE".svc.cluster.local -U postgres -d postgres -c 'SELECT 1;' >/dev/null 2>&1
-              local RC=$?
-              set -e
-              # Cleanup pod if it still exists
-              kubectl -n "$NAMESPACE" delete pod pgpass-test-${GIT_COMMIT_ID} --ignore-not-found >/dev/null 2>&1 || true
-              return $RC
-            }
-
-            if ! try_psql "$EFFECTIVE_PG_PASS"; then
-              if [[ -n "${POSTGRES_PASSWORD:-}" ]] && try_psql "$POSTGRES_PASSWORD"; then
-                log_warning "PostgreSQL secret password invalid for live DB; falling back to POSTGRES_PASSWORD"
-                EFFECTIVE_PG_PASS="$POSTGRES_PASSWORD"
-              else
-                log_warning "Could not validate PostgreSQL password from secret or env; proceeding but migrations may fail"
-              fi
-            fi
-
-            log_info "Database credentials retrieved: user=${APP_DB_USER}, db=${APP_DB_NAME}, pass_set=${EFFECTIVE_PG_PASS:+yes}"
-            log_info "Redis credentials retrieved: pass_set=${REDIS_PASS:+yes}"
-
-            SECRET_ARGS=()
-            if [[ -n "$EFFECTIVE_PG_PASS" ]]; then
-              SECRET_ARGS+=(--from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${EFFECTIVE_PG_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}")
-              SECRET_ARGS+=(--from-literal=DB_HOST="postgresql.${NAMESPACE}.svc.cluster.local")
-              SECRET_ARGS+=(--from-literal=DB_PORT="5432")
-              SECRET_ARGS+=(--from-literal=DB_NAME="${APP_DB_NAME}")
-              SECRET_ARGS+=(--from-literal=DB_USER="${APP_DB_USER}")
-              SECRET_ARGS+=(--from-literal=DB_PASSWORD="${EFFECTIVE_PG_PASS}")
-            else
-              log_error "Failed to retrieve PostgreSQL password!"
-            fi
-            if [[ -n "$REDIS_PASS" ]]; then
-              SECRET_ARGS+=(--from-literal=REDIS_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
-              SECRET_ARGS+=(--from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
-              SECRET_ARGS+=(--from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1")
-              SECRET_ARGS+=(--from-literal=REDIS_HOST="redis-master.${NAMESPACE}.svc.cluster.local")
-              SECRET_ARGS+=(--from-literal=REDIS_PORT="6379")
-              SECRET_ARGS+=(--from-literal=REDIS_PASSWORD="${REDIS_PASS}")
-            fi
-            if [[ ${#SECRET_ARGS[@]} -gt 0 ]]; then
-              log_info "Updating ${ENV_SECRET_NAME} secret with database credentials..."
-              kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" "${SECRET_ARGS[@]}" \
-                --dry-run=client -o yaml | kubectl apply -f - || log_error "Failed to create/update env secret"
-              log_success "Environment secret updated with DB credentials"
-            else
-              log_error "Could not resolve DB/Redis credentials; migrations will fail!"
-              exit 1
-            fi
+            kubectl -n "$NAMESPACE" rollout status statefulset/redis-master --timeout=120s || true
 
             log_success "Database setup completed"
             
@@ -557,6 +474,115 @@ EOF
             # Grace period after readiness before connections (minimum 5 seconds)
             log_info "Waiting 5 seconds to allow database services to stabilize before connecting..."
             sleep 5
+            
+            # RE-VALIDATE the effective password NOW (after DB fully ready)
+            log_step "Re-validating PostgreSQL password against live database..."
+            APP_DB_USER="postgres"
+            APP_DB_NAME="${PG_DATABASE:-bengo_erp}"
+            
+            # Get password from secret
+            APP_DB_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+            if [[ -z "$APP_DB_PASS" && -n "${POSTGRES_PASSWORD:-}" ]]; then
+                log_info "PostgreSQL secret password not found; using POSTGRES_PASSWORD from env"
+                APP_DB_PASS="$POSTGRES_PASSWORD"
+            fi
+            
+            # Validate effective password
+            EFFECTIVE_PG_PASS="$APP_DB_PASS"
+            try_psql() {
+              local PASS="$1"
+              if [[ -z "$PASS" ]]; then return 1; fi
+              set +e
+              kubectl -n "$NAMESPACE" run pgpass-test-$$-${RANDOM} \
+                --image=registry-1.docker.io/bitnami/postgresql:15 \
+                --restart=Never --rm -i --quiet --timeout=20s \
+                --env PGPASSWORD="$PASS" \
+                --command -- psql -h postgresql."$NAMESPACE".svc.cluster.local -U postgres -d postgres -c 'SELECT 1;' >/dev/null 2>&1
+              local RC=$?
+              set -e
+              return $RC
+            }
+
+            if ! try_psql "$EFFECTIVE_PG_PASS"; then
+              log_warning "Password from secret did not work; trying POSTGRES_PASSWORD env var"
+              if [[ -n "${POSTGRES_PASSWORD:-}" ]] && try_psql "$POSTGRES_PASSWORD"; then
+                log_warning "Using POSTGRES_PASSWORD from environment (secret is stale)"
+                EFFECTIVE_PG_PASS="$POSTGRES_PASSWORD"
+                
+                # Update the postgresql secret to match live DB password
+                log_info "Syncing postgresql secret with effective password"
+                kubectl -n "$NAMESPACE" patch secret postgresql --type merge -p "{\"stringData\":{\"postgres-password\":\"$EFFECTIVE_PG_PASS\"}}"
+              else
+                log_error "CRITICAL: Neither secret password nor POSTGRES_PASSWORD env var can connect to PostgreSQL!"
+                log_error "Manual intervention required: verify actual DB password on VPS"
+                exit 1
+              fi
+            else
+              log_success "PostgreSQL password validated successfully"
+            fi
+            
+            # Rebuild env secret with validated password and all production values
+            log_info "Updating ${ENV_SECRET_NAME} with validated credentials and production config..."
+            SECRET_ARGS=(
+              --from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${EFFECTIVE_PG_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}"
+              --from-literal=DB_HOST="postgresql.${NAMESPACE}.svc.cluster.local"
+              --from-literal=DB_PORT="5432"
+              --from-literal=DB_NAME="${APP_DB_NAME}"
+              --from-literal=DB_USER="${APP_DB_USER}"
+              --from-literal=DB_PASSWORD="${EFFECTIVE_PG_PASS}"
+            )
+            
+            # Add Redis credentials
+            REDIS_PASS=$(kubectl -n "$NAMESPACE" get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
+            if [[ -z "$REDIS_PASS" && -n "${REDIS_PASSWORD:-}" ]]; then
+                REDIS_PASS="$REDIS_PASSWORD"
+            fi
+            if [[ -n "$REDIS_PASS" ]]; then
+              SECRET_ARGS+=(--from-literal=REDIS_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
+              SECRET_ARGS+=(--from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
+              SECRET_ARGS+=(--from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1")
+              SECRET_ARGS+=(--from-literal=REDIS_HOST="redis-master.${NAMESPACE}.svc.cluster.local")
+              SECRET_ARGS+=(--from-literal=REDIS_PORT="6379")
+              SECRET_ARGS+=(--from-literal=REDIS_PASSWORD="${REDIS_PASS}")
+            fi
+            
+            # Add Django and application secrets from environment
+            if [[ -n "${DJANGO_SECRET_KEY:-}" ]]; then
+              SECRET_ARGS+=(--from-literal=DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}")
+              SECRET_ARGS+=(--from-literal=SECRET_KEY="${DJANGO_SECRET_KEY}")
+            fi
+            
+            # Production Django settings
+            SECRET_ARGS+=(--from-literal=DJANGO_SETTINGS_MODULE="ProcureProKEAPI.settings")
+            SECRET_ARGS+=(--from-literal=DEBUG="False")
+            SECRET_ARGS+=(--from-literal=DJANGO_ENV="production")
+            SECRET_ARGS+=(--from-literal=ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke")
+            
+            # CORS and Frontend
+            SECRET_ARGS+=(--from-literal=CORS_ALLOWED_ORIGINS="https://erp.masterspace.co.ke,http://localhost:3000,*.masterspace.co.ke")
+            SECRET_ARGS+=(--from-literal=FRONTEND_URL="https://erp.masterspace.co.ke")
+            SECRET_ARGS+=(--from-literal=CSRF_TRUSTED_ORIGINS="https://erp.masterspace.co.ke,https://erpapi.masterspace.co.ke")
+            
+            # Media and static file configuration
+            SECRET_ARGS+=(--from-literal=MEDIA_ROOT="/app/media")
+            SECRET_ARGS+=(--from-literal=MEDIA_URL="/media/")
+            SECRET_ARGS+=(--from-literal=STATIC_ROOT="/app/staticfiles")
+            SECRET_ARGS+=(--from-literal=STATIC_URL="/static/")
+            
+            # Email configuration (if provided)
+            if [[ -n "${EMAIL_HOST_USER:-}" ]]; then
+              SECRET_ARGS+=(--from-literal=EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend")
+              SECRET_ARGS+=(--from-literal=EMAIL_HOST="${EMAIL_HOST:-smtp.gmail.com}")
+              SECRET_ARGS+=(--from-literal=EMAIL_PORT="${EMAIL_PORT:-587}")
+              SECRET_ARGS+=(--from-literal=EMAIL_USE_TLS="True")
+              SECRET_ARGS+=(--from-literal=EMAIL_HOST_USER="${EMAIL_HOST_USER}")
+              SECRET_ARGS+=(--from-literal=EMAIL_HOST_PASSWORD="${EMAIL_HOST_PASSWORD:-}")
+              SECRET_ARGS+=(--from-literal=DEFAULT_FROM_EMAIL="${EMAIL_HOST_USER}")
+            fi
+            
+            kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" "${SECRET_ARGS[@]}" \
+              --dry-run=client -o yaml | kubectl apply -f - || { log_error "Failed to update env secret"; exit 1; }
+            log_success "Environment secret refreshed with validated credentials and production config"
             
             # Verify env secret exists
             if ! kubectl -n "$NAMESPACE" get secret "$ENV_SECRET_NAME" >/dev/null 2>&1; then
