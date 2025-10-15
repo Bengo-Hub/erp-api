@@ -591,6 +591,14 @@ EOF
             fi
             log_info "Environment secret ${ENV_SECRET_NAME} verified"
 
+            # Force rollout of existing deployment to pick up updated secret values
+            # Ensures running pods restart with correct DB credentials before proceeding
+            if kubectl get deployment erp-api -n "$NAMESPACE" >/dev/null 2>&1; then
+                log_step "Triggering rollout restart to apply updated secrets to running pods..."
+                kubectl rollout restart deployment/erp-api -n "$NAMESPACE" || log_warning "Failed to restart deployment (may not exist yet)"
+                kubectl rollout status deployment/erp-api -n "$NAMESPACE" --timeout=300s || log_warning "Deployment did not become ready in time after restart"
+            fi
+
             # Create migration job with imagePullSecrets if needed
             PULL_SECRETS_YAML=""
             if kubectl -n "$NAMESPACE" get secret registry-credentials >/dev/null 2>&1; then
