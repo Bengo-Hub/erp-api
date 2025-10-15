@@ -489,16 +489,68 @@ EOF
             
             # Validate effective password
             EFFECTIVE_PG_PASS="$APP_DB_PASS"
+
+            # Optional debug helpers
+            debug_hash() {
+              local LABEL="$1"; local VAL="$2"
+              if [[ -n "$DEBUG_DB_VALIDATION" && "$DEBUG_DB_VALIDATION" == "true" ]]; then
+                local LEN; LEN=$(printf %s "$VAL" | wc -c | tr -d ' ')
+                local SHA; SHA=$(printf %s "$VAL" | sha256sum | awk '{print $1}')
+                log_debug "${LABEL}: len=${LEN}, sha256=${SHA}"
+              fi
+            }
+
+            debug_k8s_net() {
+              if [[ -n "$DEBUG_DB_VALIDATION" && "$DEBUG_DB_VALIDATION" == "true" ]]; then
+                log_debug "kubectl context: $(kubectl config current-context 2>/dev/null || echo 'n/a')"
+                log_debug "postgresql svc: $(kubectl -n "$NAMESPACE" get svc postgresql -o jsonpath='{.spec.clusterIP}:{.spec.ports[0].port}' 2>/dev/null || echo 'n/a')"
+              fi
+            }
+
+            debug_hash "PG_PASS_from_secret" "$APP_DB_PASS"
+            debug_hash "PG_PASS_from_env" "${POSTGRES_PASSWORD:-}"
+            debug_k8s_net
+
             try_psql() {
+              # Create a short-lived Job to run psql and capture logs for debugging
               local PASS="$1"
+              local JOB_NAME="pgpass-check-${RANDOM}"
               if [[ -z "$PASS" ]]; then return 1; fi
+              cat > /tmp/${JOB_NAME}.yaml <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${JOB_NAME}
+  namespace: ${NAMESPACE}
+spec:
+  ttlSecondsAfterFinished: 120
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: psql
+        image: registry-1.docker.io/bitnami/postgresql:15
+        env:
+        - name: PGPASSWORD
+          value: "${PASS}"
+        command: ["psql"]
+        args: ["-h","postgresql.${NAMESPACE}.svc.cluster.local","-U","postgres","-d","postgres","-c","SELECT 1;"]
+EOF
               set +e
-              kubectl -n "$NAMESPACE" run pgpass-test-$$-${RANDOM} \
-                --image=registry-1.docker.io/bitnami/postgresql:15 \
-                --restart=Never --rm -i --quiet --timeout=20s \
-                --env PGPASSWORD="$PASS" \
-                --command -- psql -h postgresql."$NAMESPACE".svc.cluster.local -U postgres -d postgres -c 'SELECT 1;' >/dev/null 2>&1
+              kubectl apply -f /tmp/${JOB_NAME}.yaml >/dev/null 2>&1
+              kubectl -n "$NAMESPACE" wait --for=condition=complete job/${JOB_NAME} --timeout=45s >/dev/null 2>&1
               local RC=$?
+              if [[ -n "$DEBUG_DB_VALIDATION" && "$DEBUG_DB_VALIDATION" == "true" ]]; then
+                log_debug "psql job logs (RC=${RC}):"
+                kubectl -n "$NAMESPACE" logs job/${JOB_NAME} 2>/dev/null || true
+                if [[ $RC -ne 0 ]]; then
+                  log_debug "job describe:"; kubectl -n "$NAMESPACE" describe job ${JOB_NAME} 2>/dev/null || true
+                  log_debug "pods describe:"; kubectl -n "$NAMESPACE" get pods -l job-name=${JOB_NAME} -o name | xargs -r kubectl -n "$NAMESPACE" describe 2>/dev/null || true
+                fi
+              fi
+              # cleanup
+              kubectl -n "$NAMESPACE" delete job ${JOB_NAME} --ignore-not-found >/dev/null 2>&1 || true
               set -e
               return $RC
             }
@@ -513,9 +565,17 @@ EOF
                 log_info "Syncing postgresql secret with effective password"
                 kubectl -n "$NAMESPACE" patch secret postgresql --type merge -p "{\"stringData\":{\"postgres-password\":\"$EFFECTIVE_PG_PASS\"}}"
               else
-                log_error "CRITICAL: Neither secret password nor POSTGRES_PASSWORD env var can connect to PostgreSQL!"
-                log_error "Manual intervention required: verify actual DB password on VPS"
-                exit 1
+                # Final attempt: read the actual live password from the Bitnami secret directly
+                LIVE_PG_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+                debug_hash "PG_PASS_from_live_secret" "$LIVE_PG_PASS"
+                if [[ -n "$LIVE_PG_PASS" ]] && try_psql "$LIVE_PG_PASS"; then
+                  log_success "Validated password directly from live postgresql secret"
+                  EFFECTIVE_PG_PASS="$LIVE_PG_PASS"
+                else
+                  log_error "CRITICAL: Neither secret-derived, env POSTGRES_PASSWORD, nor live secret password worked"
+                  log_error "Enable DEBUG_DB_VALIDATION=true for detailed diagnostics"
+                  exit 1
+                fi
               fi
             else
               log_success "PostgreSQL password validated successfully"
