@@ -15,8 +15,16 @@ class Command(BaseCommand):
             action='store_true',
             help='Clear existing bank statement data before seeding',
         )
+        parser.add_argument(
+            '--count',
+            type=int,
+            default=50,
+            help='Number of bank statement entries to create (default: 50)',
+        )
 
     def handle(self, *args, **options):
+        count = options.get('count', 50)
+        
         if options['clear']:
             BankStatementLine.objects.all().delete()
             self.stdout.write(
@@ -54,7 +62,7 @@ class Command(BaseCommand):
         sample_data = []
         start_date = date.today() - timedelta(days=30)
         
-        for i in range(50):  # Create 50 sample entries
+        for i in range(count):  # Create the requested number of entries
             account = random.choice(accounts)
             statement_date = start_date + timedelta(days=random.randint(0, 30))
             amount = random.uniform(-10000, 15000)  # Mix of positive and negative amounts

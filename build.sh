@@ -291,7 +291,7 @@ if [[ "$DEPLOY" == "true" ]]; then
             APP_DB_USER="postgres"
             APP_DB_NAME="${PG_DATABASE:-bengo_erp}"
             
-            # Try to get the postgres password from the secret
+            # Try to get the postgres password from the secret (may be out of sync with actual DB if PVC reused)
             APP_DB_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
             
             # If postgres-password doesn't exist, try to read from env var used during install
@@ -307,17 +307,45 @@ if [[ "$DEPLOY" == "true" ]]; then
                 REDIS_PASS="$REDIS_PASSWORD"
             fi
 
-            log_info "Database credentials retrieved: user=${APP_DB_USER}, db=${APP_DB_NAME}, pass_set=${APP_DB_PASS:+yes}"
+            # Validate the effective PostgreSQL password by attempting a psql connection inside the cluster
+            EFFECTIVE_PG_PASS="$APP_DB_PASS"
+            try_psql() {
+              local PASS="$1"
+              if [[ -z "$PASS" ]]; then return 1; fi
+              # Use the default 'postgres' database for credential validation
+              set +e
+              kubectl -n "$NAMESPACE" run pgpass-test-${GIT_COMMIT_ID} \
+                --image=registry-1.docker.io/bitnami/postgresql:15 \
+                --restart=Never --rm -i --quiet \
+                --env PGPASSWORD="$PASS" \
+                --command -- psql -h postgresql."$NAMESPACE".svc.cluster.local -U postgres -d postgres -c 'SELECT 1;' >/dev/null 2>&1
+              local RC=$?
+              set -e
+              # Cleanup pod if it still exists
+              kubectl -n "$NAMESPACE" delete pod pgpass-test-${GIT_COMMIT_ID} --ignore-not-found >/dev/null 2>&1 || true
+              return $RC
+            }
+
+            if ! try_psql "$EFFECTIVE_PG_PASS"; then
+              if [[ -n "${POSTGRES_PASSWORD:-}" ]] && try_psql "$POSTGRES_PASSWORD"; then
+                log_warning "PostgreSQL secret password invalid for live DB; falling back to POSTGRES_PASSWORD"
+                EFFECTIVE_PG_PASS="$POSTGRES_PASSWORD"
+              else
+                log_warning "Could not validate PostgreSQL password from secret or env; proceeding but migrations may fail"
+              fi
+            fi
+
+            log_info "Database credentials retrieved: user=${APP_DB_USER}, db=${APP_DB_NAME}, pass_set=${EFFECTIVE_PG_PASS:+yes}"
             log_info "Redis credentials retrieved: pass_set=${REDIS_PASS:+yes}"
 
             SECRET_ARGS=()
-            if [[ -n "$APP_DB_PASS" ]]; then
-              SECRET_ARGS+=(--from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}")
+            if [[ -n "$EFFECTIVE_PG_PASS" ]]; then
+              SECRET_ARGS+=(--from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${EFFECTIVE_PG_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}")
               SECRET_ARGS+=(--from-literal=DB_HOST="postgresql.${NAMESPACE}.svc.cluster.local")
               SECRET_ARGS+=(--from-literal=DB_PORT="5432")
               SECRET_ARGS+=(--from-literal=DB_NAME="${APP_DB_NAME}")
               SECRET_ARGS+=(--from-literal=DB_USER="${APP_DB_USER}")
-              SECRET_ARGS+=(--from-literal=DB_PASSWORD="${APP_DB_PASS}")
+              SECRET_ARGS+=(--from-literal=DB_PASSWORD="${EFFECTIVE_PG_PASS}")
             else
               log_error "Failed to retrieve PostgreSQL password!"
             fi
@@ -560,7 +588,38 @@ ${PULL_SECRETS_YAML}
       containers:
       - name: migrate
         image: ${IMAGE_REPO}:${GIT_COMMIT_ID}
-        command: ["python", "manage.py", "migrate"]
+        command: ["bash", "-lc", "python manage.py showmigrations >/dev/null 2>&1 || true; python manage.py migrate --noinput"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ${ENV_SECRET_NAME}
+              key: DATABASE_URL
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: ${ENV_SECRET_NAME}
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: ${ENV_SECRET_NAME}
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: ${ENV_SECRET_NAME}
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: ${ENV_SECRET_NAME}
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ${ENV_SECRET_NAME}
+              key: DB_PASSWORD
         envFrom:
         - secretRef:
             name: ${ENV_SECRET_NAME}
