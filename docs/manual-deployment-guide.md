@@ -47,7 +47,7 @@ docker login $REGISTRY_SERVER
 ### 0.3 Build and push image
 ```bash
 # From the API project root
-cd bengobox-erp-api/
+cd /bengobox-erp-api/
 docker build -t "$IMAGE_REPO:$IMAGE_TAG" .
 docker push "$IMAGE_REPO:$IMAGE_TAG"
 ```
