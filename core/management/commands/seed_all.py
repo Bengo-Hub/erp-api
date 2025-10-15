@@ -13,13 +13,20 @@ class Command(BaseCommand):
         parser.add_argument('--full', action='store_true', help='Run full manufacturing seeding (products + raw materials)')
         parser.add_argument('--products', type=int, default=20, help='Number of demo products to generate')
         parser.add_argument('--employees', type=int, default=5, help='Number of demo employees to generate')
+        parser.add_argument('--minimal', action='store_true', help='Seed a minimal dataset (1-2 per model)')
 
     def handle(self, *args, **options):
         clear_data = options.get('clear')
         simulate = options.get('simulate')
         full = options.get('full')
+        minimal = options.get('minimal')
         products_count = options.get('products')
         employees_count = options.get('employees')
+
+        if minimal:
+            # Cap counts to 1-2 for lightweight seeding
+            products_count = max(1, min(2, int(products_count)))
+            employees_count = max(1, min(2, int(employees_count)))
 
         self.stdout.write(self.style.SUCCESS('Starting comprehensive seeding process...'))
         
@@ -71,7 +78,7 @@ class Command(BaseCommand):
         try:
             # 4. HRM employees seeding
             self.stdout.write(f'4. Seeding HRM employees ({employees_count} employees)...')
-            call_command('seed_employees')
+            call_command('seed_employees', count=employees_count)
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'HRM employees seeding failed: {e}'))
 
@@ -105,22 +112,31 @@ class Command(BaseCommand):
 
         try:
             # 9. Manufacturing data seeding
-            self.stdout.write('9. Seeding manufacturing data...')
-            call_command('seed_manufacturing', full=full, simulate=simulate)
+            if minimal:
+                self.stdout.write('9. Skipping manufacturing data in minimal mode')
+            else:
+                self.stdout.write('9. Seeding manufacturing data...')
+                call_command('seed_manufacturing', full=full, simulate=simulate)
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Manufacturing data seeding failed: {e}'))
 
         try:
             # 10. Finance payment accounts seeding
             self.stdout.write('10. Seeding finance payment accounts...')
-            call_command('seed_payment_accounts')
+            if minimal:
+                call_command('seed_payment_accounts', count=2)
+            else:
+                call_command('seed_payment_accounts')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Finance payment accounts seeding failed: {e}'))
 
         try:
             # 11. Finance bank statements seeding
             self.stdout.write('11. Seeding finance bank statements...')
-            call_command('seed_bank_statements')
+            if minimal:
+                call_command('seed_bank_statements', count=2)
+            else:
+                call_command('seed_bank_statements')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Finance bank statements seeding failed: {e}'))
 
@@ -138,9 +154,19 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Procurement data seeding failed: {e}'))
 
+        # 14. Assets seeding (depends on business & branches)
         try:
-            # 14. Notifications setup
-            self.stdout.write('14. Setting up notifications...')
+            self.stdout.write('14. Seeding assets data...')
+            if minimal:
+                call_command('seed_assets', users=1, categories=2, assets=2)
+            else:
+                call_command('seed_assets')
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'Assets data seeding failed: {e}'))
+
+        try:
+            # 15. Notifications setup
+            self.stdout.write('15. Setting up notifications...')
             call_command('setup_notifications')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Notifications setup failed: {e}'))

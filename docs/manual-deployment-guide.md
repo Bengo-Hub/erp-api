@@ -170,6 +170,33 @@ kubectl wait --for=condition=complete job/erp-migrate-${SHORT_TAG} -n ${NAMESPAC
   echo "Migration job logs:" && kubectl logs job/erp-migrate-${SHORT_TAG} -n ${NAMESPACE} || true
   exit 1
 }
+
+# Optional: Seed minimal initial data after migrations
+cat > /tmp/seed-job.yaml <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: erp-seed-${SHORT_TAG}
+  namespace: ${NAMESPACE}
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: seed
+        image: ${IMAGE_REPO}:${SHORT_TAG}
+        command: ["python", "manage.py", "seed_all", "--minimal"]
+        envFrom:
+        - secretRef:
+            name: ${ENV_SECRET_NAME}
+EOF
+
+kubectl apply -f /tmp/seed-job.yaml
+kubectl wait --for=condition=complete job/erp-seed-${SHORT_TAG} -n ${NAMESPACE} --timeout=300s || {
+  echo "Seed job logs:" && kubectl logs job/erp-seed-${SHORT_TAG} -n ${NAMESPACE} || true
+  exit 1
+}
 ```
 
 ### Phase 2: Initial ArgoCD Application Deployment
