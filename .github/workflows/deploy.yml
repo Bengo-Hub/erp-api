@@ -87,51 +87,58 @@ jobs:
         chmod +x build.sh
         ./build.sh
 
-    - name: Run database migrations (Django apps)
+    - name: Tag and push :latest
       if: success()
       env:
-        NS: erp
-        IMAGE_REPO: docker.io/codevertex/erp-api
-        SHORT_SHA: ${{ github.sha }}
-        KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG }}
-        ENV_SECRET_NAME: erp-api-env
+        REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+        REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       run: |
-        # Only run migrations if KUBE_CONFIG is available
-        if [ -z "${{ secrets.KUBE_CONFIG }}" ]; then
-          echo "⏭️ Skipping migrations - no KUBE_CONFIG available"
+        set -e
+        : "${REGISTRY_SERVER:=docker.io}"
+        : "${REGISTRY_NAMESPACE:=codevertex}"
+        IMAGE_REPO="${REGISTRY_SERVER}/${REGISTRY_NAMESPACE}/erp-api"
+        SHORT_SHA=${GITHUB_SHA::8}
+        echo "Tagging ${IMAGE_REPO}:${SHORT_SHA} as :latest and pushing"
+        echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY_SERVER" -u "$REGISTRY_USERNAME" --password-stdin
+        # Ensure the commit-tagged image is available locally
+        docker pull "${IMAGE_REPO}:${SHORT_SHA}" || true
+        docker tag "${IMAGE_REPO}:${SHORT_SHA}" "${IMAGE_REPO}:latest"
+        docker push "${IMAGE_REPO}:latest"
+
+    - name: Verify API health
+      if: success()
+      env:
+        KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG }}
+        NS: erp
+      run: |
+        if [ -z "${KUBE_CONFIG_B64}" ]; then
+          echo "⏭️ Skipping health check - no KUBE_CONFIG available"
           exit 0
         fi
 
-        echo "::group::Running database migrations"
+        echo "::group::Health check"
         mkdir -p ~/.kube
         echo "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
 
-        # Create migration job
-        cat > /tmp/migrate-job.yaml <<EOF
-        apiVersion: batch/v1
-        kind: Job
-        metadata:
-          name: erp-migrate-${SHORT_SHA::8}
-          namespace: ${NS}
-        spec:
-          ttlSecondsAfterFinished: 600
-          template:
-            spec:
-              restartPolicy: Never
-              containers:
-              - name: migrate
-                image: ${IMAGE_REPO}:${SHORT_SHA::8}
-                command: ["python", "manage.py", "migrate"]
-                envFrom:
-                - secretRef:
-                    name: ${ENV_SECRET_NAME}
-        EOF
+        # Ensure deployment is rolled out
+        kubectl rollout status deployment/erp-api -n ${NS} --timeout=300s
 
-        kubectl apply -f /tmp/migrate-job.yaml
-        kubectl wait --for=condition=complete job/erp-migrate-${SHORT_SHA::8} -n ${NS} --timeout=300s || {
-          echo "Migration job logs:"
-          kubectl logs job/erp-migrate-${SHORT_SHA::8} -n ${NS} || true
-          exit 1
-        }
-        echo "✅ Database migrations completed"
+        # Try ingress health endpoint(s)
+        HOSTS=$(kubectl get ingress -n ${NS} -o jsonpath='{.items[*].spec.rules[*].host}' | tr ' ' '\n' | grep -E '^erpapi(\.|$)' || true)
+        if [ -n "$HOSTS" ]; then
+          STATUS=1
+          for H in $HOSTS; do
+            echo "Checking https://$H/api/v1/health/ ..."
+            if curl -sk --max-time 10 "https://$H/api/v1/health/" | grep -Ei "ok|healthy" >/dev/null; then
+              echo "✅ Health OK for $H"
+              STATUS=0
+              break
+            fi
+          done
+          if [ $STATUS -ne 0 ]; then
+            echo "⚠️ Health endpoint did not return OK; rollout completed but endpoint may still be initializing"
+          fi
+        else
+          echo "No ingress host found; skipping external health probe"
+        fi
         echo "::endgroup::"
