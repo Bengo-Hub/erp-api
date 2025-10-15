@@ -14,8 +14,16 @@ class Command(BaseCommand):
             action='store_true',
             help='Clear existing payment accounts before seeding',
         )
+        parser.add_argument(
+            '--count',
+            type=int,
+            default=5,
+            help='Number of payment accounts to create (default: 5)',
+        )
 
     def handle(self, *args, **options):
+        count = options.get('count', 5)
+        
         if options['clear']:
             PaymentAccounts.objects.all().delete()
             self.stdout.write(
@@ -105,10 +113,13 @@ class Command(BaseCommand):
             }
         ]
 
+        # Limit accounts to the requested count
+        accounts_to_create = accounts_data[:count]
+
         # Create payment accounts
         created_accounts = []
         with transaction.atomic():
-            for account_data in accounts_data:
+            for account_data in accounts_to_create:
                 account, created = PaymentAccounts.objects.get_or_create(
                     name=account_data['name'],
                     defaults=account_data

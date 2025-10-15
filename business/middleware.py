@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+import secrets
 from django.db import IntegrityError, transaction
 from .models import *
 from core.models import Regions, Departments
@@ -20,6 +21,23 @@ class BusinessConfigs:
         try:
             with transaction.atomic():
                 if Bussiness.objects.count() == 0:
+                    # Resolve or create an owner account for the default business
+                    owner = User.objects.filter(is_superuser=True).first()
+                    if owner is None:
+                        owner = User.objects.filter(is_staff=True).first()
+                    if owner is None:
+                        # Create a secure superuser if none exists
+                        try:
+                            random_password = secrets.token_urlsafe(20)
+                            owner = User.objects.create_superuser(
+                                username='admin',
+                                email='admin@codevertexafrica.com',
+                                password=random_password
+                            )
+                        except Exception:
+                            # Fallback to any existing user if creation fails
+                            owner = User.objects.first()
+
                     # Create default business location
                     location = BusinessLocation.objects.create(
                         city='Nairobi',
@@ -36,6 +54,7 @@ class BusinessConfigs:
                     # Create default business
                     biz = Bussiness.objects.create(
                         location=location,
+                        owner=owner,
                         name='Codevertex Africa',
                         start_date='2024-01-01',
                         currency='KES',
