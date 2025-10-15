@@ -340,6 +340,44 @@ if [[ "$DEPLOY" == "true" ]]; then
             fi
 
             log_success "Database setup completed"
+            
+            # Optional: Configure VPA for databases if CRDs exist
+            if kubectl get crd verticalpodautoscalers.autoscaling.k8s.io >/dev/null 2>&1; then
+                log_step "Configuring VPA for PostgreSQL and Redis"
+                cat > /tmp/vpa-postgresql.yaml <<EOF
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: postgresql-vpa
+  namespace: ${NAMESPACE}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind:       StatefulSet
+    name:       postgresql
+  updatePolicy:
+    updateMode: "Auto"
+EOF
+                kubectl apply -f /tmp/vpa-postgresql.yaml || log_warning "Failed to apply VPA for PostgreSQL"
+
+                cat > /tmp/vpa-redis-master.yaml <<EOF
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: redis-master-vpa
+  namespace: ${NAMESPACE}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind:       StatefulSet
+    name:       redis-master
+  updatePolicy:
+    updateMode: "Auto"
+EOF
+                kubectl apply -f /tmp/vpa-redis-master.yaml || log_warning "Failed to apply VPA for Redis"
+            else
+                log_info "VPA CRDs not found; skipping DB VPA configuration"
+            fi
         fi
 
         # Kubernetes secrets and JWT setup
@@ -470,6 +508,10 @@ if [[ "$DEPLOY" == "true" ]]; then
             
             log_info "Waiting for Redis to be ready..."
             kubectl -n "$NAMESPACE" rollout status statefulset/redis-master --timeout=120s || log_warning "Redis not fully ready"
+            
+            # Grace period after readiness before connections (minimum 5 seconds)
+            log_info "Waiting 5 seconds to allow database services to stabilize before connecting..."
+            sleep 5
             
             # Verify env secret exists
             if ! kubectl -n "$NAMESPACE" get secret "$ENV_SECRET_NAME" >/dev/null 2>&1; then
