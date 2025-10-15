@@ -63,6 +63,11 @@ trivy image "$IMAGE_REPO:$IMAGE_TAG" --exit-code 0 --format table --ignorefile .
 ### 0.4 Create registry pull secret in cluster
 ```bash
 # Decode kubeconfig
+\# Update server address
+sed -i 's|server: https://.\*:6443|server: https://77.237.232.66:6443 |' ~/.kube/contabo-kubeadm-config
+\# Test
+export KUBECONFIG=~/.kube/contabo-kubeadm-config
+
 mkdir -p ~/.kube
 echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
 
