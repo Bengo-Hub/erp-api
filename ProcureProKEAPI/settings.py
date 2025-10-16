@@ -41,7 +41,7 @@ def env_list(name: str, default: list[str] | None = None) -> list[str]:
 DEBUG = env_bool('DEBUG', default=True)
 
 # Hosts and CORS/CSRF configuration from environment for production
-ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default=['*' if DEBUG else '127.0.0.1'])
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default=['*' if DEBUG else '127.0.0.1,192.168.10.69,localhost,erpapi.masterspace.co.ke,*.masterspace.co.ke'.split(',')])
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # Application definition
