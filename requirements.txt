@@ -24,6 +24,7 @@ django-tinymce
 django-tinymce4-lite
 djangorestframework
 djangorestframework-csv
+bleach
 dnspython
 drf-spectacular
 drf-spectacular-sidecar
@@ -124,8 +125,7 @@ pyee
 Pygments
 pyHanko
 pyhanko-certvalidator
-PyJWT
-pymongo
+PyJWT>=2.10.1
 pyotp
 pyparsing
 pypdf
@@ -194,3 +194,4 @@ yarl
 zipp
 boto3
 fcm-django
+pushjack

@@ -638,7 +638,7 @@ EOF
               debug_hash "PG_PASS_from_live_secret" "$LIVE_PG_PASS"
             else
               log_info "kubectl not available or not configured; skipping live secret fetch"
-            }
+            fi
 
             CANDIDATE_PASSES=("$APP_DB_PASS" "${POSTGRES_PASSWORD:-}" "$LIVE_PG_PASS")
             for CANDIDATE in "${CANDIDATE_PASSES[@]}"; do
