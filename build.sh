@@ -32,6 +32,48 @@ log_step()    { echo -e "${PURPLE}[STEP]${NC} $1"; }
 log_debug()   { echo -e "${CYAN}[DEBUG]${NC} $1"; }
 
 # =============================================================================
+# Helper functions
+# =============================================================================
+
+ensure_kube_config() {
+    if [[ -n "${KUBE_CONFIG:-}" ]]; then
+        mkdir -p ~/.kube
+        echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+        export KUBECONFIG=~/.kube/config
+    fi
+}
+
+stream_job() {
+    # Args: namespace job_name timeout
+    local NS="$1"; local JOB="$2"; local TIMEOUT="$3"; local POD="";
+    log_info "Streaming logs for job ${JOB} (waiting for pod to start)..."
+    for i in {1..30}; do
+        POD=$(kubectl get pods -n "${NS}" -l job-name="${JOB}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [[ -n "${POD}" ]]; then
+            log_info "Pod started: ${POD}"
+            break
+        fi
+        sleep 2
+    done
+    if [[ -z "${POD}" ]]; then
+        log_error "Pod for job ${JOB} did not start"
+        return 2
+    fi
+    kubectl logs -n "${NS}" -f "${POD}" 2>/dev/null &
+    local LOGS_PID=$!
+    kubectl wait --for=condition=complete job/"${JOB}" -n "${NS}" --timeout="${TIMEOUT}"
+    local RC=$?
+    kill ${LOGS_PID} 2>/dev/null || true
+    wait ${LOGS_PID} 2>/dev/null || true
+    if [[ ${RC} -ne 0 ]]; then
+        log_info "Final logs for ${JOB}:"
+        kubectl logs -n "${NS}" "${POD}" --tail=100 || true
+    fi
+    return ${RC}
+}
+
+# =============================================================================
 # CONFIGURATION & ENVIRONMENT SETUP
 # =============================================================================
 
@@ -226,12 +268,7 @@ if [[ "$DEPLOY" == "true" ]]; then
             fi
 
             # Setup kubeconfig if available
-            if [[ -n "${KUBE_CONFIG:-}" ]]; then
-                mkdir -p ~/.kube
-                echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
-                chmod 600 ~/.kube/config
-                export KUBECONFIG=~/.kube/config
-            fi
+            ensure_kube_config
 
             # Create namespace if it doesn't exist
             kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create ns "$NAMESPACE"
@@ -329,10 +366,7 @@ EOF
         if [[ -n "${KUBE_CONFIG:-}" ]]; then
             log_step "Setting up Kubernetes secrets..."
 
-            mkdir -p ~/.kube
-            echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
-            chmod 600 ~/.kube/config
-            export KUBECONFIG=~/.kube/config
+            ensure_kube_config
 
             # Create namespace if needed
             kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create ns "$NAMESPACE"
@@ -477,7 +511,8 @@ EOF
             
             # RE-VALIDATE the effective password NOW (after DB fully ready)
             log_step "Re-validating PostgreSQL password against live database..."
-            APP_DB_USER="postgres"
+            # Preferred application DB user; fallback to 'erp_user', then 'postgres' if validation fails later
+            APP_DB_USER="${APP_DB_USER:-erp_user}"
             APP_DB_NAME="${PG_DATABASE:-bengo_erp}"
             
             # Get password from secret
@@ -555,6 +590,45 @@ EOF
               return $RC
             }
 
+            try_psql_user() {
+              local PASS="$1"; local USER="$2"; local DBNAME="$3"
+              local JOB_NAME="pguser-check-${RANDOM}"
+              if [[ -z "$PASS" || -z "$USER" || -z "$DBNAME" ]]; then return 1; fi
+              cat > /tmp/${JOB_NAME}.yaml <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${JOB_NAME}
+  namespace: ${NAMESPACE}
+spec:
+  ttlSecondsAfterFinished: 120
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: psql
+        image: registry-1.docker.io/bitnami/postgresql:15
+        env:
+        - name: PGPASSWORD
+          value: "${PASS}"
+        command: ["psql"]
+        args: ["-h","postgresql.${NAMESPACE}.svc.cluster.local","-U","${USER}","-d","${DBNAME}","-c","SELECT current_user, current_database();"]
+EOF
+              set +e
+              kubectl apply -f /tmp/${JOB_NAME}.yaml >/dev/null 2>&1
+              kubectl -n "$NAMESPACE" wait --for=condition=complete job/${JOB_NAME} --timeout=45s >/dev/null 2>&1
+              local RC=$?
+              if [[ -n "$DEBUG_DB_VALIDATION" && "$DEBUG_DB_VALIDATION" == "true" ]]; then
+                log_debug "psql user job logs (user=${USER}, db=${DBNAME}, RC=${RC}):"
+                kubectl -n "$NAMESPACE" logs job/${JOB_NAME} 2>/dev/null || true
+              fi
+              kubectl -n "$NAMESPACE" delete job ${JOB_NAME} --ignore-not-found >/dev/null 2>&1 || true
+              set -e
+              return $RC
+            }
+
+            # First validate connectivity using the cluster superuser 'postgres' against default db
             if ! try_psql "$EFFECTIVE_PG_PASS"; then
               log_warning "Password from secret did not work; trying POSTGRES_PASSWORD env var"
               if [[ -n "${POSTGRES_PASSWORD:-}" ]] && try_psql "$POSTGRES_PASSWORD"; then
@@ -579,6 +653,17 @@ EOF
               fi
             else
               log_success "PostgreSQL password validated successfully"
+            fi
+
+            # Validate application DB user; fallback to 'postgres' if needed
+            if ! try_psql_user "$EFFECTIVE_PG_PASS" "$APP_DB_USER" "$APP_DB_NAME"; then
+              log_warning "App DB user '${APP_DB_USER}' failed validation; falling back to 'postgres'"
+              if try_psql_user "$EFFECTIVE_PG_PASS" "postgres" "$APP_DB_NAME"; then
+                APP_DB_USER="postgres"
+              else
+                log_error "CRITICAL: Neither '${APP_DB_USER}' nor 'postgres' can connect to ${APP_DB_NAME}"
+                exit 1
+              fi
             fi
             
             # Rebuild env secret with validated password and all production values
@@ -721,41 +806,13 @@ EOF
 
             set +e
             kubectl apply -f /tmp/migrate-job.yaml
-            
-            # Stream logs in real-time while waiting for job
-            log_info "Streaming migration logs (waiting for pod to start)..."
-            for i in {1..30}; do
-              MIGRATE_POD=$(kubectl get pods -n ${NAMESPACE} -l job-name=${APP_NAME}-migrate-${GIT_COMMIT_ID} -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-              if [[ -n "$MIGRATE_POD" ]]; then
-                log_info "Migration pod started: $MIGRATE_POD"
-                break
-              fi
-              sleep 2
-            done
-            
-            if [[ -n "$MIGRATE_POD" ]]; then
-              # Follow logs in background while waiting for completion
-              kubectl logs -n ${NAMESPACE} -f "$MIGRATE_POD" 2>/dev/null &
-              LOGS_PID=$!
-              
-              kubectl wait --for=condition=complete job/${APP_NAME}-migrate-${GIT_COMMIT_ID} -n ${NAMESPACE} --timeout=300s
-              JOB_STATUS=$?
-              
-              # Stop log streaming
-              kill $LOGS_PID 2>/dev/null || true
-              wait $LOGS_PID 2>/dev/null || true
-              
-              if [[ $JOB_STATUS -ne 0 ]]; then
-                  log_error "Migration job failed or timed out"
-                  log_info "Final migration logs:"
-                  kubectl logs -n ${NAMESPACE} "$MIGRATE_POD" --tail=100 || true
-                  exit 1
-              fi
-            else
-              log_error "Migration pod never started"
-              exit 1
-            fi
+            stream_job "${NAMESPACE}" "${APP_NAME}-migrate-${GIT_COMMIT_ID}" "300s"
+            JOB_STATUS=$?
             set -e
+            if [[ $JOB_STATUS -ne 0 ]]; then
+                log_error "Migration job failed or timed out"
+                exit 1
+            fi
             log_success "Database migrations completed"
 
             # Seed initial data after migrations
@@ -784,41 +841,13 @@ EOF
 
             set +e
             kubectl apply -f /tmp/seed-job.yaml
-            
-            # Stream seed logs in real-time while waiting for job
-            log_info "Streaming seed logs (waiting for pod to start)..."
-            for i in {1..30}; do
-              SEED_POD=$(kubectl get pods -n ${NAMESPACE} -l job-name=${APP_NAME}-seed-${GIT_COMMIT_ID} -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-              if [[ -n "$SEED_POD" ]]; then
-                log_info "Seed pod started: $SEED_POD"
-                break
-              fi
-              sleep 2
-            done
-            
-            if [[ -n "$SEED_POD" ]]; then
-              # Follow logs in background while waiting for completion
-              kubectl logs -n ${NAMESPACE} -f "$SEED_POD" 2>/dev/null &
-              SEED_LOGS_PID=$!
-              
-              kubectl wait --for=condition=complete job/${APP_NAME}-seed-${GIT_COMMIT_ID} -n ${NAMESPACE} --timeout=300s
-              SEED_STATUS=$?
-              
-              # Stop log streaming
-              kill $SEED_LOGS_PID 2>/dev/null || true
-              wait $SEED_LOGS_PID 2>/dev/null || true
-              
-              if [[ $SEED_STATUS -ne 0 ]]; then
-                log_error "Seed job failed or timed out"
-                log_info "Final seed logs:"
-                kubectl logs -n ${NAMESPACE} "$SEED_POD" --tail=100 || true
-                exit 1
-              fi
-            else
-              log_error "Seed pod never started"
+            stream_job "${NAMESPACE}" "${APP_NAME}-seed-${GIT_COMMIT_ID}" "300s"
+            SEED_STATUS=$?
+            set -e
+            if [[ $SEED_STATUS -ne 0 ]]; then
+              log_error "Seed job failed or timed out"
               exit 1
             fi
-            set -e
             log_success "Initial data seeding completed"
 
             # Restart API deployment to pick up updated environment secret
