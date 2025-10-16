@@ -499,6 +499,9 @@ EOF
         # Database migrations (ensure DBs ready and env secret exists before running)
         if [[ "$SETUP_DATABASES" == "true" && -n "${KUBE_CONFIG:-}" ]]; then
             log_step "Running database migrations..."
+            
+            # Ensure kubeconfig is set up
+            ensure_kube_config
 
             # Wait for databases to be ready
             log_info "Waiting for PostgreSQL to be ready..."
@@ -852,6 +855,32 @@ EOF
             log_step "Restarting API deployment to pick updated secrets"
             kubectl -n "$NAMESPACE" rollout restart deployment/erp-api || true
             kubectl -n "$NAMESPACE" rollout status deployment/erp-api --timeout=300s || log_warning "API deployment rollout not ready in time"
+            
+            # Retrieve pod IPs and update ALLOWED_HOSTS to include cluster internal addresses
+            log_step "Updating ALLOWED_HOSTS with cluster internal IPs..."
+            sleep 5  # Brief wait for pods to stabilize after rollout
+            
+            POD_IPS=$(kubectl get pods -n "$NAMESPACE" -l app=erp-api-app -o jsonpath='{.items[*].status.podIP}' 2>/dev/null | tr ' ' ',' || true)
+            SVC_IP=$(kubectl get svc erp-api -n "$NAMESPACE" -o jsonpath='{.spec.clusterIP}' 2>/dev/null || true)
+            
+            # Build comprehensive ALLOWED_HOSTS including external domain, localhost, wildcards, and cluster IPs
+            UPDATED_ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
+            [[ -n "$SVC_IP" ]] && UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},${SVC_IP}"
+            [[ -n "$POD_IPS" ]] && UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},${POD_IPS}"
+            # Add common private IP ranges for cluster networking
+            UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+            
+            log_info "Updated ALLOWED_HOSTS: ${UPDATED_ALLOWED_HOSTS}"
+            
+            # Patch the env secret with updated ALLOWED_HOSTS
+            kubectl -n "$NAMESPACE" patch secret "$ENV_SECRET_NAME" --type merge -p "{\"stringData\":{\"ALLOWED_HOSTS\":\"${UPDATED_ALLOWED_HOSTS}\"}}" || log_warning "Failed to update ALLOWED_HOSTS"
+            
+            # Restart deployment again to pick up the updated ALLOWED_HOSTS
+            log_info "Restarting API deployment to apply updated ALLOWED_HOSTS..."
+            kubectl -n "$NAMESPACE" rollout restart deployment/erp-api || true
+            kubectl -n "$NAMESPACE" rollout status deployment/erp-api --timeout=300s || log_warning "Final API deployment rollout not ready"
+            
+            log_success "ALLOWED_HOSTS updated with cluster IPs"
         fi
 
         # Note: ArgoCD applications are configured with automated sync
