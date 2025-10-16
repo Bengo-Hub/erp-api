@@ -38,10 +38,10 @@ def env_list(name: str, default: list[str] | None = None) -> list[str]:
     return [item.strip() for item in raw.split(',') if item.strip()]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env_bool('DEBUG', default=False)
+DEBUG = env_bool('DEBUG', default=True)
 
 # Hosts and CORS/CSRF configuration from environment for production
-ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default=['*' if DEBUG else 'localhost'])
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default=['*' if DEBUG else '127.0.0.1'])
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # Application definition
