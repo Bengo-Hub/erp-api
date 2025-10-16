@@ -96,6 +96,10 @@ jobs:
         APPLICATION_DISPLAY_NAME: BengoERP API
       run: |
         chmod +x build.sh
+        # Make sure DB vars are exported in shell (avoid masking by YAML env scoping)
+        export POSTGRES_PASSWORD="${POSTGRES_PASSWORD}"
+        export APP_DB_USER="${APP_DB_USER:-erp_user}"
+        export PG_DATABASE="${PG_DATABASE:-bengo_erp}"
         ./build.sh
 
     - name: Tag and push :latest

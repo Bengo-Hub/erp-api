@@ -13,6 +13,8 @@
 # =============================================================================
 
 set -euo pipefail
+# Disable history expansion to avoid issues with passwords containing '!'
+set +H
 
 # Color codes for output
 RED='\033[0;31m'
@@ -522,8 +524,8 @@ EOF
                 APP_DB_PASS="$POSTGRES_PASSWORD"
             fi
             
-            # Validate effective password
-            EFFECTIVE_PG_PASS="$APP_DB_PASS"
+            # Validate effective password using the intended app user first
+            EFFECTIVE_PG_PASS=""
 
             # Optional debug helpers
             debug_hash() {
@@ -629,41 +631,37 @@ EOF
             }
 
             # First validate connectivity using the cluster superuser 'postgres' against default db
-            if ! try_psql "$EFFECTIVE_PG_PASS"; then
-              log_warning "Password from secret did not work; trying POSTGRES_PASSWORD env var"
-              if [[ -n "${POSTGRES_PASSWORD:-}" ]] && try_psql "$POSTGRES_PASSWORD"; then
-                log_warning "Using POSTGRES_PASSWORD from environment (secret is stale)"
-                EFFECTIVE_PG_PASS="$POSTGRES_PASSWORD"
-                
-                # Update the postgresql secret to match live DB password
-                log_info "Syncing postgresql secret with effective password"
-                kubectl -n "$NAMESPACE" patch secret postgresql --type merge -p "{\"stringData\":{\"postgres-password\":\"$EFFECTIVE_PG_PASS\"}}"
-              else
-                # Final attempt: read the actual live password from the Bitnami secret directly
-                LIVE_PG_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
-                debug_hash "PG_PASS_from_live_secret" "$LIVE_PG_PASS"
-                if [[ -n "$LIVE_PG_PASS" ]] && try_psql "$LIVE_PG_PASS"; then
-                  log_success "Validated password directly from live postgresql secret"
-                  EFFECTIVE_PG_PASS="$LIVE_PG_PASS"
-                else
-                  log_error "CRITICAL: Neither secret-derived, env POSTGRES_PASSWORD, nor live secret password worked"
-                  log_error "Enable DEBUG_DB_VALIDATION=true for detailed diagnostics"
-                  exit 1
-                fi
-              fi
+            # Pull live password once for candidate list (only if kubeconfig available)
+            LIVE_PG_PASS=""
+            if kubectl version --short >/dev/null 2>&1; then
+              LIVE_PG_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+              debug_hash "PG_PASS_from_live_secret" "$LIVE_PG_PASS"
             else
-              log_success "PostgreSQL password validated successfully"
-            fi
+              log_info "kubectl not available or not configured; skipping live secret fetch"
+            }
 
-            # Validate application DB user; fallback to 'postgres' if needed
-            if ! try_psql_user "$EFFECTIVE_PG_PASS" "$APP_DB_USER" "$APP_DB_NAME"; then
-              log_warning "App DB user '${APP_DB_USER}' failed validation; falling back to 'postgres'"
-              if try_psql_user "$EFFECTIVE_PG_PASS" "postgres" "$APP_DB_NAME"; then
-                APP_DB_USER="postgres"
-              else
-                log_error "CRITICAL: Neither '${APP_DB_USER}' nor 'postgres' can connect to ${APP_DB_NAME}"
-                exit 1
+            CANDIDATE_PASSES=("$APP_DB_PASS" "${POSTGRES_PASSWORD:-}" "$LIVE_PG_PASS")
+            for CANDIDATE in "${CANDIDATE_PASSES[@]}"; do
+              [[ -z "$CANDIDATE" ]] && continue
+              # Try with intended app user first
+              if try_psql_user "$CANDIDATE" "$APP_DB_USER" "$APP_DB_NAME"; then
+                EFFECTIVE_PG_PASS="$CANDIDATE"
+                break
               fi
+              # Fallback: try with postgres user to same DB
+              if try_psql_user "$CANDIDATE" "postgres" "$APP_DB_NAME"; then
+                EFFECTIVE_PG_PASS="$CANDIDATE"
+                APP_DB_USER="postgres"
+                break
+              fi
+            done
+
+            if [[ -z "$EFFECTIVE_PG_PASS" ]]; then
+              log_error "CRITICAL: Could not validate any password for users '${APP_DB_USER}' or 'postgres'"
+              log_error "Enable DEBUG_DB_VALIDATION=true for detailed diagnostics"
+              exit 1
+            else
+              log_success "Database credentials validated for user '${APP_DB_USER}' and db '${APP_DB_NAME}'"
             fi
             
             # Rebuild env secret with validated password and all production values

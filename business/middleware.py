@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 import secrets
+from django.db import DatabaseError, connection
 from django.db import IntegrityError, transaction
 from .models import *
 from core.models import Regions, Departments
@@ -11,10 +12,31 @@ class BusinessConfigs:
     def __init__(self, get_response):
         self.get_response = get_response
         # On startup, ensure all businesses have branding settings
-        self.initialize_business_details()
-        self.initialize_branding_settings()
+        try:
+            self.initialize_business_details()
+        except Exception as e:
+            print(f"Error during initialize_business_details: {e}")
+            try:
+                connection.close()
+            except Exception:
+                pass
+        try:
+            self.initialize_branding_settings()
+        except Exception as e:
+            print(f"Error during initialize_branding_settings: {e}")
+            try:
+                connection.close()
+            except Exception:
+                pass
         # Initialize pickup locations based on business locations
-        self.initialize_pickup_locations()
+        try:
+            self.initialize_pickup_locations()
+        except Exception as e:
+            print(f"Error during initialize_pickup_locations: {e}")
+            try:
+                connection.close()
+            except Exception:
+                pass
 
     def initialize_business_details(self):
         """Ensure all businesses have business details and proper multi-branch structure"""
@@ -46,7 +68,7 @@ class BusinessConfigs:
                         country='KE',
                         zip_code='00100',
                         postal_code='00100',
-                        website='codevertexitsolutions.com',
+                        website='https://codevertexitsolutions.com',
                         default=True,
                         is_active=True
                     )
@@ -85,78 +107,68 @@ class BusinessConfigs:
             print(f"Error initializing business details: {e}")
 
     def initialize_branding_settings(self):
-        """Ensure all businesses have branding settings"""
+        """Ensure all businesses have branding settings (idempotent, no wide atomic)."""
         try:
-            with transaction.atomic():
-                # Get all businesses that don't have branding settings
-                businesses_without_branding = []
-                for business in Bussiness.objects.all():
-                    if not hasattr(business, 'branding'):
-                        businesses_without_branding.append(business)
-                
-                # Create branding settings for each business that needs it
-                for business in businesses_without_branding:
+            for business in Bussiness.objects.all():
+                try:
+                    BrandingSettings.objects.get_or_create(
+                        business=business,
+                        defaults={
+                            'primary_color_name': 'blue',
+                            'surface_name': 'slate',
+                            'compact_mode': False,
+                            'ripple_effect': True,
+                            'border_radius': '4px',
+                            'scale_factor': 1.0,
+                        },
+                    )
+                except IntegrityError:
+                    # Likely created concurrently
+                    print(f"IntegrityError creating branding settings for {business.name}")
+                except DatabaseError as db_e:
+                    print(f"DatabaseError creating branding for {business.name}: {db_e}")
                     try:
-                        # Check if a branding setting exists but isn't properly linked
-                        existing = BrandingSettings.objects.filter(business=business).first()
-                        if existing:
-                            continue
-                            
-                        # Create new branding settings
-                        BrandingSettings.objects.create(
-                            business=business,
-                            primary_color_name='blue',
-                            surface_name='slate',
-                            compact_mode=False,
-                            ripple_effect=True,
-                            border_radius='4px',
-                            scale_factor=1.0
-                        )
-                    except IntegrityError:
-                        # If there's an integrity error, it likely means another process created it
-                        # Just log and continue
-                        print(f"IntegrityError creating branding settings for {business.name}")
+                        connection.close()
+                    except Exception:
+                        pass
         except Exception as e:
             print(f"Error initializing branding settings: {e}")
 
     def initialize_pickup_locations(self):
-        """Create pickup locations for businesses based on their business locations"""
+        """Create pickup locations for businesses based on their business locations (idempotent)."""
         try:
-            with transaction.atomic():
-                # Get all businesses with their branches
-                businesses = Bussiness.objects.all().prefetch_related('branches__location')
-                
-                for business in businesses:
-                    # Get business branches for this business
-                    business_branches = business.branches.all()
-                    
-                    # For each business branch, ensure a DeliveryRegion and PickupStation exists
-                    for branch in business_branches:
-                        location = branch.location
-                        
-                        # Resolve an existing delivery region (avoid MultipleObjectsReturned)
-                        region = DeliveryRegion.objects.filter(
-                            name=location.city,
-                            county=location.county
-                        ).first()
-                        if not region:
+            # Get all businesses with their branches
+            businesses = Bussiness.objects.all().prefetch_related('branches__location')
+            for business in businesses:
+                # Get business branches for this business
+                business_branches = business.branches.all()
+                for branch in business_branches:
+                    location = branch.location
+                    # Resolve an existing delivery region (avoid MultipleObjectsReturned)
+                    region = DeliveryRegion.objects.filter(
+                        name=location.city,
+                        county=location.county
+                    ).first()
+                    if not region:
+                        try:
                             region = DeliveryRegion.objects.create(
                                 name=location.city,
                                 county=location.county,
                                 delivery_charge=300,
                                 estimated_delivery_days=3
                             )
-                        
-                        # Check if a pickup station already exists for this business and region
-                        pickup_exists = PickupStations.objects.filter(
-                            business=business, 
-                            region=region,
-                            pickup_location__icontains=location.city
-                        ).exists()
-                        
-                        # Only create if it doesn't exist already
-                        if not pickup_exists:
-                            # Create the pickup station
+                        except IntegrityError:
+                            region = DeliveryRegion.objects.filter(
+                                name=location.city, county=location.county
+                            ).first()
+                    # Create pickup station if not exists
+                    pickup_exists = PickupStations.objects.filter(
+                        business=business, 
+                        region=region,
+                        pickup_location__icontains=location.city
+                    ).exists()
+                    if not pickup_exists:
+                        try:
                             PickupStations.objects.create(
                                 business=business,
                                 region=region,
@@ -169,6 +181,9 @@ class BusinessConfigs:
                                 shipping_charge=100,
                                 postal_code=location.postal_code if hasattr(location, 'postal_code') and location.postal_code else "57-40100"
                             )
+                        except IntegrityError:
+                            # Created concurrently, safe to ignore
+                            pass
         except Exception as e:
             print(f"Error initializing pickup locations: {e}")
 
