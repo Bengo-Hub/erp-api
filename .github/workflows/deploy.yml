@@ -59,6 +59,8 @@ jobs:
         DB_TYPES: postgres,redis
         NAMESPACE: erp
         ENV_SECRET_NAME: erp-api-env
+        # Prefer dedicated app DB user if provided; fallback handled in build.sh
+        APP_DB_USER: ${{ secrets.APP_DB_USER }}
         REGISTRY_SERVER: docker.io
         REGISTRY_NAMESPACE: codevertex
         VALUES_FILE_PATH: apps/erp-api/values.yaml
@@ -74,6 +76,8 @@ jobs:
         POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
         PG_DATABASE: bengo_erp
+        # Optional: enable DB validation debug
+        DEBUG_DB_VALIDATION: ${{ secrets.DEBUG_DB_VALIDATION || 'false' }}
         # Django application secrets
         DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY || 'change-me-strong' }}
         # Email configuration (optional)
