@@ -1,5 +1,4 @@
 import os
-import datetime
 from django.shortcuts import render,redirect
 from django.views import View
 from rest_framework import viewsets
@@ -26,7 +25,6 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.http import JsonResponse
 from django.core.cache import cache
-from django.utils import timezone
 from datetime import datetime, timedelta
 from .models import *
 from .serializers import *
@@ -124,7 +122,7 @@ class HealthCheckView(APIView):
         # Basic health check data
         health_data = {
             "status": "healthy",
-            "timestamp": datetime.datetime.now().isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "database": db_status,
             "version": "1.0.0"
         }

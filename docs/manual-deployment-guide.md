@@ -290,8 +290,8 @@ fi
 
 # Update ALLOWED_HOSTS with cluster IPs
 echo "Updating ALLOWED_HOSTS with cluster internal IPs..."
-kubectl rollout restart deployment/erp-api -n ${NAMESPACE} || true
-kubectl rollout status deployment/erp-api -n ${NAMESPACE} --timeout=300s || true
+kubectl rollout restart deployment/erp-api-app -n ${NAMESPACE} || true
+kubectl rollout status deployment/erp-api-app -n ${NAMESPACE} --timeout=300s || true
 sleep 5
 
 # Retrieve dynamic pod and service IPs
@@ -311,8 +311,8 @@ kubectl -n ${NAMESPACE} patch secret ${ENV_SECRET_NAME} --type merge -p "{\"stri
 
 # Final restart to apply updated ALLOWED_HOSTS
 echo "Restarting API deployment to apply updated ALLOWED_HOSTS..."
-kubectl rollout restart deployment/erp-api -n ${NAMESPACE} || true
-kubectl rollout status deployment/erp-api -n ${NAMESPACE} --timeout=300s || true
+kubectl rollout restart deployment/erp-api-app -n ${NAMESPACE} || true
+kubectl rollout status deployment/erp-api-app -n ${NAMESPACE} --timeout=300s || true
 
 echo "✅ ALLOWED_HOSTS updated with cluster IPs"
 ```
@@ -451,7 +451,7 @@ kubectl get svc -n erp
 ### 3.4 Wait for Full Deployment
 ```bash
 # Wait for API deployment to be ready
-kubectl wait --for=condition=available --timeout=600s deployment/erp-api -n erp
+kubectl wait --for=condition=available --timeout=600s deployment/erp-api-app -n erp
 
 # Verify API pods are running
 kubectl get pods -n erp -l app=erp-api-app
@@ -479,7 +479,7 @@ kubectl get application erp-api -n argocd -o jsonpath='{.status.conditions}'
 kubectl get all,ingress,secrets,pvc -n erp
 
 # Verify API deployment and service
-kubectl get deployment erp-api -n erp
+kubectl get deployment erp-api-app -n erp
 kubectl get service erp-api -n erp
 
 # Check API ingress configuration
@@ -565,7 +565,7 @@ kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-repo-server
 ### 5.3 Pod Startup Issues
 ```bash
 # Check API pod logs for errors
-kubectl logs -f deployment/erp-api -n erp
+kubectl logs -f deployment/erp-api-app -n erp
 
 # Check API pod events
 kubectl describe pod -n erp -l app=erp-api-app
@@ -646,10 +646,10 @@ argocd app rollback erp-api PREV
 ### Scale API Application
 ```bash
 # Scale down for maintenance
-kubectl scale deployment erp-api -n erp --replicas=0
+kubectl scale deployment erp-api-app -n erp --replicas=0
 
 # Scale back up
-kubectl scale deployment erp-api -n erp --replicas=2
+kubectl scale deployment erp-api-app -n erp --replicas=2
 ```
 
 ---
@@ -674,7 +674,7 @@ curl -k https://erpapi.masterspace.co.ke/api/v1/core/health/
 ### Common Fixes
 ```bash
 # Restart API application
-kubectl rollout restart deployment/erp-api -n erp
+kubectl rollout restart deployment/erp-api-app -n erp
 
 # Force certificate renewal
 kubectl annotate certificate erp-masterspace-tls -n erp cert-manager.io/issue-temporary-certificate="true"

@@ -259,108 +259,22 @@ if [[ "$DEPLOY" == "true" ]]; then
     if [[ "$DEPLOY" == "true" ]]; then
         log_step "Starting enhanced deployment process..."
 
-        # Database setup logic (moved from reusable workflow)
+        # Database setup logic (using modular script)
         if [[ "$SETUP_DATABASES" == "true" ]]; then
-            log_step "Setting up databases..."
-
-            # Ensure kubectl is available
-            if ! command -v kubectl &> /dev/null; then
-                log_error "kubectl is required for database setup"
+            ensure_kube_config
+            
+            if [[ -f "scripts/setup_databases.sh" ]]; then
+                chmod +x scripts/setup_databases.sh
+                ./scripts/setup_databases.sh || { log_error "Database setup failed"; exit 1; }
+            else
+                log_error "scripts/setup_databases.sh not found"
                 exit 1
             fi
-
-            # Setup kubeconfig if available
-            ensure_kube_config
-
-            # Create namespace if it doesn't exist
-            kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create ns "$NAMESPACE"
-
-            # Install Helm repos
-            helm repo add bitnami https://charts.bitnami.com/bitnami >/dev/null 2>&1 || true
-            helm repo update >/dev/null 2>&1 || true
-
-            # Parse database types
-            SAVEIFS=$IFS; IFS=','; set -f; types=($DB_TYPES); IFS=$SAVEIFS; set +f
-
-            for db in "${types[@]}"; do
-                db=$(echo "$db" | xargs)
-                case "$db" in
-                    postgres)
-                        log_info "Installing PostgreSQL..."
-                        # Avoid immutable spec updates: reuse existing chart values on upgrade
-                        if helm -n "$NAMESPACE" status postgresql >/dev/null 2>&1; then
-                            log_info "PostgreSQL release exists; performing safe upgrade with --reuse-values"
-                            # Patch existing secret to include 'password' key if missing (compat with newer chart)
-                            EXISTING_PG_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
-                            if [[ -n "$EXISTING_PG_PASS" ]]; then
-                                kubectl -n "$NAMESPACE" patch secret postgresql --type merge -p "{\"stringData\":{\"password\":\"$EXISTING_PG_PASS\"}}" 2>/dev/null || true
-                            fi
-                            helm upgrade postgresql bitnami/postgresql -n "$NAMESPACE" \
-                                --reuse-values \
-                                --wait --timeout=600s || log_warning "PostgreSQL safe upgrade failed"
-                        else
-                            log_info "PostgreSQL not found; installing fresh"
-                            DB_NAME="${PG_DATABASE:-bengo_erp}"
-                            helm install postgresql bitnami/postgresql -n "$NAMESPACE" \
-                                --set global.postgresql.auth.postgresPassword="$POSTGRES_PASSWORD" \
-                                --set global.postgresql.auth.database="$DB_NAME" \
-                                --wait --timeout=600s || log_warning "PostgreSQL installation failed"
-                        fi
-                        ;;
-                    redis)
-                        log_info "Installing Redis..."
-                        helm upgrade --install redis bitnami/redis -n "$NAMESPACE" \
-                            --set global.redis.password="$REDIS_PASSWORD" \
-                            --wait --timeout=300s || log_warning "Redis installation failed"
-                        ;;
-                    *)
-                        log_warning "Unknown database type: $db"
-                        ;;
-                esac
-            done
-
-            # Ensure DB & Redis are ready after installation
-            kubectl -n "$NAMESPACE" rollout status statefulset/postgresql --timeout=180s || true
-            kubectl -n "$NAMESPACE" rollout status statefulset/redis-master --timeout=120s || true
-
-            log_success "Database setup completed"
             
-            # Optional: Configure VPA for databases if CRDs exist
-            if kubectl get crd verticalpodautoscalers.autoscaling.k8s.io >/dev/null 2>&1; then
-                log_step "Configuring VPA for PostgreSQL and Redis"
-                cat > /tmp/vpa-postgresql.yaml <<EOF
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: postgresql-vpa
-  namespace: ${NAMESPACE}
-spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind:       StatefulSet
-    name:       postgresql
-  updatePolicy:
-    updateMode: "Auto"
-EOF
-                kubectl apply -f /tmp/vpa-postgresql.yaml || log_warning "Failed to apply VPA for PostgreSQL"
-
-                cat > /tmp/vpa-redis-master.yaml <<EOF
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: redis-master-vpa
-  namespace: ${NAMESPACE}
-spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind:       StatefulSet
-    name:       redis-master
-  updatePolicy:
-    updateMode: "Auto"
-EOF
-                kubectl apply -f /tmp/vpa-redis-master.yaml || log_warning "Failed to apply VPA for Redis"
-            else
-                log_info "VPA CRDs not found; skipping DB VPA configuration"
+            # Configure VPA for databases
+            if [[ -f "scripts/configure_vpa.sh" ]]; then
+                chmod +x scripts/configure_vpa.sh
+                NAMESPACE="$NAMESPACE" ./scripts/configure_vpa.sh || log_warning "VPA configuration failed"
             fi
         fi
 
@@ -400,82 +314,13 @@ EOF
             fi
         fi
 
-        # Helm values update (moved from reusable workflow)
+        # Helm values update (using modular script)
         if [[ -n "${KUBE_CONFIG:-}" ]]; then
-            log_step "Updating Helm values..."
-
-            # Clone or update devops-k8s repo into DEVOPS_DIR using token when available
-            TOKEN="${GH_PAT:-${GITHUB_SECRET:-${GITHUB_TOKEN:-}}}"
-            ORIGIN_REPO="${GITHUB_REPOSITORY:-}"
-            
-            # Debug: log which token source is being used (without revealing value)
-            if [[ -n "${GH_PAT:-}" ]]; then
-                log_info "Using GH_PAT for git operations"
-            elif [[ -n "${GITHUB_SECRET:-}" ]]; then
-                log_info "Using GITHUB_SECRET for git operations"
-            elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
-                log_info "Using GITHUB_TOKEN for git operations (may lack cross-repo write)"
+            if [[ -f "scripts/update_helm_values.sh" ]]; then
+                chmod +x scripts/update_helm_values.sh
+                ./scripts/update_helm_values.sh || log_warning "Helm values update failed"
             else
-                log_warning "No GitHub token found"
-            fi
-            
-            # For cross-repo pushes, we REQUIRE a PAT (deploy keys and GITHUB_TOKEN don't work)
-            if [[ -n "$ORIGIN_REPO" && "$DEVOPS_REPO" != "$ORIGIN_REPO" ]]; then
-                if [[ -z "${GH_PAT:-${GITHUB_SECRET:-}}" ]]; then
-                    log_error "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                    log_error "CRITICAL: GH_PAT or GITHUB_SECRET required for cross-repo push"
-                    log_error "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                    log_error "You are pushing from: ${ORIGIN_REPO}"
-                    log_error "         to repository: ${DEVOPS_REPO}"
-                    log_error ""
-                    log_error "Default GITHUB_TOKEN does NOT have cross-repo write access."
-                    log_error "Deploy keys also do NOT work for pushing to other repos."
-                    log_error ""
-                    log_error "ACTION REQUIRED:"
-                    log_error "1. Create a Personal Access Token (PAT) at:"
-                    log_error "   https://github.com/settings/tokens/new"
-                    log_error "2. Select scope: 'repo' (full control)"
-                    log_error "3. Add as repository secret named 'GH_PAT' or 'GITHUB_SECRET'"
-                    log_error "4. Re-run this workflow"
-                    log_error "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                    exit 1
-                fi
-            fi
-            CLONE_URL="https://github.com/${DEVOPS_REPO}.git"
-            [[ -n "$TOKEN" ]] && CLONE_URL="https://x-access-token:${TOKEN}@github.com/${DEVOPS_REPO}.git"
-            if [[ ! -d "$DEVOPS_DIR" ]]; then
-                log_info "Cloning devops repo into $DEVOPS_DIR"
-                git clone "$CLONE_URL" "$DEVOPS_DIR" || { log_error "Failed to clone devops-k8s"; exit 1; }
-            fi
-
-            if [[ -d "$DEVOPS_DIR" ]]; then
-                cd "$DEVOPS_DIR"
-                git config user.name "$GIT_USER"
-                git config user.email "$GIT_EMAIL"
-
-                git fetch origin main || true
-                git checkout main || git checkout -b main
-
-                if [[ -f "$VALUES_FILE_PATH" ]]; then
-                    IMAGE_REPO_ENV="$IMAGE_REPO" IMAGE_TAG_ENV="$GIT_COMMIT_ID" \
-                    yq e -i '.image.repository = env(IMAGE_REPO_ENV) | .image.tag = env(IMAGE_TAG_ENV)' "$VALUES_FILE_PATH"
-                    if [[ -n "${REGISTRY_USERNAME:-}" && -n "${REGISTRY_PASSWORD:-}" ]]; then
-                        yq e -i '.image.pullSecrets = [{"name":"registry-credentials"}]' "$VALUES_FILE_PATH"
-                    fi
-                    git add "$VALUES_FILE_PATH"
-                    git commit -m "${APP_NAME}:${GIT_COMMIT_ID} released" || echo "No changes to commit"
-                    git pull --rebase origin main || true
-                    if [[ -z "$TOKEN" ]]; then
-                        log_error "No GitHub token (GH_PAT/GITHUB_TOKEN/GITHUB_SECRET) available for devops-k8s push"
-                        log_warning "Skipping git push; set GH_PAT (preferred) with repo write perms to Bengo-Hub/devops-k8s"
-                    else
-                        if git remote | grep -q push-origin; then git remote remove push-origin || true; fi
-                        git remote add push-origin "https://x-access-token:${TOKEN}@github.com/${DEVOPS_REPO}.git"
-                        git push push-origin HEAD:main || log_warning "Git push failed"
-                    fi
-                fi
-                cd - >/dev/null 2>&1 || true
-                log_success "Helm values updated"
+                log_warning "scripts/update_helm_values.sh not found; skipping Helm values update"
             fi
         fi
 
@@ -498,8 +343,6 @@ EOF
 
         # Database migrations (ensure DBs ready and env secret exists before running)
         if [[ "$SETUP_DATABASES" == "true" && -n "${KUBE_CONFIG:-}" ]]; then
-            log_step "Running database migrations..."
-            
             # Ensure kubeconfig is set up
             ensure_kube_config
 
@@ -514,221 +357,28 @@ EOF
             log_info "Waiting 5 seconds to allow database services to stabilize before connecting..."
             sleep 5
             
-            # RE-VALIDATE the effective password NOW (after DB fully ready)
-            log_step "Re-validating PostgreSQL password against live database..."
-            # Preferred application DB user; fallback to 'erp_user', then 'postgres' if validation fails later
-            APP_DB_USER="${APP_DB_USER:-erp_user}"
-            APP_DB_NAME="${PG_DATABASE:-bengo_erp}"
-            
-            # Get password from secret
-            APP_DB_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
-            if [[ -z "$APP_DB_PASS" && -n "${POSTGRES_PASSWORD:-}" ]]; then
-                log_info "PostgreSQL secret password not found; using POSTGRES_PASSWORD from env"
-                APP_DB_PASS="$POSTGRES_PASSWORD"
-            fi
-            
-            # Validate effective password using the intended app user first
-            EFFECTIVE_PG_PASS=""
-
-            # Optional debug helpers
-            debug_hash() {
-              local LABEL="$1"; local VAL="$2"
-              if [[ -n "$DEBUG_DB_VALIDATION" && "$DEBUG_DB_VALIDATION" == "true" ]]; then
-                local LEN; LEN=$(printf %s "$VAL" | wc -c | tr -d ' ')
-                local SHA; SHA=$(printf %s "$VAL" | sha256sum | awk '{print $1}')
-                log_debug "${LABEL}: len=${LEN}, sha256=${SHA}"
-              fi
-            }
-
-            debug_k8s_net() {
-              if [[ -n "$DEBUG_DB_VALIDATION" && "$DEBUG_DB_VALIDATION" == "true" ]]; then
-                log_debug "kubectl context: $(kubectl config current-context 2>/dev/null || echo 'n/a')"
-                log_debug "postgresql svc: $(kubectl -n "$NAMESPACE" get svc postgresql -o jsonpath='{.spec.clusterIP}:{.spec.ports[0].port}' 2>/dev/null || echo 'n/a')"
-              fi
-            }
-
-            debug_hash "PG_PASS_from_secret" "$APP_DB_PASS"
-            debug_hash "PG_PASS_from_env" "${POSTGRES_PASSWORD:-}"
-            debug_k8s_net
-
-            try_psql() {
-              # Create a short-lived Job to run psql and capture logs for debugging
-              local PASS="$1"
-              local JOB_NAME="pgpass-check-${RANDOM}"
-              if [[ -z "$PASS" ]]; then return 1; fi
-              cat > /tmp/${JOB_NAME}.yaml <<EOF
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: ${JOB_NAME}
-  namespace: ${NAMESPACE}
-spec:
-  ttlSecondsAfterFinished: 120
-  backoffLimit: 0
-  template:
-    spec:
-      restartPolicy: Never
-      containers:
-      - name: psql
-        image: registry-1.docker.io/bitnami/postgresql:15
-        env:
-        - name: PGPASSWORD
-          value: "${PASS}"
-        command: ["psql"]
-        args: ["-h","postgresql.${NAMESPACE}.svc.cluster.local","-U","postgres","-d","postgres","-c","SELECT 1;"]
-EOF
-              set +e
-              kubectl apply -f /tmp/${JOB_NAME}.yaml >/dev/null 2>&1
-              kubectl -n "$NAMESPACE" wait --for=condition=complete job/${JOB_NAME} --timeout=45s >/dev/null 2>&1
-              local RC=$?
-              if [[ -n "$DEBUG_DB_VALIDATION" && "$DEBUG_DB_VALIDATION" == "true" ]]; then
-                log_debug "psql job logs (RC=${RC}):"
-                kubectl -n "$NAMESPACE" logs job/${JOB_NAME} 2>/dev/null || true
-                if [[ $RC -ne 0 ]]; then
-                  log_debug "job describe:"; kubectl -n "$NAMESPACE" describe job ${JOB_NAME} 2>/dev/null || true
-                  log_debug "pods describe:"; kubectl -n "$NAMESPACE" get pods -l job-name=${JOB_NAME} -o name | xargs -r kubectl -n "$NAMESPACE" describe 2>/dev/null || true
+            # Validate database password and update env secret (using modular scripts)
+            if [[ -f "scripts/validate_db_password.sh" ]]; then
+                chmod +x scripts/validate_db_password.sh
+                VALIDATION_OUTPUT=$(./scripts/validate_db_password.sh) || { log_error "Password validation failed"; exit 1; }
+                
+                # Parse validation output
+                export EFFECTIVE_PG_PASS=$(echo "$VALIDATION_OUTPUT" | grep "^EFFECTIVE_PG_PASS=" | cut -d= -f2-)
+                export VALIDATED_DB_USER=$(echo "$VALIDATION_OUTPUT" | grep "^VALIDATED_DB_USER=" | cut -d= -f2-)
+                export VALIDATED_DB_NAME=$(echo "$VALIDATION_OUTPUT" | grep "^VALIDATED_DB_NAME=" | cut -d= -f2-)
+                
+                # Update env secret with validated credentials
+                if [[ -f "scripts/update_env_secret.sh" ]]; then
+                    chmod +x scripts/update_env_secret.sh
+                    ./scripts/update_env_secret.sh || { log_error "Env secret update failed"; exit 1; }
+                else
+                    log_error "scripts/update_env_secret.sh not found"
+                    exit 1
                 fi
-              fi
-              # cleanup
-              kubectl -n "$NAMESPACE" delete job ${JOB_NAME} --ignore-not-found >/dev/null 2>&1 || true
-              set -e
-              return $RC
-            }
-
-            try_psql_user() {
-              local PASS="$1"; local USER="$2"; local DBNAME="$3"
-              local JOB_NAME="pguser-check-${RANDOM}"
-              if [[ -z "$PASS" || -z "$USER" || -z "$DBNAME" ]]; then return 1; fi
-              cat > /tmp/${JOB_NAME}.yaml <<EOF
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: ${JOB_NAME}
-  namespace: ${NAMESPACE}
-spec:
-  ttlSecondsAfterFinished: 120
-  backoffLimit: 0
-  template:
-    spec:
-      restartPolicy: Never
-      containers:
-      - name: psql
-        image: registry-1.docker.io/bitnami/postgresql:15
-        env:
-        - name: PGPASSWORD
-          value: "${PASS}"
-        command: ["psql"]
-        args: ["-h","postgresql.${NAMESPACE}.svc.cluster.local","-U","${USER}","-d","${DBNAME}","-c","SELECT current_user, current_database();"]
-EOF
-              set +e
-              kubectl apply -f /tmp/${JOB_NAME}.yaml >/dev/null 2>&1
-              kubectl -n "$NAMESPACE" wait --for=condition=complete job/${JOB_NAME} --timeout=45s >/dev/null 2>&1
-              local RC=$?
-              if [[ -n "$DEBUG_DB_VALIDATION" && "$DEBUG_DB_VALIDATION" == "true" ]]; then
-                log_debug "psql user job logs (user=${USER}, db=${DBNAME}, RC=${RC}):"
-                kubectl -n "$NAMESPACE" logs job/${JOB_NAME} 2>/dev/null || true
-              fi
-              kubectl -n "$NAMESPACE" delete job ${JOB_NAME} --ignore-not-found >/dev/null 2>&1 || true
-              set -e
-              return $RC
-            }
-
-            # First validate connectivity using the cluster superuser 'postgres' against default db
-            # Pull live password once for candidate list (only if kubeconfig available)
-            LIVE_PG_PASS=""
-            if kubectl version --short >/dev/null 2>&1; then
-              LIVE_PG_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
-              debug_hash "PG_PASS_from_live_secret" "$LIVE_PG_PASS"
             else
-              log_info "kubectl not available or not configured; skipping live secret fetch"
+                log_error "scripts/validate_db_password.sh not found"
+                exit 1
             fi
-
-            CANDIDATE_PASSES=("$APP_DB_PASS" "${POSTGRES_PASSWORD:-}" "$LIVE_PG_PASS")
-            for CANDIDATE in "${CANDIDATE_PASSES[@]}"; do
-              [[ -z "$CANDIDATE" ]] && continue
-              # Try with intended app user first
-              if try_psql_user "$CANDIDATE" "$APP_DB_USER" "$APP_DB_NAME"; then
-                EFFECTIVE_PG_PASS="$CANDIDATE"
-                break
-              fi
-              # Fallback: try with postgres user to same DB
-              if try_psql_user "$CANDIDATE" "postgres" "$APP_DB_NAME"; then
-                EFFECTIVE_PG_PASS="$CANDIDATE"
-                APP_DB_USER="postgres"
-                break
-              fi
-            done
-
-            if [[ -z "$EFFECTIVE_PG_PASS" ]]; then
-              log_error "CRITICAL: Could not validate any password for users '${APP_DB_USER}' or 'postgres'"
-              log_error "Enable DEBUG_DB_VALIDATION=true for detailed diagnostics"
-              exit 1
-            else
-              log_success "Database credentials validated for user '${APP_DB_USER}' and db '${APP_DB_NAME}'"
-            fi
-            
-            # Rebuild env secret with validated password and all production values
-            log_info "Updating ${ENV_SECRET_NAME} with validated credentials and production config..."
-            SECRET_ARGS=(
-              --from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${EFFECTIVE_PG_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}"
-              --from-literal=DB_HOST="postgresql.${NAMESPACE}.svc.cluster.local"
-              --from-literal=DB_PORT="5432"
-              --from-literal=DB_NAME="${APP_DB_NAME}"
-              --from-literal=DB_USER="${APP_DB_USER}"
-              --from-literal=DB_PASSWORD="${EFFECTIVE_PG_PASS}"
-            )
-            
-            # Add Redis credentials
-            REDIS_PASS=$(kubectl -n "$NAMESPACE" get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
-            if [[ -z "$REDIS_PASS" && -n "${REDIS_PASSWORD:-}" ]]; then
-                REDIS_PASS="$REDIS_PASSWORD"
-            fi
-            if [[ -n "$REDIS_PASS" ]]; then
-              SECRET_ARGS+=(--from-literal=REDIS_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
-              SECRET_ARGS+=(--from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
-              SECRET_ARGS+=(--from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1")
-              SECRET_ARGS+=(--from-literal=REDIS_HOST="redis-master.${NAMESPACE}.svc.cluster.local")
-              SECRET_ARGS+=(--from-literal=REDIS_PORT="6379")
-              SECRET_ARGS+=(--from-literal=REDIS_PASSWORD="${REDIS_PASS}")
-            fi
-            
-            # Add Django and application secrets from environment
-            if [[ -n "${DJANGO_SECRET_KEY:-}" ]]; then
-              SECRET_ARGS+=(--from-literal=DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}")
-              SECRET_ARGS+=(--from-literal=SECRET_KEY="${DJANGO_SECRET_KEY}")
-            fi
-            
-            # Production Django settings
-            SECRET_ARGS+=(--from-literal=DJANGO_SETTINGS_MODULE="ProcureProKEAPI.settings")
-            SECRET_ARGS+=(--from-literal=DEBUG="False")
-            SECRET_ARGS+=(--from-literal=DJANGO_ENV="production")
-            SECRET_ARGS+=(--from-literal=ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke")
-            
-            # CORS and Frontend
-            SECRET_ARGS+=(--from-literal=CORS_ALLOWED_ORIGINS="https://erp.masterspace.co.ke,http://localhost:3000,*.masterspace.co.ke")
-            SECRET_ARGS+=(--from-literal=FRONTEND_URL="https://erp.masterspace.co.ke")
-            SECRET_ARGS+=(--from-literal=CSRF_TRUSTED_ORIGINS="https://erp.masterspace.co.ke,https://erpapi.masterspace.co.ke")
-            
-            # Media and static file configuration
-            SECRET_ARGS+=(--from-literal=MEDIA_ROOT="/app/media")
-            SECRET_ARGS+=(--from-literal=MEDIA_URL="/media/")
-            SECRET_ARGS+=(--from-literal=STATIC_ROOT="/app/staticfiles")
-            SECRET_ARGS+=(--from-literal=STATIC_URL="/static/")
-            
-            # Email configuration (if provided)
-            if [[ -n "${EMAIL_HOST_USER:-}" ]]; then
-              SECRET_ARGS+=(--from-literal=EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend")
-              SECRET_ARGS+=(--from-literal=EMAIL_HOST="${EMAIL_HOST:-smtp.gmail.com}")
-              SECRET_ARGS+=(--from-literal=EMAIL_PORT="${EMAIL_PORT:-587}")
-              SECRET_ARGS+=(--from-literal=EMAIL_USE_TLS="True")
-              SECRET_ARGS+=(--from-literal=EMAIL_HOST_USER="${EMAIL_HOST_USER}")
-              SECRET_ARGS+=(--from-literal=EMAIL_HOST_PASSWORD="${EMAIL_HOST_PASSWORD:-}")
-              SECRET_ARGS+=(--from-literal=DEFAULT_FROM_EMAIL="${EMAIL_HOST_USER}")
-            fi
-            
-            kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" "${SECRET_ARGS[@]}" \
-              --dry-run=client -o yaml | kubectl apply -f - || { log_error "Failed to update env secret"; exit 1; }
-            log_success "Environment secret refreshed with validated credentials and production config"
             
             # Verify env secret exists
             if ! kubectl -n "$NAMESPACE" get secret "$ENV_SECRET_NAME" >/dev/null 2>&1; then
@@ -737,148 +387,50 @@ EOF
             fi
             log_info "Environment secret ${ENV_SECRET_NAME} verified"
 
-            # Force rollout of existing deployment to pick up updated secret values
-            # Ensures running pods restart with correct DB credentials before proceeding
-            if kubectl get deployment erp-api -n "$NAMESPACE" >/dev/null 2>&1; then
-                log_step "Triggering rollout restart to apply updated secrets to running pods..."
-                kubectl rollout restart deployment/erp-api -n "$NAMESPACE" || log_warning "Failed to restart deployment (may not exist yet)"
-                kubectl rollout status deployment/erp-api -n "$NAMESPACE" --timeout=300s || log_warning "Deployment did not become ready in time after restart"
-            fi
-
-            # Create migration job with imagePullSecrets if needed
-            PULL_SECRETS_YAML=""
-            if kubectl -n "$NAMESPACE" get secret registry-credentials >/dev/null 2>&1; then
-                PULL_SECRETS_YAML="      imagePullSecrets:
-      - name: registry-credentials"
-            fi
-
-            cat > /tmp/migrate-job.yaml <<EOF
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: ${APP_NAME}-migrate-${GIT_COMMIT_ID}
-  namespace: ${NAMESPACE}
-spec:
-  ttlSecondsAfterFinished: 600
-  backoffLimit: 2
-  template:
-    spec:
-      restartPolicy: Never
-${PULL_SECRETS_YAML}
-      containers:
-      - name: migrate
-        image: ${IMAGE_REPO}:${GIT_COMMIT_ID}
-        command: ["bash", "-lc", "python manage.py showmigrations >/dev/null 2>&1 || true; python manage.py migrate --noinput"]
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: ${ENV_SECRET_NAME}
-              key: DATABASE_URL
-        - name: DB_HOST
-          valueFrom:
-            secretKeyRef:
-              name: ${ENV_SECRET_NAME}
-              key: DB_HOST
-        - name: DB_PORT
-          valueFrom:
-            secretKeyRef:
-              name: ${ENV_SECRET_NAME}
-              key: DB_PORT
-        - name: DB_NAME
-          valueFrom:
-            secretKeyRef:
-              name: ${ENV_SECRET_NAME}
-              key: DB_NAME
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: ${ENV_SECRET_NAME}
-              key: DB_USER
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ${ENV_SECRET_NAME}
-              key: DB_PASSWORD
-        envFrom:
-        - secretRef:
-            name: ${ENV_SECRET_NAME}
-EOF
-
-            set +e
-            kubectl apply -f /tmp/migrate-job.yaml
-            stream_job "${NAMESPACE}" "${APP_NAME}-migrate-${GIT_COMMIT_ID}" "300s"
-            JOB_STATUS=$?
-            set -e
-            if [[ $JOB_STATUS -ne 0 ]]; then
-                log_error "Migration job failed or timed out"
+            # Run database migrations (using modular script)
+            if [[ -f "scripts/run_migrations.sh" ]]; then
+                chmod +x scripts/run_migrations.sh
+                ./scripts/run_migrations.sh || { log_error "Migration failed"; exit 1; }
+            else
+                log_error "scripts/run_migrations.sh not found"
                 exit 1
             fi
-            log_success "Database migrations completed"
 
-            # Seed initial data after migrations
-            log_step "Seeding initial data (minimal mode for safety)"
-            cat > /tmp/seed-job.yaml <<EOF
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: ${APP_NAME}-seed-${GIT_COMMIT_ID}
-  namespace: ${NAMESPACE}
-spec:
-  ttlSecondsAfterFinished: 600
-  backoffLimit: 1
-  template:
-    spec:
-      restartPolicy: Never
-${PULL_SECRETS_YAML}
-      containers:
-      - name: seed
-        image: ${IMAGE_REPO}:${GIT_COMMIT_ID}
-        command: ["python", "manage.py", "seed_all", "--minimal"]
-        envFrom:
-        - secretRef:
-            name: ${ENV_SECRET_NAME}
-EOF
-
-            set +e
-            kubectl apply -f /tmp/seed-job.yaml
-            stream_job "${NAMESPACE}" "${APP_NAME}-seed-${GIT_COMMIT_ID}" "300s"
-            SEED_STATUS=$?
-            set -e
-            if [[ $SEED_STATUS -ne 0 ]]; then
-              log_error "Seed job failed or timed out"
-              exit 1
+            # Seed initial data after migrations (using modular script)
+            if [[ -f "scripts/run_seeding.sh" ]]; then
+                chmod +x scripts/run_seeding.sh
+                ./scripts/run_seeding.sh || { log_error "Seeding failed"; exit 1; }
+            else
+                log_error "scripts/run_seeding.sh not found"
+                exit 1
             fi
-            log_success "Initial data seeding completed"
 
-            # Restart API deployment to pick up updated environment secret
-            log_step "Restarting API deployment to pick updated secrets"
-            kubectl -n "$NAMESPACE" rollout restart deployment/erp-api || true
-            kubectl -n "$NAMESPACE" rollout status deployment/erp-api --timeout=300s || log_warning "API deployment rollout not ready in time"
-            
-            # Retrieve pod IPs and update ALLOWED_HOSTS to include cluster internal addresses
+            # Update ALLOWED_HOSTS with cluster internal IPs using dedicated script
             log_step "Updating ALLOWED_HOSTS with cluster internal IPs..."
-            sleep 5  # Brief wait for pods to stabilize after rollout
-            
-            POD_IPS=$(kubectl get pods -n "$NAMESPACE" -l app=erp-api-app -o jsonpath='{.items[*].status.podIP}' 2>/dev/null | tr ' ' ',' || true)
-            SVC_IP=$(kubectl get svc erp-api -n "$NAMESPACE" -o jsonpath='{.spec.clusterIP}' 2>/dev/null || true)
-            
-            # Build comprehensive ALLOWED_HOSTS including external domain, localhost, wildcards, and cluster IPs
-            UPDATED_ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
-            [[ -n "$SVC_IP" ]] && UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},${SVC_IP}"
-            [[ -n "$POD_IPS" ]] && UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},${POD_IPS}"
-            # Add common private IP ranges for cluster networking
-            UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-            
-            log_info "Updated ALLOWED_HOSTS: ${UPDATED_ALLOWED_HOSTS}"
-            
-            # Patch the env secret with updated ALLOWED_HOSTS
-            kubectl -n "$NAMESPACE" patch secret "$ENV_SECRET_NAME" --type merge -p "{\"stringData\":{\"ALLOWED_HOSTS\":\"${UPDATED_ALLOWED_HOSTS}\"}}" || log_warning "Failed to update ALLOWED_HOSTS"
-            
-            # Restart deployment again to pick up the updated ALLOWED_HOSTS
-            log_info "Restarting API deployment to apply updated ALLOWED_HOSTS..."
-            kubectl -n "$NAMESPACE" rollout restart deployment/erp-api || true
-            kubectl -n "$NAMESPACE" rollout status deployment/erp-api --timeout=300s || log_warning "Final API deployment rollout not ready"
+            if [[ -f "scripts/update_allowed_hosts.sh" ]]; then
+                chmod +x scripts/update_allowed_hosts.sh
+                NAMESPACE="$NAMESPACE" ENV_SECRET_NAME="$ENV_SECRET_NAME" ./scripts/update_allowed_hosts.sh || log_warning "ALLOWED_HOSTS update script failed"
+            else
+                log_warning "scripts/update_allowed_hosts.sh not found; using inline logic"
+                # Fallback to inline implementation
+                kubectl -n "$NAMESPACE" rollout restart deployment/erp-api-app || true
+                kubectl -n "$NAMESPACE" rollout status deployment/erp-api-app --timeout=300s || log_warning "API deployment rollout not ready in time"
+                sleep 5
+                
+                POD_IPS=$(kubectl get pods -n "$NAMESPACE" -l app=erp-api-app -o jsonpath='{.items[*].status.podIP}' 2>/dev/null | tr ' ' ',' || true)
+                SVC_IP=$(kubectl get svc erp-api -n "$NAMESPACE" -o jsonpath='{.spec.clusterIP}' 2>/dev/null || true)
+                
+                UPDATED_ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
+                [[ -n "$SVC_IP" ]] && UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},${SVC_IP}"
+                [[ -n "$POD_IPS" ]] && UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},${POD_IPS}"
+                UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+                
+                log_info "Updated ALLOWED_HOSTS: ${UPDATED_ALLOWED_HOSTS}"
+                kubectl -n "$NAMESPACE" patch secret "$ENV_SECRET_NAME" --type merge -p "{\"stringData\":{\"ALLOWED_HOSTS\":\"${UPDATED_ALLOWED_HOSTS}\"}}" || log_warning "Failed to update ALLOWED_HOSTS"
+                
+                kubectl -n "$NAMESPACE" rollout restart deployment/erp-api-app || true
+                kubectl -n "$NAMESPACE" rollout status deployment/erp-api-app --timeout=300s || log_warning "Final API deployment rollout not ready"
+            fi
             
             log_success "ALLOWED_HOSTS updated with cluster IPs"
         fi
