@@ -14,7 +14,7 @@ log_debug() { echo -e "\033[0;36m[DEBUG]\033[0m $1"; }
 
 NAMESPACE=${NAMESPACE:-erp}
 APP_DB_USER=${APP_DB_USER:-erp_user}
-APP_DB_NAME=${PG_DATABASE:-bengo_erp}
+APP_DB_NAME=${PG_DATABASE:-${DB_NAME:-bengo_erp}}
 DEBUG_DB_VALIDATION=${DEBUG_DB_VALIDATION:-false}
 
 log_step "Re-validating PostgreSQL password against live database..."
@@ -94,7 +94,13 @@ else
   log_info "kubectl not available or not configured; skipping live secret fetch"
 fi
 
-CANDIDATE_PASSES=("$APP_DB_PASS" "${POSTGRES_PASSWORD:-}" "$LIVE_PG_PASS")
+# If application secret already exists and has DB_PASSWORD, prefer it
+SECRET_DB_PASS=$(kubectl -n "$NAMESPACE" get secret ${ENV_SECRET_NAME:-erp-api-env} -o jsonpath='{.data.DB_PASSWORD}' 2>/dev/null | base64 -d || true)
+SECRET_URL_PASS=$(kubectl -n "$NAMESPACE" get secret ${ENV_SECRET_NAME:-erp-api-env} -o jsonpath='{.data.DATABASE_URL}' 2>/dev/null | base64 -d | sed -n 's#.*postgresql://[^:]*:\([^@]*\)@.*#\1#p' || true)
+debug_hash "PG_PASS_from_app_secret" "$SECRET_DB_PASS"
+debug_hash "PG_PASS_from_DATABASE_URL" "$SECRET_URL_PASS"
+
+CANDIDATE_PASSES=("$APP_DB_PASS" "${POSTGRES_PASSWORD:-}" "$LIVE_PG_PASS" "$SECRET_DB_PASS" "$SECRET_URL_PASS")
 EFFECTIVE_PG_PASS=""
 VALIDATED_USER=""
 

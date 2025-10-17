@@ -317,6 +317,27 @@ kubectl rollout status deployment/erp-api-app -n ${NAMESPACE} --timeout=300s || 
 echo "✅ ALLOWED_HOSTS updated with cluster IPs"
 ```
 
+### 0.8 Verify Celery Workers (for async payslip generation)
+```bash
+# Check if Celery workers are running
+kubectl get pods -n ${NAMESPACE} -l component=celery-worker
+
+# If no workers found, they will be deployed automatically via ArgoCD
+# Workers use the same image as the API and connect to Redis for task queuing
+
+# Check worker logs
+kubectl logs -n ${NAMESPACE} -l component=celery-worker --tail=50
+
+# Check Celery beat scheduler (for periodic tasks)
+kubectl get pods -n ${NAMESPACE} -l component=celery-beat
+
+# Verify Redis connection (used by both API and Celery)
+kubectl run redis-check --rm -i --tty --image redis:alpine -n ${NAMESPACE} -- redis-cli -h redis-master.${NAMESPACE}.svc.cluster.local -a "${REDIS_PASSWORD}" ping
+# Expected: PONG
+```
+
+**Note**: Payslip generation is asynchronous. If workers are not running, payslips will be queued but not processed.
+
 ### Phase 2: Initial ArgoCD Application Deployment
 ### Phase 3: Application Sync Monitoring
 ### Phase 4: Post-Deployment Verification
@@ -616,6 +637,51 @@ kubectl port-forward svc/erp-api 8000:80 -n erp
 # Test locally
 curl http://localhost:8000/api/v1/health/
 curl http://localhost:8000/api/v1/core/health/
+```
+
+### 5.7 Celery Worker Issues (Payslips Not Generated)
+```bash
+# Check if Celery workers are running
+kubectl get pods -n erp -l component=celery-worker
+
+# Check worker logs for errors
+kubectl logs -n erp -l component=celery-worker --tail=100
+
+# Check if workers can connect to Redis
+kubectl exec -it -n erp deployment/erp-api-celery-worker -- celery -A ProcureProKEAPI inspect ping
+
+# Check active tasks
+kubectl exec -it -n erp deployment/erp-api-celery-worker -- celery -A ProcureProKEAPI inspect active
+
+# Check registered tasks
+kubectl exec -it -n erp deployment/erp-api-celery-worker -- celery -A ProcureProKEAPI inspect registered
+
+# Restart workers if stuck
+kubectl rollout restart deployment/erp-api-celery-worker -n erp
+
+# Scale workers if needed
+kubectl scale deployment/erp-api-celery-worker -n erp --replicas=4
+
+# Check Redis queue length (should decrease as tasks are processed)
+kubectl run redis-check --rm -i --tty --image redis:alpine -n erp -- redis-cli -h redis-master.erp.svc.cluster.local -a "$REDIS_PASSWORD" llen celery
+```
+
+### 5.8 WebSocket Connection Issues
+```bash
+# Check if Channels is configured to use Redis
+kubectl get secret erp-api-env -n erp -o jsonpath='{.data.CHANNEL_BACKEND}' | base64 -d
+# Expected: channels_redis.core.RedisChannelLayer
+
+kubectl get secret erp-api-env -n erp -o jsonpath='{.data.CHANNEL_URL}' | base64 -d
+# Expected: redis://:<password>@redis-master.erp.svc.cluster.local:6379/2
+
+# Test WebSocket connection from browser console
+# const ws = new WebSocket('wss://erp.masterspace.co.ke/ws/payroll/');
+# ws.onopen = () => console.log('Connected');
+# ws.onerror = (e) => console.error('Error:', e);
+
+# Check Ingress for WebSocket support (upgrade headers)
+kubectl describe ingress -n erp | grep -i upgrade
 ```
 
 ---

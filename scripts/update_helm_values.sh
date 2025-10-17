@@ -12,8 +12,18 @@ log_step() { echo -e "\033[0;35m[STEP]\033[0m $1"; }
 
 # Required variables
 APP_NAME=${APP_NAME:-erp-api}
-IMAGE_REPO=${IMAGE_REPO:-}
-GIT_COMMIT_ID=${GIT_COMMIT_ID:-}
+# Derive sensible defaults like build.sh
+REGISTRY_SERVER=${REGISTRY_SERVER:-docker.io}
+REGISTRY_NAMESPACE=${REGISTRY_NAMESPACE:-codevertex}
+IMAGE_REPO=${IMAGE_REPO:-"${REGISTRY_SERVER}/${REGISTRY_NAMESPACE}/${APP_NAME}"}
+# Allow GitHub SHA or local git
+if [[ -z "${GIT_COMMIT_ID:-}" ]]; then
+  if [[ -n "${GITHUB_SHA:-}" ]]; then
+    GIT_COMMIT_ID=${GITHUB_SHA::8}
+  else
+    GIT_COMMIT_ID=$(git rev-parse --short=8 HEAD)
+  fi
+fi
 DEVOPS_REPO=${DEVOPS_REPO:-Bengo-Hub/devops-k8s}
 DEVOPS_DIR=${DEVOPS_DIR:-"$HOME/devops-k8s"}
 VALUES_FILE_PATH=${VALUES_FILE_PATH:-apps/erp-api/values.yaml}
@@ -24,6 +34,7 @@ REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
 
 if [[ -z "$IMAGE_REPO" || -z "$GIT_COMMIT_ID" ]]; then
     log_error "IMAGE_REPO and GIT_COMMIT_ID are required"
+    log_error "Computed IMAGE_REPO='${IMAGE_REPO}', GIT_COMMIT_ID='${GIT_COMMIT_ID}'"
     exit 1
 fi
 

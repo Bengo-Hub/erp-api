@@ -447,7 +447,7 @@ class PayrollAnalyticsService:
                 queryset = queryset.filter(employee__organisation__id=business_id)
             
             department_analysis = queryset.values(
-                'employee__hr_details__department__name'
+                'employee__hr_details__department__title'
             ).annotate(
                 avg_gross_pay=Avg('gross_pay'),
                 avg_net_pay=Avg('net_pay'),

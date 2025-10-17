@@ -197,7 +197,7 @@ class AttendanceAnalyticsService:
             
             # Late by department
             late_by_department = queryset.values(
-                'employee__hr_details__department__name'
+                'employee__hr_details__department__title'
             ).annotate(
                 count=Count('id')
             ).order_by('-count')
@@ -265,7 +265,7 @@ class AttendanceAnalyticsService:
             
             # Overtime by department
             overtime_by_department = queryset.values(
-                'employee__hr_details__department__name'
+                'employee__hr_details__department__title'
             ).annotate(
                 total_hours=Sum('overtime_hours'),
                 avg_hours=Avg('overtime_hours'),
@@ -372,7 +372,7 @@ class AttendanceAnalyticsService:
                 queryset = queryset.filter(employee__organisation__id=business_id)
             
             department_attendance = queryset.values(
-                'employee__hr_details__department__name'
+                'employee__hr_details__department__title'
             ).annotate(
                 total=Count('id'),
                 present=Count('id', filter=Q(status='present')),
@@ -454,7 +454,7 @@ class AttendanceAnalyticsService:
             employee_attendance = queryset.values(
                 'employee__user__first_name',
                 'employee__user__last_name',
-                'employee__hr_details__department__name'
+                'employee__hr_details__department__title'
             ).annotate(
                 total=Count('id'),
                 present=Count('id', filter=Q(status='present')),

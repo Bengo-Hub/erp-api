@@ -347,7 +347,7 @@ class LeaveAnalyticsService:
                 queryset = queryset.filter(employee__organisation__id=business_id)
             
             leave_by_department = queryset.values(
-                'employee__hr_details__department__name'
+                'employee__hr_details__department__title'
             ).annotate(
                 total_requests=Count('id'),
                 approved_requests=Count('id', filter=Q(status='approved')),
