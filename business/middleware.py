@@ -13,8 +13,7 @@ class BusinessConfigs:
         self.get_response = get_response
         # On startup, ensure all businesses have branding settings
         try:
-            #self.initialize_business_details()
-            pass
+            self.initialize_business_details()
         except Exception as e:
             print(f"Error during initialize_business_details: {e}")
             try:
@@ -22,8 +21,7 @@ class BusinessConfigs:
             except Exception:
                 pass
         try:
-            #self.initialize_branding_settings()
-            pass
+            self.initialize_branding_settings()
         except Exception as e:
             print(f"Error during initialize_branding_settings: {e}")
             try:
@@ -32,8 +30,7 @@ class BusinessConfigs:
                 pass
         # Initialize pickup locations based on business locations
         try:
-            #self.initialize_pickup_locations()
-            pass
+            self.initialize_pickup_locations()
         except Exception as e:
             print(f"Error during initialize_pickup_locations: {e}")
             try:
