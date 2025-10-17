@@ -76,6 +76,8 @@ class Command(BaseCommand):
                 username='admin', 
                 email='admin@codevertexafrica.com', 
                 password='admin123'
+                first_name='Codevertex',
+                last_name='Africa',
             )
             self.stdout.write(self.style.SUCCESS('Created admin user'))
         
