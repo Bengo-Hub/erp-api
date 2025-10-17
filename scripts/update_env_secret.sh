@@ -69,6 +69,11 @@ SECRET_ARGS+=(--from-literal=MEDIA_URL="/media/")
 SECRET_ARGS+=(--from-literal=STATIC_ROOT="/app/staticfiles")
 SECRET_ARGS+=(--from-literal=STATIC_URL="/static/")
 
+# Channels/ASGI configuration for WebSockets in production
+# Use Redis for channel layer
+SECRET_ARGS+=(--from-literal=CHANNEL_BACKEND="channels_redis.core.RedisChannelLayer")
+SECRET_ARGS+=(--from-literal=CHANNEL_URL="redis://:${REDIS_PASS:-${REDIS_PASSWORD:-}}@redis-master.${NAMESPACE}.svc.cluster.local:6379/2")
+
 # Email configuration (if provided)
 if [[ -n "${EMAIL_HOST_USER:-}" ]]; then
   SECRET_ARGS+=(--from-literal=EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend")
