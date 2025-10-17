@@ -5,10 +5,11 @@ from django.core.management.base import CommandError
 
 
 class Command(BaseCommand):
-    help = 'Runs all seeders across apps in proper dependency order with data clearing'
+    help = 'Runs all seeders across apps (clears existing data by default)'
 
     def add_arguments(self, parser):
-        parser.add_argument('--clear', action='store_true', help='Clear existing seeded data before seeding')
+        # Default: CLEAR data before seeding. Use --no-clear to preserve data.
+        parser.add_argument('--no-clear', action='store_true', help='Do NOT clear existing data before seeding (default: clear)')
         parser.add_argument('--simulate', action='store_true', help='Simulate manufacturing workflows where supported')
         parser.add_argument('--full', action='store_true', help='Run full manufacturing seeding (products + raw materials)')
         parser.add_argument('--products', type=int, default=20, help='Number of demo products to generate')
@@ -16,7 +17,8 @@ class Command(BaseCommand):
         parser.add_argument('--minimal', action='store_true', help='Seed a minimal dataset (1-2 per model)')
 
     def handle(self, *args, **options):
-        clear_data = options.get('clear')
+        # Clear by default unless explicitly disabled
+        clear_data = not options.get('no_clear')
         simulate = options.get('simulate')
         full = options.get('full')
         minimal = options.get('minimal')
