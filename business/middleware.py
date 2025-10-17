@@ -137,6 +137,32 @@ class BusinessConfigs:
     def initialize_pickup_locations(self):
         """Create pickup locations for businesses based on their business locations (idempotent)."""
         try:
+            # Cleanup: Remove duplicate DeliveryRegion entries (keep oldest)
+            from django.db.models import Count
+            duplicates = DeliveryRegion.objects.values('name', 'county').annotate(
+                count=Count('id')
+            ).filter(count__gt=1)
+            
+            for dup in duplicates:
+                # Keep the first (oldest) region, delete others
+                regions = DeliveryRegion.objects.filter(
+                    name=dup['name'], 
+                    county=dup['county']
+                ).order_by('id')
+                
+                if regions.count() > 1:
+                    keep_region = regions.first()
+                    delete_regions = regions.exclude(id=keep_region.id)
+                    
+                    # Update any PickupStations pointing to duplicate regions
+                    for region_to_delete in delete_regions:
+                        PickupStations.objects.filter(region=region_to_delete).update(region=keep_region)
+                    
+                    # Now safe to delete duplicates
+                    delete_count = delete_regions.count()
+                    delete_regions.delete()
+                    print(f"Cleaned up {delete_count} duplicate DeliveryRegion entries for {dup['name']}, {dup['county']}")
+            
             # Get all businesses with their branches
             businesses = Bussiness.objects.all().prefetch_related('branches__location')
             for business in businesses:
@@ -144,23 +170,21 @@ class BusinessConfigs:
                 business_branches = business.branches.all()
                 for branch in business_branches:
                     location = branch.location
-                    # Resolve an existing delivery region (avoid MultipleObjectsReturned)
-                    region = DeliveryRegion.objects.filter(
-                        name=location.city,
-                        county=location.county
-                    ).first()
-                    if not region:
-                        try:
-                            region = DeliveryRegion.objects.create(
-                                name=location.city,
-                                county=location.county,
-                                delivery_charge=300,
-                                estimated_delivery_days=3
-                            )
-                        except IntegrityError:
-                            region = DeliveryRegion.objects.filter(
-                                name=location.city, county=location.county
-                            ).first()
+                    # Use get_or_create to avoid duplicates (now that unique_together constraint exists)
+                    try:
+                        region, created = DeliveryRegion.objects.get_or_create(
+                            name=location.city,
+                            county=location.county,
+                            defaults={
+                                'delivery_charge': 300,
+                                'estimated_delivery_days': 3
+                            }
+                        )
+                    except IntegrityError:
+                        # Race condition - another worker created it
+                        region = DeliveryRegion.objects.filter(
+                            name=location.city, county=location.county
+                        ).first()
                     # Create pickup station if not exists
                     pickup_exists = PickupStations.objects.filter(
                         business=business, 

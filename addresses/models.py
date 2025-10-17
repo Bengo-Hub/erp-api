@@ -169,6 +169,7 @@ class DeliveryRegion(models.Model):
     class Meta:
         db_table = 'delivery_regions'
         ordering = ['name']
+        unique_together = [['name', 'county']]
         indexes = [
             models.Index(fields=['name'], name='idx_delivery_region_name'),
             models.Index(fields=['county'], name='idx_delivery_region_county'),
