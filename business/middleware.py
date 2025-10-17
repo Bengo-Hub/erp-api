@@ -54,6 +54,8 @@ class BusinessConfigs:
                             owner = User.objects.create_superuser(
                                 username='admin',
                                 email='admin@codevertexafrica.com',
+                                first_name='Codevertex',
+                                last_name='Africa',
                                 password=random_password
                             )
                         except Exception:
