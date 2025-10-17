@@ -226,7 +226,7 @@ class EmployeeAnalyticsService:
             
             # Salary by department
             salary_by_department = queryset.values(
-                'employee__hr_details__department__name'
+                'employee__hr_details__department__title'
             ).annotate(
                 avg_salary=Avg('monthly_salary'),
                 employee_count=Count('employee', distinct=True)
