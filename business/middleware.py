@@ -13,7 +13,8 @@ class BusinessConfigs:
         self.get_response = get_response
         # On startup, ensure all businesses have branding settings
         try:
-            self.initialize_business_details()
+            #self.initialize_business_details()
+            pass
         except Exception as e:
             print(f"Error during initialize_business_details: {e}")
             try:
@@ -21,7 +22,8 @@ class BusinessConfigs:
             except Exception:
                 pass
         try:
-            self.initialize_branding_settings()
+            #self.initialize_branding_settings()
+            pass
         except Exception as e:
             print(f"Error during initialize_branding_settings: {e}")
             try:
@@ -30,7 +32,8 @@ class BusinessConfigs:
                 pass
         # Initialize pickup locations based on business locations
         try:
-            self.initialize_pickup_locations()
+            #self.initialize_pickup_locations()
+            pass
         except Exception as e:
             print(f"Error during initialize_pickup_locations: {e}")
             try:
@@ -170,11 +173,14 @@ class BusinessConfigs:
                 business_branches = business.branches.all()
                 for branch in business_branches:
                     location = branch.location
-                    # Use get_or_create to avoid duplicates (now that unique_together constraint exists)
+                    # Normalize lookup to reduce duplicates caused by case/whitespace
+                    region_name = (location.city or "").strip()
+                    county_name = (location.county or "").strip()
+                    # Use get_or_create, but guard against MultipleObjectsReturned when legacy duplicates exist
                     try:
                         region, created = DeliveryRegion.objects.get_or_create(
-                            name=location.city,
-                            county=location.county,
+                            name=region_name,
+                            county=county_name,
                             defaults={
                                 'delivery_charge': 300,
                                 'estimated_delivery_days': 3
@@ -183,8 +189,16 @@ class BusinessConfigs:
                     except IntegrityError:
                         # Race condition - another worker created it
                         region = DeliveryRegion.objects.filter(
-                            name=location.city, county=location.county
-                        ).first()
+                            name__iexact=region_name, county__iexact=county_name
+                        ).order_by('id').first()
+                    except Exception as e:
+                        # Handle MultipleObjectsReturned or any unexpected get() behavior inside get_or_create
+                        if 'MultipleObjectsReturned' in e.__class__.__name__ or 'returned more than one' in str(e):
+                            region = DeliveryRegion.objects.filter(
+                                name__iexact=region_name, county__iexact=county_name
+                            ).order_by('id').first()
+                        else:
+                            raise
                     # Create pickup station if not exists
                     pickup_exists = PickupStations.objects.filter(
                         business=business, 
