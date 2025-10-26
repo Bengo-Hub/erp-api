@@ -9,6 +9,7 @@ from datetime import timedelta
 import polars as pl
 from django.http import HttpResponse
 from ecommerce.pos.services import POSReportService
+from core.modules.report_export import export_report_to_csv, export_report_to_pdf
 
 class SalesSummaryReport(APIView):
     def get(self, request, *args, **kwargs):
@@ -23,13 +24,9 @@ class SalesSummaryReport(APIView):
         return Response(data)
 
 def export_report_to_csv(data, filename='report.csv'):
-    df = pl.DataFrame(data)
-    csv_bytes = df.write_csv()
-    response = HttpResponse(csv_bytes, content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    return response
+    # Deprecated local implementation; use centralized export
+    return export_report_to_csv(data, filename)
 
 def export_report_to_pdf(data, filename='report.pdf'):
-    # Placeholder: implement PDF export using a library like reportlab or weasyprint
-    # For now, just return a not implemented response
-    return HttpResponse('PDF export not implemented', status=501)
+    # Deprecated local implementation; use centralized export
+    return export_report_to_pdf(data, filename)

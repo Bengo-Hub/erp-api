@@ -240,3 +240,26 @@ class AccountRequest(models.Model):
             models.Index(fields=['status'], name='idx_account_request_status'),
             models.Index(fields=['created_at'], name='idx_account_request_created_at'),
         ]
+
+
+class UserPreferences(models.Model):
+    """
+    Store user-specific preferences including theme settings
+    """
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='preferences')
+    theme_settings = models.JSONField(default=dict, blank=True, help_text="Theme configuration (preset, colors, menu mode, etc.)")
+    notification_settings = models.JSONField(default=dict, blank=True, help_text="Notification preferences")
+    dashboard_layout = models.JSONField(default=dict, blank=True, help_text="Dashboard widget layout")
+    language = models.CharField(max_length=10, default='en', help_text="User interface language")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Preferences for {self.user.email}"
+
+    class Meta:
+        verbose_name = 'User Preferences'
+        verbose_name_plural = 'User Preferences'
+        indexes = [
+            models.Index(fields=['user'], name='idx_user_preferences_user'),
+        ]

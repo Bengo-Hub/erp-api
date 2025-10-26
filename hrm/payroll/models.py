@@ -130,6 +130,64 @@ class ExpenseClaims(models.Model):
         db_table="employee_expense_claims"
         managed=True
 
+class ExpenseClaimSettings(models.Model):
+    """
+    Singleton model for expense claim configuration
+    """
+    payment_method = models.CharField(
+        max_length=20,
+        choices=[
+            ('separately', 'Separately'),
+            ('with_net_pay', 'with NET PAY')
+        ],
+        default='separately',
+        help_text='How expense claims are paid to employees'
+    )
+    mandatory_attachment = models.CharField(
+        max_length=10,
+        choices=[
+            ('yes', 'Yes'),
+            ('no', 'No')
+        ],
+        default='no',
+        help_text='Whether attachments are required for claims'
+    )
+    mileage_rate_currency = models.CharField(max_length=10, default='KES')
+    mileage_rate_amount = models.DecimalField(max_digits=10, decimal_places=2, default=152.00)
+    mileage_rate_unit = models.CharField(max_length=20, default='Per km')
+    
+    class Meta:
+        verbose_name = 'Expense Claim Settings'
+        verbose_name_plural = 'Expense Claim Settings'
+    
+    @classmethod
+    def load(cls):
+        """Load or create the singleton settings instance"""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return 'Expense Claim Settings'
+
+
+class ExpenseCode(models.Model):
+    """
+    Predefined expense codes for categorizing expense claims
+    """
+    code = models.CharField(max_length=20, unique=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Expense Code'
+        verbose_name_plural = 'Expense Codes'
+        ordering = ['code']
+    
+    def __str__(self):
+        return f"{self.code} - {self.title}"
+
+
 class ClaimItems(models.Model):
     expense_choices=(
         ("tt","Travel Tickets"),
@@ -137,6 +195,10 @@ class ClaimItems(models.Model):
         ("ml","Meals"),
         ("jm","Job Materials"),
         ("os","Office Supplies"),
+        ("mh","Medical Help"),
+        ("tr","Transport"),
+        ("mlg","Mileage"),
+        ("other","Other"),
     )
     claim=models.ForeignKey(ExpenseClaims,on_delete=models.CASCADE,related_name="expense_categories")
     expense_type=models.CharField(max_length=100,choices=expense_choices)
@@ -338,4 +400,37 @@ class PayslipAudit(models.Model):
 
     def __str__(self):
         return f"Audit for Payroll {self.payslip.payment_period} - {self.action}" 
-    
+
+class CustomReport(models.Model):
+    """Saved custom payroll reports configuration."""
+    REPORT_TYPES = (
+        ('p9', 'P9'),
+        ('p10a', 'P10A'),
+        ('statutory', 'Statutory Deductions'),
+        ('bank_net_pay', 'Bank Net Pay'),
+        ('muster_roll', 'Muster Roll'),
+        ('withholding_tax', 'Withholding Tax'),
+        ('variance', 'Variance'),
+    )
+
+    name = models.CharField(max_length=150)
+    description = models.TextField(blank=True, null=True)
+    report_type = models.CharField(max_length=50, choices=REPORT_TYPES)
+    params = models.JSONField(default=dict, help_text="Filters and options for the report, e.g., year/month/employee_ids/deduction_type")
+    is_public = models.BooleanField(default=False)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='custom_reports')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'hrm_custom_reports'
+        verbose_name = 'Custom Report'
+        verbose_name_plural = 'Custom Reports'
+        indexes = [
+            models.Index(fields=['report_type'], name='idx_custom_report_type'),
+            models.Index(fields=['created_by'], name='idx_custom_report_user'),
+        ]
+        unique_together = ('name', 'created_by')
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.report_type})"

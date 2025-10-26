@@ -103,10 +103,31 @@ class BenefitTaxesAdmin(admin.ModelAdmin):
         }),
     )
 
-@admin.register(GeneralHR)
-class HRSettingsAdmin(admin.ModelAdmin):
-    list_display = ('id',)  # Simple display for HRSettings
-    search_fields = ('id',)  # You can add more fields if necessary
+@admin.register(GeneralHRSettings)
+class GeneralHRSettingsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'overtime_normal_days', 'overtime_non_working_days', 'overtime_holidays', 
+                    'partial_months', 'allow_backwards_payroll')
+    fieldsets = (
+        ('Overtime Rates', {
+            'fields': ('overtime_normal_days', 'overtime_non_working_days', 'overtime_holidays')
+        }),
+        ('Payroll Configuration', {
+            'fields': ('partial_months', 'round_off_currency', 'round_off_amount', 'allow_backwards_payroll')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    readonly_fields = ('created_at', 'updated_at')
+    
+    def has_add_permission(self, request):
+        """Prevent adding more than one instance"""
+        return not GeneralHRSettings.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion"""
+        return False
 
 @admin.register(Relief)
 class ReliefAdmin(admin.ModelAdmin):

@@ -57,17 +57,18 @@ class FormulaItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = FormulaItems
         fields = [
-            'id', 'formula', 'lower_limit', 'upper_limit', 'percentage',
-            'fixed_amount', 'is_active'
+            'id', 'formula', 'amount_from', 'amount_to', 
+            'deduct_amount', 'deduct_percentage'
         ]
+        read_only_fields = ['id']
 
 class SplitRatioSerializer(serializers.ModelSerializer):
     class Meta:
         model = SplitRatio
         fields = [
-            'id', 'formula', 'employee_percentage', 'employer_percentage',
-            'is_active'
+            'id', 'formula', 'employee_percentage', 'employer_percentage'
         ]
+        read_only_fields = ['id']
 
 class FormulasSerializer(serializers.ModelSerializer):
     class Meta:
@@ -80,6 +81,7 @@ class FormulasSerializer(serializers.ModelSerializer):
             'version', 'transition_date', 'replaces_formula', 'regulatory_source',
             'notes', 'deduction_order'
         ]
+        read_only_fields = ['id', 'created_at']
 
 class PayrollComponentsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -88,3 +90,18 @@ class PayrollComponentsSerializer(serializers.ModelSerializer):
             'id', 'title', 'wb_code', 'non_cash', 'deduct_after_taxing',
             'checkoff', 'statutory', 'constant', 'mode', 'is_active'
         ]
+
+
+class LoansSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Loans
+        fields = '__all__'
+
+
+class GeneralHRSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneralHRSettings
+        fields = ['id', 'overtime_normal_days', 'overtime_non_working_days', 'overtime_holidays',
+                  'partial_months', 'round_off_currency', 'round_off_amount', 'allow_backwards_payroll',
+                  'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']

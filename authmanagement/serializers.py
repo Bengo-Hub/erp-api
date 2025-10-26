@@ -61,16 +61,31 @@ class UserSerializer(serializers.ModelSerializer):
             user.set_password(validated_data['password'])
             user.is_staff = True
             user.save()
-            group,created=Group.objects.get_or_create(name='staff')
-            print(group.id)
+            
+            # Get or create staff group (case-insensitive to prevent duplicates)
+            staff_group = Group.objects.filter(name__iexact='staff').first()
+            if not staff_group:
+                staff_group = Group.objects.create(name='Staff')
+            
             user.is_active = False
             user.save()
+            
+            # Assign roles
             if selectedroles:
+                # User-specified roles
                 roles = Group.objects.filter(name__in=selectedroles)
                 for role in roles:
                     user.groups.add(role)
+                
+                # Also assign Staff role if not admin/superuser role selected
+                admin_roles = ['superusers', 'admin', 'superuser']
+                if not any(role.lower() in admin_roles for role in selectedroles):
+                    # Add staff role in addition to specified roles
+                    user.groups.add(staff_group)
             else:
-                user.groups.add(group)
+                # No roles specified - assign Staff role by default
+                user.groups.add(staff_group)
+            
             user.save()
             Token.objects.create(user=user)
             # Send confirmation email
@@ -143,3 +158,10 @@ class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
         fields = ('id', 'name', 'codename', 'content_type')
+
+
+class UserPreferencesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserPreferences
+        fields = ('id', 'user', 'theme_settings', 'notification_settings', 'dashboard_layout', 'language', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'user', 'created_at', 'updated_at')

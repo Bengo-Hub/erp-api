@@ -30,15 +30,23 @@ class EmployeeBankAccountSerializer(serializers.ModelSerializer):
 # Salary Details Serializer
 class SalaryDetailsSerializer(serializers.ModelSerializer):
     bank_account_details = EmployeeBankAccountSerializer(source='bank_account', read_only=True)
+    work_shift_details = serializers.SerializerMethodField()
     
     class Meta:
         model = SalaryDetails
         fields = [
             'id', 'employee', 'employment_type', 'payment_currency', 'monthly_salary',
-            'pay_type', 'work_hours', 'hourly_rate', 'daily_rate', 'income_tax',
+            'pay_type', 'work_hours', 'work_shift', 'work_shift_details', 'hourly_rate', 'daily_rate', 'income_tax',
             'deduct_shif_or_nhif', 'deduct_nssf', 'tax_excemption_amount',
             'excemption_cert_no', 'payment_type', 'bank_account', 'bank_account_details', 'mobile_number'
         ]
+    
+    def get_work_shift_details(self, obj):
+        """Return work shift details including schedule"""
+        if obj.work_shift:
+            from hrm.attendance.serializers import WorkShiftSerializer
+            return WorkShiftSerializer(obj.work_shift).data
+        return None
 
 class BenefitsSerializer(serializers.ModelSerializer):
     employee = serializers.SerializerMethodField()
@@ -230,12 +238,13 @@ class LoansSerializer(serializers.ModelSerializer):
 class SalaryDetailsDetailSerializer(serializers.ModelSerializer):
     salaryDetail = serializers.SerializerMethodField()
     bank_account_details = EmployeeBankAccountSerializer(source='bank_account', read_only=True)
+    work_shift_details = serializers.SerializerMethodField()
     
     class Meta:
         model = SalaryDetails
         fields = [
             'id', 'employee', 'employment_type', 'payment_currency', 'monthly_salary',
-            'pay_type', 'work_hours', 'hourly_rate', 'daily_rate', 'income_tax',
+            'pay_type', 'work_hours', 'work_shift', 'work_shift_details', 'hourly_rate', 'daily_rate', 'income_tax',
             'deduct_shif_or_nhif', 'deduct_nssf', 'tax_excemption_amount',
             'excemption_cert_no', 'payment_type', 'bank_account', 'bank_account_details', 'mobile_number'
         ]
@@ -250,6 +259,13 @@ class SalaryDetailsDetailSerializer(serializers.ModelSerializer):
             return {
                 'currentPay': salaryDetails.monthly_salary,
             }
+        return None
+    
+    def get_work_shift_details(self, obj):
+        """Return work shift details including schedule"""
+        if obj.work_shift:
+            from hrm.attendance.serializers import WorkShiftSerializer
+            return WorkShiftSerializer(obj.work_shift).data
         return None  
 
 
@@ -363,11 +379,26 @@ class EmployeeSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'organisation', 'gender', 'passport_photo', 'date_of_birth',
             'residential_status', 'national_id', 'pin_no', 'shif_or_nhif_number',
-            'nssf_no', 'deleted', 'terminated', 'salary_details', 'hr_details',
+            'nssf_no', 'deleted', 'terminated', 'allow_ess', 'ess_activated_at', 
+            'ess_last_login', 'ess_unrestricted_access', 'salary_details', 'hr_details', 
             'contracts', 'contacts', 'kins', 'documents'
         ]
+        read_only_fields = ['ess_activated_at', 'ess_last_login']
 
 class JobTitleSerializer(serializers.ModelSerializer):
     class Meta:
         model = JobTitle
         fields = '__all__'
+
+
+class JobGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobGroup
+        fields = '__all__'
+
+
+class WorkersUnionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkersUnion
+        fields = '__all__'
+

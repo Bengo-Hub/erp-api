@@ -104,6 +104,8 @@ phonenumbers
 pillow
 pluggy
 polars
+# Report generation libraries
+reportlab>=4.0.0
 # 'prometheus-client' and 'prometheus_client' refer to the same package; keep one
 # Keep only 'prometheus-client'
 prompt_toolkit

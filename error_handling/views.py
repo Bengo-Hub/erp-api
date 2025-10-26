@@ -14,13 +14,19 @@ from datetime import timedelta
 from .models import Error, ErrorLog, ErrorPattern
 from .serializers import ErrorSerializer, ErrorLogSerializer, ErrorPatternSerializer
 from .filters import ErrorFilter
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-class ErrorViewSet(viewsets.ModelViewSet):
+class ErrorViewSet(BaseModelViewSet):
     """
     Centralized error management for all ERP modules
     """
-    queryset = Error.objects.all()
+    queryset = Error.objects.all().select_related('user', 'resolved_by')
     serializer_class = ErrorSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -45,6 +51,7 @@ class ErrorViewSet(viewsets.ModelViewSet):
     def dashboard(self, request):
         """Get error dashboard statistics"""
         try:
+            correlation_id = get_correlation_id(request)
             # Get date range from query params
             days = int(request.query_params.get('days', 7))
             start_date = timezone.now() - timedelta(days=days)
@@ -79,52 +86,51 @@ class ErrorViewSet(viewsets.ModelViewSet):
             recent_errors = errors.order_by('-occurred_at')[:10]
             stats['recent_errors'] = ErrorSerializer(recent_errors, many=True).data
             
-            return Response(stats)
+            return APIResponse.success(data=stats, message='Error dashboard retrieved successfully', correlation_id=correlation_id)
             
         except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.error(f'Error retrieving error dashboard: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving dashboard', error_id=str(e), correlation_id=get_correlation_id(request))
 
     @action(detail=True, methods=['post'])
     def resolve(self, request, pk=None):
         """Resolve an error"""
         try:
+            correlation_id = get_correlation_id(request)
             error = self.get_object()
             notes = request.data.get('notes', '')
             
             error.resolve(request.user, notes)
+            AuditTrail.log(operation=AuditTrail.UPDATE, module='error_handling', entity_type='Error', entity_id=error.id, user=request.user, reason='Error resolved', request=request)
             
-            return Response({'message': 'Error resolved successfully'})
+            return APIResponse.success(data=self.get_serializer(error).data, message='Error resolved successfully', correlation_id=correlation_id)
             
         except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.error(f'Error resolving error: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error resolving record', error_id=str(e), correlation_id=get_correlation_id(request))
 
     @action(detail=True, methods=['post'])
     def close(self, request, pk=None):
         """Close an error"""
         try:
+            correlation_id = get_correlation_id(request)
             error = self.get_object()
             notes = request.data.get('notes', '')
             
             error.close(request.user, notes)
+            AuditTrail.log(operation=AuditTrail.CANCEL, module='error_handling', entity_type='Error', entity_id=error.id, user=request.user, reason='Error closed', request=request)
             
-            return Response({'message': 'Error closed successfully'})
+            return APIResponse.success(data=self.get_serializer(error).data, message='Error closed successfully', correlation_id=correlation_id)
             
         except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.error(f'Error closing error: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error closing record', error_id=str(e), correlation_id=get_correlation_id(request))
 
     @action(detail=True, methods=['get'])
     def logs(self, request, pk=None):
         """Get error logs"""
         try:
+            correlation_id = get_correlation_id(request)
             error = self.get_object()
             logs = error.logs.all().order_by('-timestamp')
             
@@ -137,21 +143,13 @@ class ErrorViewSet(viewsets.ModelViewSet):
             logs_page = logs[start:end]
             serializer = ErrorLogSerializer(logs_page, many=True)
             
-            return Response({
-                'logs': serializer.data,
-                'total': logs.count(),
-                'page': page,
-                'page_size': page_size
-            })
-            
+            return APIResponse.success(data={'logs': serializer.data, 'total': logs.count(), 'page': page, 'page_size': page_size}, message='Error logs retrieved successfully', correlation_id=correlation_id)
         except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.error(f'Error retrieving error logs: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving logs', error_id=str(e), correlation_id=get_correlation_id(request))
 
 
-class ErrorLogViewSet(viewsets.ReadOnlyModelViewSet):
+class ErrorLogViewSet(BaseModelViewSet):
     """
     Error log management (read-only)
     """
@@ -164,7 +162,7 @@ class ErrorLogViewSet(viewsets.ReadOnlyModelViewSet):
     ordering = ['-timestamp']
 
 
-class ErrorPatternViewSet(viewsets.ModelViewSet):
+class ErrorPatternViewSet(BaseModelViewSet):
     """
     Error pattern management
     """

@@ -65,24 +65,28 @@ class MpesaSettings(models.Model):
         related_name='mpesa_settings',
         limit_choices_to={'integration_type': 'PAYMENT'}
     )
-    consumer_secret = models.CharField(max_length=1500, default='consumer secret')
-    consumer_key = models.CharField(max_length=1500, default='consumer key')
-    passkey = models.CharField(max_length=1500, default="passkey")
-    security_credential = models.CharField(max_length=1500, default='credential')
-    short_code = models.CharField(max_length=100, default='4133621')
+    consumer_secret = models.CharField(max_length=1500, blank=True, null=True)
+    consumer_key = models.CharField(max_length=1500, blank=True, null=True)
+    passkey = models.CharField(max_length=1500, blank=True, null=True)
+    security_credential = models.CharField(max_length=1500, blank=True, null=True)
+    short_code = models.CharField(max_length=100, default='')
     base_url = models.URLField(default='https://api.safaricom.co.ke')
-    callback_base_url = models.URLField(default='https://posapi.kwaboi.co.ke/api/callback/')
-    initiator_name = models.CharField(max_length=1500, default='towuor')
-    initiator_password = models.CharField(max_length=255, default='@Yogis202402$')
+    callback_base_url = models.URLField(blank=True, null=True)
+    initiator_name = models.CharField(max_length=1500, blank=True, null=True)
+    initiator_password = models.CharField(max_length=255, blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        if "gAAAAA" not in self.consumer_key:
+        # Encrypt sensitive fields if provided and not already encrypted
+        if self.consumer_key and "gAAAAA" not in str(self.consumer_key):
             self.consumer_key = Crypto(self.consumer_key, 'encrypt').encrypt()
-        if "gAAAAA" not in self.consumer_secret:
+        if self.consumer_secret and "gAAAAA" not in str(self.consumer_secret):
             self.consumer_secret = Crypto(self.consumer_secret, 'encrypt').encrypt()
+        if self.passkey and "gAAAAA" not in str(self.passkey):
             self.passkey = Crypto(self.passkey, 'encrypt').encrypt()
-        if "gAAAAA" not in self.security_credential:
+        if self.security_credential and "gAAAAA" not in str(self.security_credential):
             self.security_credential = Crypto(self.security_credential, 'encrypt').encrypt()
+        if self.initiator_password and "gAAAAA" not in str(self.initiator_password):
+            self.initiator_password = Crypto(self.initiator_password, 'encrypt').encrypt()
         super().save(*args, **kwargs)
         
     def __str__(self):
@@ -368,4 +372,191 @@ class WebhookEvent(models.Model):
             models.Index(fields=['event_type']),
             models.Index(fields=['status']),
             models.Index(fields=['created_at']),
+        ]
+
+
+# ---------------------------
+# Bank API Integration
+# ---------------------------
+class BankAPISettings(models.Model):
+    """
+    Configuration for Kenyan bank API integrations.
+    Supports major Kenyan banks: Equity, KCB, Co-operative, etc.
+    """
+    BANK_PROVIDERS = [
+        ('EQUITY', 'Equity Bank'),
+        ('KCB', 'Kenya Commercial Bank'),
+        ('COOP', 'Co-operative Bank'),
+        ('NCBA', 'NCBA Bank'),
+        ('ABSA', 'Absa Bank Kenya'),
+        ('STANCHART', 'Standard Chartered'),
+        ('DTB', 'Diamond Trust Bank'),
+        ('BARCLAYS', 'Barclays Bank Kenya'),
+        ('OTHER', 'Other Bank'),
+    ]
+    
+    integration = models.ForeignKey(
+        Integrations,
+        on_delete=models.CASCADE,
+        related_name='bank_api_settings',
+        limit_choices_to={'integration_type': 'PAYMENT'},
+        null=True,
+        blank=True
+    )
+    
+    # Bank identification
+    bank_provider = models.CharField(max_length=50, choices=BANK_PROVIDERS)
+    bank_name = models.CharField(max_length=255, help_text="Full bank name")
+    bank_code = models.CharField(max_length=20, blank=True, null=True, help_text="Bank code/SWIFT code")
+    
+    # Environment
+    is_test_mode = models.BooleanField(default=True, help_text="Use sandbox/test environment")
+    base_url = models.URLField(help_text="Bank API base URL")
+    sandbox_url = models.URLField(blank=True, null=True, help_text="Sandbox API URL")
+    
+    # API Credentials (encrypted)
+    client_id = models.CharField(max_length=1500, blank=True, null=True)
+    client_secret = models.CharField(max_length=1500, blank=True, null=True)
+    api_key = models.CharField(max_length=1500, blank=True, null=True)
+    api_secret = models.CharField(max_length=1500, blank=True, null=True)
+    
+    # Organization identifiers
+    organization_id = models.CharField(max_length=255, blank=True, null=True)
+    account_number = models.CharField(max_length=50, blank=True, null=True, help_text="Primary account for API operations")
+    
+    # Endpoint paths (configurable per bank)
+    auth_path = models.CharField(max_length=255, default='/oauth/token')
+    account_balance_path = models.CharField(max_length=255, default='/accounts/balance')
+    account_statement_path = models.CharField(max_length=255, default='/accounts/statement')
+    transfer_path = models.CharField(max_length=255, default='/payments/transfer')
+    bulk_payment_path = models.CharField(max_length=255, default='/payments/bulk')
+    payment_status_path = models.CharField(max_length=255, default='/payments/status')
+    
+    # Configuration
+    webhook_url = models.URLField(blank=True, null=True, help_text="URL for bank webhooks")
+    callback_url = models.URLField(blank=True, null=True, help_text="URL for payment callbacks")
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def save(self, *args, **kwargs):
+        """Auto-encrypt sensitive fields before saving"""
+        # Update base URL based on test mode
+        if self.is_test_mode and self.sandbox_url:
+            self.base_url = self.sandbox_url
+        
+        # Encrypt sensitive fields if not already encrypted
+        if self.client_id and "gAAAAA" not in str(self.client_id):
+            self.client_id = Crypto(self.client_id, 'encrypt').encrypt()
+        if self.client_secret and "gAAAAA" not in str(self.client_secret):
+            self.client_secret = Crypto(self.client_secret, 'encrypt').encrypt()
+        if self.api_key and "gAAAAA" not in str(self.api_key):
+            self.api_key = Crypto(self.api_key, 'encrypt').encrypt()
+        if self.api_secret and "gAAAAA" not in str(self.api_secret):
+            self.api_secret = Crypto(self.api_secret, 'encrypt').encrypt()
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        mode = 'Test' if self.is_test_mode else 'Production'
+        return f"{self.bank_name} API ({mode})"
+    
+    class Meta:
+        verbose_name = "Bank API Settings"
+        verbose_name_plural = "Bank API Settings"
+        indexes = [
+            models.Index(fields=['bank_provider'], name='idx_bank_api_provider'),
+            models.Index(fields=['is_active'], name='idx_bank_api_active'),
+        ]
+
+
+# ---------------------------
+# Government Services Integration
+# ---------------------------
+class GovernmentServiceSettings(models.Model):
+    """
+    Configuration for Kenyan government service integrations.
+    Supports eCitizen, Huduma Kenya, NTSA, etc.
+    """
+    SERVICE_PROVIDERS = [
+        ('ECITIZEN', 'eCitizen'),
+        ('HUDUMA', 'Huduma Kenya'),
+        ('NTSA', 'National Transport and Safety Authority'),
+        ('NITA', 'National Industrial Training Authority'),
+        ('NSSF', 'National Social Security Fund'),
+        ('NHIF', 'National Hospital Insurance Fund'),
+        ('HELB', 'Higher Education Loans Board'),
+        ('IPRS', 'Integrated Population Registration System'),
+        ('OTHER', 'Other Government Service'),
+    ]
+    
+    # Service identification
+    service_provider = models.CharField(max_length=50, choices=SERVICE_PROVIDERS)
+    service_name = models.CharField(max_length=255, help_text="Full service name")
+    service_code = models.CharField(max_length=50, blank=True, null=True, help_text="Service code if applicable")
+    
+    # Environment
+    is_test_mode = models.BooleanField(default=True, help_text="Use sandbox/test environment")
+    base_url = models.URLField(help_text="Service API base URL")
+    sandbox_url = models.URLField(blank=True, null=True, help_text="Sandbox API URL")
+    
+    # API Credentials (encrypted)
+    client_id = models.CharField(max_length=1500, blank=True, null=True)
+    client_secret = models.CharField(max_length=1500, blank=True, null=True)
+    api_key = models.CharField(max_length=1500, blank=True, null=True)
+    api_token = models.CharField(max_length=1500, blank=True, null=True)
+    username = models.CharField(max_length=255, blank=True, null=True)
+    password = models.CharField(max_length=1500, blank=True, null=True)
+    
+    # Organization identifiers
+    organization_id = models.CharField(max_length=255, blank=True, null=True)
+    organization_code = models.CharField(max_length=50, blank=True, null=True)
+    
+    # Endpoint paths (configurable per service)
+    auth_path = models.CharField(max_length=255, default='/oauth/token')
+    query_path = models.CharField(max_length=255, default='/query')
+    submit_path = models.CharField(max_length=255, default='/submit')
+    status_path = models.CharField(max_length=255, default='/status')
+    
+    # Configuration
+    webhook_url = models.URLField(blank=True, null=True)
+    callback_url = models.URLField(blank=True, null=True)
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def save(self, *args, **kwargs):
+        """Auto-encrypt sensitive fields before saving"""
+        # Update base URL based on test mode
+        if self.is_test_mode and self.sandbox_url:
+            self.base_url = self.sandbox_url
+        
+        # Encrypt sensitive fields if not already encrypted
+        if self.client_id and "gAAAAA" not in str(self.client_id):
+            self.client_id = Crypto(self.client_id, 'encrypt').encrypt()
+        if self.client_secret and "gAAAAA" not in str(self.client_secret):
+            self.client_secret = Crypto(self.client_secret, 'encrypt').encrypt()
+        if self.api_key and "gAAAAA" not in str(self.api_key):
+            self.api_key = Crypto(self.api_key, 'encrypt').encrypt()
+        if self.api_token and "gAAAAA" not in str(self.api_token):
+            self.api_token = Crypto(self.api_token, 'encrypt').encrypt()
+        if self.password and "gAAAAA" not in str(self.password):
+            self.password = Crypto(self.password, 'encrypt').encrypt()
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        mode = 'Test' if self.is_test_mode else 'Production'
+        return f"{self.service_name} ({mode})"
+    
+    class Meta:
+        verbose_name = "Government Service Settings"
+        verbose_name_plural = "Government Service Settings"
+        indexes = [
+            models.Index(fields=['service_provider'], name='idx_govt_service_provider'),
+            models.Index(fields=['is_active'], name='idx_govt_service_active'),
         ]

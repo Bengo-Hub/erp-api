@@ -74,10 +74,10 @@ class Command(BaseCommand):
         if not admin_user:
             admin_user = User.objects.create_superuser(
                 username='admin', 
-                email='admin@codevertexafrica.com', 
-                password='admin123'
-                first_name='Codevertex',
-                last_name='Africa',
+                email='admin@codevertexitsolutions.com', 
+                password='Demo@2020!',
+                first_name='Super',
+                last_name='User',
             )
             self.stdout.write(self.style.SUCCESS('Created admin user'))
         
@@ -98,13 +98,24 @@ class Command(BaseCommand):
         return admin_user
 
     def _create_single_business_setup(self, admin_user):
-        """Create single business "Codevertex Africa" with one location and one branch."""
-        # Clear any existing businesses to ensure single business setup
+        """Create business "Codevertex Africa" with one main branch only."""
+        # Clear any existing businesses to ensure clean setup
         Bussiness.objects.all().delete()
         BusinessLocation.objects.all().delete()
         Branch.objects.all().delete()
         
-        # Create single business location in Nairobi
+        # Create business "Codevertex Africa"
+        business = Bussiness.objects.create(
+            name='Codevertex Africa',
+            start_date='2024-01-01',
+            currency='KES',
+            kra_number='A123456789X',
+            business_type='limited_company',
+            county='Nairobi',
+            owner=admin_user
+        )
+        
+        # Create main location
         location = BusinessLocation.objects.create(
             city='Nairobi',
             county='Nairobi',
@@ -117,33 +128,23 @@ class Command(BaseCommand):
             is_active=True
         )
         
-        # Create single business "Codevertex Africa"
-        business = Bussiness.objects.create(
-            name='Codevertex Africa',
-            start_date='2024-01-01',
-            currency='KES',
-            kra_number='A123456789X',
-            business_type='limited_company',
-            county='Nairobi',
-            location=location,
-            owner=admin_user
-        )
-        
-        # Create single main branch
-        branch = Branch.objects.create(
+        # Create main branch
+        main_branch = Branch.objects.create(
             business=business,
             location=location,
-            name='Nairobi Main Branch',
-            branch_code='NBO-MAIN-001',
+            name='Main Branch',
+            branch_code='MAIN-001',
             is_active=True,
             is_main_branch=True
         )
         
-        self.stdout.write(self.style.SUCCESS(f'Created business: {business.name}'))
-        self.stdout.write(self.style.SUCCESS(f'Created location: {location.city}'))
-        self.stdout.write(self.style.SUCCESS(f'Created branch: {branch.name}'))
+        # Update business location to point to main branch location
+        business.location = location
+        business.save()
         
-        return business, location, branch
+        self.stdout.write(self.style.SUCCESS(f'Created business: {business.name} with Main Branch ({main_branch.branch_code})'))
+        
+        return business, location, main_branch
 
     def create_tax_rates(self, business):
         """Create tax rates for the business."""

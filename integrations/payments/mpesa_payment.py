@@ -5,6 +5,7 @@ import logging
 
 from ..models import Integrations, MpesaSettings
 from ..utils import Crypto
+from ..services.config_service import IntegrationConfigService
 
 logger = logging.getLogger(__name__)
 
@@ -29,19 +30,18 @@ class MpesaPaymentService:
 
     @classmethod
     def initiate_stk_push(cls, phone, amount, account_reference, description="Payment"):
-        settings = cls.get_settings()
-        if not settings:
+        # Use centralized config service for decryption and defaults
+        config = IntegrationConfigService.get_mpesa_config(decrypt_secrets=True)
+        if not config.get('consumer_key') or not config.get('consumer_secret') or not config.get('short_code'):
             return False, "Mpesa settings not configured", None
-
-        # decrypt sensitive values
-        consumer_key = Crypto(settings.consumer_key, 'decrypt').decrypt() if 'gAAAAA' in settings.consumer_key else settings.consumer_key
-        consumer_secret = Crypto(settings.consumer_secret, 'decrypt').decrypt() if 'gAAAAA' in settings.consumer_secret else settings.consumer_secret
-        passkey = Crypto(settings.passkey, 'decrypt').decrypt() if 'gAAAAA' in settings.passkey else settings.passkey
+        consumer_key = config['consumer_key']
+        consumer_secret = config['consumer_secret']
+        passkey = config['passkey']
 
         try:
             # get token
             auth_resp = requests.get(
-                f"{settings.base_url}/oauth/v1/generate?grant_type=client_credentials",
+                f"{config['base_url']}/oauth/v1/generate?grant_type=client_credentials",
                 auth=(consumer_key, consumer_secret),
                 timeout=20,
             )
@@ -52,23 +52,23 @@ class MpesaPaymentService:
             from datetime import datetime
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
             import base64
-            pwd = base64.b64encode(f"{settings.short_code}{passkey}{timestamp}".encode()).decode()
+            pwd = base64.b64encode(f"{config['short_code']}{passkey}{timestamp}".encode()).decode()
 
             payload = {
-                "BusinessShortCode": settings.short_code,
+                "BusinessShortCode": config['short_code'],
                 "Password": pwd,
                 "Timestamp": timestamp,
                 "TransactionType": "CustomerPayBillOnline",
                 "Amount": int(Decimal(str(amount))),
                 "PartyA": phone,
-                "PartyB": settings.short_code,
+                "PartyB": config['short_code'],
                 "PhoneNumber": phone,
-                "CallBackURL": f"{settings.callback_base_url}",
+                "CallBackURL": f"{config['callback_base_url']}",
                 "AccountReference": account_reference,
                 "TransactionDesc": description,
             }
             headers = {"Authorization": f"Bearer {access_token}"}
-            resp = requests.post(f"{settings.base_url}/mpesa/stkpush/v1/processrequest", json=payload, headers=headers, timeout=30)
+            resp = requests.post(f"{config['base_url']}/mpesa/stkpush/v1/processrequest", json=payload, headers=headers, timeout=30)
             data = resp.json()
             if resp.ok and data.get('ResponseCode') == '0':
                 return True, "STK Push initiated", {
@@ -84,27 +84,27 @@ class MpesaPaymentService:
 
     @classmethod
     def query_stk_status(cls, checkout_id, password, timestamp):
-        settings = cls.get_settings()
-        if not settings:
+        config = IntegrationConfigService.get_mpesa_config(decrypt_secrets=True)
+        if not config.get('consumer_key') or not config.get('consumer_secret'):
             return False, "Mpesa settings not configured", None
         try:
             # token
-            consumer_key = Crypto(settings.consumer_key, 'decrypt').decrypt() if 'gAAAAA' in settings.consumer_key else settings.consumer_key
-            consumer_secret = Crypto(settings.consumer_secret, 'decrypt').decrypt() if 'gAAAAA' in settings.consumer_secret else settings.consumer_secret
+            consumer_key = config['consumer_key']
+            consumer_secret = config['consumer_secret']
             auth_resp = requests.get(
-                f"{settings.base_url}/oauth/v1/generate?grant_type=client_credentials",
+                f"{config['base_url']}/oauth/v1/generate?grant_type=client_credentials",
                 auth=(consumer_key, consumer_secret),
                 timeout=20,
             )
             access_token = auth_resp.json().get('access_token')
             payload = {
-                "BusinessShortCode": settings.short_code,
+                "BusinessShortCode": config['short_code'],
                 "Password": password,
                 "Timestamp": timestamp,
                 "CheckoutRequestID": checkout_id,
             }
             headers = {"Authorization": f"Bearer {access_token}"}
-            resp = requests.post(f"{settings.base_url}/mpesa/stkpushquery/v1/query", json=payload, headers=headers, timeout=30)
+            resp = requests.post(f"{config['base_url']}/mpesa/stkpushquery/v1/query", json=payload, headers=headers, timeout=30)
             data = resp.json()
             return resp.ok, None if resp.ok else data.get('errorMessage'), data
         except Exception as e:

@@ -259,3 +259,30 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
         
         serializer = ApprovalSerializer(pending_approvals, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def audit(self, request, pk=None):
+        """Return audit-style view of an approval request with steps and statuses."""
+        request_obj = self.get_object()
+        approvals = request_obj.approvals.select_related('step', 'approver').all()
+        data = {
+            'id': request_obj.id,
+            'workflow': getattr(request_obj.workflow, 'name', None),
+            'status': request_obj.status,
+            'requested_by': getattr(request_obj.requester, 'id', None),
+            'requested_at': request_obj.created_at,
+            'approvals': [
+                {
+                    'step': a.step.name if a.step else None,
+                    'step_number': a.step.step_number if a.step else None,
+                    'approver_id': a.approver_id,
+                    'status': a.status,
+                    'notes': a.notes,
+                    'approved_at': a.approved_at,
+                    'rejected_at': a.rejected_at,
+                    'delegated_to': a.delegated_to_id,
+                }
+                for a in approvals
+            ]
+        }
+        return Response(data)

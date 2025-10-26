@@ -16,12 +16,19 @@ from ecommerce.stockinventory.models import Review, StockInventory
 from ecommerce.product.models import *
 from business.models import PickupStations
 from .delivery import DeliveryPolicy, RegionalDeliveryPolicy, ProductDeliveryInfo
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import PageNumberPagination
 from django.db.models import Prefetch
 from core.performance import monitor_performance, cache_result, optimize_list_queryset
 from addresses.models import AddressBook, DeliveryRegion
-        
-class ProductViewSet(viewsets.ModelViewSet):
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
+
+class ProductViewSet(BaseModelViewSet):
     queryset = StockInventory.objects.all().prefetch_related(
         'product__images',
         'product__category',
@@ -37,8 +44,8 @@ class ProductViewSet(viewsets.ModelViewSet):
     ).all()
     serializer_class = StockSerializer
     #authentication_classes = []
-    permission_classes = ()
-    pagination_class = LimitOffsetPagination
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    pagination_class = PageNumberPagination  # Standardized: 100 records per page
 
     @monitor_performance('product_list_query')
     def get_queryset(self):
@@ -206,78 +213,88 @@ class ProductViewSet(viewsets.ModelViewSet):
         return queryset
 
     def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        data = serializer.data
-        
-        # Check if user is authenticated and get their favorites
-        if request.user.is_authenticated:
-            favorite = Favourites.objects.filter(user=request.user, stock=instance).exists()
-            data['is_favorite'] = favorite
-        else:
-            data['is_favorite'] = False
+        try:
+            correlation_id = get_correlation_id(request)
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            data = serializer.data
             
-        # Get related products
-        related_products = self.get_related_products(instance.product)
-        related_serializer = StockSerializer(related_products, many=True, context={'request': request})
-        data['related_products'] = related_serializer.data
-        
-        # Add delivery information
-        self.add_delivery_info(data, instance.product, request)
-        
-        # Increment view count
-        instance.product.view_count = instance.product.view_count + 1
-        instance.product.save()
-        
-        return Response(data)
+            # Check if user is authenticated and get their favorites
+            if request.user.is_authenticated:
+                favorite = Favourites.objects.filter(user=request.user, stock=instance).exists()
+                data['is_favorite'] = favorite
+            else:
+                data['is_favorite'] = False
+                
+            # Get related products
+            related_products = self.get_related_products(instance.product)
+            related_serializer = StockSerializer(related_products, many=True, context={'request': request})
+            data['related_products'] = related_serializer.data
+            
+            # Add delivery information
+            self.add_delivery_info(data, instance.product, request)
+            
+            # Increment view count
+            instance.product.view_count = instance.product.view_count + 1
+            instance.product.save()
+            
+            return APIResponse.success(data=data, message='Product retrieved successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error retrieving product: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving product', error_id=str(e), correlation_id=get_correlation_id(request))
         
     @action(detail=False, methods=['get'])
     def delivery_options(self, request):
         """
         Return standard delivery options available in the system
         """
-        # Default delivery options
-        delivery_options = [
-            {
-                'id': 1,
-                'name': 'Standard Delivery',
-                'fee': 200,
-                'description': 'Delivery within 2-5 business days',
-                'is_default': True
-            },
-            {
-                'id': 2,
-                'name': 'Express Delivery',
-                'fee': 500,
-                'description': 'Next day delivery for orders placed before 2pm',
-                'is_default': False
-            }
-        ]
-        
-        # Try to get any custom delivery options from the database if available
         try:
-            # This is a flexible approach to support custom delivery options
-            # from different modules if they're implemented in the future
-            from ecommerce.order.models import DeliveryOption
-            db_options = DeliveryOption.objects.filter(is_active=True)
-            if db_options.exists():
-                delivery_options = []
-                for option in db_options:
-                    delivery_options.append({
-                        'id': option.id,
-                        'name': option.name,
-                        'fee': option.fee,
-                        'description': option.description,
-                        'is_default': option.is_default
-                    })
-        except ImportError:
-            # DeliveryOption model might not exist, use defaults
-            pass
+            correlation_id = get_correlation_id(request)
+            # Default delivery options
+            delivery_options = [
+                {
+                    'id': 1,
+                    'name': 'Standard Delivery',
+                    'fee': 200,
+                    'description': 'Delivery within 2-5 business days',
+                    'is_default': True
+                },
+                {
+                    'id': 2,
+                    'name': 'Express Delivery',
+                    'fee': 500,
+                    'description': 'Next day delivery for orders placed before 2pm',
+                    'is_default': False
+                }
+            ]
+            
+            # Try to get any custom delivery options from the database if available
+            try:
+                # This is a flexible approach to support custom delivery options
+                # from different modules if they're implemented in the future
+                from ecommerce.order.models import DeliveryOption
+                db_options = DeliveryOption.objects.filter(is_active=True)
+                if db_options.exists():
+                    delivery_options = []
+                    for option in db_options:
+                        delivery_options.append({
+                            'id': option.id,
+                            'name': option.name,
+                            'fee': option.fee,
+                            'description': option.description,
+                            'is_default': option.is_default
+                        })
+            except ImportError:
+                # DeliveryOption model might not exist, use defaults
+                pass
+            except Exception as e:
+                # Log error but continue with default options
+                print(f"Error fetching delivery options: {str(e)}")
+            
+            return APIResponse.success(data=delivery_options, message='Delivery options retrieved successfully', correlation_id=correlation_id)
         except Exception as e:
-            # Log error but continue with default options
-            print(f"Error fetching delivery options: {str(e)}")
-        
-        return Response(delivery_options)
+            logger.error(f'Error fetching delivery options: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving delivery options', error_id=str(e), correlation_id=get_correlation_id(request))
 
     def get_related_products(self, product):
         """Get products related to the current product based on category and brand"""
@@ -383,74 +400,94 @@ class ProductViewSet(viewsets.ModelViewSet):
         """
         Return featured products (products marked as featured or with high ratings)
         """
-        queryset = self.get_queryset().filter(
-            Q(is_top_pick=True) | Q(is_new_arrival=True) |
-            Q(reviews__rating__gte=4)
-        ).distinct()[:8]
-        
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        try:
+            correlation_id = get_correlation_id(request)
+            queryset = self.get_queryset().filter(
+                Q(is_top_pick=True) | Q(is_new_arrival=True) |
+                Q(reviews__rating__gte=4)
+            ).distinct()[:8]
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return APIResponse.success(data=serializer.data, message='Featured products retrieved successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error fetching featured products: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving featured products', error_id=str(e), correlation_id=get_correlation_id(request))
     
     @action(detail=False, methods=['get',],name="trending",url_path="trending")
     def trending(self, request):
         """
         Return trending products (most viewed or recently popular products)
         """
-        # You could implement more complex logic based on views or purchases
-        queryset = self.get_queryset().order_by('-product__view_count')[:8]
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        try:
+            correlation_id = get_correlation_id(request)
+            # You could implement more complex logic based on views or purchases
+            queryset = self.get_queryset().order_by('-product__view_count')[:8]
+            serializer = self.get_serializer(queryset, many=True)
+            return APIResponse.success(data=serializer.data, message='Trending products retrieved successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error fetching trending products: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving trending products', error_id=str(e), correlation_id=get_correlation_id(request))
     
     @action(detail=False, methods=['get'],name="recommended",url_path="recommended")
     def recommended(self, request):
         """
         Return recommended products for the current user or generally popular products
         """
-        user = request.user
-        
-        if user.is_authenticated:
-            # Get user's purchase history categories
-            # This is a simplified version - you'd typically use a more sophisticated algorithm
-            favourites = Favourites.objects.filter(user=user).values_list('stock_id', flat=True)
+        try:
+            correlation_id = get_correlation_id(request)
+            user = request.user
             
-            if favourites.exists():
-                # Get products from similar categories as user's favorites
-                favorite_products = StockInventory.objects.filter(id__in=favourites)
-                fav_categories = set()
-                for product in favorite_products:
-                    fav_categories.add(product.category.id)
-                    
-                queryset = self.get_queryset().filter(
-                    product__category__id__in=fav_categories
-                ).exclude(product__id__in=favourites)[:8]
+            if user.is_authenticated:
+                # Get user's purchase history categories
+                # This is a simplified version - you'd typically use a more sophisticated algorithm
+                favourites = Favourites.objects.filter(user=user).values_list('stock_id', flat=True)
                 
-                serializer = self.get_serializer(queryset, many=True)
-                return Response(serializer.data)
-        
-        # Default: return highly rated products
-        queryset = self.get_queryset().filter(
-            reviews__rating__gte=4
-        ).distinct().order_by('?')[:8]  # Random selection
-        
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+                if favourites.exists():
+                    # Get products from similar categories as user's favorites
+                    favorite_products = StockInventory.objects.filter(id__in=favourites)
+                    fav_categories = set()
+                    for product in favorite_products:
+                        fav_categories.add(product.category.id)
+                        
+                    queryset = self.get_queryset().filter(
+                        product__category__id__in=fav_categories
+                    ).exclude(product__id__in=favourites)[:8]
+                    
+                    serializer = self.get_serializer(queryset, many=True)
+                    return APIResponse.success(data=serializer.data, message='Recommended products retrieved successfully', correlation_id=correlation_id)
+            
+            # Default: return highly rated products
+            queryset = self.get_queryset().filter(
+                reviews__rating__gte=4
+            ).distinct().order_by('?')[:8]  # Random selection
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return APIResponse.success(data=serializer.data, message='Recommended products retrieved successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error fetching recommended products: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving recommended products', error_id=str(e), correlation_id=get_correlation_id(request))
     
     @action(detail=False, methods=['get'],name="flash_sale",url_path="flash-sale")
     def flash_sale(self, request):
         """
         Return products that are currently part of a flash sale
         """
-        today = date.today()
-        queryset = self.get_queryset().filter(
-            Q(discount__percentage__gt=0) |
-            Q(discount__discount_amount__gt=0),
-            discount__isnull=False,
-            discount__start_date__lte=today,
-            discount__end_date__gte=today
-        ).order_by('-discount__percentage')[:8]
-        
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        try:
+            correlation_id = get_correlation_id(request)
+            today = date.today()
+            queryset = self.get_queryset().filter(
+                Q(discount__percentage__gt=0) |
+                Q(discount__discount_amount__gt=0),
+                discount__isnull=False,
+                discount__start_date__lte=today,
+                discount__end_date__gte=today
+            ).order_by('-discount__percentage')[:8]
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return APIResponse.success(data=serializer.data, message='Flash sale products retrieved successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error fetching flash sale products: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving flash sale products', error_id=str(e), correlation_id=get_correlation_id(request))
 
 class ProductDetail(APIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly,]
@@ -461,15 +498,21 @@ class ProductDetail(APIView):
             raise Http404
 
     def get(self, request, pk):
-        cart = self.get_object(pk)
-        serializer = ProductsSerializer(cart)
-        return Response(serializer.data)
+        try:
+            correlation_id = get_correlation_id(request)
+            cart = self.get_object(pk)
+            serializer = ProductsSerializer(cart)
+            return APIResponse.success(data=serializer.data, message='Product detail retrieved successfully', correlation_id=correlation_id)
+        except Http404:
+            return APIResponse.not_found(message='Product not found', correlation_id=get_correlation_id(request))
+        except Exception as e:
+            logger.error(f'Error fetching product detail: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving product detail', error_id=str(e), correlation_id=get_correlation_id(request))
 
-class ReviewsViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all()
+class ReviewsViewSet(BaseModelViewSet):
+    queryset = Review.objects.all().select_related('stock__product')
     serializer_class = ReviewsSerializer
-    authentication_classes = []
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly,]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -479,110 +522,124 @@ class ReviewsViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(Q(stock__product__sku=sku)|Q(stock__variation__sku=sku))
         return queryset
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+    def create(self, request, *args, **kwargs):
+        try:
+            correlation_id = get_correlation_id(request)
+            serializer = self.get_serializer(data=request.data)
+            if not serializer.is_valid():
+                return APIResponse.validation_error(message='Review validation failed', errors=serializer.errors, correlation_id=correlation_id)
+            instance = serializer.save()
+            AuditTrail.log(operation=AuditTrail.CREATE, module='ecommerce', entity_type='Review', entity_id=instance.id, user=request.user, reason=f'Created product review', request=request)
+            return APIResponse.created(data=self.get_serializer(instance).data, message='Review created successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error creating review: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error creating review', error_id=str(e), correlation_id=get_correlation_id(request))
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
-class FavouriteViewSet(viewsets.ModelViewSet):
-    #authentication_classes = [] 
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly] 
+class FavouriteViewSet(BaseModelViewSet):
     serializer_class = FavouritesSerializer
     queryset = Favourites.objects.prefetch_related(
         'stock__product',
         'stock__product__images',
-                    'stock__product__category',
+        'stock__product__category',
         'stock__product__brand',
         'stock__variation',
         'stock__discount',
         'stock__unit',
         'stock__reviews',
         'stock__location',
-    ).all()   
+    ).all()
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
      
     def get_queryset(self):
         if not self.request.user.is_authenticated:
-            return []  # Return an empty list if not authenticated
-        queryset = super().get_queryset()  # Get the base queryset using super()
-        return queryset.filter(user=self.request.user)  # Filter by the current user
+            return Favourites.objects.none()
+        queryset = super().get_queryset()
+        return queryset.filter(user=self.request.user)
 
-    def post(self, request):
+    def create(self, request, *args, **kwargs):
         """Add product to favorites"""
-        product_id = request.data.get('product_id')
-        if not product_id:
-            return Response({"detail": "Product ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-            
         try:
-            product = StockInventory.objects.get(id=product_id)
-        except StockInventory.DoesNotExist:
-            return Response({"detail": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+            correlation_id = get_correlation_id(request)
+            product_id = request.data.get('product_id')
+            if not product_id:
+                return APIResponse.bad_request(message='Product ID is required', error_id='missing_product_id', correlation_id=correlation_id)
+                
+            try:
+                product = StockInventory.objects.get(id=product_id)
+            except StockInventory.DoesNotExist:
+                return APIResponse.not_found(message='Product not found', correlation_id=correlation_id)
+                
+            favorite, created = Favourites.objects.get_or_create(
+                user=request.user,
+                stock=product
+            )
             
-        # Create favorite if it doesn't exist
-        favorite, created = Favourites.objects.get_or_create(
-            user=request.user,
-            stock=product
-        )
-        
-        if not created:
-            return Response({"detail": "Product already in favorites"}, status=status.HTTP_200_OK)
+            if not created:
+                return APIResponse.success(data=self.get_serializer(favorite).data, message='Product already in favorites', correlation_id=correlation_id)
             
-        return Response({"detail": "Product added to favorites"}, status=status.HTTP_201_CREATED)
+            AuditTrail.log(operation=AuditTrail.CREATE, module='ecommerce', entity_type='Favourite', entity_id=favorite.id, user=request.user, reason='Product added to favorites', request=request)
+            return APIResponse.created(data=self.get_serializer(favorite).data, message='Product added to favorites', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error adding to favorites: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error adding to favorites', error_id=str(e), correlation_id=get_correlation_id(request))
     
-    def destroy(self, request, product_id=None):
+    def destroy(self, request, pk=None):
         """Remove product from favorites"""
         try:
-            favorite = Favourites.objects.get(user=request.user, stock__id=product_id)
+            correlation_id = get_correlation_id(request)
+            favorite = self.get_object()
+            AuditTrail.log(operation=AuditTrail.DELETE, module='ecommerce', entity_type='Favourite', entity_id=favorite.id, user=request.user, reason='Product removed from favorites', request=request)
             favorite.delete()
-            return Response({"detail": "Product removed from favorites"}, status=status.HTTP_200_OK)
+            return APIResponse.success(message='Product removed from favorites', correlation_id=correlation_id)
         except Favourites.DoesNotExist:
-            return Response({"detail": "Product not in favorites"}, status=status.HTTP_404_NOT_FOUND)
-    
+            return APIResponse.not_found(message='Favourite not found', correlation_id=get_correlation_id(request))
+        except Exception as e:
+            logger.error(f'Error removing from favorites: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error removing from favorites', error_id=str(e), correlation_id=get_correlation_id(request))
+
 #Brands
-class BrandsViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.AllowAny,]
-    authentication_classes = []
+class BrandsViewSet(BaseModelViewSet):
     queryset = ProductBrands.objects.all()
     serializer_class = BrandsSerializer
+    permission_classes = [permissions.AllowAny]
 
 #Models
 
-class ModelsViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.AllowAny,]
-    authentication_classes = []
+class ModelsViewSet(BaseModelViewSet):
     queryset = ProductModels.objects.all()
     serializer_class = ModelsSerializer
+    permission_classes = [permissions.AllowAny]
 
 class Home(APIView):
     permission_classes = ([permissions.IsAuthenticatedOrReadOnly,])
-    authentication_classes = ()
 
     def get(self, request, *args, **kwargs):
-        now = datetime.now()
-        current_year = now.year
-        current_month = now.month
-        current_day = now.day
-        categories = len(Category.objects.all())
-        products = len(Products.objects.all())
-        transaction = len(Sales.objects.filter(
-            date_added__year=current_year,
-            date_added__month=current_month,
-            date_added__day=current_day
-        ))
-        today_sales = Sales.objects.filter(
-            date_added__year=current_year,
-            date_added__month=current_month,
-            date_added__day=current_day
-        ).all()
-        total_sales = sum(today_sales.values_list('grand_total', flat=True))
-        context = {
-            'categories': categories,
-            'products': products,
-            'transaction': transaction,
-            'total_sales': total_sales,
-        }
-        return Response(context)
+        try:
+            correlation_id = get_correlation_id(request)
+            now = datetime.now()
+            current_year = now.year
+            current_month = now.month
+            current_day = now.day
+            categories = len(Category.objects.all())
+            products = len(Products.objects.all())
+            transaction = len(Sales.objects.filter(
+                date_added__year=current_year,
+                date_added__month=current_month,
+                date_added__day=current_day
+            ))
+            today_sales = Sales.objects.filter(
+                date_added__year=current_year,
+                date_added__month=current_month,
+                date_added__day=current_day
+            ).all()
+            total_sales = sum(today_sales.values_list('grand_total', flat=True))
+            context = {
+                'categories': categories,
+                'products': products,
+                'transaction': transaction,
+                'total_sales': total_sales,
+            }
+            return APIResponse.success(data=context, message='Home statistics retrieved successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error fetching home stats: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving home statistics', error_id=str(e), correlation_id=get_correlation_id(request))

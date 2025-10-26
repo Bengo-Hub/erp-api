@@ -16,13 +16,19 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 
 from .models import (
-    KRASettings, WebhookEndpoint, WebhookEvent
+    KRASettings, WebhookEndpoint, WebhookEvent, MpesaSettings
 )
 from .serializers import (
-    KRASettingsSerializer, WebhookEndpointSerializer, WebhookEventSerializer
+    KRASettingsSerializer, WebhookEndpointSerializer, WebhookEventSerializer, MpesaSettingsSerializer
 )
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+import logging
 
-class KRASettingsViewSet(viewsets.ModelViewSet):
+logger = logging.getLogger(__name__)
+
+class KRASettingsViewSet(BaseModelViewSet):
     """ViewSet to manage KRA eTIMS settings with RBAC protection."""
     serializer_class = KRASettingsSerializer
     permission_classes = [IsAuthenticated]
@@ -67,6 +73,27 @@ class KRASettingsViewSet(viewsets.ModelViewSet):
         except Exception as exc:
             return Response({'success': False, 'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+class MpesaSettingsViewSet(viewsets.ModelViewSet):
+    """ViewSet to manage M-Pesa settings with RBAC protection."""
+    serializer_class = MpesaSettingsSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = MpesaSettings.objects.all()
+
+    def get_permissions(self):
+        # Only admins can create/update/delete settings. Authenticated users can read.
+        if self.action in ['list', 'retrieve', 'current']:
+            return [IsAuthenticated()]
+        return [IsAdminUser()]
+
+    @action(detail=False, methods=['get'])
+    def current(self, request):
+        obj = MpesaSettings.objects.order_by('-updated_at').first() if hasattr(MpesaSettings, 'updated_at') else MpesaSettings.objects.first()
+        if not obj:
+            # Provide safe defaults from config service
+            from .services.config_service import IntegrationConfigService
+            return Response(IntegrationConfigService.DEFAULT_MPESA_CONFIG)
+        return Response(self.get_serializer(obj).data)
 
 class WebhookEndpointViewSet(viewsets.ModelViewSet):
     serializer_class = WebhookEndpointSerializer

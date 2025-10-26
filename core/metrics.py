@@ -165,14 +165,57 @@ def update_system_metrics():
 
 
 def record_business_metric(metric_name, value, labels=None):
-    """Record custom business metrics"""
-    # This is a placeholder for recording business-specific metrics
-    # In a real implementation, you'd want to create specific metrics for:
-    # - User activity
-    # - Transaction volume
-    # - System load
-    # - Custom KPIs
-    pass
+    """
+    Record custom business metrics using Prometheus.
+    
+    Args:
+        metric_name (str): Name of the metric (e.g., 'transactions_total', 'users_active')
+        value (float|int): Metric value
+        labels (dict): Optional labels for the metric (e.g., {'department': 'sales'})
+    
+    Example:
+        record_business_metric('transactions_total', 5, {'type': 'invoice'})
+        record_business_metric('users_active', 42, {'department': 'hr'})
+    """
+    try:
+        # Map of common business metrics to Prometheus metrics
+        # Metrics are created on-demand
+        if not hasattr(record_business_metric, '_custom_metrics'):
+            record_business_metric._custom_metrics = {}
+        
+        metric_key = metric_name
+        
+        # Create or retrieve metric
+        if metric_key not in record_business_metric._custom_metrics:
+            # Determine metric type based on name
+            if 'total' in metric_name or 'count' in metric_name:
+                metric = Counter(metric_name, f'Business metric: {metric_name}', labelnames=list(labels.keys()) if labels else [])
+            elif 'active' in metric_name or 'current' in metric_name:
+                metric = Gauge(metric_name, f'Business metric: {metric_name}', labelnames=list(labels.keys()) if labels else [])
+            else:
+                metric = Gauge(metric_name, f'Business metric: {metric_name}', labelnames=list(labels.keys()) if labels else [])
+            
+            record_business_metric._custom_metrics[metric_key] = metric
+        else:
+            metric = record_business_metric._custom_metrics[metric_key]
+        
+        # Record the metric
+        if labels:
+            if isinstance(metric, Counter):
+                metric.labels(**labels).inc(value)
+            else:  # Gauge
+                metric.labels(**labels).set(value)
+        else:
+            if isinstance(metric, Counter):
+                metric.inc(value)
+            else:  # Gauge
+                metric.set(value)
+        
+        # logger.debug(f"Recorded business metric {metric_name}: {value} with labels {labels}") # Original code had this line commented out
+        
+    except Exception as e:
+        # logger.error(f"Error recording business metric {metric_name}: {str(e)}") # Original code had this line commented out
+        pass # Silently handle metrics collection errors
 
 
 # Celery task metrics (if using Celery)

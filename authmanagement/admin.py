@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group
 from django import forms
 from .models import (
     CustomUser, PasswordPolicy,
-    Backup, BackupConfig, BackupSchedule, UserLog, AccountRequest
+    Backup, BackupConfig, BackupSchedule, UserLog, AccountRequest, UserPreferences
 )
 
 @admin.register(CustomUser)
@@ -73,6 +73,18 @@ class AccountRequestAdmin(admin.ModelAdmin):
     search_fields = ('email', 'first_name', 'last_name', 'phone')
     list_editable = ('status',)
     readonly_fields = ('created_at', 'updated_at')
+
+@admin.register(UserPreferences)
+class UserPreferencesAdmin(admin.ModelAdmin):
+    list_display = ('user', 'language', 'updated_at')
+    list_filter = ('language', 'created_at', 'updated_at')
+    search_fields = ('user__email', 'user__first_name', 'user__last_name')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        ('User', {'fields': ('user',)}),
+        ('Preferences', {'fields': ('theme_settings', 'notification_settings', 'dashboard_layout', 'language')}),
+        ('Timestamps', {'fields': ('created_at', 'updated_at')}),
+    )
 
 # Custom Group admin to handle large permission sets more efficiently
 class CustomGroupAdminForm(forms.ModelForm):

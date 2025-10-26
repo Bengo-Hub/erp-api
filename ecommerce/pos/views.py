@@ -39,6 +39,9 @@ from django.utils import timezone
 from django.db import transaction
 from decimal import Decimal
 import logging
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
 
 from .models import (
     Sales, salesItems, Register, CustomerReward, 
@@ -66,10 +69,11 @@ class CustomPagination(pagination.PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 100
 
-class TransactionViewSet(viewsets.ModelViewSet):
+class TransactionViewSet(BaseModelViewSet):
     queryset = MpesaTransaction.objects.all()
     serializer_class = TransactionSerializer
     pagination_class = CustomPagination
+    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         serializer.save()
@@ -81,37 +85,44 @@ class TransactionViewSet(viewsets.ModelViewSet):
         instance.delete()
 
     def list(self, request, *args, **kwargs):
-        queryset=super().get_queryset()
-        # Get transactions by type (deposit/withdrawal)
-        transaction_type = request.query_params.get('type', None)
-        if transaction_type:
-           queryset = queryset.filter(transactionType=transaction_type)
-        # Get transactions by date
-        fromdate = request.query_params.get('fromdate', None)
-        todate = request.query_params.get('todate', None)
-        if fromdate and todate:
-           queryset = queryset.filter(date__range=[fromdate,todate])
-        # Perform analytics for general deposit and withdrawal totals
-        total_deposit =queryset.filter(transactionType='deposit').aggregate(total=Sum('amount'))['total']
-        total_withdrawal = queryset.filter(transactionType='withdrawal').aggregate(total=Sum('amount'))['total']
-        # Get the daily summary for deposits and withdrawals separately
-        daily_summary_deposit = queryset.filter(date=date.today(), transactionType='deposit').aggregate(total=Sum('amount'))['total']
-        daily_summary_withdrawal = queryset.filter(date=date.today(), transactionType='withdrawal').aggregate(total=Sum('amount'))['total']
-        serializer = TransactionSerializer(queryset, many=True)
+        try:
+            correlation_id = get_correlation_id(request)
+            queryset = super().get_queryset()
+            # Get transactions by type (deposit/withdrawal)
+            transaction_type = request.query_params.get('type', None)
+            if transaction_type:
+               queryset = queryset.filter(transactionType=transaction_type)
+            # Get transactions by date
+            fromdate = request.query_params.get('fromdate', None)
+            todate = request.query_params.get('todate', None)
+            if fromdate and todate:
+               queryset = queryset.filter(date__range=[fromdate,todate])
+            # Perform analytics for general deposit and withdrawal totals
+            total_deposit =queryset.filter(transactionType='deposit').aggregate(total=Sum('amount'))['total']
+            total_withdrawal = queryset.filter(transactionType='withdrawal').aggregate(total=Sum('amount'))['total']
+            # Get the daily summary for deposits and withdrawals separately
+            daily_summary_deposit = queryset.filter(date=date.today(), transactionType='deposit').aggregate(total=Sum('amount'))['total']
+            daily_summary_withdrawal = queryset.filter(date=date.today(), transactionType='withdrawal').aggregate(total=Sum('amount'))['total']
+            serializer = TransactionSerializer(queryset, many=True)
 
-        return Response({
-            'total_deposit': total_deposit or 0,
-            'total_withdrawal': total_withdrawal or 0,
-            'daily_summary': {
-                "deposits":daily_summary_deposit or 0,
-                "withdrawals":daily_summary_withdrawal or 0,
+            data = {
+                'total_deposit': total_deposit or 0,
+                'total_withdrawal': total_withdrawal or 0,
+                'daily_summary': {
+                    "deposits":daily_summary_deposit or 0,
+                    "withdrawals":daily_summary_withdrawal or 0,
                 },
-            'transactions':serializer.data,
-        })
+                'transactions':serializer.data,
+            }
+            return APIResponse.success(data=data, message='Transactions retrieved successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error fetching transactions: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving transactions', error_id=str(e), correlation_id=get_correlation_id(request))
 
-class CustomerRewardViewSet(viewsets.ModelViewSet):
+class CustomerRewardViewSet(BaseModelViewSet):
     queryset = CustomerReward.objects.all()
     serializer_class = CustomerRewardSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 class SalesReturnViewSet(viewsets.ViewSet):
     queryset=SalesReturn.objects.all()
@@ -280,8 +291,8 @@ class SalesReturnRefundViewSet(viewsets.ViewSet):
             resp = {'icon':'error','title': 'Error', 'msg': str(e)}
             return Response(resp,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class SuspendedSaleViewSet(viewsets.ModelViewSet):
-    queryset = SuspendedSale.objects.all()
+class SuspendedSaleViewSet(BaseModelViewSet):
+    queryset = SuspendedSale.objects.all().select_related('created_by', 'customer')
     serializer_class = SuspendedSaleSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -293,102 +304,132 @@ class SuspendedSaleViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def resume(self, request, pk=None):
-        suspended_sale = self.get_object()
-        
-        # Create a new sale from the suspended sale
-        sale_data = {
-            'items': suspended_sale.items,
-            'customer': suspended_sale.customer,
-            'notes': f"Resumed from suspended sale {suspended_sale.reference_number}"
-        }
-        
-        sale_serializer = SaleSerializer(data=sale_data)
-        if sale_serializer.is_valid():
+        try:
+            correlation_id = get_correlation_id(request)
+            suspended_sale = self.get_object()
+            
+            # Create a new sale from the suspended sale
+            sale_data = {
+                'items': suspended_sale.items,
+                'customer': suspended_sale.customer,
+                'notes': f"Resumed from suspended sale {suspended_sale.reference_number}"
+            }
+            
+            sale_serializer = SaleSerializer(data=sale_data)
+            if not sale_serializer.is_valid():
+                return APIResponse.validation_error(message='Sale validation failed', errors=sale_serializer.errors, correlation_id=correlation_id)
+            
             sale = sale_serializer.save()
-            suspended_sale.delete()  # Remove the suspended sale
-            return Response(sale_serializer.data)
-        return Response(sale_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            suspended_sale.delete()
+            AuditTrail.log(operation=AuditTrail.UPDATE, module='ecommerce', entity_type='SuspendedSale', entity_id=suspended_sale.id, user=request.user, reason=f'Resumed suspended sale', request=request)
+            
+            return APIResponse.created(data=sale_serializer.data, message='Suspended sale resumed successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error resuming suspended sale: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error resuming suspended sale', error_id=str(e), correlation_id=get_correlation_id(request))
 
-class POSViewSet(viewsets.ModelViewSet):
-    queryset = Sales.objects.all()
+class POSViewSet(BaseModelViewSet):
+    queryset = Sales.objects.all().select_related('customer', 'register', 'voided_by')
     serializer_class = SalesSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     @action(detail=False, methods=['post'])
     def create_sale(self, request):
-        with transaction.atomic():
-            # Create the sale first
-            sale_serializer = self.get_serializer(data=request.data)
-            if not sale_serializer.is_valid():
-                return Response(sale_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
-            sale = sale_serializer.save()
+        try:
+            correlation_id = get_correlation_id(request)
+            with transaction.atomic():
+                # Create the sale first
+                sale_serializer = self.get_serializer(data=request.data)
+                if not sale_serializer.is_valid():
+                    return APIResponse.validation_error(message='Sale validation failed', errors=sale_serializer.errors, correlation_id=correlation_id)
+                
+                sale = sale_serializer.save()
 
-            # Process payment
-            payment_data = {
-                'sale': sale.id,
-                'amount': request.data.get('grand_total'),
-                'payment_method': request.data.get('payment_method'),
-                'tendered_amount': request.data.get('tendered_amount', 0),
-                'notes': f"POS Sale {sale.reference_number}"
-            }
+                # Process payment
+                payment_data = {
+                    'sale': sale.id,
+                    'amount': request.data.get('grand_total'),
+                    'payment_method': request.data.get('payment_method'),
+                    'tendered_amount': request.data.get('tendered_amount', 0),
+                    'notes': f"POS Sale {sale.reference_number}"
+                }
 
-            payment_serializer = CreatePOSPaymentSerializer(data=payment_data)
-            if not payment_serializer.is_valid():
-                return Response(payment_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
-            payment = payment_serializer.save()
+                payment_serializer = CreatePOSPaymentSerializer(data=payment_data)
+                if not payment_serializer.is_valid():
+                    return APIResponse.validation_error(message='Payment validation failed', errors=payment_serializer.errors, correlation_id=correlation_id)
+                
+                payment = payment_serializer.save()
 
-            # Update sale with payment info
-            sale.payment_status = 'paid'
-            sale.save()
+                # Update sale with payment info
+                sale.payment_status = 'paid'
+                sale.save()
+                
+                AuditTrail.log(operation=AuditTrail.CREATE, module='ecommerce', entity_type='Sale', entity_id=sale.id, user=request.user, reason='Created POS sale', request=request)
 
-            return Response({
-                'sale': SaleSerializer(sale).data,
-                'payment': payment_serializer.data
-            }, status=status.HTTP_201_CREATED)
+                return APIResponse.created(data={'sale': SalesSerializer(sale).data, 'payment': payment_serializer.data}, message='Sale created successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error creating sale: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error creating sale', error_id=str(e), correlation_id=get_correlation_id(request))
 
     @action(detail=True, methods=['post'])
     def void_sale(self, request, pk=None):
-        sale = self.get_object()
-        with transaction.atomic():
-            # Void the sale
-            sale.status = 'voided'
-            sale.voided_by = request.user
-            sale.voided_at = timezone.now()
-            sale.save()
+        try:
+            correlation_id = get_correlation_id(request)
+            sale = self.get_object()
+            with transaction.atomic():
+                # Void the sale
+                old_status = sale.status
+                sale.status = 'voided'
+                sale.voided_by = request.user
+                sale.voided_at = timezone.now()
+                sale.save()
 
-            # Refund the payment if it exists
-            if hasattr(sale, 'payment'):
-                payment = sale.payment
-                payment.status = 'refunded'
-                payment.save()
+                # Refund the payment if it exists
+                if hasattr(sale, 'payment'):
+                    payment = sale.payment
+                    payment.status = 'refunded'
+                    payment.save()
+                
+                AuditTrail.log(operation=AuditTrail.CANCEL, module='ecommerce', entity_type='Sale', entity_id=sale.id, user=request.user, changes={'status': {'old': old_status, 'new': 'voided'}}, reason='Sale voided', request=request)
 
-            return Response({'status': 'sale voided'})
+                return APIResponse.success(data=self.get_serializer(sale).data, message='Sale voided successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error voiding sale: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error voiding sale', error_id=str(e), correlation_id=get_correlation_id(request))
 
     @action(detail=True, methods=['post'])
     def refund_sale(self, request, pk=None):
-        sale = self.get_object()
-        refund_amount = request.data.get('amount')
-        reason = request.data.get('reason')
+        try:
+            correlation_id = get_correlation_id(request)
+            sale = self.get_object()
+            refund_amount = request.data.get('amount')
+            reason = request.data.get('reason')
 
-        with transaction.atomic():
-            # Create refund record
-            if hasattr(sale, 'payment'):
-                payment = sale.payment
-                refund = payment.refunds.create(
-                    amount=refund_amount,
-                    reason=reason,
-                    processed_by=request.user
-                )
+            if not refund_amount or refund_amount <= 0:
+                return APIResponse.bad_request(message='Refund amount must be positive', error_id='invalid_refund_amount', correlation_id=correlation_id)
 
-                # Update sale status
-                sale.payment_status = 'refunded'
-                sale.save()
+            with transaction.atomic():
+                # Create refund record
+                if hasattr(sale, 'payment'):
+                    payment = sale.payment
+                    refund = payment.refunds.create(
+                        amount=refund_amount,
+                        reason=reason,
+                        processed_by=request.user
+                    )
 
-                return Response({'status': 'refund processed', 'refund_id': refund.id})
-            return Response({'error': 'No payment found for this sale'}, 
-                          status=status.HTTP_400_BAD_REQUEST)
+                    # Update sale status
+                    sale.payment_status = 'refunded'
+                    sale.save()
+                    
+                    AuditTrail.log(operation=AuditTrail.UPDATE, module='ecommerce', entity_type='Sale', entity_id=sale.id, user=request.user, changes={'payment_status': {'old': 'paid', 'new': 'refunded'}}, reason=f'Refund processed: {reason}', request=request)
+
+                    return APIResponse.success(data=self.get_serializer(sale).data, message='Refund processed successfully', correlation_id=correlation_id)
+                else:
+                    return APIResponse.bad_request(message='No payment found for this sale', error_id='no_payment', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error processing refund: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error processing refund', error_id=str(e), correlation_id=get_correlation_id(request))
 
     @action(detail=False, methods=['get'])
     def sales_list(self, request):
@@ -541,7 +582,7 @@ class POSViewSet(viewsets.ModelViewSet):
                 'detail': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class RegisterViewSet(viewsets.ModelViewSet):
+class RegisterViewSet(BaseModelViewSet):
     queryset = Register.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.IsAuthenticated]

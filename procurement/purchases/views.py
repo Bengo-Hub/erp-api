@@ -2,6 +2,7 @@ from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from decimal import Decimal
 import logging
@@ -11,85 +12,140 @@ from .models import Purchase, PurchaseItems, PayTerm, StockInventory
 from .serializers import *
 from finance.payment.services import PaymentOrchestrationService
 from django.contrib.auth import get_user_model
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-class PurchaseViewSet(viewsets.ModelViewSet):
-    queryset = Purchase.objects.all()
+class PurchaseViewSet(BaseModelViewSet):
+    queryset = Purchase.objects.all().select_related('supplier', 'pay_term')
     serializer_class = PurchasesSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Optimize queries with select_related for related objects."""
+        queryset = super().get_queryset()
+        return queryset.prefetch_related('purchaseitems__stock_item__product')
 
     def create(self, request, *args, **kwargs):
-       
-        data = request.data
-        purchase_items_data = data.pop('purhaseitems', [])  # Get purchase items data from the payload
-        # Handle the pay term
-        pay_term_data = data.pop('pay_term', None)
-        if pay_term_data.get('pay_duration',0)>0:
-            pay_term, _ = PayTerm.objects.get_or_create(
-                duration=pay_term_data.get('pay_duration', 0),
-                period=pay_term_data.get('duration_type', 'Days')
-            )
-            data['pay_term'] = pay_term.id
-        data['pay_term'] = None
-        #purchase id
-        purchase_id=data.get("purchase_id",None)
-        if purchase_id =='' or purchase_id is None:
-            purchase_id=generate_ref_no("PO")
-        data['purchase_id']=purchase_id
-        # Serialize and validate the main Purchase data
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        
-        # Save the main Purchase instance
-        purchase = serializer.save()
-        # Calculate balance due and overdue
-        purchase.balance_due = max(purchase.grand_total - purchase.purchase_ammount, 0)
-        purchase.balance_overdue = max(purchase.purchase_ammount - purchase.grand_total, 0)
-
-        # Update stock levels if conditions are met
-        if (purchase.purchase_status == 'received') and (purchase.payment_status in ['paid', 'partial']):
-            for purchase_item in purchase.purchaseitems.all():
-                stock_item = purchase_item.stock_item
-                stock_item.stock_level += purchase_item.qty  # Increase stock level
-                stock_item.save()
-
-            # Update payment details
-            purchase.purchase_ammount = purchase.grand_total
+        """Create purchase with validation, reference generation, and audit logging."""
+        try:
+            correlation_id = get_correlation_id(request)
+            data = request.data.copy()
+            purchase_items_data = data.pop('purhaseitems', [])  # Get purchase items data from the payload
+            
+            # Validate purchase items
+            if not purchase_items_data:
+                return APIResponse.validation_error(
+                    message='At least one purchase item is required',
+                    errors={'purhaseitems': 'Cannot be empty'},
+                    correlation_id=correlation_id
+                )
+            
+            # Handle the pay term
+            pay_term_data = data.pop('pay_term', None)
+            if pay_term_data and pay_term_data.get('pay_duration', 0) > 0:
+                pay_term, _ = PayTerm.objects.get_or_create(
+                    duration=pay_term_data.get('pay_duration', 0),
+                    period=pay_term_data.get('duration_type', 'Days')
+                )
+                data['pay_term'] = pay_term.id
+            else:
+                data['pay_term'] = None
+            
+            # Generate purchase ID if not provided
+            purchase_id = data.get("purchase_id", None)
+            if purchase_id == '' or purchase_id is None:
+                purchase_id = generate_ref_no("PO")
+            data['purchase_id'] = purchase_id
+            
+            # Serialize and validate the main Purchase data
+            serializer = self.get_serializer(data=data)
+            if not serializer.is_valid():
+                return APIResponse.validation_error(
+                    message='Purchase validation failed',
+                    errors=serializer.errors,
+                    correlation_id=correlation_id
+                )
+            
+            # Save the main Purchase instance
+            purchase = serializer.save()
+            
+            # Calculate balance due and overdue
             purchase.balance_due = max(purchase.grand_total - purchase.purchase_ammount, 0)
             purchase.balance_overdue = max(purchase.purchase_ammount - purchase.grand_total, 0)
 
-        # Save the purchase again with updated values
-        purchase.save()
+            # Update stock levels if conditions are met
+            if (purchase.purchase_status == 'received') and (purchase.payment_status in ['paid', 'partial']):
+                for purchase_item in purchase.purchaseitems.all():
+                    stock_item = purchase_item.stock_item
+                    stock_item.stock_level += purchase_item.qty  # Increase stock level
+                    stock_item.save()
 
-        # Save related PurchaseItems
-        for item_data in purchase_items_data:
-            product_data = item_data.pop('product', {})
-            variation_data = item_data.pop('variation', {})
-            
-            # Create or fetch the related stock_item
-            stock_item = StockInventory.objects.get(
-                Q(product__sku=item_data.get('sku')) |
-                Q(product_id=product_data.get('id')) |
-                Q(variation__sku=variation_data.get('sku'))
-            )
-            
-            # Add the stock_item reference to item_data
-            item_data['stock'] = stock_item.id
-            item_data['purchase'] = purchase.id
-            _,_=PurchaseItems.objects.update_or_create(
-                purchase=purchase,
-                defaults={
-                    "stock_item":stock_item,
-                    "qty":item_data.get('quantity',0),
-                    "discount_amount":item_data.get('discount_amount',0),
-                    "unit_price":item_data.get('unit_price',0)
-                }
+                # Update payment details
+                purchase.purchase_ammount = purchase.grand_total
+                purchase.balance_due = max(purchase.grand_total - purchase.purchase_ammount, 0)
+                purchase.balance_overdue = max(purchase.purchase_ammount - purchase.grand_total, 0)
+
+            # Save the purchase again with updated values
+            purchase.save()
+
+            # Save related PurchaseItems
+            for item_data in purchase_items_data:
+                product_data = item_data.pop('product', {})
+                variation_data = item_data.pop('variation', {})
+                
+                try:
+                    # Create or fetch the related stock_item
+                    stock_item = StockInventory.objects.get(
+                        Q(product__sku=item_data.get('sku')) |
+                        Q(product_id=product_data.get('id')) |
+                        Q(variation__sku=variation_data.get('sku'))
+                    )
+                    
+                    # Add the stock_item reference to item_data
+                    item_data['stock'] = stock_item.id
+                    item_data['purchase'] = purchase.id
+                    PurchaseItems.objects.update_or_create(
+                        purchase=purchase,
+                        defaults={
+                            "stock_item": stock_item,
+                            "qty": item_data.get('quantity', 0),
+                            "discount_amount": item_data.get('discount_amount', 0),
+                            "unit_price": item_data.get('unit_price', 0)
+                        }
+                    )
+                except StockInventory.DoesNotExist:
+                    logger.warning(f"Stock item not found for purchase item: {item_data}")
+                    continue
+
+            # Log purchase creation
+            AuditTrail.log(
+                operation=AuditTrail.CREATE,
+                module='procurement',
+                entity_type='Purchase',
+                entity_id=purchase.id,
+                user=request.user,
+                changes={'purchase_id': {'new': purchase.purchase_id}},
+                reason=f'Created purchase {purchase.purchase_id}',
+                request=request
             )
 
-        # Return the full Purchase data with related items
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return APIResponse.created(
+                data=self.get_serializer(purchase).data,
+                message='Purchase created successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error creating purchase: {str(e)}', exc_info=True)
+            correlation_id = get_correlation_id(request)
+            return APIResponse.server_error(
+                message='Error creating purchase',
+                error_id=str(e),
+                correlation_id=correlation_id
+            )
 
     def update(self, request, *args, **kwargs):
         """

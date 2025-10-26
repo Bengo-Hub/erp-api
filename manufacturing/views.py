@@ -17,13 +17,19 @@ from django.contrib.auth.models import Permission
 
 from .models import *
 from .serializers import *
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+from django.db import transaction
+import logging
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 # finished product and raw material views are not defined in the original code
-class FinishedProductViewSet(viewsets.ModelViewSet):
-    queryset = Products.objects.filter(Q(is_manufactured=True) & Q(status='active'))  
+class FinishedProductViewSet(BaseModelViewSet):
+    queryset = Products.objects.filter(Q(is_manufactured=True) & Q(status='active')).select_related('category', 'brand')
     serializer_class = FinalProductSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -41,8 +47,8 @@ class FinishedProductViewSet(viewsets.ModelViewSet):
             )
         return queryset
 
-class RawMaterialViewSet(viewsets.ModelViewSet):
-    queryset = Products.objects.filter(stock__is_raw_material=True, stock__delete_status=False)
+class RawMaterialViewSet(BaseModelViewSet):
+    queryset = Products.objects.filter(stock__is_raw_material=True, stock__delete_status=False).select_related('category', 'brand')
     serializer_class = RawMaterialProductSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -62,8 +68,8 @@ class RawMaterialViewSet(viewsets.ModelViewSet):
 
 # views.py
 
-class ProductFormulaViewSet(viewsets.ModelViewSet):
-    queryset = ProductFormula.objects.filter(is_active=True)
+class ProductFormulaViewSet(BaseModelViewSet):
+    queryset = ProductFormula.objects.filter(is_active=True).select_related('final_product')
     serializer_class = ProductFormulaSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -76,8 +82,19 @@ class ProductFormulaViewSet(viewsets.ModelViewSet):
         context['markup_percentage'] = self.request.query_params.get('markup', 30)
         return context
     
-    def perform_create(self, serializer):
-        serializer.save()
+    def create(self, request, *args, **kwargs):
+        try:
+            correlation_id = get_correlation_id(request)
+            serializer = self.get_serializer(data=request.data)
+            if not serializer.is_valid():
+                return APIResponse.validation_error(message='Product formula validation failed', errors=serializer.errors, correlation_id=correlation_id)
+            with transaction.atomic():
+                instance = serializer.save()
+                AuditTrail.log(operation=AuditTrail.CREATE, module='manufacturing', entity_type='ProductFormula', entity_id=instance.id, user=request.user, reason=f'Created product formula', request=request)
+            return APIResponse.created(data=self.get_serializer(instance).data, message='Product formula created successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error creating product formula: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error creating product formula', error_id=str(e), correlation_id=get_correlation_id(request))
     
     @action(detail=True, methods=['post'])
     def add_ingredient(self, request, pk=None):
@@ -142,16 +159,16 @@ class ProductFormulaViewSet(viewsets.ModelViewSet):
         )
 
 
-class FormulaIngredientViewSet(viewsets.ModelViewSet):
-    queryset = FormulaIngredient.objects.all()
+class FormulaIngredientViewSet(BaseModelViewSet):
+    queryset = FormulaIngredient.objects.all().select_related('formula', 'raw_material', 'unit')
     serializer_class = FormulaIngredientSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['formula', 'raw_material']
 
 
-class ProductionBatchViewSet(viewsets.ModelViewSet):
-    queryset = ProductionBatch.objects.all()
+class ProductionBatchViewSet(BaseModelViewSet):
+    queryset = ProductionBatch.objects.all().select_related('formula', 'location', 'supervisor', 'created_by')
     serializer_class = ProductionBatchSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -164,65 +181,80 @@ class ProductionBatchViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def start_production(self, request, pk=None):
-        batch = self.get_object()
-        
         try:
+            correlation_id = get_correlation_id(request)
+            batch = self.get_object()
             batch.start_production()
-            serializer = self.get_serializer(batch)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            AuditTrail.log(operation=AuditTrail.UPDATE, module='manufacturing', entity_type='ProductionBatch', entity_id=batch.id, user=request.user, reason='Production started', request=request)
+            return APIResponse.success(data=self.get_serializer(batch).data, message='Production started successfully', correlation_id=correlation_id)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f'Error starting production: {str(e)}')
+            return APIResponse.bad_request(message='Cannot start production', error_id=str(e), correlation_id=get_correlation_id(request))
+        except Exception as e:
+            logger.error(f'Error starting production: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error starting production', error_id=str(e), correlation_id=get_correlation_id(request))
     
     @action(detail=True, methods=['post'])
     def complete_production(self, request, pk=None):
-        batch = self.get_object()
-        actual_quantity = Decimal(str(request.data.get('actual_quantity'))) if  request.data.get('actual_quantity') else 0.00
-        
-        if not actual_quantity:
-            return Response(
-                {"detail": "actual_quantity is required"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         try:
+            correlation_id = get_correlation_id(request)
+            batch = self.get_object()
+            actual_quantity = Decimal(str(request.data.get('actual_quantity'))) if request.data.get('actual_quantity') else None
+            
+            if not actual_quantity:
+                return APIResponse.bad_request(message='actual_quantity is required', error_id='missing_quantity', correlation_id=correlation_id)
+            
             batch.complete_production(Decimal(actual_quantity))
-            serializer = self.get_serializer(batch)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            AuditTrail.log(operation=AuditTrail.UPDATE, module='manufacturing', entity_type='ProductionBatch', entity_id=batch.id, user=request.user, reason=f'Production completed with quantity {actual_quantity}', request=request)
+            return APIResponse.success(data=self.get_serializer(batch).data, message='Production completed successfully', correlation_id=correlation_id)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f'Error completing production: {str(e)}')
+            return APIResponse.bad_request(message='Cannot complete production', error_id=str(e), correlation_id=get_correlation_id(request))
+        except Exception as e:
+            logger.error(f'Error completing production: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error completing production', error_id=str(e), correlation_id=get_correlation_id(request))
     
     @action(detail=True, methods=['post'])
     def cancel_production(self, request, pk=None):
-        batch = self.get_object()
-        reason = request.data.get('reason', '')
-        
-        batch.cancel_production(reason)
-        serializer = self.get_serializer(batch)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            correlation_id = get_correlation_id(request)
+            batch = self.get_object()
+            reason = request.data.get('reason', '')
+            
+            batch.cancel_production(reason)
+            AuditTrail.log(operation=AuditTrail.CANCEL, module='manufacturing', entity_type='ProductionBatch', entity_id=batch.id, user=request.user, reason=f'Production cancelled: {reason}', request=request)
+            return APIResponse.success(data=self.get_serializer(batch).data, message='Production cancelled successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error cancelling production: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error cancelling production', error_id=str(e), correlation_id=get_correlation_id(request))
     
     @action(detail=True, methods=['post'])
     def add_quality_check(self, request, pk=None):
-        batch = self.get_object()
-        serializer = QualityCheckSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            serializer.save(batch=batch, inspector=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            correlation_id = get_correlation_id(request)
+            batch = self.get_object()
+            serializer = QualityCheckSerializer(data=request.data)
+            
+            if serializer.is_valid():
+                quality_check = serializer.save(batch=batch, inspector=request.user)
+                AuditTrail.log(operation=AuditTrail.CREATE, module='manufacturing', entity_type='QualityCheck', entity_id=quality_check.id, user=request.user, reason='Quality check added', request=request)
+                return APIResponse.created(data=serializer.data, message='Quality check added successfully', correlation_id=correlation_id)
+            
+            return APIResponse.validation_error(message='Quality check validation failed', errors=serializer.errors, correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error adding quality check: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error adding quality check', error_id=str(e), correlation_id=get_correlation_id(request))
     
     @action(detail=False, methods=['get'])
     def check_material_availability(self, request):
-        formula_id = request.query_params.get('formula')
-        quantity = request.query_params.get('quantity')
-        
-        if not formula_id or not quantity:
-            return Response(
-                {"detail": "formula and quantity parameters are required"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         try:
+            correlation_id = get_correlation_id(request)
+            formula_id = request.query_params.get('formula')
+            quantity = request.query_params.get('quantity')
+            
+            if not formula_id or not quantity:
+                return APIResponse.bad_request(message='formula and quantity parameters are required', error_id='missing_params', correlation_id=correlation_id)
+            
             formula = ProductFormula.objects.get(id=formula_id)
             batch_ratio = Decimal(quantity) / Decimal(formula.expected_output_quantity)
             
@@ -239,14 +271,12 @@ class ProductionBatchViewSet(viewsets.ModelViewSet):
                         'shortage': required_quantity - stock_level
                     })
             
-            return Response(missing_materials, status=status.HTTP_200_OK)
+            return APIResponse.success(data=missing_materials, message='Material availability checked', correlation_id=correlation_id)
         except ProductFormula.DoesNotExist:
-            return Response(
-                {"detail": "Formula not found"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return APIResponse.not_found(message='Formula not found', error_id='formula_not_found', correlation_id=get_correlation_id(request))
         except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f'Error checking material availability: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error checking material availability', error_id=str(e), correlation_id=get_correlation_id(request))
 
 
 class QualityCheckViewSet(viewsets.ModelViewSet):

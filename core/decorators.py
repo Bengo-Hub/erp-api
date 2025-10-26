@@ -115,7 +115,7 @@ def require_branch_context(view_func):
         if not request.filters.get('branch_id'):
             return JsonResponse({
                 'success': False,
-                'message': 'Branch context is required. Please provide X-Branch-ID header.',
+                'message': 'Branch context is required. Provide X-Branch-ID header (branch id or branch_code).',
                 'timestamp': timezone.now().isoformat()
             }, status=400)
         

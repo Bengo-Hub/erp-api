@@ -419,7 +419,7 @@ class ProductView(models.Model):
     view_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.viewed_by} viewed {self.stock} at {self.viewed_at}"
+        return f"{self.viewed_by} viewed {self.stock} at {self.view_date}"
 
     class Meta:
         db_table = 'product_views'

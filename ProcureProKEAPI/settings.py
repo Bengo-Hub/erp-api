@@ -229,6 +229,7 @@ MIDDLEWARE = [
     #'finance.accounts.middleware.TaxFormulaMiddleware',
     'hrm.payroll.middleware.PayrollFormulaMiddleware',
     'hrm.payroll_settings.middleware.TaxFormulaMiddleware',
+    'hrm.attendance.middleware.DefaultShiftMiddleware',  # Auto-create Regular shift
     'business.middleware.BusinessConfigs',
 ]
 
@@ -521,7 +522,7 @@ REST_FRAMEWORK = {
         'rest_framework_csv.renderers.AdminRenderer',  # Add this line for CSV support
         'rest_framework_csv.renderers.CSVRenderer',  # Add this line for CSV support
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'core.pagination.StandardResultPagination',
     'PAGE_SIZE': 100,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     # API versioning

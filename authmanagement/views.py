@@ -36,13 +36,45 @@ from datetime import datetime
 import threading
 from rest_framework import viewsets
 from .serializers import UserSerializer
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+import logging
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
-class HODUserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
+
+class GroupViewSet(BaseModelViewSet):
+    """ViewSet for managing user groups/roles"""
+    queryset = Group.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def list(self, request, *args, **kwargs):
+        """List all groups"""
+        groups = self.queryset.all()
+        data = [{'id': g.id, 'name': g.name} for g in groups]
+        return Response({
+            'success': True,
+            'results': data,
+            'count': len(data)
+        })
+    
+    def retrieve(self, request, pk=None, *args, **kwargs):
+        """Get single group"""
+        group = get_object_or_404(Group, pk=pk)
+        return Response({
+            'success': True,
+            'data': {'id': group.id, 'name': group.name}
+        })
+
+
+class HODUserViewSet(BaseModelViewSet):
+    queryset = User.objects.all().select_related('profile')
     #queryset = queryset.filter(employee__hr_details__head_of__isnull=False)
     serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 class RegistrationView(generics.CreateAPIView):
     permission_classes = ()
@@ -213,14 +245,20 @@ class UserViewSet(APIView):
         context = None
         if request.user.is_superuser:
             context = User.objects.values("username", "first_name", "last_name",
-                                          "email", "phone", "groups__name")
+                                          "email", "phone", "groups__name", "pic", "is_active")
             # print(request.user.is_superuser)
         else:
             biz = Bussiness.objects.filter(owner=request.user).first()
             # print(vendor)
-            context = biz.employees.values("user__username", "user__first_name", "user__last_name",
-                                              "user__email", "user__phone", "user__groups__name", "address",
-                                              "national_id", "salary")
+            if biz:
+                context = biz.employees.values(
+                    "user__username", "user__first_name", "user__last_name",
+                    "user__email", "user__phone", "user__groups__name", "user__pic",
+                    "user__is_active", "national_id", "gender", "passport_photo"
+                )
+            else:
+                # If user doesn't own a business, return empty list
+                context = []
         context = list(context)
         return Response(context)
 
@@ -398,3 +436,40 @@ class PermissionView(APIView):
         permission = get_object_or_404(Permission, pk=pk)
         permission.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserPreferencesView(APIView):
+    """
+    View for managing user preferences including theme settings
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request, pk):
+        """Get user preferences"""
+        user = get_object_or_404(User, pk=pk)
+        
+        # Create preferences if they don't exist
+        preferences, created = UserPreferences.objects.get_or_create(user=user)
+        
+        serializer = UserPreferencesSerializer(preferences)
+        return Response(serializer.data)
+    
+    def put(self, request, pk):
+        """Update user preferences"""
+        user = get_object_or_404(User, pk=pk)
+        
+        # Ensure the user can only update their own preferences
+        if request.user.id != user.id and not request.user.is_staff:
+            return Response(
+                {'error': 'You can only update your own preferences'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get or create preferences
+        preferences, created = UserPreferences.objects.get_or_create(user=user)
+        
+        serializer = UserPreferencesSerializer(preferences, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

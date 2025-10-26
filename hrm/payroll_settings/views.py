@@ -7,9 +7,9 @@ from hrm.payroll.models import *
 from hrm.payroll.serializers import *
 from hrm.payroll_settings.serializers import (
     ScheduledPayslipSerializer, ApprovalSerializer, FormulaItemSerializer, 
-    SplitRatioSerializer, FormulasSerializer, PayrollComponentsSerializer
+    SplitRatioSerializer, FormulasSerializer, PayrollComponentsSerializer, GeneralHRSettingsSerializer
 )
-from .models import PayrollComponents, ScheduledPayslip, Approval, Formulas, Loans, FormulaItems, SplitRatio
+from .models import PayrollComponents, ScheduledPayslip, Approval, Formulas, Loans, FormulaItems, SplitRatio, GeneralHRSettings
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
@@ -243,11 +243,25 @@ class FormulaViewSet(viewsets.ModelViewSet):
             serializer = FormulaItemSerializer(items, many=True)
             return Response(serializer.data)
         elif request.method == 'POST':
-            serializer = FormulaItemSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save(formula=formula)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Handle bulk creation - delete existing items first
+            FormulaItems.objects.filter(formula=formula).delete()
+            
+            # If data is a list, create multiple items
+            if isinstance(request.data, list):
+                for item_data in request.data:
+                    serializer = FormulaItemSerializer(data=item_data)
+                    if serializer.is_valid():
+                        serializer.save(formula=formula)
+                    else:
+                        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": "Items created successfully"}, status=status.HTTP_201_CREATED)
+            else:
+                # Single item creation
+                serializer = FormulaItemSerializer(data=request.data)
+                if serializer.is_valid():
+                    serializer.save(formula=formula)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         elif request.method == 'PATCH':
             items = FormulaItems.objects.filter(formula=formula)
             for item in items:
@@ -257,6 +271,40 @@ class FormulaViewSet(viewsets.ModelViewSet):
                 if serializer.is_valid():
                     serializer.save(formula=formula)
             return Response({"detail": "Items updated successfully"}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get', 'post', 'patch'], url_path='split-ratio')
+    def split_ratio(self, request, pk=None):
+        """Manage split ratio for a formula (employee vs employer contribution)"""
+        formula = self.get_object()
+        
+        if request.method == 'GET':
+            split_ratios = SplitRatio.objects.filter(formula=formula)
+            serializer = SplitRatioSerializer(split_ratios, many=True)
+            return Response(serializer.data)
+        
+        elif request.method == 'POST':
+            # Delete existing split ratios for this formula
+            SplitRatio.objects.filter(formula=formula).delete()
+            
+            # Create new split ratio
+            serializer = SplitRatioSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(formula=formula)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        elif request.method == 'PATCH':
+            # Get or create split ratio
+            split_ratio = SplitRatio.objects.filter(formula=formula).first()
+            if split_ratio:
+                serializer = SplitRatioSerializer(split_ratio, data=request.data, partial=True)
+            else:
+                serializer = SplitRatioSerializer(data=request.data)
+            
+            if serializer.is_valid():
+                serializer.save(formula=formula)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'], url_path='effective')
     def get_effective_formula(self, request):
@@ -737,5 +785,60 @@ class ApprovalViewSet(viewsets.ModelViewSet):
                 # Skip if there's any error inspecting the model
                 continue
         return Response(content_types)
+
+
+class LoansViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing loan types/settings.
+    """
+    queryset = Loans.objects.all()
+    serializer_class = LoansSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ['title', 'wb_code']
+    filterset_fields = ['is_active']
+    ordering_fields = ['title']
+    ordering = ['title']
+
+
+class GeneralHRSettingsViewSet(viewsets.ViewSet):
+    """
+    ViewSet for General HR Settings (Singleton).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        """Get general HR settings"""
+        try:
+            settings = GeneralHRSettings.load()
+            serializer = GeneralHRSettingsSerializer(settings)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def retrieve(self, request, pk=None):
+        """Get general HR settings by ID (always returns the singleton)"""
+        return self.list(request)
+
+    def update(self, request, pk=None):
+        """Update general HR settings"""
+        try:
+            settings = GeneralHRSettings.load()
+            serializer = GeneralHRSettingsSerializer(settings, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(
+                    {'message': 'General HR settings updated successfully', 'data': serializer.data},
+                    status=status.HTTP_200_OK
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     

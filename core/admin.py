@@ -54,15 +54,62 @@ class DepartmentsAdmin(admin.ModelAdmin):
 class ContractSettingAdmin(admin.ModelAdmin):
     pass
 
-@admin.register(OvertimeRate)
-class OvertimeRateAdmin(admin.ModelAdmin):
-    list_display = ('overtime_type', 'overtime_rate', 'is_active')
-    list_filter = ('overtime_type', 'is_active')
-    search_fields = ('overtime_type', 'overtime_rate')
+# OvertimeRate and PartialMonthPay admin removed - use GeneralHRSettings instead
+# See: hrm.payroll_settings.admin.GeneralHRSettingsAdmin
 
-@admin.register(PartialMonthPay)
-class PartialMonthPayAdmin(admin.ModelAdmin):
-    list_display = ('prorate_option', 'carry_forward_prorated_pay', 'apply_for', 'is_active')
-    list_filter = ('prorate_option', 'apply_for', 'is_active')
-    search_fields = ('prorate_option',)
+@admin.register(RegionalSettings)
+class RegionalSettingsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'timezone', 'date_format', 'currency', 'currency_symbol', 'financial_year_end')
+    fieldsets = (
+        ('Timezone & Date', {
+            'fields': ('timezone', 'date_format', 'financial_year_end')
+        }),
+        ('Currency', {
+            'fields': ('currency', 'currency_symbol')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    readonly_fields = ('created_at', 'updated_at')
+    
+    def has_add_permission(self, request):
+        """Prevent adding more than one instance"""
+        return not RegionalSettings.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion"""
+        return False
 
+
+@admin.register(BrandingSettings)
+class BrandingSettingsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'app_name', 'primary_color', 'secondary_color', 'enable_dark_mode', 'theme_preset')
+    fieldsets = (
+        ('Application Identity', {
+            'fields': ('app_name', 'tagline', 'footer_text')
+        }),
+        ('Logos & Images', {
+            'fields': ('logo', 'logo_url', 'watermark', 'watermark_url', 'favicon_url')
+        }),
+        ('Color Palette', {
+            'fields': ('primary_color', 'secondary_color', 'text_color', 'background_color')
+        }),
+        ('Theme', {
+            'fields': ('enable_dark_mode', 'theme_preset', 'menu_mode')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    readonly_fields = ('created_at', 'updated_at')
+    
+    def has_add_permission(self, request):
+        """Prevent adding more than one instance"""
+        return not BrandingSettings.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion"""
+        return False

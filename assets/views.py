@@ -20,23 +20,33 @@ from .serializers import (
     AssetReservationSerializer, AssetTransferSerializer, AssetMaintenanceSerializer,
     AssetDisposalSerializer
 )
+from finance.accounts.models import PaymentAccounts, Transaction
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+import logging
 
-class AssetCategoryViewSet(viewsets.ModelViewSet):
+logger = logging.getLogger(__name__)
+
+
+class AssetCategoryViewSet(BaseModelViewSet):
     queryset = AssetCategory.objects.filter(is_active=True)
     serializer_class = AssetCategorySerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['is_active', 'parent']
 
-class AssetViewSet(viewsets.ModelViewSet):
-    queryset = Asset.objects.filter(is_active=True)
+
+class AssetViewSet(BaseModelViewSet):
+    queryset = Asset.objects.filter(is_active=True).select_related('category', 'branch', 'assigned_to', 'custodian')
     serializer_class = AssetSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['category', 'status', 'branch', 'assigned_to', 'custodian', 'condition']
 
     def get_queryset(self):
-        queryset = Asset.objects.filter(is_active=True)
+        """Optimize queries with select_related for related objects."""
+        queryset = super().get_queryset()
         search = self.request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
@@ -51,58 +61,194 @@ class AssetViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def transfer(self, request, pk=None):
         """Transfer asset to new location/user"""
-        asset = self.get_object()
-        serializer = AssetTransferSerializer(data=request.data)
-        if serializer.is_valid():
+        try:
+            correlation_id = get_correlation_id(request)
+            asset = self.get_object()
+            serializer = AssetTransferSerializer(data=request.data)
+            
+            if not serializer.is_valid():
+                return APIResponse.validation_error(
+                    message='Transfer validation failed',
+                    errors=serializer.errors,
+                    correlation_id=correlation_id
+                )
+            
             transfer = serializer.save(asset=asset, transferred_by=request.user)
-            return Response(AssetTransferSerializer(transfer).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Log transfer
+            AuditTrail.log(
+                operation=AuditTrail.TRANSFER,
+                module='assets',
+                entity_type='Asset',
+                entity_id=asset.id,
+                user=request.user,
+                reason=f'Asset transferred',
+                request=request
+            )
+            
+            return APIResponse.created(
+                data=AssetTransferSerializer(transfer).data,
+                message='Asset transferred successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error transferring asset: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error transferring asset',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
 
     @action(detail=True, methods=['post'])
     def schedule_maintenance(self, request, pk=None):
         """Schedule maintenance for asset"""
-        asset = self.get_object()
-        serializer = AssetMaintenanceSerializer(data=request.data)
-        if serializer.is_valid():
+        try:
+            correlation_id = get_correlation_id(request)
+            asset = self.get_object()
+            serializer = AssetMaintenanceSerializer(data=request.data)
+            
+            if not serializer.is_valid():
+                return APIResponse.validation_error(
+                    message='Maintenance schedule validation failed',
+                    errors=serializer.errors,
+                    correlation_id=correlation_id
+                )
+            
             maintenance = serializer.save(asset=asset)
-            return Response(AssetMaintenanceSerializer(maintenance).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Log maintenance scheduling
+            AuditTrail.log(
+                operation=AuditTrail.CREATE,
+                module='assets',
+                entity_type='AssetMaintenance',
+                entity_id=maintenance.id,
+                user=request.user,
+                reason=f'Maintenance scheduled for asset {asset.asset_tag}',
+                request=request
+            )
+            
+            return APIResponse.created(
+                data=AssetMaintenanceSerializer(maintenance).data,
+                message='Maintenance scheduled successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error scheduling maintenance: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error scheduling maintenance',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
 
     @action(detail=True, methods=['post'])
     def dispose(self, request, pk=None):
         """Dispose of asset"""
-        asset = self.get_object()
-        serializer = AssetDisposalSerializer(data=request.data)
-        if serializer.is_valid():
+        try:
+            correlation_id = get_correlation_id(request)
+            asset = self.get_object()
+            serializer = AssetDisposalSerializer(data=request.data)
+            
+            if not serializer.is_valid():
+                return APIResponse.validation_error(
+                    message='Disposal validation failed',
+                    errors=serializer.errors,
+                    correlation_id=correlation_id
+                )
+            
             disposal = serializer.save(asset=asset, approved_by=request.user)
+            
             # Update asset status to disposed
             asset.status = 'disposed'
             asset.current_value = Decimal('0.00')
             asset.save()
-            return Response(AssetDisposalSerializer(disposal).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Log disposal
+            AuditTrail.log(
+                operation=AuditTrail.DELETE,
+                module='assets',
+                entity_type='Asset',
+                entity_id=asset.id,
+                user=request.user,
+                reason=f'Asset disposed: {asset.asset_tag}',
+                request=request
+            )
+            
+            return APIResponse.created(
+                data=AssetDisposalSerializer(disposal).data,
+                message='Asset disposed successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error disposing asset: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error disposing asset',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
 
     @action(detail=True, methods=['get'])
     def depreciation_schedule(self, request, pk=None):
         """Get depreciation schedule for asset"""
-        asset = self.get_object()
-        years = int(request.query_params.get('years', asset.category.useful_life_years if asset.category else 5))
-        schedule = asset.get_depreciation_schedule(years)
-        return Response(schedule)
+        try:
+            correlation_id = get_correlation_id(request)
+            asset = self.get_object()
+            
+            years = int(request.query_params.get('years', asset.category.useful_life_years if asset.category else 5))
+            schedule = asset.get_depreciation_schedule(years)
+            
+            return APIResponse.success(
+                data=schedule,
+                message='Depreciation schedule retrieved successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error fetching depreciation schedule: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error fetching depreciation schedule',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
 
     @action(detail=True, methods=['post'])
     def record_depreciation(self, request, pk=None):
         """Record depreciation for asset"""
-        asset = self.get_object()
-        serializer = AssetDepreciationSerializer(data=request.data)
-        if serializer.is_valid():
+        try:
+            correlation_id = get_correlation_id(request)
+            asset = self.get_object()
+            serializer = AssetDepreciationSerializer(data=request.data)
+            
+            if not serializer.is_valid():
+                return APIResponse.validation_error(
+                    message='Depreciation recording validation failed',
+                    errors=serializer.errors,
+                    correlation_id=correlation_id
+                )
+            
             depreciation = serializer.save(asset=asset)
-            # Update asset accumulated depreciation
-            asset.accumulated_depreciation = Decimal(str(asset.accumulated_depreciation)) + depreciation.depreciation_amount
-            asset.current_value = Decimal(str(asset.current_value)) - depreciation.depreciation_amount
-            asset.save()
-            return Response(AssetDepreciationSerializer(depreciation).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Log depreciation recording
+            AuditTrail.log(
+                operation=AuditTrail.CREATE,
+                module='assets',
+                entity_type='AssetDepreciation',
+                entity_id=depreciation.id,
+                user=request.user,
+                reason=f'Depreciation recorded for asset {asset.asset_tag}',
+                request=request
+            )
+            
+            return APIResponse.created(
+                data=AssetDepreciationSerializer(depreciation).data,
+                message='Depreciation recorded successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error recording depreciation: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error recording depreciation',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
 
 class AssetDepreciationViewSet(viewsets.ModelViewSet):
     queryset = AssetDepreciation.objects.all()
@@ -110,6 +256,80 @@ class AssetDepreciationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['asset', 'posted_to_finance', 'period_start']
+
+    @action(detail=True, methods=['post'])
+    def post_to_finance(self, request, pk=None):
+        """Post an asset depreciation record to finance transactions (idempotent)."""
+        depreciation = self.get_object()
+        if depreciation.posted_to_finance:
+            return Response(
+                {'detail': 'Already posted to finance', 'finance_transaction': depreciation.finance_transaction},
+                status=status.HTTP_200_OK
+            )
+
+        account_id = request.data.get('account_id')
+        if not account_id:
+            return Response({'error': 'account_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            account = PaymentAccounts.objects.get(pk=account_id)
+        except PaymentAccounts.DoesNotExist:
+            return Response({'error': 'Invalid account_id'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Use period_end as transaction date when available, otherwise now
+        tx_date = depreciation.period_end or timezone.now()
+
+        # Create finance transaction as an expense
+        tx = Transaction.objects.create(
+            account=account,
+            transaction_date=tx_date,
+            amount=depreciation.depreciation_amount,
+            transaction_type='expense',
+            description=f"Asset depreciation - {depreciation.asset.asset_tag} ({depreciation.period_start} to {depreciation.period_end})",
+            reference_type='asset_depreciation',
+            reference_id=str(depreciation.id),
+            created_by=request.user
+        )
+
+        depreciation.posted_to_finance = True
+        depreciation.finance_transaction = str(tx.id)
+        depreciation.save(update_fields=['posted_to_finance', 'finance_transaction'])
+
+        return Response({'detail': 'Posted to finance', 'finance_transaction': tx.id}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def reverse_posting(self, request, pk=None):
+        """Reverse a previously posted depreciation by creating a refund transaction and unmarking the posting."""
+        depreciation = self.get_object()
+        if not depreciation.posted_to_finance:
+            return Response({'error': 'Depreciation not posted to finance'}, status=status.HTTP_400_BAD_REQUEST)
+
+        account_id = request.data.get('account_id')
+        if not account_id:
+            return Response({'error': 'account_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            account = PaymentAccounts.objects.get(pk=account_id)
+        except PaymentAccounts.DoesNotExist:
+            return Response({'error': 'Invalid account_id'}, status=status.HTTP_404_NOT_FOUND)
+
+        tx_date = timezone.now()
+        reversal = Transaction.objects.create(
+            account=account,
+            transaction_date=tx_date,
+            amount=depreciation.depreciation_amount,
+            transaction_type='refund',
+            description=f"Reversal: Asset depreciation - {depreciation.asset.asset_tag} ({depreciation.period_start} to {depreciation.period_end})",
+            reference_type='asset_depreciation_reversal',
+            reference_id=str(depreciation.id),
+            created_by=request.user
+        )
+
+        depreciation.posted_to_finance = False
+        depreciation.finance_transaction = None
+        depreciation.save(update_fields=['posted_to_finance', 'finance_transaction'])
+
+        return Response({'detail': 'Reversal posted', 'reversal_transaction': reversal.id}, status=status.HTTP_201_CREATED)
 
 class AssetInsuranceViewSet(viewsets.ModelViewSet):
     queryset = AssetInsurance.objects.filter(is_active=True)

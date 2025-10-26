@@ -22,37 +22,53 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         count = options.get('count', 10)
-        self.stdout.write(self.style.SUCCESS(f'Starting to seed {count} demo employees...'))
+        self.stdout.write(self.style.SUCCESS(f'Starting to seed {count} demo employees across multiple branches...'))
     
-        # Get the single business "Codevertex Africa"
+        # Get the business "Codevertex Africa"
         business = Bussiness.objects.filter(name='Codevertex Africa').first()
         if not business:
             self.stdout.write(self.style.ERROR('Business "Codevertex Africa" not found. Please run business seeding first.'))
             return
         
-        # Get the single branch
-        branch = Branch.objects.filter(business=business, is_main_branch=True).first()
-        if not branch:
-            self.stdout.write(self.style.ERROR('Main branch not found. Please run business seeding first.'))
+        # Get all branches for distribution
+        branches = list(Branch.objects.filter(business=business, is_active=True))
+        if not branches:
+            self.stdout.write(self.style.ERROR('No branches found. Please run business seeding first.'))
             return
         
-        # Get Nairobi region
-        nairobi_region = Regions.objects.filter(name='Nairobi').first()
-        if not nairobi_region:
-            self.stdout.write(self.style.ERROR('Nairobi region not found. Please run core data seeding first.'))
+        self.stdout.write(self.style.SUCCESS(f'Found {len(branches)} branches for employee distribution'))
+        
+        # Get all regions for distribution
+        regions = list(Regions.objects.all())
+        if not regions:
+            self.stdout.write(self.style.ERROR('No regions found. Please run core data seeding first.'))
             return
 
-        # Create employees
+        # Create employees distributed across branches
         for i in range(1, count + 1):
             try:
-                self.create_demo_employee(i, business, branch, nairobi_region)
-                self.stdout.write(self.style.SUCCESS(f'Successfully created demo employee #{i}'))
+                # Distribute employees across branches
+                branch = branches[i % len(branches)]
+                # Try to match region with branch location, fallback to any region
+                region = self._get_region_for_branch(branch, regions)
+                
+                self.create_demo_employee(i, business, branch, region)
+                self.stdout.write(self.style.SUCCESS(f'Successfully created demo employee #{i} in {branch.name}'))
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'Error creating employee #{i}: {str(e)}'))
 
-        self.stdout.write(self.style.SUCCESS(f'Successfully seeded {count} demo employees!'))
+        self.stdout.write(self.style.SUCCESS(f'Successfully seeded {count} demo employees across {len(branches)} branches!'))
+    
+    def _get_region_for_branch(self, branch, regions):
+        """Match region to branch location or return random region"""
+        # Try to find a region matching the branch city
+        for region in regions:
+            if branch.location.city.lower() in region.name.lower() or region.name.lower() in branch.location.city.lower():
+                return region
+        # Fallback to random region
+        return random.choice(regions)
 
-    def create_demo_employee(self, index, business, branch, nairobi_region):
+    def create_demo_employee(self, index, business, branch, region):
         # Create user
         first_name = fake.first_name()
         last_name = fake.last_name()
@@ -190,7 +206,8 @@ class Command(BaseCommand):
                 'department': department,
                 'head_of': None,
                 'reports_to': None,
-                'region': nairobi_region,  # Always Nairobi
+                'region': region,  # Distributed across regions
+                'branch': branch,  # Link to assigned branch
                 'project': None,
                 'date_of_employment': emp_date,
                 'board_director': False
@@ -213,15 +230,15 @@ class Command(BaseCommand):
             }
         )
 
-        # Contact details - always Nairobi
+        # Contact details - match branch location
         contact_details, _ = ContactDetails.objects.get_or_create(
             employee=employee,
             defaults={
                 'personal_email': f"personal.{email}",
                 'country': 'KE',
-                'county': 'Nairobi',
-                'city': 'Nairobi',
-                'zip': '00100',
+                'county': branch.location.county,
+                'city': branch.location.city,
+                'zip': branch.location.zip_code or '00100',
                 'address': fake.address(),
                 'mobile_phone': f"+2547{random.randint(10000000, 99999999)}",
                 'official_phone': f"+2547{random.randint(10000000, 99999999)}",

@@ -1,7 +1,10 @@
 from django.contrib import admin
 
 from business.models import Bussiness
-from .models import*
+from .models import (
+    Payslip, PayslipAudit, ClaimItems, ExpenseClaims, 
+    ExpenseClaimSettings, ExpenseCode, CustomReport
+)
 from django.db.models import Q
 
 
@@ -87,3 +90,32 @@ class PayslipAuditAdmin(admin.ModelAdmin):
             Q(payslip__employee__organisation__in=owner_businesses)
         ).distinct()
         return qs
+
+
+@admin.register(ExpenseClaimSettings)
+class ExpenseClaimSettingsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'payment_method', 'mandatory_attachment', 'mileage_rate_amount', 'mileage_rate_currency')
+    fieldsets = (
+        ('Payment Configuration', {
+            'fields': ('payment_method', 'mandatory_attachment')
+        }),
+        ('Mileage Rates', {
+            'fields': ('mileage_rate_currency', 'mileage_rate_amount', 'mileage_rate_unit')
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        """Prevent adding more than one instance"""
+        return not ExpenseClaimSettings.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion"""
+        return False
+
+
+@admin.register(ExpenseCode)
+class ExpenseCodeAdmin(admin.ModelAdmin):
+    list_display = ('code', 'title', 'is_active')
+    list_filter = ('is_active',)
+    search_fields = ('code', 'title', 'description')
+    ordering = ('code',)
