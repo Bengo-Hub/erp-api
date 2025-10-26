@@ -1,14 +1,24 @@
 # urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import *
+from .views import (
+    UploadData, RegionsViewSet, DepartmentsViewSet, ProjectsViewSet, ProjectCategoryViewSet,
+    BankInstitutionViewSet, BankBranchesViewSet, RegionalSettingsViewSet, BrandingSettingsViewSet,
+    HealthCheckView, ExecutiveDashboardView, PerformanceDashboardView,
+    PerformanceMetricsView, DatabaseOptimizationView, CacheManagementView,
+    SystemHealthView, BackgroundJobManagementView, ImageOptimizationView,
+    CDNManagementView, ResponsiveImagesView, LoadTestingView
+)
 
 router = DefaultRouter()
 router.register(r'regions', RegionsViewSet)
 router.register(r'projects', ProjectsViewSet)
+router.register(r'project-categories', ProjectCategoryViewSet)
 router.register(r'departments', DepartmentsViewSet)
-router.register(r'banks', BanksViewSet)
+router.register(r'banks', BankInstitutionViewSet)
 router.register(r'bank-branches', BankBranchesViewSet)
+router.register(r'regional-settings', RegionalSettingsViewSet, basename='regional-settings')
+router.register(r'branding-settings', BrandingSettingsViewSet, basename='branding-settings')
 
 urlpatterns = [
     path('', include(router.urls)),

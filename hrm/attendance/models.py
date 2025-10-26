@@ -1,14 +1,30 @@
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 from hrm.employees.models import Employee
+from core.models import Projects
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class WorkShift(models.Model):
+    """
+    Work shift configuration with support for day-wise schedules.
+    Can be used for regular shifts (Monday-Friday) or flexible schedules.
+    """
     name = models.CharField(max_length=100)
-    start_time = models.TimeField()
-    end_time = models.TimeField()
-    grace_minutes = models.PositiveIntegerField(default=0)
+    # Legacy fields - kept for backward compatibility but made optional
+    start_time = models.TimeField(blank=True, null=True, help_text="Legacy: Default start time")
+    end_time = models.TimeField(blank=True, null=True, help_text="Legacy: Default end time")
+    grace_minutes = models.PositiveIntegerField(default=0, help_text="Grace period for late arrivals in minutes")
+    total_hours_per_week = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=Decimal('40.00'),
+        help_text="Total expected work hours per week"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -20,9 +36,55 @@ class WorkShift(models.Model):
         ordering = ["id"]
         indexes = [
             models.Index(fields=['name'], name='idx_work_shift_name'),
-            models.Index(fields=['start_time'], name='idx_work_shift_start_time'),
-            models.Index(fields=['end_time'], name='idx_work_shift_end_time'),
             models.Index(fields=['created_at'], name='idx_work_shift_created_at'),
+        ]
+
+
+class WorkShiftSchedule(models.Model):
+    """
+    Day-wise schedule for a work shift.
+    Allows different start/end times and break hours for each day of the week.
+    """
+    DAY_CHOICES = (
+        ('Monday', 'Monday'),
+        ('Tuesday', 'Tuesday'),
+        ('Wednesday', 'Wednesday'),
+        ('Thursday', 'Thursday'),
+        ('Friday', 'Friday'),
+        ('Saturday', 'Saturday'),
+        ('Sunday', 'Sunday'),
+    )
+    
+    work_shift = models.ForeignKey(
+        WorkShift, 
+        on_delete=models.CASCADE, 
+        related_name='schedule'
+    )
+    day = models.CharField(max_length=10, choices=DAY_CHOICES)
+    start_time = models.TimeField(help_text="Shift start time for this day")
+    end_time = models.TimeField(help_text="Shift end time for this day")
+    break_hours = models.DecimalField(
+        max_digits=3, 
+        decimal_places=1, 
+        default=Decimal('0.0'),
+        help_text="Break hours for this day"
+    )
+    is_working_day = models.BooleanField(default=True, help_text="Whether this is a working day")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"{self.work_shift.name} - {self.day}"
+
+    class Meta:
+        db_table = "hrm_work_shift_schedules"
+        unique_together = ("work_shift", "day")
+        ordering = ["work_shift", "day"]
+        indexes = [
+            models.Index(fields=['work_shift', 'day'], name='idx_shift_schedule_shift_day'),
+            models.Index(fields=['day'], name='idx_shift_schedule_day'),
+            models.Index(fields=['is_working_day'], name='idx_shift_schedule_working'),
         ]
 
 
@@ -173,3 +235,269 @@ class AttendanceRule(models.Model):
             models.Index(fields=["department"], name="idx_attendance_rule_department"),
             models.Index(fields=["created_at"], name="idx_attendance_rule_created_at"),
         ]
+
+
+class ShiftRotation(models.Model):
+    """Shift rotation patterns for managing rotating shifts"""
+    title = models.CharField(max_length=255)
+    shifts = models.ManyToManyField(WorkShift, related_name='rotations', blank=True)
+    current_active_shift = models.ForeignKey(WorkShift, on_delete=models.SET_NULL, null=True, blank=True, related_name='current_rotations')
+    last_shift = models.ForeignKey(WorkShift, on_delete=models.SET_NULL, null=True, blank=True, related_name='previous_rotations')
+    run_duration = models.PositiveIntegerField(default=2, help_text=_('Duration to run each shift'))
+    run_unit = models.CharField(max_length=20, choices=[
+        ('Day', 'Day'),
+        ('Days', 'Days'),
+        ('Week', 'Week'),
+        ('Weeks', 'Weeks'),
+        ('Month', 'Month'),
+        ('Months', 'Months')
+    ], default='Months')
+    break_duration = models.PositiveIntegerField(default=1, help_text=_('Break duration between shifts'))
+    break_unit = models.CharField(max_length=20, choices=[
+        ('Day', 'Day'),
+        ('Days', 'Days'),
+        ('Week', 'Week'),
+        ('Weeks', 'Weeks'),
+        ('Month', 'Month'),
+        ('Months', 'Months')
+    ], default='Day')
+    next_change_date = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'hrm_shift_rotations'
+        verbose_name = _('Shift Rotation')
+        verbose_name_plural = _('Shift Rotations')
+        indexes = [
+            models.Index(fields=['title'], name='idx_shift_rotation_title'),
+            models.Index(fields=['is_active'], name='idx_shift_rotation_active'),
+        ]
+
+    def __str__(self):
+        return self.title
+
+
+class ESSSettings(models.Model):
+    """
+    Global ESS (Employee Self-Service) configuration settings.
+    Singleton model - only one instance should exist.
+    """
+    
+    # Shift-based login restrictions
+    enable_shift_based_restrictions = models.BooleanField(
+        default=True,
+        verbose_name="Enable Shift-Based Login Restrictions",
+        help_text="When enabled, employees can only login during their assigned shift working days (excluding off days and leave)"
+    )
+    
+    # Role exemptions
+    exempt_roles = models.ManyToManyField(
+        'auth.Group',
+        blank=True,
+        verbose_name="Exempt Roles/Groups",
+        help_text="User groups/roles that are exempt from shift-based login restrictions"
+    )
+    
+    # App Access Permissions (From ESS Portal UI)
+    allow_payslip_view = models.BooleanField(
+        default=True,
+        verbose_name="Allow Payslip View",
+        help_text="Allow employees to view and download their payslips"
+    )
+    
+    allow_leave_application = models.BooleanField(
+        default=True,
+        verbose_name="Allow Leave Application",
+        help_text="Allow employees to submit leave requests"
+    )
+    
+    allow_timesheet_application = models.BooleanField(
+        default=False,
+        verbose_name="Allow Timesheet Application",
+        help_text="Allow employees to submit timesheets"
+    )
+    
+    allow_overtime_application = models.BooleanField(
+        default=False,
+        verbose_name="Allow Overtime Application",
+        help_text="Allow employees to apply for overtime"
+    )
+    
+    allow_advance_salary_application = models.BooleanField(
+        default=False,
+        verbose_name="Allow Advance Salary Application",
+        help_text="Allow employees to request salary advances"
+    )
+    
+    allow_losses_damage_submission = models.BooleanField(
+        default=False,
+        verbose_name="Allow Losses/Damage Submission",
+        help_text="Allow employees to report losses and damages"
+    )
+    
+    allow_expense_claims_application = models.BooleanField(
+        default=False,
+        verbose_name="Allow Expense Claims Application",
+        help_text="Allow employees to submit expense claim requests"
+    )
+    
+    # Additional ESS settings
+    require_password_change_on_first_login = models.BooleanField(
+        default=True,
+        verbose_name="Require Password Change on First Login",
+        help_text="Force employees to change their password on first ESS login"
+    )
+    
+    session_timeout_minutes = models.PositiveIntegerField(
+        default=60,
+        verbose_name="Session Timeout (Minutes)",
+        help_text="Number of minutes before an inactive ESS session expires"
+    )
+    
+    allow_weekend_login = models.BooleanField(
+        default=False,
+        verbose_name="Allow Weekend Login",
+        help_text="Override shift restrictions and allow login on weekends for all employees"
+    )
+    
+    max_failed_login_attempts = models.PositiveIntegerField(
+        default=5,
+        verbose_name="Max Failed Login Attempts",
+        help_text="Number of failed login attempts before account is locked"
+    )
+    
+    account_lockout_duration_minutes = models.PositiveIntegerField(
+        default=30,
+        verbose_name="Account Lockout Duration (Minutes)",
+        help_text="Duration to lock account after max failed login attempts"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'ess_settings'
+        verbose_name = 'ESS Settings'
+        verbose_name_plural = 'ESS Settings'
+        indexes = [
+            models.Index(fields=['enable_shift_based_restrictions'], name='idx_ess_shift_restrict'),
+            models.Index(fields=['created_at'], name='idx_ess_created_at'),
+        ]
+    
+    def __str__(self):
+        return "ESS Settings"
+    
+    def save(self, *args, **kwargs):
+        """Ensure only one instance exists (Singleton pattern)"""
+        self.pk = 1
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def load(cls):
+        """Load or create the singleton ESS settings instance"""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+    
+    def is_role_exempt(self, user):
+        """Check if user's roles/groups are exempt from restrictions"""
+        if not user or not user.is_authenticated:
+            return False
+        
+        user_groups = user.groups.all()
+        exempt_group_ids = self.exempt_roles.values_list('id', flat=True)
+        
+        return user_groups.filter(id__in=exempt_group_ids).exists()
+
+
+class Timesheet(models.Model):
+    """
+    Employee timesheet for tracking work hours and activities
+    """
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected')
+    ]
+    
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name='timesheets'
+    )
+    approver = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_timesheets'
+    )
+    period_start = models.DateField(help_text='Start date of timesheet period')
+    period_end = models.DateField(help_text='End date of timesheet period')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    submission_date = models.DateTimeField(null=True, blank=True)
+    approval_date = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True, null=True)
+    total_hours = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    total_overtime_hours = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Timesheet'
+        verbose_name_plural = 'Timesheets'
+        ordering = ['-period_start', '-created_at']
+        unique_together = [['employee', 'period_start', 'period_end']]
+    
+    def __str__(self):
+        return f"{self.employee.user.get_full_name()} - {self.period_start} to {self.period_end}"
+    
+    def calculate_totals(self):
+        """Calculate total hours from timesheet entries"""
+        entries = self.entries.all()
+        self.total_hours = sum(entry.regular_hours for entry in entries)
+        self.total_overtime_hours = sum(entry.overtime_hours for entry in entries)
+        self.save()
+
+
+class TimesheetEntry(models.Model):
+    """
+    Individual daily entries within a timesheet
+    """
+    timesheet = models.ForeignKey(
+        Timesheet,
+        on_delete=models.CASCADE,
+        related_name='entries'
+    )
+    date = models.DateField()
+    project = models.ForeignKey(
+        Projects,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='timesheet_entries'
+    )
+    task_description = models.TextField()
+    regular_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    break_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    notes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Timesheet Entry'
+        verbose_name_plural = 'Timesheet Entries'
+        ordering = ['date']
+        unique_together = [['timesheet', 'date']]
+    
+    def __str__(self):
+        return f"{self.timesheet.employee.user.get_full_name()} - {self.date}"
+    
+    @property
+    def total_hours(self):
+        """Calculate total hours for this entry"""
+        return self.regular_hours + self.overtime_hours

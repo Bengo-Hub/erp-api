@@ -10,9 +10,16 @@ from .serializers import (
     CampaignSerializer, CampaignListSerializer, CampaignCreateSerializer,
     CampaignUpdateSerializer, CampaignPerformanceSerializer
 )
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-class CampaignViewSet(viewsets.ModelViewSet):
+class CampaignViewSet(BaseModelViewSet):
     """ViewSet for Campaign management"""
     
     queryset = Campaign.objects.all()
@@ -32,33 +39,38 @@ class CampaignViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def active_banners(self, request):
         """Get active banner campaigns for display"""
-        now = timezone.now()
-        
-        # Get active banner campaigns
-        active_banners = Campaign.objects.filter(
-            campaign_type='banner',
-            status='active',
-            is_active=True,
-            start_date__lte=now,
-            end_date__gte=now
-        ).order_by('priority')[:5]
-        
-        # If no active banners, get default ones
-        if not active_banners.exists():
+        try:
+            correlation_id = get_correlation_id(request)
+            now = timezone.now()
+            
+            # Get active banner campaigns
             active_banners = Campaign.objects.filter(
                 campaign_type='banner',
+                status='active',
                 is_active=True,
-                is_default=True
-            ).order_by('?')[:3]
-        
-        serializer = CampaignListSerializer(active_banners, many=True)
-        return Response(serializer.data)
+                start_date__lte=now,
+                end_date__gte=now
+            ).order_by('priority')[:5]
+            
+            # If no active banners, get default ones
+            if not active_banners.exists():
+                active_banners = Campaign.objects.filter(
+                    campaign_type='banner',
+                    is_active=True,
+                    is_default=True
+                ).order_by('?')[:3]
+            
+            serializer = CampaignListSerializer(active_banners, many=True)
+            return APIResponse.success(data=serializer.data, message='Active banners retrieved successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error fetching active banners: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving active banners', error_id=str(e), correlation_id=get_correlation_id(request))
 
 
-class CampaignPerformanceViewSet(viewsets.ModelViewSet):
+class CampaignPerformanceViewSet(BaseModelViewSet):
     """ViewSet for CampaignPerformance tracking"""
     
-    queryset = CampaignPerformance.objects.all()
+    queryset = CampaignPerformance.objects.all().select_related('campaign')
     serializer_class = CampaignPerformanceSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = LimitOffsetPagination
@@ -76,45 +88,52 @@ class CampaignPerformanceViewSet(viewsets.ModelViewSet):
         if start_date and end_date:
             queryset = queryset.filter(date__range=[start_date, end_date])
         
-        return queryset.select_related('campaign')
+        return queryset
     
     @action(detail=False, methods=['post'])
     def bulk_update(self, request):
         """Bulk update campaign performance metrics"""
-        performance_data = request.data.get('performance_data', [])
-        
-        updated_records = []
-        for data in performance_data:
-            campaign_id = data.get('campaign_id')
-            date = data.get('date')
-            impressions = data.get('impressions', 0)
-            clicks = data.get('clicks', 0)
-            conversions = data.get('conversions', 0)
-            revenue = data.get('revenue', 0)
+        try:
+            correlation_id = get_correlation_id(request)
+            performance_data = request.data.get('performance_data', [])
             
-            if campaign_id and date:
-                performance, created = CampaignPerformance.objects.get_or_create(
-                    campaign_id=campaign_id,
-                    date=date,
-                    defaults={
-                        'impressions': impressions,
-                        'clicks': clicks,
-                        'conversions': conversions,
-                        'revenue': revenue
-                    }
-                )
-                
-                if not created:
-                    performance.impressions = impressions
-                    performance.clicks = clicks
-                    performance.conversions = conversions
-                    performance.revenue = revenue
-                    performance.save()
-                
-                updated_records.append(performance)
-        
-        serializer = self.get_serializer(updated_records, many=True)
-        return Response({
-            'message': f'Updated {len(updated_records)} performance records',
-            'data': serializer.data
-        })
+            if not performance_data:
+                return APIResponse.bad_request(message='performance_data is required', error_id='missing_performance_data', correlation_id=correlation_id)
+            
+            updated_records = []
+            with transaction.atomic():
+                for data in performance_data:
+                    campaign_id = data.get('campaign_id')
+                    date = data.get('date')
+                    impressions = data.get('impressions', 0)
+                    clicks = data.get('clicks', 0)
+                    conversions = data.get('conversions', 0)
+                    revenue = data.get('revenue', 0)
+                    
+                    if campaign_id and date:
+                        performance, created = CampaignPerformance.objects.get_or_create(
+                            campaign_id=campaign_id,
+                            date=date,
+                            defaults={
+                                'impressions': impressions,
+                                'clicks': clicks,
+                                'conversions': conversions,
+                                'revenue': revenue
+                            }
+                        )
+                        
+                        if not created:
+                            performance.impressions = impressions
+                            performance.clicks = clicks
+                            performance.conversions = conversions
+                            performance.revenue = revenue
+                            performance.save()
+                        
+                        updated_records.append(performance)
+                        AuditTrail.log(operation=AuditTrail.UPDATE, module='crm', entity_type='CampaignPerformance', entity_id=performance.id, user=request.user, reason='Updated campaign performance metrics', request=request)
+            
+            serializer = self.get_serializer(updated_records, many=True)
+            return APIResponse.success(data={'message': f'Updated {len(updated_records)} performance records', 'data': serializer.data}, message='Performance metrics updated', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error bulk updating campaign performance: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error updating performance', error_id=str(e), correlation_id=get_correlation_id(request))

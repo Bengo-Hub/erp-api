@@ -7,7 +7,8 @@ from authmanagement.models import CustomUser
 from django.utils.timezone import now
 from django.contrib.auth import get_user_model
 from djmoney.models.fields import MoneyField
-from core.models import OvertimeRate, PartialMonthPay
+# Legacy models - Use GeneralHRSettings instead
+# from core.models import OvertimeRate, PartialMonthPay
 from approvals.models import Approval
 from hrm.employees.models import Employee
 from decimal import Decimal
@@ -373,13 +374,79 @@ class ScheduledPayslip(models.Model):
         return f"{self.document_type} ({self.payroll_period}) by {self.composer}"
 
 
-class GeneralHR(models.Model):
-    overtime_rates = models.ManyToManyField(OvertimeRate, related_name="hr_settings")
-    partial_month_pay = models.OneToOneField(PartialMonthPay, on_delete=models.SET_NULL, null=True, blank=True)
-
+class GeneralHRSettings(models.Model):
+    """
+    Singleton model for general HR and payroll settings
+    """
+    PARTIAL_MONTHS_CHOICES = [
+        ('prorate_calendar', 'Prorate Basic Pay (Calendar)'),
+        ('prorate_working_days', 'Prorate Basic Pay (Working Days)'),
+        ('no_proration', 'No Proration')
+    ]
+    
+    # Overtime rates
+    overtime_normal_days = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('1.5'),
+        help_text='Overtime rate for normal working days (e.g., 1.5 = 150%)'
+    )
+    overtime_non_working_days = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('2.0'),
+        help_text='Overtime rate for non-working days (e.g., weekends)'
+    )
+    overtime_holidays = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('2.0'),
+        help_text='Overtime rate for public holidays'
+    )
+    
+    # Partial months handling
+    partial_months = models.CharField(
+        max_length=30,
+        choices=PARTIAL_MONTHS_CHOICES,
+        default='prorate_calendar',
+        help_text='How to calculate pay for incomplete months'
+    )
+    
+    # Round off settings
+    round_off_currency = models.CharField(max_length=10, default='KES')
+    round_off_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Round net pay to nearest amount (e.g., 0.50, 1.00)'
+    )
+    
+    # Payroll processing settings
+    allow_backwards_payroll = models.BooleanField(
+        default=False,
+        help_text='Allow processing payroll for previous periods'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'General HR Settings'
+        verbose_name_plural = 'General HR Settings'
+    
+    @classmethod
+    def load(cls):
+        """Load or create the singleton settings instance"""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+    
+    def save(self, *args, **kwargs):
+        """Ensure only one instance exists (Singleton pattern)"""
+        self.pk = 1
+        super().save(*args, **kwargs)
+    
     def __str__(self):
-        return 'General HR'
-
+        return 'General HR Settings'
 
 
 # PayrollApproval moved to centralized approvals app - import from there

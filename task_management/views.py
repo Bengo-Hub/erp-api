@@ -10,17 +10,25 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
 from django.db.models import Q, Count, Avg
 from datetime import timedelta
+from jsonschema import validate as jsonschema_validate, ValidationError
+import json
 
 from .models import Task, TaskLog, TaskTemplate
 from .serializers import TaskSerializer, TaskLogSerializer, TaskTemplateSerializer
 from .filters import TaskFilter
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-class TaskViewSet(viewsets.ModelViewSet):
+class TaskViewSet(BaseModelViewSet):
     """
     Centralized task management for all ERP modules
     """
-    queryset = Task.objects.all()
+    queryset = Task.objects.all().select_related('created_by', 'assigned_to')
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -43,6 +51,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     def dashboard(self, request):
         """Get task dashboard statistics"""
         try:
+            correlation_id = get_correlation_id(request)
             # Get date range from query params
             days = int(request.query_params.get('days', 7))
             start_date = timezone.now() - timedelta(days=days)
@@ -93,30 +102,27 @@ class TaskViewSet(viewsets.ModelViewSet):
             recent_tasks = tasks.order_by('-created_at')[:10]
             stats['recent_tasks'] = TaskSerializer(recent_tasks, many=True).data
             
-            return Response(stats)
+            return APIResponse.success(data=stats, message='Task dashboard retrieved successfully', correlation_id=correlation_id)
             
         except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.error(f'Error retrieving task dashboard: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving dashboard', error_id=str(e), correlation_id=get_correlation_id(request))
 
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """Cancel a running task"""
         try:
+            correlation_id = get_correlation_id(request)
             task = self.get_object()
             
             if task.status not in ['pending', 'running']:
-                return Response(
-                    {'error': 'Task cannot be cancelled'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return APIResponse.bad_request(message='Task cannot be cancelled', error_id='invalid_task_status', correlation_id=correlation_id)
             
             # Update task status
             task.status = 'cancelled'
             task.completed_at = timezone.now()
-            task.save()
+            task.save(update_fields=['status', 'completed_at'])
+            AuditTrail.log(operation=AuditTrail.CANCEL, module='task_management', entity_type='Task', entity_id=task.id, user=request.user, reason=f'Task cancelled by {request.user.username}', request=request)
             
             # Log cancellation
             TaskLog.objects.create(
@@ -126,13 +132,11 @@ class TaskViewSet(viewsets.ModelViewSet):
                 data={'cancelled_by': request.user.id}
             )
             
-            return Response({'message': 'Task cancelled successfully'})
+            return APIResponse.success(data=self.get_serializer(task).data, message='Task cancelled successfully', correlation_id=correlation_id)
             
         except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.error(f'Error cancelling task: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error cancelling task', error_id=str(e), correlation_id=get_correlation_id(request))
 
     @action(detail=True, methods=['get'])
     def logs(self, request, pk=None):
@@ -211,7 +215,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             )
 
 
-class TaskTemplateViewSet(viewsets.ModelViewSet):
+class TaskTemplateViewSet(BaseModelViewSet):
     """
     Task template management
     """
@@ -232,8 +236,21 @@ class TaskTemplateViewSet(viewsets.ModelViewSet):
             
             # Validate input data against schema
             if template.input_schema:
-                # TODO: Implement JSON schema validation
-                pass
+                try:
+                    schema = template.input_schema
+                    if isinstance(schema, str):
+                        schema = json.loads(schema)
+                    jsonschema_validate(instance=input_data, schema=schema)
+                except ValidationError as ve:
+                    return Response(
+                        {'error': f'Input validation failed', 'detail': ve.message},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                except Exception as e:
+                    return Response(
+                        {'error': 'Invalid input schema configuration', 'detail': str(e)},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
             
             # Create task from template
             from .tasks import generic_task_wrapper

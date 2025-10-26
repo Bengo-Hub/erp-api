@@ -9,6 +9,7 @@ from django.utils import timezone
 from .analytics.leave_analytics import LeaveAnalyticsService
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
+from hrm.employees.permissions import StaffDataFilterMixin, SensitiveModuleFilterMixin
 from .models import LeaveCategory, LeaveEntitlement, LeaveRequest, LeaveBalance, LeaveLog, PublicHoliday
 from .serializers import (
     LeaveCategorySerializer,
@@ -18,18 +19,23 @@ from .serializers import (
     LeaveLogSerializer,
     PublicHolidaySerializer,
 )
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
 
-# Create your views here.
+logger = logging.getLogger(__name__)
 
-class LeaveCategoryViewSet(viewsets.ModelViewSet):
+
+class LeaveCategoryViewSet(BaseModelViewSet):
     queryset = LeaveCategory.objects.all()
     serializer_class = LeaveCategorySerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'description']
 
-class LeaveEntitlementViewSet(viewsets.ModelViewSet):
-    queryset = LeaveEntitlement.objects.all()
+
+class LeaveEntitlementViewSet(BaseModelViewSet):
+    queryset = LeaveEntitlement.objects.all().select_related('employee__user', 'category')
     serializer_class = LeaveEntitlementSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -42,17 +48,21 @@ class LeaveEntitlementViewSet(viewsets.ModelViewSet):
     search_fields = ['employee__user__first_name', 'employee__user__last_name', 'category__name']
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        employee_ids = self.request.GET.get('employee_id')
+        from hrm.utils.filter_utils import get_filter_params, apply_hrm_filters
         
-        if employee_ids:
-            employee_ids = employee_ids.split(',')
-            queryset = queryset.filter(employee_id__in=employee_ids)
-            
-        return queryset.select_related('employee__user', 'category')
+        queryset = super().get_queryset()
+        
+        # Get standardized filter parameters
+        filter_params = get_filter_params(self.request)
+        
+        # Apply HRM filters (branch, department, region, project, employee)
+        queryset = apply_hrm_filters(queryset, filter_params, filter_prefix='employee__hr_details')
+        
+        return queryset
 
-class LeaveRequestViewSet(viewsets.ModelViewSet):
-    queryset = LeaveRequest.objects.all()
+
+class LeaveRequestViewSet(SensitiveModuleFilterMixin, BaseModelViewSet):
+    queryset = LeaveRequest.objects.all().select_related('employee__user', 'category', 'approved_by')
     serializer_class = LeaveRequestSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -72,15 +82,19 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     ]
 
     def get_queryset(self):
+        """Optimize queries with select_related for related objects."""
+        from hrm.utils.filter_utils import get_filter_params, apply_hrm_filters
+        
         queryset = super().get_queryset()
         params = self.request.GET
         
-        # Handle multiple employee IDs
-        employee_ids = params.get('employee_id')
-        if employee_ids:
-            employee_ids = employee_ids.split(',')
-            queryset = queryset.filter(employee_id__in=employee_ids)
+        # Get standardized filter parameters
+        filter_params = get_filter_params(self.request)
         
+        # Apply HRM filters (branch, department, region, project, employee)
+        queryset = apply_hrm_filters(queryset, filter_params, filter_prefix='employee__hr_details')
+        
+        # Additional specific filters
         # Date range filtering
         start_date = params.get('start_date')
         end_date = params.get('end_date')
@@ -100,11 +114,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         if status_value:
             queryset = queryset.filter(status=status_value)
         
-        return queryset.select_related(
-            'employee__user', 
-            'category',
-            'approved_by__user'
-        ).order_by('-created_at')
+        return queryset.order_by('-created_at')
 
     @action(detail=False, methods=['post'], url_path='validate')
     def validate_leave(self, request):
@@ -352,8 +362,8 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_200_OK
             )
 
-class LeaveBalanceViewSet(viewsets.ModelViewSet):
-    queryset = LeaveBalance.objects.all()
+class LeaveBalanceViewSet(BaseModelViewSet):
+    queryset = LeaveBalance.objects.all().select_related('employee__user', 'category')
     serializer_class = LeaveBalanceSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -372,25 +382,29 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
     ]
 
     def get_queryset(self):
+        from hrm.utils.filter_utils import get_filter_params, apply_hrm_filters
+        
         queryset = super().get_queryset()
         
-        # Get filter parameters from request
-        employee_id = self.request.GET.get('employee_id',None)
-        category_id = self.request.GET.get('category_id',None)
-        year = self.request.GET.get('year',None)
+        # Get standardized filter parameters
+        filter_params = get_filter_params(self.request)
         
-        # Apply filters
-        if employee_id:
-            queryset = queryset.filter(employee_id=employee_id)
+        # Apply HRM filters (branch, department, region, project, employee)
+        queryset = apply_hrm_filters(queryset, filter_params, filter_prefix='employee__hr_details')
+        
+        # Additional specific filters
+        category_id = self.request.GET.get('category_id', None)
+        year = self.request.GET.get('year', None)
+        
         if category_id:
             queryset = queryset.filter(category_id=category_id)
         if year:
             queryset = queryset.filter(year=year)
             
-        return queryset.select_related('employee__user', 'category')
+        return queryset
 
-class LeaveLogViewSet(viewsets.ModelViewSet):
-    queryset = LeaveLog.objects.all()
+class LeaveLogViewSet(BaseModelViewSet):
+    queryset = LeaveLog.objects.all().select_related('leave_request__employee__user', 'leave_request__category', 'user')
     serializer_class = LeaveLogSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -426,15 +440,11 @@ class LeaveLogViewSet(viewsets.ModelViewSet):
         if date:
             queryset = queryset.filter(created_at__date=date)
         
-        return queryset.select_related(
-            'leave_request__employee__user',
-            'leave_request__category',
-            'user'
-        ).order_by('-created_at')
+        return queryset.order_by('-created_at')
 
 
-class PublicHolidayViewSet(viewsets.ModelViewSet):
-    queryset = PublicHoliday.objects.all()
+class PublicHolidayViewSet(BaseModelViewSet):
+    queryset = PublicHoliday.objects.all().order_by('-date')
     serializer_class = PublicHolidaySerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -442,7 +452,7 @@ class PublicHolidayViewSet(viewsets.ModelViewSet):
     filterset_fields = ['is_national', 'county', 'date']
 
     def get_queryset(self):
-        return super().get_queryset().order_by('-date')
+        return super().get_queryset()
 
 
 @api_view(['GET'])

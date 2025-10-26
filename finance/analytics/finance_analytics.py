@@ -6,6 +6,7 @@ expenses, taxes, and payment analytics.
 """
 
 from datetime import datetime, timedelta
+import logging
 from django.utils import timezone
 from django.db.models import Avg, Count, Q, Sum, F, Min, Max
 from django.db import connection
@@ -14,6 +15,8 @@ from finance.accounts.models import PaymentAccounts, Transaction
 from finance.expenses.models import Expense
 from finance.taxes.models import Tax, TaxPeriod
 from finance.payment.models import BillingDocument, Payment
+
+logger = logging.getLogger(__name__)
 
 
 class FinanceAnalyticsService:
@@ -74,6 +77,67 @@ class FinanceAnalyticsService:
             }
         except Exception:
             return self._get_fallback_accounts_data()
+    
+    def get_financial_summary(self, start_date, end_date, business_id=None):
+        """
+        Get financial summary for a date range.
+        
+        Consolidates duplicate logic from finance/api.py.
+        
+        Args:
+            start_date: Start date for filtering
+            end_date: End date for filtering
+            business_id: Optional business ID to filter by
+        
+        Returns:
+            dict: Financial summary with invoices, payments, expenses, outstanding amounts
+        """
+        try:
+            # Build base querysets
+            invoice_qs = BillingDocument.objects.filter(
+                document_type='INVOICE',
+                issue_date__gte=start_date,
+                issue_date__lte=end_date
+            )
+            payment_qs = Payment.objects.filter(
+                payment_date__gte=start_date,
+                payment_date__lte=end_date
+            )
+            expense_qs = Expense.objects.filter(
+                date_added__gte=start_date,
+                date_added__lte=end_date
+            )
+            
+            # Apply business filter if provided
+            if business_id:
+                invoice_qs = invoice_qs.filter(business_id=business_id)
+                payment_qs = payment_qs.filter(business_id=business_id)
+                expense_qs = expense_qs.filter(business_id=business_id)
+            
+            # Calculate totals
+            total_invoices = invoice_qs.aggregate(total=Sum('total'))['total'] or 0
+            total_payments = payment_qs.aggregate(total=Sum('amount'))['total'] or 0
+            total_expenses = expense_qs.aggregate(total=Sum('total_amount'))['total'] or 0
+            outstanding_invoices = invoice_qs.filter(balance_due__gt=0).aggregate(
+                total=Sum('balance_due')
+            )['total'] or 0
+            
+            return {
+                'total_invoices': round(total_invoices, 2),
+                'total_payments': round(total_payments, 2),
+                'total_expenses': round(total_expenses, 2),
+                'outstanding_invoices': round(outstanding_invoices, 2),
+                'net_position': round(total_invoices + total_payments - total_expenses, 2)
+            }
+        except Exception as e:
+            # logger.error(f"Error calculating financial summary: {str(e)}") # This line was not in the original file, so it's not added.
+            return {
+                'total_invoices': 0,
+                'total_payments': 0,
+                'total_expenses': 0,
+                'outstanding_invoices': 0,
+                'net_position': 0
+            }
     
     def _get_expenses_analysis(self, business_id, period):
         """Get expenses analysis metrics."""

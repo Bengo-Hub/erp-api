@@ -156,30 +156,28 @@ class CoreMiddleware(MiddlewareMixin):
             self._app_settings_initialized = True
 
     def _initialize_overtime_settings(self):
-        """Initialize overtime settings only if they don't exist"""
+        """
+        Initialize general HR settings (overtime, partial months, rounding)
+        Uses new consolidated GeneralHRSettings model
+        """
         try:
-            # Check if overtime types already exist
-            if OvertimeRate.objects.exists():
+            from hrm.payroll_settings.models import GeneralHRSettings
+            
+            # Check if settings already exist
+            if GeneralHRSettings.objects.exists():
                 self._overtime_initialized = True
                 return
             
-            # Create overtime types
-            overtime_types = ["Normal", "Weekend", "Holiday"]
-            for item in overtime_types:
-                overtime_rate, created = OvertimeRate.objects.get_or_create(overtime_type=item)
-                if created:
-                    logger.info(f"Created overtime rate: {item}")
-            
-            # Create partial month pay setting
-            partial_month_pay, created = PartialMonthPay.objects.get_or_create()
-            if created:
-                logger.info("Created partial month pay setting")
+            # Create default general HR settings (Singleton)
+            settings = GeneralHRSettings.load()
+            logger.info(f"Created General HR Settings with overtime rates: Normal={settings.overtime_normal_days}x, "
+                       f"Weekend={settings.overtime_non_working_days}x, Holidays={settings.overtime_holidays}x")
             
             self._overtime_initialized = True
-            logger.info("Overtime settings initialization completed successfully")
+            logger.info("General HR settings initialization completed successfully")
             
         except Exception as e:
-            logger.error(f"Error initializing overtime settings: {str(e)}")
+            logger.error(f"Error initializing general HR settings: {str(e)}")
             # Mark as initialized to prevent repeated attempts
             self._overtime_initialized = True
 

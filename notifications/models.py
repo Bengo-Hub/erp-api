@@ -127,9 +127,23 @@ class EmailConfiguration(BaseModel):
     timeout = models.IntegerField(default=60)
     
     # API Settings (for SendGrid, Mailgun, etc.)
-    api_key = models.CharField(max_length=500, blank=True, null=True)
-    api_secret = models.CharField(max_length=500, blank=True, null=True)
+    api_key = models.CharField(max_length=1500, blank=True, null=True)
+    api_secret = models.CharField(max_length=1500, blank=True, null=True)
     api_url = models.URLField(blank=True, null=True)
+    
+    def save(self, *args, **kwargs):
+        """Auto-encrypt sensitive fields before saving"""
+        from integrations.utils import Crypto
+        
+        # Encrypt passwords/keys if not already encrypted
+        if self.smtp_password and "gAAAAA" not in str(self.smtp_password):
+            self.smtp_password = Crypto(self.smtp_password, 'encrypt').encrypt()
+        if self.api_key and "gAAAAA" not in str(self.api_key):
+            self.api_key = Crypto(self.api_key, 'encrypt').encrypt()
+        if self.api_secret and "gAAAAA" not in str(self.api_secret):
+            self.api_secret = Crypto(self.api_secret, 'encrypt').encrypt()
+        
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.integration.name} - {self.from_email}"
@@ -150,18 +164,36 @@ class SMSConfiguration(BaseModel):
     provider = models.CharField(max_length=20, choices=SMS_PROVIDERS)
     
     # Twilio Settings
-    account_sid = models.CharField(max_length=255, blank=True, null=True, help_text="For Twilio")
-    auth_token = models.CharField(max_length=255, blank=True, null=True, help_text="For Twilio/AfricasTalking")
+    account_sid = models.CharField(max_length=1500, blank=True, null=True, help_text="For Twilio")
+    auth_token = models.CharField(max_length=1500, blank=True, null=True, help_text="For Twilio/AfricasTalking")
     from_number = models.CharField(max_length=20, blank=True, null=True, help_text="For Twilio")
     
     # AfricasTalking Settings
-    api_key = models.CharField(max_length=255, blank=True, null=True, help_text="For AfricasTalking/Nexmo")
+    api_key = models.CharField(max_length=1500, blank=True, null=True, help_text="For AfricasTalking/Nexmo")
     api_username = models.CharField(max_length=100, blank=True, null=True, help_text="For AfricasTalking")
     
     # AWS SNS Settings
-    aws_access_key = models.CharField(max_length=255, blank=True, null=True, help_text="For AWS SNS")
-    aws_secret_key = models.CharField(max_length=255, blank=True, null=True, help_text="For AWS SNS")
+    aws_access_key = models.CharField(max_length=1500, blank=True, null=True, help_text="For AWS SNS")
+    aws_secret_key = models.CharField(max_length=1500, blank=True, null=True, help_text="For AWS SNS")
     aws_region = models.CharField(max_length=50, default="us-east-1", help_text="For AWS SNS")
+    
+    def save(self, *args, **kwargs):
+        """Auto-encrypt sensitive fields before saving"""
+        from integrations.utils import Crypto
+        
+        # Encrypt API keys/tokens if not already encrypted
+        if self.api_key and "gAAAAA" not in str(self.api_key):
+            self.api_key = Crypto(self.api_key, 'encrypt').encrypt()
+        if self.auth_token and "gAAAAA" not in str(self.auth_token):
+            self.auth_token = Crypto(self.auth_token, 'encrypt').encrypt()
+        if self.account_sid and "gAAAAA" not in str(self.account_sid):
+            self.account_sid = Crypto(self.account_sid, 'encrypt').encrypt()
+        if self.aws_access_key and "gAAAAA" not in str(self.aws_access_key):
+            self.aws_access_key = Crypto(self.aws_access_key, 'encrypt').encrypt()
+        if self.aws_secret_key and "gAAAAA" not in str(self.aws_secret_key):
+            self.aws_secret_key = Crypto(self.aws_secret_key, 'encrypt').encrypt()
+        
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.integration.name} - {self.provider}"

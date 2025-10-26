@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import viewsets, permissions, authentication, status, filters
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import render
 from django.http import Http404
 from django.db.models import Q, Sum, F, ExpressionWrapper, DecimalField
@@ -13,19 +13,24 @@ import django.utils.timezone as django_timezone
 from .models import Products, StockInventory, StockTransaction, StockTransfer, StockAdjustment, Unit
 from .serializers import *
 from ecommerce.vendor.models import Vendor
-from business.models import BusinessLocation
+from business.models import BusinessLocation, Branch
+from core.utils import get_branch_id_from_request
 from core.performance import monitor_performance, cache_result, optimize_list_queryset
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+from django.db import transaction
 
 # Create your views here.
 logger = logging.getLogger(__name__)
 
 
-class InventoryViewSet(viewsets.ModelViewSet):
+class InventoryViewSet(BaseModelViewSet):
     queryset = StockInventory.objects.all().order_by('product__id','-created_at').distinct()
     serializer_class = StockSerializer
     authentication_classes = []
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    pagination_class = LimitOffsetPagination  # Use the custom pagination class
+    pagination_class = PageNumberPagination  # Standardized: 100 records per page
 
     @monitor_performance('inventory_list_query')
     def get_queryset(self):
@@ -75,29 +80,35 @@ class InventoryViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'], url_path='valuation', url_name='valuation')
     def valuation(self, request):
-        queryset = self.queryset
-        
-        # Filter by location if provided
-        branch_id = request.query_params.get('branch_id')
-        if branch_id:
-            queryset = queryset.filter(branch_id=branch_id)
-        
-        # Calculate total valuation
-        total_valuation = queryset.aggregate(
-            total_value=Sum(F('stock_level') * F('buying_price'))
-        )['total_value'] or 0
-        
-        # Get valuation by category
-        valuation_by_category = queryset.values(
-            'product__category__name'
-        ).annotate(
-            category_value=Sum(F('stock_level') * F('buying_price'))
-        ).order_by('-category_value')
-        
-        return Response({
-            'total_valuation': total_valuation,
-            'valuation_by_category': valuation_by_category
-        })
+        try:
+            correlation_id = get_correlation_id(request)
+            queryset = self.queryset
+            
+            # Filter by location if provided
+            branch_id = request.query_params.get('branch_id') or get_branch_id_from_request(request)
+            if branch_id:
+                queryset = queryset.filter(branch_id=branch_id)
+            
+            # Calculate total valuation
+            total_valuation = queryset.aggregate(
+                total_value=Sum(F('stock_level') * F('buying_price'))
+            )['total_value'] or 0
+            
+            # Get valuation by category
+            valuation_by_category = queryset.values(
+                'product__category__name'
+            ).annotate(
+                category_value=Sum(F('stock_level') * F('buying_price'))
+            ).order_by('-category_value')
+            
+            data = {
+                'total_valuation': total_valuation,
+                'valuation_by_category': list(valuation_by_category)
+            }
+            return APIResponse.success(data=data, message='Inventory valuation calculated successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error calculating inventory valuation: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error calculating valuation', error_id=str(e), correlation_id=get_correlation_id(request))
     @action(detail=False, methods=['post','get','put'], url_path='reconcile', url_name='reconcile')
     def reconcile(self, request):
         branch_id = request.data.get('branch_id')
@@ -142,7 +153,7 @@ class PosInventoryViewSet(viewsets.ModelViewSet):
     queryset = StockInventory.objects.filter(stock_level__gt=0)
     serializer_class = StockSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = LimitOffsetPagination
+    pagination_class = PageNumberPagination  # Standardized: 100 records per page
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -165,7 +176,7 @@ class PosInventoryViewSet(viewsets.ModelViewSet):
         )
 
         search_item = self.request.query_params.get('filter', None)
-        branch_id = self.request.query_params.get('branch_id', None)
+        branch_id = self.request.query_params.get('branch_id', None) or get_branch_id_from_request(self.request)
         user = self.request.user
 
         # Filter by branch if provided
@@ -243,22 +254,28 @@ class StockTransactionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        branch_id = self.request.query_params.get('branch_id')
+        branch_param = self.request.query_params.get('branch_id')
+        header_branch_id = get_branch_id_from_request(self.request)
         from_date = self.request.query_params.get('fromdate')
         to_date = self.request.query_params.get('todate')
 
-        if branch_id:
-            queryset = queryset.filter(branch__branch_id=location)
+        if branch_param:
+            # Support branch code via query param
+            queryset = queryset.filter(branch__branch_code=branch_param)
+        elif header_branch_id:
+            # Fallback to header-resolved branch id
+            queryset = queryset.filter(branch_id=header_branch_id)
 
         if from_date and to_date:
-            queryset = queryset.filter(adjusted_at__range=[from_date,to_date])
+            queryset = queryset.filter(transaction_date__range=[from_date, to_date])
         return queryset
     @action(detail=False, methods=['get'])
     def movements(self, request):
         try:
             # Get filter parameters with defaults
             stock_item_id = request.query_params.get('stock_item_id')
-            branch_id = request.query_params.get('branch_id')
+            branch_param = request.query_params.get('branch_id')
+            header_branch_id = get_branch_id_from_request(request)
             days = int(request.query_params.get('days', 30))
             transaction_type = request.query_params.get('type')
 
@@ -274,8 +291,15 @@ class StockTransactionViewSet(viewsets.ModelViewSet):
             # Apply filters if provided
             if stock_item_id:
                 queryset = queryset.filter(stock_item_id=stock_item_id)
-            if branch_id:
-                queryset = queryset.filter(branch_id=branch_id)
+            if branch_param:
+                # Support both id and code in query param
+                try:
+                    bid = int(branch_param)
+                    queryset = queryset.filter(branch_id=bid)
+                except ValueError:
+                    queryset = queryset.filter(branch__branch_code=branch_param)
+            elif header_branch_id:
+                queryset = queryset.filter(branch_id=header_branch_id)
             if transaction_type:
                 queryset = queryset.filter(transaction_type=transaction_type)
 
@@ -308,7 +332,8 @@ class StockTransferViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        branch_id = self.request.query_params.get('branch_id')
+        branch_param = self.request.query_params.get('branch_id')
+        header_branch_id = get_branch_id_from_request(self.request)
         from_date = self.request.query_params.get('fromdate')
         to_date = self.request.query_params.get('todate')
         status = self.request.query_params.get('status')
@@ -316,86 +341,100 @@ class StockTransferViewSet(viewsets.ModelViewSet):
         if status:
             queryset = queryset.filter(status=status)
 
-        if branch_id:
-            queryset = queryset.filter(Q(branch_to__branch_id=branch_id) | Q(branch_from__branch_id=branch_id))
+        if branch_param:
+            try:
+                bid = int(branch_param)
+                queryset = queryset.filter(Q(branch_to_id=bid) | Q(branch_from_id=bid))
+            except ValueError:
+                queryset = queryset.filter(Q(branch_to__branch_code=branch_param) | Q(branch_from__branch_code=branch_param))
+        elif header_branch_id:
+            queryset = queryset.filter(Q(branch_to_id=header_branch_id) | Q(branch_from_id=header_branch_id))
 
         if from_date and to_date:
             queryset = queryset.filter(transfrer_date__range=[from_date,to_date])
         return queryset
 
-class StockAdjustmentViewSet(viewsets.ModelViewSet):
-    queryset = StockAdjustment.objects.all()
+class StockAdjustmentViewSet(BaseModelViewSet):
+    queryset = StockAdjustment.objects.all().select_related('branch', 'stock_item', 'adjusted_by')
     serializer_class = StockAdjustmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        branch_id = self.request.query_params.get('branch_id')
+        branch_param = self.request.query_params.get('branch_id')
+        header_branch_id = get_branch_id_from_request(self.request)
         from_date = self.request.query_params.get('fromdate')
         to_date = self.request.query_params.get('todate')
 
-        if branch_id:
-            queryset = queryset.filter(branch_branch_code=branch_id)
+        if branch_param:
+            queryset = queryset.filter(branch__branch_code=branch_param)
+        elif header_branch_id:
+            queryset = queryset.filter(branch_id=header_branch_id)
 
         if from_date and to_date:
             queryset = queryset.filter(adjusted_at__range=[from_date, to_date])
         return queryset
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
-        items = request.data.get('items', [])
-        if not items:
-            return Response(
-                {"detail": "No items provided for stock adjustment."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        try:
+            correlation_id = get_correlation_id(request)
+            items = request.data.get('items', [])
+            if not items:
+                return APIResponse.bad_request(message='No items provided for stock adjustment', error_id='no_items', correlation_id=correlation_id)
 
-        branch_id = request.data.get('branch_id')
-        reason = request.data.get('reason')
-        adjustment_type = request.data.get('adjustment_type')
+            branch_id = request.data.get('branch_id')
+            reason = request.data.get('reason')
+            adjustment_type = request.data.get('adjustment_type')
 
-        if not adjustment_type or adjustment_type not in ['increase', 'decrease']:
-            return Response(
-                {"detail": "Invalid adjustment type. Must be 'increase' or 'decrease'."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            if not adjustment_type or adjustment_type not in ['increase', 'decrease']:
+                return APIResponse.bad_request(message='Invalid adjustment type. Must be "increase" or "decrease"', error_id='invalid_adjustment_type', correlation_id=correlation_id)
 
-        stock_adjustments = []
-        for item in items:
-            sku = item.get('sku')
-            quantity_adjusted = item.get('quantity')
-            total_recovered = request.data.get('total_recovered', 0)
+            stock_adjustments = []
+            for item in items:
+                sku = item.get('sku')
+                quantity_adjusted = item.get('quantity')
+                total_recovered = request.data.get('total_recovered', 0)
 
-            try:
-                stock_item = StockInventory.objects.get(product__sku=sku)
-            except StockInventory.DoesNotExist:
-                return Response(
-                    {"detail": f"Stock item with SKU {sku} not found."},
-                    status=status.HTTP_404_NOT_FOUND
+                try:
+                    stock_item = StockInventory.objects.get(product__sku=sku)
+                except StockInventory.DoesNotExist:
+                    return APIResponse.not_found(message=f'Stock item with SKU {sku} not found', correlation_id=correlation_id)
+
+                # Resolve branch from id or code
+                branch_obj = None
+                if branch_id:
+                    try:
+                        branch_obj = Branch.objects.get(pk=int(branch_id))
+                    except (ValueError, Branch.DoesNotExist):
+                        branch_obj = Branch.objects.filter(branch_code=branch_id).first()
+                
+                # Create the stock adjustment
+                stock_adjustment = StockAdjustment(
+                    branch=branch_obj,
+                    stock_item=stock_item,
+                    adjustment_type=adjustment_type,
+                    quantity_adjusted=quantity_adjusted,
+                    total_recovered=total_recovered,
+                    reason=reason,
                 )
 
-            # Create the stock adjustment
-            stock_adjustment = StockAdjustment(
-                branch_branch_code=branch_id,
-                stock_item=stock_item,
-                adjustment_type=adjustment_type,
-                quantity_adjusted=quantity_adjusted,
-                total_recovered=total_recovered,
-                reason=reason,
-            )
+                # Add the logged-in user to adjusted_by
+                stock_adjustment.save(user=request.user)
+                stock_adjustments.append(stock_adjustment)
+                AuditTrail.log(operation=AuditTrail.CREATE, module='ecommerce', entity_type='StockAdjustment', entity_id=stock_adjustment.id, user=request.user, reason=f'Stock {adjustment_type}d by {quantity_adjusted}', request=request)
 
-            # Add the logged-in user to adjusted_by
-            stock_adjustment.save(user=request.user)
-            stock_adjustments.append(stock_adjustment)
+            # Serialize the created adjustments
+            serializer = self.get_serializer(stock_adjustments, many=True)
+            return APIResponse.created(data=serializer.data, message='Stock adjustments created successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error creating stock adjustment: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error creating stock adjustment', error_id=str(e), correlation_id=get_correlation_id(request))
 
-        # Serialize the created adjustments
-        serializer = self.get_serializer(stock_adjustments, many=True)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
-
-class UnitViewSet(viewsets.ModelViewSet):
+class UnitViewSet(BaseModelViewSet):
     queryset = Unit.objects.all()
     serializer_class = UnitSerializer
-    authentication_classes = []
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly,]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset()

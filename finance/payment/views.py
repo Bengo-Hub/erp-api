@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes, action
 from django.utils import timezone
 from django.db import transaction
 from rest_framework.pagination import PageNumberPagination
+from decimal import Decimal, InvalidOperation
 
 from .services import get_payment_service
 from finance.accounts.models import PaymentAccounts
@@ -23,6 +24,13 @@ from .serializers import (
     BillingDocumentSerializer,
     BillingDocumentHistorySerializer
 )
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail, log_payment_operation
+from core.validators import validate_non_negative_decimal
+from core.base_viewsets import BaseModelViewSet
+import logging
+
+logger = logging.getLogger(__name__)
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -32,6 +40,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 class SplitPaymentView(APIView):
     """
     Endpoint to process payments using multiple payment methods for a single entity
+    with comprehensive validation and audit logging.
     """
     permission_classes = [IsAuthenticated]
     
@@ -43,61 +52,126 @@ class SplitPaymentView(APIView):
         - entity_type: Type of entity (order, invoice, pos_sale)
         - entity_id: ID of the entity
         - payments: List of payment dictionaries, each containing:
-            - amount: Payment amount
-            - payment_method: Payment method code
+            - amount: Payment amount (must be > 0)
+            - payment_method: Payment method code (cash, mpesa, card, bank, etc.)
             - transaction_id: Optional transaction ID
             - transaction_details: Optional additional details
             - payment_account_id: Optional specific payment account to use
         """
-        # Get required parameters
-        entity_type = request.data.get('entity_type')
-        entity_id = request.data.get('entity_id')
-        payments = request.data.get('payments', [])
-        
-        # Validate required parameters
-        if not entity_type or not entity_id:
-            return Response({
-                'success': False,
-                'message': 'Missing required parameters: entity_type and entity_id',
-            }, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            correlation_id = get_correlation_id(request)
             
-        if not payments or not isinstance(payments, list) or len(payments) == 0:
-            return Response({
-                'success': False,
-                'message': 'No payment records provided or invalid format',
-            }, status=status.HTTP_400_BAD_REQUEST)
+            # Get required parameters
+            entity_type = request.data.get('entity_type', '').strip()
+            entity_id = request.data.get('entity_id')
+            payments = request.data.get('payments', [])
             
-        # Process split payment
-        payment_service = get_payment_service()
-        success, message, payment_records = payment_service.process_split_payment(
-            entity_type=entity_type,
-            entity_id=entity_id,
-            payments=payments,
-            created_by=request.user
-        )
+            # Validate required parameters
+            errors = {}
+            
+            if not entity_type:
+                errors['entity_type'] = 'Entity type is required'
+            if not entity_id:
+                errors['entity_id'] = 'Entity ID is required'
+            if not payments or not isinstance(payments, list) or len(payments) == 0:
+                errors['payments'] = 'At least one payment record is required'
+            
+            if errors:
+                return APIResponse.validation_error(
+                    message='Split payment validation failed',
+                    errors=errors,
+                    correlation_id=correlation_id
+                )
+            
+            # Validate individual payments
+            payment_errors = []
+            for idx, payment in enumerate(payments):
+                payment_item_errors = {}
+                
+                # Validate amount
+                try:
+                    amount = Decimal(str(payment.get('amount', 0)))
+                    if amount <= 0:
+                        payment_item_errors['amount'] = 'Amount must be greater than 0'
+                except (InvalidOperation, TypeError, ValueError):
+                    payment_item_errors['amount'] = 'Invalid amount format'
+                
+                # Validate payment method
+                payment_method = payment.get('payment_method', '').strip()
+                if not payment_method:
+                    payment_item_errors['payment_method'] = 'Payment method is required'
+                
+                if payment_item_errors:
+                    payment_errors.append({'index': idx, 'errors': payment_item_errors})
+            
+            if payment_errors:
+                return APIResponse.validation_error(
+                    message='Payment validation failed',
+                    errors={'payments': payment_errors},
+                    correlation_id=correlation_id
+                )
+            
+            # Process split payment
+            payment_service = get_payment_service()
+            success, message, payment_records = payment_service.process_split_payment(
+                entity_type=entity_type,
+                entity_id=entity_id,
+                payments=payments,
+                created_by=request.user
+            )
+            
+            # Log payment operation
+            if success and payment_records:
+                total_amount = sum(float(getattr(p, 'amount', 0)) for p in payment_records)
+                AuditTrail.log(
+                    operation=AuditTrail.PAYMENT,
+                    module='finance',
+                    entity_type=entity_type.capitalize(),
+                    entity_id=entity_id,
+                    user=request.user,
+                    changes={
+                        'payment_count': {'new': len(payment_records)},
+                        'total_amount': {'new': total_amount}
+                    },
+                    reason=f'Split payment processed for {entity_type} {entity_id}',
+                    request=request
+                )
+            
+            # Return response based on payment result
+            if success:
+                return APIResponse.success(
+                    data={
+                        'entity_type': entity_type,
+                        'entity_id': entity_id,
+                        'payment_count': len(payment_records) if payment_records else 0,
+                        'total_amount': sum(float(getattr(p, 'amount', 0)) for p in payment_records) if payment_records else 0
+                    },
+                    message=message or 'Split payment processed successfully',
+                    status_code=status.HTTP_200_OK,
+                    correlation_id=correlation_id
+                )
+            else:
+                return APIResponse.error(
+                    error_code='PAYMENT_PROCESSING_FAILED',
+                    message=message or 'Failed to process split payment',
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    correlation_id=correlation_id
+                )
         
-        # Return response based on payment result
-        if success:
-            return Response({
-                'success': True,
-                'message': message,
-                'data': {
-                    'entity_type': entity_type,
-                    'entity_id': entity_id,
-                    'payment_count': len(payment_records) if payment_records else 0,
-                    'total_amount': sum(float(getattr(p, 'amount', 0)) for p in payment_records) if payment_records else 0
-                }
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response({
-                'success': False,
-                'message': message
-            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error processing split payment: {str(e)}", exc_info=True)
+            correlation_id = get_correlation_id(request)
+            return APIResponse.server_error(
+                message='Error processing split payment',
+                error_id=str(e),
+                correlation_id=correlation_id
+            )
 
 
 class ProcessPaymentView(APIView):
     """
     Endpoint to process payments for any entity in the system
+    with comprehensive validation and audit logging.
     """
     permission_classes = [IsAuthenticated]
     
@@ -108,7 +182,7 @@ class ProcessPaymentView(APIView):
         Required parameters:
         - entity_type: Type of entity (order, invoice, pos_sale)
         - entity_id: ID of the entity
-        - amount: Amount to pay
+        - amount: Amount to pay (must be > 0)
         - payment_method: Payment method code (cash, mpesa, card, bank, etc.)
         
         Optional parameters:
@@ -117,119 +191,115 @@ class ProcessPaymentView(APIView):
         - payment_account_id: ID of the payment account to use
         - notes: Payment notes
         """
-        # Get required parameters
-        entity_type = request.data.get('entity_type')
-        entity_id = request.data.get('entity_id')
-        amount = request.data.get('amount')
-        payment_method = request.data.get('payment_method')
-        
-        # Validate required parameters
-        if not all([entity_type, entity_id, amount, payment_method]):
-            return Response({
-                'success': False,
-                'message': 'Missing required parameters',
-                'required': ['entity_type', 'entity_id', 'amount', 'payment_method']
-            }, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            correlation_id = get_correlation_id(request)
             
-        # Get optional parameters
-        transaction_id = request.data.get('transaction_id')
-        transaction_details = request.data.get('transaction_details')
-        payment_account_id = request.data.get('payment_account_id')
-        notes = request.data.get('notes')
-        
-        # Get the payment account if specified
-        payment_account = None
-        if payment_account_id:
+            # Get required parameters
+            entity_type = request.data.get('entity_type', '').strip()
+            entity_id = request.data.get('entity_id')
+            amount = request.data.get('amount')
+            payment_method = request.data.get('payment_method', '').strip()
+            
+            # Validate required parameters
+            errors = {}
+            
+            if not entity_type:
+                errors['entity_type'] = 'Entity type is required'
+            if not entity_id:
+                errors['entity_id'] = 'Entity ID is required'
+            if not payment_method:
+                errors['payment_method'] = 'Payment method is required'
+            
+            # Validate and parse amount
             try:
-                payment_account = PaymentAccounts.objects.get(id=payment_account_id)
-            except PaymentAccounts.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': f'Payment account with ID {payment_account_id} not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-        
-        # Get payment service with the specified account
-        payment_service = get_payment_service(payment_account)
-        
-        # Process payment based on entity type
-        if entity_type == 'order':
-            from core_orders.models import BaseOrder
-            try:
-                order = BaseOrder.objects.get(order_id=entity_id)
-                success, message, payment = payment_service.process_order_payment(
-                    order=order,
-                    amount=amount,
-                    payment_method=payment_method,
-                    transaction_id=transaction_id,
-                    transaction_details=transaction_details,
-                    created_by=request.user
+                amount_decimal = validate_non_negative_decimal(amount, 'amount')
+                if amount_decimal <= 0:
+                    errors['amount'] = 'Amount must be greater than 0'
+            except Exception as e:
+                errors['amount'] = str(e)
+            
+            if errors:
+                return APIResponse.validation_error(
+                    message='Payment validation failed',
+                    errors=errors,
+                    correlation_id=correlation_id
                 )
-            except BaseOrder.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': f'Order with ID {entity_id} not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-                
-        elif entity_type == 'invoice':
-            from finance.payment.models import BillingDocument
-            try:
-                invoice = BillingDocument.objects.get(document_number=entity_id)
-                success, message, payment = payment_service.process_bill_payment(
-                    document=invoice,
-                    amount=amount,
-                    payment_method=payment_method,
+            
+            # Get optional parameters
+            transaction_id = request.data.get('transaction_id')
+            transaction_details = request.data.get('transaction_details')
+            payment_account_id = request.data.get('payment_account_id')
+            notes = request.data.get('notes', '')
+            
+            # Get the payment account if specified
+            payment_account = None
+            if payment_account_id:
+                try:
+                    payment_account = PaymentAccounts.objects.get(id=payment_account_id)
+                except PaymentAccounts.DoesNotExist:
+                    return APIResponse.error(
+                        error_code='PAYMENT_ACCOUNT_NOT_FOUND',
+                        message=f'Payment account {payment_account_id} not found',
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        correlation_id=correlation_id
+                    )
+            
+            # Process the payment
+            payment_service = get_payment_service()
+            success, message, payment_record = payment_service.process_payment(
+                entity_type=entity_type,
+                entity_id=entity_id,
+                amount=amount_decimal,
+                payment_method=payment_method,
+                transaction_id=transaction_id,
+                transaction_details=transaction_details,
+                payment_account=payment_account,
+                created_by=request.user,
+                notes=notes
+            )
+            
+            # Log payment operation
+            if success:
+                log_payment_operation(
+                    payment_id=getattr(payment_record, 'id', entity_id),
+                    amount=float(amount_decimal),
+                    method=payment_method,
+                    status='completed',
+                    user=request.user,
                     reference=transaction_id,
-                    notes=notes,
-                    created_by=request.user
+                    request=request
                 )
-            except BillingDocument.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': f'Invoice with number {entity_id} not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-                
-        elif entity_type == 'pos_sale':
-            from ecommerce.pos.models import Sales
-            try:
-                sale = Sales.objects.get(sale_id=entity_id)
-                success, message, payment = payment_service.process_pos_payment(
-                    sale=sale,
-                    amount=amount,
-                    payment_method=payment_method,
-                    transaction_id=transaction_id,
-                    transaction_details=transaction_details,
-                    created_by=request.user
-                )
-            except Sales.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': f'Sale with ID {entity_id} not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-                
-        else:
-            return Response({
-                'success': False,
-                'message': f'Unsupported entity type: {entity_type}'
-            }, status=status.HTTP_400_BAD_REQUEST)
             
-        # Return response based on payment result
-        if success:
-            return Response({
-                'success': True,
-                'message': message,
-                'data': {
-                    'entity_type': entity_type,
-                    'entity_id': entity_id,
-                    'amount': amount,
-                    'payment_method': payment_method,
-                    'payment_id': getattr(payment, 'id', None)
-                }
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response({
-                'success': False,
-                'message': message
-            }, status=status.HTTP_400_BAD_REQUEST)
+            if success:
+                return APIResponse.success(
+                    data={
+                        'entity_type': entity_type,
+                        'entity_id': entity_id,
+                        'amount': float(amount_decimal),
+                        'payment_method': payment_method,
+                        'transaction_id': transaction_id,
+                        'status': 'completed'
+                    },
+                    message=message or 'Payment processed successfully',
+                    status_code=status.HTTP_200_OK,
+                    correlation_id=correlation_id
+                )
+            else:
+                return APIResponse.error(
+                    error_code='PAYMENT_PROCESSING_FAILED',
+                    message=message or 'Failed to process payment',
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    correlation_id=correlation_id
+                )
+        
+        except Exception as e:
+            logger.error(f"Error processing payment: {str(e)}", exc_info=True)
+            correlation_id = get_correlation_id(request)
+            return APIResponse.server_error(
+                message='Error processing payment',
+                error_id=str(e),
+                correlation_id=correlation_id
+            )
 
 
 class MpesaPaymentView(APIView):
@@ -387,12 +457,12 @@ def get_payment_accounts(request):
         'data': data
     }, status=status.HTTP_200_OK)
 
-class PaymentMethodViewSet(viewsets.ModelViewSet):
+class PaymentMethodViewSet(BaseModelViewSet):
     queryset = PaymentMethod.objects.filter(is_active=True)
     serializer_class = PaymentMethodSerializer
     permission_classes = [IsAuthenticated]
 
-class PaymentViewSet(viewsets.ModelViewSet):
+class PaymentViewSet(BaseModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
@@ -411,7 +481,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-class POSPaymentViewSet(viewsets.ModelViewSet):
+class POSPaymentViewSet(BaseModelViewSet):
     queryset = POSPayment.objects.all()
     permission_classes = [IsAuthenticated]
 

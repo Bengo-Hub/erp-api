@@ -8,6 +8,8 @@ router.register(r'payroll-components', PayrollComponentsViewSet, basename='payro
 router.register(r'approvals', ApprovalViewSet, basename='approvals')
 router.register(r'formulas', FormulaViewSet, basename='formulas')
 router.register(r'components', PayrollComponentsViewSet, basename='components')
+router.register(r'loans', LoansViewSet, basename='loans')
+router.register(r'general-hr-settings', GeneralHRSettingsViewSet, basename='general-hr-settings')
 
 urlpatterns = [
     path('', include(router.urls)),

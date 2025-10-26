@@ -11,6 +11,12 @@ from .serializers import (
     OrderItemSerializer, OrderPaymentSerializer
 )
 from core.decorators import apply_common_filters, require_business_and_branch_context
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BaseOrderFilter(filters.FilterSet):
@@ -45,18 +51,14 @@ class BaseOrderFilter(filters.FilterSet):
         )
 
 
-class BaseOrderViewSet(viewsets.ModelViewSet):
+class BaseOrderViewSet(BaseModelViewSet):
     """ViewSet for BaseOrder model"""
-    queryset = BaseOrder.objects.all()
+    queryset = BaseOrder.objects.all().select_related('customer', 'supplier', 'branch')
     serializer_class = BaseOrderSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = LimitOffsetPagination
     filter_backends = [filters.DjangoFilterBackend]
     filterset_class = BaseOrderFilter
-    
-    @apply_common_filters
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
     
     def get_serializer_class(self):
         if self.action == 'list':

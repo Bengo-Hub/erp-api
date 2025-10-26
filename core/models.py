@@ -265,55 +265,90 @@ class Comments(models.Model):
             models.Index(fields=['post'], name='idx_comments_post'),
         ]
 
-class OvertimeRate(models.Model):
-    # Overtime types for configuring overtime rates
-    OVERTIME_TYPES = [
-        ("Normal", "Normal Working Days"),
-        ("Weekend", "Non-working Days (e.g. Weekend)"),
-        ("Holiday", "Holidays"),
-    ]
-    overtime_type = models.CharField(max_length=20, choices=OVERTIME_TYPES)
-    overtime_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('2.00')) 
-    fixed_amount=models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00')) 
-    is_active = models.BooleanField(default=True) 
+# OvertimeRate and PartialMonthPay models removed - replaced by GeneralHRSettings
+# Use: from hrm.payroll_settings.models import GeneralHRSettings
+# All overtime and partial month logic now centralized in GeneralHRSettings
 
-    def save(self, *args, **kwargs):
-        if self.overtime_type=='Normal':
-            self.fixed_amount=Decimal('200.00')
-            self.overtime_rate=Decimal('1.50')
-        super(OvertimeRate,self).save(*args, **kwargs)
 
-    def __str__(self):
-        return f"{self.overtime_type} - {self.overtime_rate}x"
-
-    class Meta:
-        indexes = [
-            models.Index(fields=['overtime_type'], name='idx_overtime_rate_type'),
-            models.Index(fields=['is_active'], name='idx_overtime_rate_active'),
+class RegionalSettings(models.Model):
+    """
+    Singleton model for regional settings (Currency, Timezone, Date Format)
+    """
+    timezone = models.CharField(max_length=100, default='(GMT+03:00) Nairobi')
+    date_format = models.CharField(
+        max_length=20,
+        default='dd/mm/yyyy',
+        choices=[
+            ('dd/mm/yyyy', 'dd/mm/yyyy'),
+            ('mm/dd/yyyy', 'mm/dd/yyyy'),
+            ('yyyy-mm-dd', 'yyyy-mm-dd'),
+            ('dd-mm-yyyy', 'dd-mm-yyyy')
         ]
+    )
+    financial_year_end = models.CharField(max_length=50, default='December 31')
+    currency = models.CharField(max_length=100, default='Kenya Shillings')
+    currency_symbol = models.CharField(max_length=10, default='KES')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
-class PartialMonthPay(models.Model):
-    # Prorating Options for Partial Months
-    PRORATE_OPTIONS = [
-        ("Calendar", "Prorate Based on Calendar Days"),
-        ("Daily Rate", "Prorate Based on Daily Rate"),
-        ("Full Month", "Pay Full Month, No Prorate"),
-    ]
-
-    prorate_option = models.CharField(max_length=20, choices=PRORATE_OPTIONS, default="Calendar")
-    prorate_from_start = models.BooleanField(default=True) 
-    carry_forward_prorated_pay = models.BooleanField(default=False)
-    apply_for = models.CharField(max_length=20, choices=[("Basic", "Basic Pay"), ("All", "All Pay")], default="Basic")
-    is_active = models.BooleanField(default=True) 
-
-    def __str__(self):
-        return f"{self.prorate_option} - {self.is_active}"
-
     class Meta:
-        indexes = [
-            models.Index(fields=['prorate_option'], name='idx_partial_month_pay_option'),
-            models.Index(fields=['is_active'], name='idx_partial_month_pay_active'),
-        ]
+        verbose_name = 'Regional Settings'
+        verbose_name_plural = 'Regional Settings'
+    
+    @classmethod
+    def load(cls):
+        """Load or create the singleton settings instance"""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+    
+    def save(self, *args, **kwargs):
+        """Ensure only one instance exists (Singleton pattern)"""
+        self.pk = 1
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return 'Regional Settings'
+
+
+class BrandingSettings(models.Model):
+    """
+    Singleton model for application branding settings
+    """
+    app_name = models.CharField(max_length=100, default='BengoERP')
+    tagline = models.CharField(max_length=200, blank=True, null=True)
+    footer_text = models.TextField(blank=True, null=True)
+    primary_color = models.CharField(max_length=7, default='#3B82F6')
+    secondary_color = models.CharField(max_length=7, default='#10B981')
+    text_color = models.CharField(max_length=7, default='#1F2937')
+    background_color = models.CharField(max_length=7, default='#FFFFFF')
+    logo_url = models.URLField(blank=True, null=True)
+    logo = models.ImageField(upload_to='branding/logos/', blank=True, null=True)
+    favicon_url = models.URLField(blank=True, null=True)
+    watermark_url = models.URLField(blank=True, null=True)
+    watermark = models.ImageField(upload_to='branding/watermarks/', blank=True, null=True)
+    enable_dark_mode = models.BooleanField(default=True)
+    theme_preset = models.CharField(max_length=50, default='Lara')
+    menu_mode = models.CharField(max_length=20, default='static')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Branding Settings'
+        verbose_name_plural = 'Branding Settings'
+    
+    @classmethod
+    def load(cls):
+        """Load or create the singleton settings instance"""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+    
+    def save(self, *args, **kwargs):
+        """Ensure only one instance exists (Singleton pattern)"""
+        self.pk = 1
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return 'Branding Settings'
 
 
 class Location(models.Model):

@@ -2,15 +2,25 @@
 Finance module URL configuration.
 """
 from django.urls import path, include
-from .api import finance_analytics, finance_dashboard, tax_summary, finance_reports, finance_branches
+from .services.analytics_views import finance_analytics, finance_dashboard, tax_summary
+from .services.reports_views import (
+    profit_and_loss_report,
+    balance_sheet_report,
+    cash_flow_report,
+    financial_statements_suite
+)
 
 urlpatterns = [
-    # Main finance endpoints
+    # Finance Analytics Endpoints
     path('analytics/', finance_analytics, name='finance-analytics'),
     path('dashboard/', finance_dashboard, name='finance-dashboard'),
     path('tax-summary/', tax_summary, name='finance-tax-summary'),
-    path('reports/', finance_reports, name='finance-reports'),
-    path('branches/', finance_branches, name='finance-branches'),
+    
+    # Financial Reports Endpoints
+    path('reports/profit-loss/', profit_and_loss_report, name='finance-profit-loss'),
+    path('reports/balance-sheet/', balance_sheet_report, name='finance-balance-sheet'),
+    path('reports/cash-flow/', cash_flow_report, name='finance-cash-flow'),
+    path('reports/statements-suite/', financial_statements_suite, name='finance-statements-suite'),
     
     # Include submodule URLs
     path('accounts/', include('finance.accounts.urls')),

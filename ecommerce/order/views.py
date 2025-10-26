@@ -5,7 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework import permissions
 from rest_framework.decorators import action, api_view, permission_classes
 from .serializers import OrderSerializer, OrderItemSerializer, OrderDetailSerializer
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import PageNumberPagination
 from crm.contacts.models import Contact
 from ecommerce.cart.models import CartSession
 from ecommerce.cart.serializers import CartSessionSerializer
@@ -16,16 +16,19 @@ from django.http import HttpResponse
 from finance.payment.services import get_payment_service
 from finance.payment.models import BillingDocument
 from finance.payment.pdf_utils import download_invoice_pdf
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class OrderViewSet(viewsets.ModelViewSet):
-    queryset = Order.objects.all()
+class OrderViewSet(BaseModelViewSet):
+    queryset = Order.objects.all().select_related('user')
     serializer_class = OrderSerializer
-    permission_classes = [permissions.IsAuthenticated,]
-    pagination_class = LimitOffsetPagination  # Enable Limit and Offset Pagination
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = PageNumberPagination  # Standardized: 100 records per page
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -37,141 +40,101 @@ class OrderViewSet(viewsets.ModelViewSet):
             
         return queryset
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-        
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """Cancel an order if it's still in a cancellable state"""
-        order = self.get_object()
-        
-        # Check if order can be cancelled
-        if order.status not in [Order.STATUS_PENDING, Order.STATUS_PROCESSING]:
-            return Response({
-                'success': False,
-                'message': f'Cannot cancel order in {order.get_status_display()} state'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
         try:
-            order.mark_as_cancelled(request.user, request.data.get('reason', ''))
-            return Response({
-                'success': True,
-                'message': 'Order cancelled successfully',
-                'order': self.get_serializer(order).data
-            })
+            correlation_id = get_correlation_id(request)
+            order = self.get_object()
+            
+            # Check if order can be cancelled
+            if order.status not in [Order.STATUS_PENDING, Order.STATUS_PROCESSING]:
+                return APIResponse.bad_request(
+                    message=f'Cannot cancel order in {order.get_status_display()} state',
+                    error_id='invalid_status_for_cancellation',
+                    correlation_id=correlation_id)
+            
+            with transaction.atomic():
+                order.mark_as_cancelled(request.user, request.data.get('reason', ''))
+                AuditTrail.log(operation=AuditTrail.CANCEL, module='ecommerce', entity_type='Order', entity_id=order.id, user=request.user, reason=f'Order cancelled: {request.data.get("reason", "")}', request=request)
+            
+            return APIResponse.success(data=self.get_serializer(order).data, message='Order cancelled successfully', correlation_id=correlation_id)
         except Exception as e:
-            return Response({
-                'success': False,
-                'message': f'Failed to cancel order: {str(e)}'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f'Error cancelling order: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error cancelling order', error_id=str(e), correlation_id=get_correlation_id(request))
     
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         """Get the history of an order"""
-        order = self.get_object()
-        history = [] # Placeholder for actual history data
-        
-        # Use a serializer for OrderHistory in a real implementation
-        history_data = [{
-            'status': item.status,
-            'message': item.message,
-            'created_at': item.created_at,
-            'created_by': item.created_by.get_full_name() if item.created_by else 'System'
-        } for item in history]
-        
-        return Response({
-            'order_id': order.order_id,
-            'history': history_data
-        })
+        try:
+            correlation_id = get_correlation_id(request)
+            order = self.get_object()
+            history = [] # Placeholder for actual history data
+            
+            # Use a serializer for OrderHistory in a real implementation
+            history_data = [{
+                'status': item.status,
+                'message': item.message,
+                'created_at': item.created_at,
+                'created_by': item.created_by.get_full_name() if item.created_by else 'System'
+            } for item in history]
+            
+            data = {
+                'order_id': order.order_id,
+                'history': history_data
+            }
+            return APIResponse.success(data=data, message='Order history retrieved successfully', correlation_id=correlation_id)
+        except Exception as e:
+            logger.error(f'Error fetching order history: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error retrieving order history', error_id=str(e), correlation_id=get_correlation_id(request))
         
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
         """Update the status of an order (admin/staff only)"""
-        # Check permissions - only staff/admin should update order status
-        if not request.user.is_staff and not request.user.is_superuser:
-            return Response({
-                'success': False, 
-                'message': 'Permission denied'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        order = self.get_object()
-        new_status = request.data.get('status')
-        message = request.data.get('message', '')
-        
-        if not new_status or new_status not in dict(Order.STATUS_CHOICES):
-            return Response({
-                'success': False,
-                'message': 'Invalid status value',
-                'valid_statuses': dict(Order.STATUS_CHOICES)
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
         try:
-            # Use the appropriate status update method
-            if new_status == Order.STATUS_CONFIRMED:
-                order.mark_as_confirmed(request.user, message)
-            elif new_status == Order.STATUS_PROCESSING:
-                order.mark_as_processing(request.user, message)
-            elif new_status == Order.STATUS_FULFILLED:
-                order.mark_as_fulfilled(request.user, message)
-            elif new_status == Order.STATUS_SHIPPED:
-                order.mark_as_shipped(request.user, message, request.data.get('tracking_number'))
-            elif new_status == Order.STATUS_DELIVERED:
-                order.mark_as_delivered(request.user, message)
-            elif new_status == Order.STATUS_CANCELLED:
-                order.mark_as_cancelled(request.user, message)
-            elif new_status == Order.STATUS_REFUNDED:
-                order.mark_as_refunded(request.user, message)
-            else:
-                # Generic status update for any other status
-                order.status = new_status
-                order.save()
-                # OrderHistory.objects.create( # This line is removed
-                #     order=order,
-                #     status=new_status,
-                #     message=message,
-                #     created_by=request.user
-                # )
-                
-            return Response({
-                'success': True,
-                'message': f'Order status updated to {order.get_status_display()}',
-                'order': self.get_serializer(order).data
-            })
+            correlation_id = get_correlation_id(request)
+            # Check permissions - only staff/admin should update order status
+            if not request.user.is_staff and not request.user.is_superuser:
+                return APIResponse.forbidden(message='Only staff/admin can update order status', correlation_id=correlation_id)
+            
+            order = self.get_object()
+            status_value = request.data.get('status')
+            
+            if not status_value:
+                return APIResponse.bad_request(message='Status is required', error_id='missing_status', correlation_id=correlation_id)
+            
+            # Validate status is valid
+            valid_statuses = [s[0] for s in Order.STATUS_CHOICES]
+            if status_value not in valid_statuses:
+                return APIResponse.bad_request(message=f'Invalid status. Valid options: {", ".join(valid_statuses)}', error_id='invalid_status', correlation_id=correlation_id)
+            
+            old_status = order.status
+            order.status = status_value
+            order.save(update_fields=['status', 'updated_at'])
+            
+            AuditTrail.log(operation=AuditTrail.UPDATE, module='ecommerce', entity_type='Order', entity_id=order.id, user=request.user, changes={'status': {'old': old_status, 'new': status_value}}, reason=f'Order status updated to {status_value}', request=request)
+            
+            return APIResponse.success(data=self.get_serializer(order).data, message='Order status updated successfully', correlation_id=correlation_id)
         except Exception as e:
-            return Response({
-                'success': False,
-                'message': f'Failed to update order status: {str(e)}'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f'Error updating order status: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error updating order status', error_id=str(e), correlation_id=get_correlation_id(request))
 
 
-class OrderItemViewSet(viewsets.ModelViewSet):
-    queryset = OrderItem.objects.all()
+class OrderItemViewSet(BaseModelViewSet):
+    queryset = OrderItem.objects.all().select_related('order')
     serializer_class = OrderItemSerializer
     permission_classes = [permissions.IsAuthenticated,]
-    pagination_class = LimitOffsetPagination  # Enable Limit and Offset Pagination
+    pagination_class = PageNumberPagination  # Standardized: 100 records per page
 
     def get_queryset(self):
         queryset = super().get_queryset()
-       # Apply filters based on query parameters
+        # Apply filters based on query parameters
         user = self.request.user
-
-        # vendor = Vendor.objects.filter(user=user).first() # This line is removed
-        # employee = Employee.objects.filter(user=user).first() # This line is removed
-        # if vendor != None: # This line is removed
-        #     queryset = queryset.filter(stock__product__vendor=vendor) # This line is removed
-        # elif employee != None: # This line is removed
-        #     employee = self.request.user.employee # This line is removed
-        #     vendor = employee.vendor_set.first() # This line is removed
-        #     queryset = queryset.filter(stock__product__vendor__employees=employee) # This line is removed
-        # else: # This line is removed
-        queryset=[] # This line is added
+        
+        # Filter to only show order items from the user's orders or for staff
+        if not user.is_staff and not user.is_superuser:
+            queryset = queryset.filter(order__user=user)
+        
         return queryset
 
     def list(self, request, *args, **kwargs):

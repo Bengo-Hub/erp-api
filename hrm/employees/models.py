@@ -43,9 +43,129 @@ class Employee(models.Model):
     nssf_no=models.CharField(max_length=16)
     deleted=models.BooleanField(default=False)
     terminated=models.BooleanField(default=False)
+    
+    # ESS (Employee Self-Service) Access
+    allow_ess = models.BooleanField(
+        default=False,
+        verbose_name="Allow ESS Access",
+        help_text="Enable Employee Self-Service portal access for this employee"
+    )
+    ess_activated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="ESS Activated On",
+        help_text="Date when ESS access was first activated"
+    )
+    ess_last_login = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="ESS Last Login",
+        help_text="Last time employee logged into ESS portal"
+    )
+    ess_unrestricted_access = models.BooleanField(
+        default=False,
+        verbose_name="Unrestricted ESS Access",
+        help_text="Allow ESS login regardless of shift rotation, off days, or leave status. Only for managers/supervisors."
+    )
 
     def __str__(self) -> str:
         return self.user.email
+    
+    def can_login_to_ess(self):
+        """
+        Check if employee can login to ESS based on shift rotation, off days, and leave status.
+        Returns: (can_login: bool, reason: str)
+        """
+        from django.utils import timezone
+        from hrm.leave.models import LeaveRequest
+        
+        # Check if ESS access is enabled
+        if not self.allow_ess:
+            return False, "ESS access is disabled for this employee"
+        
+        # Check if account is terminated or deleted
+        if self.terminated:
+            return False, "Employee account has been terminated"
+        
+        if self.deleted:
+            return False, "Employee account has been deleted"
+        
+        # Load ESS settings - import locally to avoid circular dependency
+        try:
+            from hrm.attendance.models import ESSSettings
+            ess_settings = ESSSettings.load()
+        except:
+            # If settings don't exist yet (before migration), default to allowing login
+            ess_settings = None
+        
+        # ALWAYS allow superusers (is_superuser=True)
+        if self.user.is_superuser:
+            return True, "Superuser access"
+        
+        # Check if shift-based restrictions are globally disabled
+        if ess_settings and not ess_settings.enable_shift_based_restrictions:
+            return True, "Shift restrictions disabled globally"
+        
+        # Check if user's role is exempt
+        if ess_settings and ess_settings.is_role_exempt(self.user):
+            return True, "Exempt role access"
+        
+        # Managers/supervisors with unrestricted access can always login
+        if self.ess_unrestricted_access:
+            return True, "Unrestricted access granted"
+        
+        # Check if user has staff permissions (but not superuser - already checked above)
+        if self.user.is_staff:
+            return True, "Administrator access"
+        
+        today = timezone.now().date()
+        current_day = today.strftime('%A')  # Get day name (Monday, Tuesday, etc.)
+        
+        # Check weekend override setting
+        if ess_settings and ess_settings.allow_weekend_login and current_day in ['Saturday', 'Sunday']:
+            return True, "Weekend login allowed by settings"
+        
+        # Check if employee has salary details with shift assignment
+        try:
+            salary_detail = self.salary_details.filter().first()
+            if not salary_detail or not salary_detail.work_shift:
+                # No shift assigned, allow login (default behavior)
+                return True, "No shift restrictions"
+            
+            work_shift = salary_detail.work_shift
+            
+            # Check if today is a working day in the shift schedule
+            schedule_today = work_shift.schedule.filter(day=current_day).first()
+            if schedule_today and not schedule_today.is_working_day:
+                return False, f"Today ({current_day}) is not a working day in your shift schedule"
+            
+            # Check if employee is on an off day
+            if self.off_days.filter(date=today).exists():
+                return False, "You have an off day today"
+            
+            # Check if employee is on approved leave
+            active_leave = LeaveRequest.objects.filter(
+                employee=self,
+                start_date__lte=today,
+                end_date__gte=today,
+                status='approved'
+            ).first()
+            
+            if active_leave:
+                return False, f"You are currently on {active_leave.leave_type.name} leave"
+            
+            # Check shift rotation if applicable
+            rotation = work_shift.current_rotations.filter(is_active=True).first()
+            if rotation and rotation.current_active_shift != work_shift:
+                return False, f"Your current active shift is {rotation.current_active_shift.name}"
+            
+            # All checks passed
+            return True, "Login permitted"
+            
+        except Exception as e:
+            # If any error occurs, default to allowing login
+            print(f"Error checking ESS login eligibility: {e}")
+            return True, "Login permitted (default)"
 
     class Meta:
         ordering=['id']
@@ -61,6 +181,9 @@ class Employee(models.Model):
             models.Index(fields=['pin_no'], name='idx_employee_pin_no'),
             models.Index(fields=['deleted'], name='idx_employee_deleted'),
             models.Index(fields=['terminated'], name='idx_employee_terminated'),
+            models.Index(fields=['allow_ess'], name='idx_employee_allow_ess'),
+            models.Index(fields=['ess_activated_at'], name='idx_employee_ess_activated'),
+            models.Index(fields=['ess_unrestricted_access'], name='idx_employee_ess_unrestricted'),
         ]
 
 class EmployeeBankAccount(models.Model):
@@ -152,6 +275,7 @@ class SalaryDetails(models.Model):
     monthly_salary = models.DecimalField(max_digits=14, decimal_places=2)
     pay_type=models.CharField(max_length=100,choices=pay_choices,default="gross")
     work_hours=models.IntegerField(default=8)
+    work_shift=models.ForeignKey('attendance.WorkShift', on_delete=models.SET_NULL, blank=True, null=True, related_name='salary_details', help_text="Work shift assigned to employee")
     hourly_rate=models.DecimalField(max_digits=14,decimal_places=2,blank=True,null=True,help_text="auto calculated field")
     daily_rate=models.DecimalField(max_digits=14,decimal_places=2,blank=True,null=True,help_text="auto calculated field")
     income_tax=models.CharField(max_length=200,choices=income_tax_options,default="primary")
@@ -199,6 +323,7 @@ class SalaryDetails(models.Model):
             models.Index(fields=['income_tax'], name='idx_salary_details_income_tax'),
             models.Index(fields=['payment_type'], name='idx_salary_details_pay_type'),
             models.Index(fields=['bank_account'], name='idx_salary_details_bank_acc'),
+            models.Index(fields=['work_shift'], name='idx_salary_details_work_shift'),
         ]
 
 class JobTitle(models.Model):
@@ -213,6 +338,51 @@ class JobTitle(models.Model):
         indexes = [
             models.Index(fields=['title'], name='idx_job_title_title'),
         ]
+
+
+class JobGroup(models.Model):
+    """Job groups for employee classification"""
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return self.title
+
+    class Meta:
+        db_table = "job_groups"
+        managed = True
+        verbose_name_plural = "Job Groups"
+        indexes = [
+            models.Index(fields=['title'], name='idx_job_group_title'),
+        ]
+
+
+class WorkersUnion(models.Model):
+    """Workers unions and labor associations"""
+    name = models.CharField(max_length=255)
+    code = models.CharField(max_length=50, unique=True)
+    registration_number = models.CharField(max_length=100, blank=True, null=True)
+    contact_person = models.CharField(max_length=255, blank=True, null=True)
+    contact_email = models.EmailField(blank=True, null=True)
+    contact_phone = models.CharField(max_length=20, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return self.name
+
+    class Meta:
+        db_table = "workers_unions"
+        managed = True
+        verbose_name_plural = "Workers Unions"
+        indexes = [
+            models.Index(fields=['name'], name='idx_workers_union_name'),
+            models.Index(fields=['code'], name='idx_workers_union_code'),
+        ]
+
 
 class HRDetails(models.Model):
     employee=models.ForeignKey(Employee,on_delete=models.CASCADE,related_name="hr_details")

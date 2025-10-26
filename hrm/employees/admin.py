@@ -121,15 +121,19 @@ class EarningsAdmin(admin.ModelAdmin):
 class EmployeeAdmin(admin.ModelAdmin):
     list_per_page=10
     date_hierarchy = 'date_of_birth'
-    list_display = ('id', 'user', 'organisation', 'gender', 'date_of_birth', 'national_id', 'pin_no', 'shif_or_nhif_number', 'nssf_no', 'deleted', 'terminated')
-    list_filter=['user', 'organisation', 'gender','contracts__status', 'date_of_birth', 'national_id', 'pin_no', 'shif_or_nhif_number', 'nssf_no', 'contracts__contract_start_date','contracts__contract_end_date', 'deleted','terminated']
-    search_fields=[ 'user', 'gender', 'contracts__status','date_of_birth', 'national_id', 'pin_no', 'shif_or_nhif_number', 'nssf_no', 'deleted', 'terminated', 'contracts__contract_start_date','contracts__contract_end_date']
-    list_editable=['organisation','gender','date_of_birth', 'national_id', 'pin_no', 'shif_or_nhif_number', 'nssf_no', 'deleted', 'terminated']
+    list_display = ('id', 'user', 'organisation', 'gender', 'date_of_birth', 'national_id', 'allow_ess', 'ess_unrestricted_access', 'deleted', 'terminated')
+    list_filter=['organisation', 'gender', 'allow_ess', 'ess_unrestricted_access', 'deleted','terminated']
+    search_fields=['user__email', 'user__first_name', 'user__last_name', 'national_id', 'pin_no', 'shif_or_nhif_number', 'nssf_no']
+    list_editable=['organisation','gender','date_of_birth', 'national_id', 'deleted', 'terminated']
     list_display_links=['user','id']
     inlines = [SalaryDetailsInline, HRDetailsInline, ContractInline,ContactDetailsInline, NextOfKinInline, DocumentsInline, EmployeeLoansInline, EmployeeDeductionsInline,EmployeeEarningsInline,EmployeeBenefitsInline]
     fieldsets = (
         ('Personal Information', {
             'fields': ('user', 'organisation','gender', 'passport_photo', 'date_of_birth', 'residential_status', 'national_id', 'pin_no', 'shif_or_nhif_number', 'nssf_no', 'deleted', 'terminated',)
+        }),
+        ('ESS Access Control', {
+            'fields': ('allow_ess', 'ess_unrestricted_access', 'ess_activated_at', 'ess_last_login'),
+            'classes': ('collapse',)
         }),
     )
 
@@ -155,16 +159,18 @@ class EmployeeAdmin(admin.ModelAdmin):
 @admin.register(SalaryDetails)
 class SalaryDetailsAdmin(admin.ModelAdmin):
     list_per_page=10
-    list_display = ('id', 'employee', 'employment_type', 'monthly_salary', 'pay_type', 'work_hours', 'hourly_rate', 'daily_rate', 'income_tax', 'deduct_shif_or_nhif', 'deduct_nssf', 'payment_type', 'bank_account', 'mobile_number')
+    list_display = ('id', 'employee', 'employment_type', 'monthly_salary', 'pay_type', 'work_hours', 'work_shift', 'hourly_rate', 'daily_rate', 'income_tax', 'deduct_shif_or_nhif', 'deduct_nssf', 'payment_type', 'bank_account', 'mobile_number')
+    list_filter = ('employment_type', 'work_shift', 'pay_type', 'income_tax', 'payment_type')
+    search_fields = ('employee__user__first_name', 'employee__user__last_name', 'employee__user__email')
     fieldsets = (
         ('General', {
-            'fields': ('employee', 'employment_type', 'monthly_salary', 'pay_type', 'work_hours', 'hourly_rate', 'daily_rate', 'income_tax', 'deduct_shif_or_nhif', 'deduct_nssf')
+            'fields': ('employee', 'employment_type', 'monthly_salary', 'pay_type', 'work_hours', 'work_shift', 'hourly_rate', 'daily_rate', 'income_tax', 'deduct_shif_or_nhif', 'deduct_nssf')
         }),
         ('Tax Exemption', {
             'fields': ('tax_excemption_amount', 'excemption_cert_no')
         }),
         ('Payment Options', {
-            'fields': ('payment_type', 'bank', 'mobile_number')
+            'fields': ('payment_type', 'bank_account', 'mobile_number')
         }),
     )
 
@@ -423,8 +429,26 @@ class ExpenseCategoryAdmin(admin.ModelAdmin):
     
 @admin.register(JobTitle)
 class JobTitleAdmin(admin.ModelAdmin):
-    list_per_page=10
-    list_display = ('id', 'title')
+    list_display = ['title']
+    search_fields = ['title']
+    list_per_page = 10
+
+
+@admin.register(JobGroup)
+class JobGroupAdmin(admin.ModelAdmin):
+    list_display = ['title', 'created_at', 'updated_at']
+    search_fields = ['title', 'description']
+    list_filter = ['created_at']
+    list_per_page = 10
+
+
+@admin.register(WorkersUnion)
+class WorkersUnionAdmin(admin.ModelAdmin):
+    list_display = ['name', 'code', 'registration_number', 'contact_person', 'contact_email', 'created_at']
+    search_fields = ['name', 'code', 'registration_number', 'contact_person']
+    list_filter = ['created_at']
+    list_per_page = 10
+
 
 @admin.register(EmployeeBankAccount)
 class EmployeeBankAccountAdmin(admin.ModelAdmin):

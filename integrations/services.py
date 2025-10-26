@@ -10,6 +10,9 @@ from notifications.services import (
     send_email_task, send_sms_task, send_push_notification_task, send_notification_task
 )
 
+# Import configuration service
+from .services.config_service import IntegrationConfigService
+
 __all__ = [
     # Notification services (redirected to centralized app)
     'EmailService',
@@ -21,8 +24,10 @@ __all__ = [
     'send_push_notification_task',
     'send_notification_task',
     
-    # KRA service
+    # Integration services
     'KRAService',
+    'WebhookDeliveryService',
+    'IntegrationConfigService',
 ]
 
 # Factory functions - redirect to centralized notifications

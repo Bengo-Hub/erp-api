@@ -37,8 +37,15 @@ from .functions import generate_contact_id
 from rest_framework.pagination import LimitOffsetPagination
 from django.db.models import Case, Value, When
 from django.contrib.auth.hashers import make_password
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+from django.db import transaction, models
+import logging
 
-class ContactsViewSet(viewsets.ModelViewSet):
+logger = logging.getLogger(__name__)
+
+class ContactsViewSet(BaseModelViewSet):
     queryset = Contact.objects.annotate(
             is_walkin=Case(
                 When(user__username__icontains='walkin', then=Value(True)),
@@ -47,8 +54,8 @@ class ContactsViewSet(viewsets.ModelViewSet):
             )
         ).filter(is_deleted=False).order_by('-is_walkin').prefetch_related('accounts').select_related('user','customer_group', 'created_by')
     serializer_class = ContactSerializer
-    permission_classes = [permissions.IsAuthenticated,]
-    pagination_class = LimitOffsetPagination  # Use the custom pagination class
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = LimitOffsetPagination
 
     def get_object(self, pk):
         try:

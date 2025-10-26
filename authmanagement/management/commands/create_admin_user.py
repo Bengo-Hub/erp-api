@@ -15,18 +15,18 @@ class Command(BaseCommand):
             if CustomUser.objects.filter(username='admin').exists():
                 self.stdout.write(self.style.WARNING('Admin user already exists'))
                 admin_user = CustomUser.objects.get(username='admin')
-            elif CustomUser.objects.filter(email='admin@bengohub.co.ke').exists():
+            elif CustomUser.objects.filter(email='admin@codevertexitsolutions.com').exists():
                 self.stdout.write(self.style.WARNING('Admin user with email already exists'))
-                admin_user = CustomUser.objects.get(email='admin@bengohub.co.ke')
+                admin_user = CustomUser.objects.get(email='admin@codevertexitsolutions.com')
             else:
                 # Create new admin user
                 admin_user = CustomUser.objects.create(
                     username='admin',
-                    email='admin@bengohub.co.ke',
-                    password=make_password('@Super123'),
-                    first_name='Procure',
+                    email='admin@codevertexitsolutions.com',
+                    password=make_password('Demo@2020!'),
+                    first_name='Super',
                     middle_name='',
-                    last_name='Pro',
+                    last_name='User',
                     is_active=True,
                     is_staff=True,
                     is_superuser=True
@@ -52,8 +52,8 @@ class Command(BaseCommand):
             
             self.stdout.write(self.style.SUCCESS('Admin user setup completed successfully!'))
             self.stdout.write(f'Username: admin')
-            self.stdout.write(f'Password: @Super123')
-            self.stdout.write(f'Email: admin@bengohub.co.ke')
+            self.stdout.write(f'Password: Demo@2020!')
+            self.stdout.write(f'Email: admin@codevertexitsolutions.com')
             
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'Error creating admin user: {str(e)}'))

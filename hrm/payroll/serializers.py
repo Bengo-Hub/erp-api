@@ -45,6 +45,19 @@ class ExpenseClaimsSerializer(serializers.ModelSerializer):
         model = ExpenseClaims
         fields = ['approver', 'approved', 'category','application_date','attachment']
 
+
+class ExpenseClaimSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExpenseClaimSettings
+        fields = ['id', 'payment_method', 'mandatory_attachment', 'mileage_rate_currency', 
+                  'mileage_rate_amount', 'mileage_rate_unit']
+
+
+class ExpenseCodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExpenseCode
+        fields = ['id', 'code', 'title', 'description', 'is_active']
+
 class LoanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Loans
@@ -163,6 +176,16 @@ class EmployeeAdvancesSerializer(serializers.ModelSerializer):
         
         instance.save()
         return instance
+
+class CustomReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomReport
+        fields = ['id', 'name', 'description', 'report_type', 'params', 'is_public', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return CustomReport.objects.create(created_by=user, **validated_data)
         
 class EmployeeLossDamagesSerializer(serializers.ModelSerializer):
     repay_option = RepaymentOptionSerializer()
@@ -520,7 +543,8 @@ class PayrollEmployeeSerializer(serializers.ModelSerializer):
                     'title': hr_details.department.title
                 }
         except HRDetails.DoesNotExist:
-            pass
+            # Employee has no HR details; return None gracefully
+            return None
         return None
     
     def get_region(self, obj):
@@ -532,7 +556,8 @@ class PayrollEmployeeSerializer(serializers.ModelSerializer):
                     'name': hr_details.region.name
                 }
         except HRDetails.DoesNotExist:
-            pass
+            # Employee has no HR details; return None gracefully
+            return None
         return None
     
     def get_project(self, obj):
@@ -544,8 +569,8 @@ class PayrollEmployeeSerializer(serializers.ModelSerializer):
                     'name': hr_details.project.name
                 }
         except HRDetails.DoesNotExist:
-            pass
-        return None
+            # Employee has no HR details; return None gracefully
+            return None
     
     def get_employment_type(self, obj):
         try:

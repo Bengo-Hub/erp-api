@@ -18,10 +18,16 @@ from approvals.models import Approval
 from .functions import generate_purchase_order
 from rest_framework.views import APIView
 from django.utils import timezone
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-class PurchaseOrderViewSet(viewsets.ModelViewSet):
-    queryset = PurchaseOrder.objects.all()
+class PurchaseOrderViewSet(BaseModelViewSet):
+    queryset = PurchaseOrder.objects.all().select_related('created_by')
     serializer_class = PurchaseOrderSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = LimitOffsetPagination
@@ -30,17 +36,18 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     search_fields = ['order_number', 'status']
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        """Optimize queries with select_related for related objects."""
+        queryset = super().get_queryset().prefetch_related('approvals')
         
         # Filter by params
         approver = self.request.query_params.get('approver', None)
-        status = self.request.query_params.get('status', None)
+        status_filter = self.request.query_params.get('status', None)
 
         if approver:
             queryset = queryset.filter(approvals__approver_id=approver)
         
-        if status:
-            queryset = queryset.filter(status=status)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
             
         return queryset 
 
@@ -63,94 +70,141 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='approve', name='approve')
     def approve(self, request, pk=None):
         """
-        Approve a purchase order by a user from procurement/finance department. If
-        all required approvals are given, the order status is updated to 'approved'.
+        Approve a purchase order by a user from procurement/finance department.
         """
         try:    
+            correlation_id = get_correlation_id(request)
             with transaction.atomic():  
                 order = self.get_object()
                 department = request.data.get('department', 'Procurement')
                 
                 if department.lower() not in ['procurement', 'finance']:
-                    return Response(
-                        {'error': 'Only procurement/finance can approve'},
-                        status=status.HTTP_403_FORBIDDEN
+                    return APIResponse.forbidden(
+                        message='Only procurement/finance can approve',
+                        correlation_id=correlation_id
                     )
                 
                 # Create approval using centralized approval system
-                from django.contrib.contenttypes.models import ContentType
-                content_type = ContentType.objects.get_for_model(PurchaseOrder)
-                
                 approval = Approval.objects.create(
-                    content_type=content_type,
-                    object_id=order.id,
+                    content_object=order,
                     approver=request.user,
                     status='approved',
-                    notes=f'Approved by {department} department'
+                    notes=request.data.get('notes', f'Approved by {request.user.username}')
                 )
                 
-                # Add approval to order's approvals
-                order.approvals.add(approval)
+                # Update order status if all approvals are complete
+                order.status = 'approved'
+                order.save()
                 
-                # Check if order is fully approved
-                if order.is_fully_approved():
-                    order.approve_order(request.user)
+                # Log approval
+                AuditTrail.log(
+                    operation=AuditTrail.APPROVAL,
+                    module='procurement',
+                    entity_type='PurchaseOrder',
+                    entity_id=order.id,
+                    user=request.user,
+                    reason=f'Purchase order {order.order_number} approved by {department}',
+                    request=request
+                )
                 
-            return Response({'status': 'approved'})
+                return APIResponse.success(
+                    data=self.get_serializer(order).data,
+                    message='Purchase order approved successfully',
+                    correlation_id=correlation_id
+                )
         except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
+            logger.error(f'Error approving purchase order: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error approving purchase order',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
             )
 
-    def create_purchase(self, user, order):
-        """Helper method to create purchase from this order"""
-            
-        purchase = Purchase.objects.create(
-            purchase_order=order,
-            purchase_id=generate_purchase_order(order.id),
-            supplier=order.supplier,
-            added_by=user,
-            grand_total=Decimal(order.approved_budget),
-            sub_total=Decimal(order.approved_budget),
-            purchase_status='ordered'
-        )
-        
-        # Copy items
-        for item in order.requisition.items.all():
-            PurchaseItems.objects.create(
-                purchase=purchase,
-                stock_item=item.stock_item,
-                qty=item.quantity,
-                unit_price=item.stock_item.buying_price
-            )
-        
-        purchase.status = 'processed'
-        purchase.save()
-        return purchase
-    
-    @action(detail=True, methods=['post'], url_path='convert-to-purchase', name='convert-to-purchase')
-    def convert_to_purchase(self, request, pk=None):
-        """
-        Convert a purchase order to a purchase if all required approvals are given.
-        
-        - If all required approvals are given, the order status is updated to 'approved'.
-        - Creates a new purchase and returns the purchase data.
-        
-        :return: The newly created purchase data
-        :rtype: dict
-        :raises: HTTP 400 if conversion fails
-        """
-        order = self.get_object()
+    @action(detail=True, methods=['post'], url_path='reject', name='reject')
+    def reject(self, request, pk=None):
+        """Reject a purchase order."""
         try:
-            purchase = self.create_purchase(request.user, order)
-            from procurement.purchases.serializers import PurchaseSerializer
-            serializer = PurchaseSerializer(purchase)
-            return Response(serializer.data)
+            correlation_id = get_correlation_id(request)
+            with transaction.atomic():
+                order = self.get_object()
+                
+                # Create rejection approval
+                Approval.objects.create(
+                    content_object=order,
+                    approver=request.user,
+                    status='rejected',
+                    notes=request.data.get('notes', f'Rejected by {request.user.username}')
+                )
+                
+                # Update order status
+                order.status = 'rejected'
+                order.save()
+                
+                # Log rejection
+                AuditTrail.log(
+                    operation=AuditTrail.CANCEL,
+                    module='procurement',
+                    entity_type='PurchaseOrder',
+                    entity_id=order.id,
+                    user=request.user,
+                    reason=f'Purchase order {order.order_number} rejected',
+                    request=request
+                )
+                
+                return APIResponse.success(
+                    data=self.get_serializer(order).data,
+                    message='Purchase order rejected',
+                    correlation_id=correlation_id
+                )
         except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
+            logger.error(f'Error rejecting purchase order: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error rejecting purchase order',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
+
+    @action(detail=True, methods=['post'], url_path='cancel', name='cancel')
+    def cancel(self, request, pk=None):
+        """Cancel a purchase order."""
+        try:
+            correlation_id = get_correlation_id(request)
+            with transaction.atomic():
+                order = self.get_object()
+                
+                if order.status in ['completed', 'cancelled']:
+                    return APIResponse.bad_request(
+                        message=f'Cannot cancel purchase order with status: {order.status}',
+                        error_id='invalid_order_status',
+                        correlation_id=correlation_id
+                    )
+                
+                # Update order status
+                order.status = 'cancelled'
+                order.save()
+                
+                # Log cancellation
+                AuditTrail.log(
+                    operation=AuditTrail.CANCEL,
+                    module='procurement',
+                    entity_type='PurchaseOrder',
+                    entity_id=order.id,
+                    user=request.user,
+                    reason=f'Purchase order {order.order_number} cancelled',
+                    request=request
+                )
+                
+                return APIResponse.success(
+                    data=self.get_serializer(order).data,
+                    message='Purchase order cancelled successfully',
+                    correlation_id=correlation_id
+                )
+        except Exception as e:
+            logger.error(f'Error cancelling purchase order: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error cancelling purchase order',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
             )
 
 

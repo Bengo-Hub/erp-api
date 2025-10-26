@@ -88,6 +88,16 @@ class ProjectsViewSet(viewsets.ModelViewSet):
     queryset = Projects.objects.all()
     serializer_class = ProjectsSerializer
 
+
+class ProjectCategoryViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing project categories.
+    """
+    queryset = ProjectCategory.objects.all()
+    serializer_class = ProjectCategorySerializer
+    permission_classes = [IsAuthenticated]
+
+
 class DepartmentsViewSet(viewsets.ModelViewSet):
     queryset = Departments.objects.all()
     serializer_class = DepartmentsSerializer
@@ -970,3 +980,75 @@ class PerformanceDashboardView(APIView):
                 'error': str(e),
                 'generated_at': timezone.now().isoformat()
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RegionalSettingsViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        try:
+            settings = RegionalSettings.load()
+            serializer = RegionalSettingsSerializer(settings)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def retrieve(self, request, pk=None):
+        return self.list(request)
+
+    def update(self, request, pk=None):
+        try:
+            settings = RegionalSettings.load()
+            serializer = RegionalSettingsSerializer(settings, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({'message': 'Regional settings updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BrandingSettingsViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        """Get branding settings (singleton)"""
+        try:
+            settings = BrandingSettings.load()
+            serializer = BrandingSettingsSerializer(settings)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def retrieve(self, request, pk=None):
+        """Get branding settings by ID (ignores pk, returns singleton)"""
+        return self.list(request)
+
+    def update(self, request, pk=None):
+        """Update branding settings (PUT - full update)"""
+        try:
+            settings = BrandingSettings.load()
+            serializer = BrandingSettingsSerializer(settings, data=request.data, partial=False)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({
+                    'message': 'Branding settings updated successfully', 
+                    'data': serializer.data
+                }, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def partial_update(self, request, pk=None):
+        """Update branding settings (PATCH - partial update)"""
+        try:
+            settings = BrandingSettings.load()
+            serializer = BrandingSettingsSerializer(settings, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({
+                    'message': 'Branding settings updated successfully', 
+                    'data': serializer.data
+                }, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

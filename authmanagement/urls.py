@@ -10,6 +10,7 @@ from .security import (
 router = DefaultRouter()
 #router.register('listusers', UserViewSet)
 router.register('hodusers', HODUserViewSet, basename='hodusers')
+router.register('groups', GroupViewSet, basename='groups')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -31,6 +32,9 @@ urlpatterns = [
     path('roles/<int:pk>/', RoleView.as_view(), name='role_detail'),
     path('permissions/', PermissionView.as_view(), name='permission_list'),
     path('permissions/<int:pk>/', PermissionView.as_view(), name='permission_detail'),
+    
+    # User Preferences
+    path('users/<int:pk>/preferences/', UserPreferencesView.as_view(), name='user_preferences'),
 
     # Security URLs (single login endpoint at /api/v1/auth/login/)
     path('security/login/', EnhancedLoginView.as_view(), name='enhanced_login'),

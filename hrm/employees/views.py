@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
 
 from crm.contacts.utils import ImportContacts
 from ecommerce.product.functions import ImportProducts
@@ -10,6 +11,7 @@ from hrm.payroll_settings.models import *
 from hrm.payroll.serializers import *
 from hrm.payroll.models import *
 from hrm.employees.models import *
+from .services.ess_utils import create_ess_account, reset_ess_password, deactivate_ess_account
 from rest_framework.renderers import *
 from rest_framework.response import Response
 from rest_framework.permissions import *
@@ -27,6 +29,12 @@ from django.db.models import F,Q,Prefetch
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import api_view
 from .analytics.employee_analytics import EmployeeAnalyticsService
+from core.base_viewsets import BaseModelViewSet
+from core.response import APIResponse, get_correlation_id
+from core.audit import AuditTrail
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class UploadEmployData(APIView):
@@ -55,7 +63,7 @@ class UploadEmployData(APIView):
         # except Exception as e:
         #     return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class EmployeeViewSet(viewsets.ModelViewSet):#cruds
+class EmployeeViewSet(BaseModelViewSet):#cruds
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     #serializer_class = PersonalDataSerializer
@@ -63,20 +71,54 @@ class EmployeeViewSet(viewsets.ModelViewSet):#cruds
     pagination_class = PageNumberPagination  # Enable pagination
 
     def get_queryset(self):
+        """Filter employees with optimized queries using select_related and prefetch_related."""
+        from core.utils import get_branch_id_from_request
+        
         queryset = super().get_queryset()
-        branch_id = self.request.query_params.get('branch_id',None)
+        
+        # Optimize queries for related objects
+        queryset = queryset.select_related('organisation', 'user')
+        queryset = queryset.prefetch_related('hr_details', 'bank_accounts__bank_branch')
+        
+        # Get branch from X-Branch-ID header
+        branch_id = get_branch_id_from_request(self.request)
+        if not branch_id:
+            # Fallback to query param
+            branch_id = self.request.query_params.get('branch_id', None)
+        
         employement_type = self.request.query_params.getlist('employement_type', None)
         contract_start_date = self.request.query_params.get("contract_start_date", None)
         contract_end_date = self.request.query_params.get("contract_end_date", None)
-        department_ids = self.request.query_params.getlist("department[]", None)
-        region_ids = self.request.query_params.getlist("region[]", None)
+        
+        # Support multiple filter parameter formats for departments and regions
+        department_ids = (
+            self.request.query_params.getlist("department[]", None) or 
+            self.request.query_params.getlist("department", None) or
+            ([self.request.query_params.get("department")] if self.request.query_params.get("department") else None)
+        )
+        
+        region_ids = (
+            self.request.query_params.getlist("region[]", None) or 
+            self.request.query_params.getlist("region", None) or
+            ([self.request.query_params.get("region")] if self.request.query_params.get("region") else None)
+        )
+        
+        project_ids = (
+            self.request.query_params.getlist("project[]", None) or 
+            self.request.query_params.getlist("project", None) or
+            ([self.request.query_params.get("project")] if self.request.query_params.get("project") else None)
+        )
+        
         employee_ids = self.request.query_params.getlist("employee_ids[]", None)
 
+        # Apply branch filtering if branch_id is available
         if branch_id:
-           queryset = queryset.filter(branch__branch_id=branch_id)
+            # Filter through hr_details which has branch relationship
+            queryset = queryset.filter(hr_details__branch_id=branch_id)
+            
         if not self.request.user.is_superuser:
             orgs=Bussiness.objects.filter(Q(owner=self.request.user)|Q(id=getattr(getattr(self.request.user, "employee", None), "organisation_id", None)))
-            queryset = queryset.filter(Q(organisation__in=orgs)) 
+            queryset = queryset.filter(Q(organisation__in=orgs))
         
         # Apply employment type filtering - this is the key fix
         if employement_type:
@@ -92,10 +134,28 @@ class EmployeeViewSet(viewsets.ModelViewSet):#cruds
             )
             print("Employee view - No employment types specified, excluding casual and consultant employees by default")
         
+        # Apply department filter
         if department_ids:
-            queryset = queryset.filter(hr_details__department_id__in=department_ids)
+            # Filter None values
+            department_ids = [d for d in department_ids if d is not None and d != '']
+            if department_ids:
+                queryset = queryset.filter(hr_details__department_id__in=department_ids)
+        
+        # Apply region filter
         if region_ids:
-            queryset = queryset.filter(hr_details__region_id__in=region_ids)
+            # Filter None values
+            region_ids = [r for r in region_ids if r is not None and r != '']
+            if region_ids:
+                queryset = queryset.filter(hr_details__region_id__in=region_ids)
+        
+        # Apply project filter
+        if project_ids:
+            # Filter None values
+            project_ids = [p for p in project_ids if p is not None and p != '']
+            if project_ids:
+                queryset = queryset.filter(hr_details__project_id__in=project_ids)
+        
+        # Apply employee IDs filter
         if employee_ids:
             queryset = queryset.filter(id__in=employee_ids).order_by('id')
 
@@ -111,7 +171,92 @@ class EmployeeViewSet(viewsets.ModelViewSet):#cruds
                 print(f"Date parsing error: {e}")
                 # Return empty queryset on date error
                 return Employee.objects.none()
-        return queryset 
+        return queryset
+    
+    def perform_create(self, serializer):
+        """Override create to handle ESS account creation"""
+        employee = serializer.save()
+        
+        # If allow_ess is True, create ESS account and send welcome email
+        if employee.allow_ess:
+            result = create_ess_account(employee)
+            if result['success']:
+                logger.info(f"ESS account created for employee {employee.id}")
+            else:
+                logger.warning(f"Failed to create ESS account for employee {employee.id}: {result['message']}")
+        
+        return employee
+    
+    def perform_update(self, serializer):
+        """Override update to handle ESS activation changes"""
+        employee = serializer.save()
+        
+        # Check if allow_ess was just enabled
+        if employee.allow_ess and not employee.ess_activated_at:
+            result = create_ess_account(employee)
+            if result['success']:
+                logger.info(f"ESS account activated for employee {employee.id}")
+        
+        return employee
+    
+    @action(detail=True, methods=['post'], url_path='ess/reset-password')
+    def reset_ess_password(self, request, pk=None):
+        """Reset ESS password for an employee (Admin only)"""
+        employee = self.get_object()
+        
+        if not employee.allow_ess:
+            return Response(
+                {'error': 'ESS access is not enabled for this employee'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        new_password = request.data.get('new_password')
+        result = reset_ess_password(employee, new_password)
+        
+        if result['success']:
+            return Response({
+                'message': 'ESS password reset successfully',
+                'temporary_password': result['temporary_password']
+            })
+        else:
+            return Response(
+                {'error': 'Failed to reset password'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'], url_path='ess/activate')
+    def activate_ess(self, request, pk=None):
+        """Activate ESS access for an employee"""
+        employee = self.get_object()
+        employee.allow_ess = True
+        employee.save()
+        
+        result = create_ess_account(employee)
+        
+        if result['success']:
+            return Response({
+                'message': 'ESS account activated and welcome email sent',
+                'email_sent': result['email_sent']
+            })
+        else:
+            return Response(
+                {'error': result['message']},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'], url_path='ess/deactivate')
+    def deactivate_ess(self, request, pk=None):
+        """Deactivate ESS access for an employee"""
+        employee = self.get_object()
+        result = deactivate_ess_account(employee)
+        
+        if result['success']:
+            return Response({'message': result['message']})
+        else:
+            return Response(
+                {'error': 'Failed to deactivate ESS'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            ) 
 
 class EmployeeStatusAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -150,19 +295,54 @@ class EmployeeDeductionsViewSet(viewsets.ModelViewSet):#crudf
     pagination_class = PageNumberPagination  # Enable pagination
     
     def list(self, request, *args, **kwargs):
-        department_ids = request.query_params.getlist("department[]", None)
-        region_ids = request.query_params.getlist("region[]", None)
+        from core.utils import get_branch_id_from_request
+        
+        # Support multiple filter parameter formats
+        department_ids = (
+            request.query_params.getlist("department[]", None) or 
+            request.query_params.getlist("department", None) or
+            ([request.query_params.get("department")] if request.query_params.get("department") else None)
+        )
+        region_ids = (
+            request.query_params.getlist("region[]", None) or 
+            request.query_params.getlist("region", None) or
+            ([request.query_params.get("region")] if request.query_params.get("region") else None)
+        )
+        project_ids = (
+            request.query_params.getlist("project[]", None) or 
+            request.query_params.getlist("project", None) or
+            ([request.query_params.get("project")] if request.query_params.get("project") else None)
+        )
         deduction_id = request.query_params.get("deduction", None)
         emp_id = request.query_params.get("emp_id", None)
+        
+        # Get branch from X-Branch-ID header
+        branch_id = get_branch_id_from_request(request)
 
         # Apply filters dynamically
         deductions = self.get_queryset()
+        
+        if branch_id:
+            deductions = deductions.filter(employee__hr_details__branch_id=branch_id)
+            
         if emp_id:
             deductions = deductions.filter(employee__id=emp_id)
+            
         if department_ids:
-            deductions = deductions.filter(employee__hr_details__department__id__in=department_ids)
+            department_ids = [d for d in department_ids if d is not None and d != '']
+            if department_ids:
+                deductions = deductions.filter(employee__hr_details__department__id__in=department_ids)
+                
         if region_ids:
-            deductions = deductions.filter(employee__hr_details__region__id__in=region_ids)
+            region_ids = [r for r in region_ids if r is not None and r != '']
+            if region_ids:
+                deductions = deductions.filter(employee__hr_details__region__id__in=region_ids)
+                
+        if project_ids:
+            project_ids = [p for p in project_ids if p is not None and p != '']
+            if project_ids:
+                deductions = deductions.filter(employee__hr_details__project__id__in=project_ids)
+                
         if deduction_id:
             print(deduction_id)
             deductions = deductions.filter(deduction__id=deduction_id)
@@ -273,19 +453,54 @@ class EmployeeEarningsViewSet(viewsets.ModelViewSet):#crudf
     pagination_class = PageNumberPagination  # Enable pagination
 
     def list(self, request, *args, **kwargs):
-        department_ids = request.query_params.getlist("department[]", None)
-        region_ids = request.query_params.getlist("region[]", None)
+        from core.utils import get_branch_id_from_request
+        
+        # Support multiple filter parameter formats
+        department_ids = (
+            request.query_params.getlist("department[]", None) or 
+            request.query_params.getlist("department", None) or
+            ([request.query_params.get("department")] if request.query_params.get("department") else None)
+        )
+        region_ids = (
+            request.query_params.getlist("region[]", None) or 
+            request.query_params.getlist("region", None) or
+            ([request.query_params.get("region")] if request.query_params.get("region") else None)
+        )
+        project_ids = (
+            request.query_params.getlist("project[]", None) or 
+            request.query_params.getlist("project", None) or
+            ([request.query_params.get("project")] if request.query_params.get("project") else None)
+        )
         earning_id = request.query_params.get("earning", None)
         emp_id = request.query_params.get("emp_id", None)
+        
+        # Get branch from X-Branch-ID header
+        branch_id = get_branch_id_from_request(request)
 
         # Apply filters dynamically
         earnings = self.get_queryset()
+        
+        if branch_id:
+            earnings = earnings.filter(employee__hr_details__branch_id=branch_id)
+            
         if emp_id:
             earnings = earnings.filter(employee__id=emp_id)
+            
         if department_ids:
-            earnings = earnings.filter(employee__hr_details__department__id__in=department_ids)
+            department_ids = [d for d in department_ids if d is not None and d != '']
+            if department_ids:
+                earnings = earnings.filter(employee__hr_details__department__id__in=department_ids)
+                
         if region_ids:
-            earnings = earnings.filter(employee__hr_details__region__id__in=region_ids)
+            region_ids = [r for r in region_ids if r is not None and r != '']
+            if region_ids:
+                earnings = earnings.filter(employee__hr_details__region__id__in=region_ids)
+                
+        if project_ids:
+            project_ids = [p for p in project_ids if p is not None and p != '']
+            if project_ids:
+                earnings = earnings.filter(employee__hr_details__project__id__in=project_ids)
+                
         if earning_id:
             print(earning_id)
             earnings = earnings.filter(earning__id=earning_id)
@@ -545,6 +760,22 @@ class SalaryDetailsViewSet(viewsets.ModelViewSet):
     permission_classes=[IsAuthenticated]
     pagination_class = PageNumberPagination  # Enable pagination
 
+    def perform_create(self, serializer):
+        """Assign Regular shift by default if no shift is provided"""
+        if not serializer.validated_data.get('work_shift'):
+            from hrm.attendance.models import WorkShift
+            # Get or create Regular shift
+            regular_shift, created = WorkShift.objects.get_or_create(
+                name='Regular Shift',
+                defaults={
+                    'grace_minutes': 15,
+                    'total_hours_per_week': 40.00
+                }
+            )
+            serializer.save(work_shift=regular_shift)
+        else:
+            serializer.save()
+
     def list(self, request, *args, **kwargs):
         department_ids = request.query_params.getlist("department[]", None)
         region_ids = request.query_params.getlist("region[]", None)
@@ -574,18 +805,52 @@ class HRDetailsViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination  # Enable pagination
 
     def list(self, request, *args, **kwargs):
-        department_ids = request.query_params.getlist("department[]", None)
-        region_ids = request.query_params.getlist("region[]", None)
+        from core.utils import get_branch_id_from_request
+        
+        # Support multiple filter parameter formats
+        department_ids = (
+            request.query_params.getlist("department[]", None) or 
+            request.query_params.getlist("department", None) or
+            ([request.query_params.get("department")] if request.query_params.get("department") else None)
+        )
+        region_ids = (
+            request.query_params.getlist("region[]", None) or 
+            request.query_params.getlist("region", None) or
+            ([request.query_params.get("region")] if request.query_params.get("region") else None)
+        )
+        project_ids = (
+            request.query_params.getlist("project[]", None) or 
+            request.query_params.getlist("project", None) or
+            ([request.query_params.get("project")] if request.query_params.get("project") else None)
+        )
         emp_id = request.query_params.get("emp_id", None)
+        
+        # Get branch from X-Branch-ID header
+        branch_id = get_branch_id_from_request(request)
 
         # Apply filters dynamically
         queryset = self.get_queryset()
+        
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
+            
         if emp_id:
             queryset = queryset.filter(employee__id=emp_id)
+            
         if department_ids:
-            queryset = queryset.filter(department__id__in=department_ids)
+            department_ids = [d for d in department_ids if d is not None and d != '']
+            if department_ids:
+                queryset = queryset.filter(department__id__in=department_ids)
+                
         if region_ids:
-            queryset = queryset.filter(region__id__in=region_ids)
+            region_ids = [r for r in region_ids if r is not None and r != '']
+            if region_ids:
+                queryset = queryset.filter(region__id__in=region_ids)
+                
+        if project_ids:
+            project_ids = [p for p in project_ids if p is not None and p != '']
+            if project_ids:
+                queryset = queryset.filter(project__id__in=project_ids)
         
         # Paginate the queryset
         page = self.paginate_queryset(queryset)
@@ -798,6 +1063,147 @@ class EmployeePayrollDataViewSet(viewsets.ViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class JobTitleViewSet(BaseModelViewSet):
+    """
+    ViewSet for managing job titles.
+    """
+    queryset = JobTitle.objects.all()
+    serializer_class = JobTitleSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['title']
+    ordering_fields = ['title']
+    ordering = ['title']
+
+
+class JobGroupViewSet(BaseModelViewSet):
+    """
+    ViewSet for managing job groups.
+    """
+    queryset = JobGroup.objects.all()
+    serializer_class = JobGroupSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['title', 'description']
+    ordering_fields = ['title']
+    ordering = ['title']
+
+
+class WorkersUnionViewSet(BaseModelViewSet):
+    """
+    ViewSet for managing workers unions.
+    """
+    queryset = WorkersUnion.objects.all()
+    serializer_class = WorkersUnionSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['name', 'code', 'registration_number']
+    ordering_fields = ['name', 'code']
+    ordering = ['name']
+
+
+class ESSSettingsViewSet(APIView):
+    """
+    API View for ESS Settings (Singleton).
+    Provides retrieve and update functionality only.
+    Accessible to all authenticated users, including those without Employee records.
+    Uses APIView instead of ViewSet to completely bypass employee filtering.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, pk=None):
+        """
+        Get ESS settings - accessible to all users.
+        Does not require employee record.
+        """
+        try:
+            from hrm.attendance.models import ESSSettings
+            from hrm.attendance.serializers import ESSSettingsSerializer
+            from core.response import APIResponse, get_correlation_id
+            
+            correlation_id = get_correlation_id(request)
+            
+            # Load settings without employee context
+            settings = ESSSettings.load()
+            serializer = ESSSettingsSerializer(settings)
+            
+            return APIResponse.success(
+                data=serializer.data,
+                message='ESS settings retrieved successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            from core.response import APIResponse, get_correlation_id
+            correlation_id = get_correlation_id(request)
+            logger.error(f"Error fetching ESS settings: {str(e)}", exc_info=True)
+            import traceback
+            logger.error(traceback.format_exc())
+            
+            # Return default settings if table doesn't exist yet or any error occurs
+            # This ensures ESS settings are always available, even without migrations
+            return APIResponse.success(
+                data={
+                    'id': 1,
+                    'enable_shift_based_restrictions': True,
+                    'exempt_roles': [],
+                    'exempt_roles_details': [],
+                    'allow_payslip_view': True,
+                    'allow_leave_application': True,
+                    'allow_timesheet_application': True,  # Enable all by default
+                    'allow_overtime_application': True,
+                    'allow_advance_salary_application': True,
+                    'allow_losses_damage_submission': True,
+                    'allow_expense_claims_application': True,
+                    'require_password_change_on_first_login': True,
+                    'session_timeout_minutes': 60,
+                    'allow_weekend_login': False,
+                    'max_failed_login_attempts': 5,
+                    'account_lockout_duration_minutes': 30
+                },
+                message='Using default settings - run "python manage.py setup_ess_settings" to persist',
+                correlation_id=correlation_id
+            )
+    
+    def put(self, request, pk=None):
+        """Update ESS settings (PUT)"""
+        return self.patch(request, pk)
+    
+    def patch(self, request, pk=None):
+        """Update ESS settings"""
+        try:
+            from hrm.attendance.models import ESSSettings
+            from hrm.attendance.serializers import ESSSettingsSerializer
+            from core.response import APIResponse, get_correlation_id
+            
+            correlation_id = get_correlation_id(request)
+            settings = ESSSettings.load()
+            serializer = ESSSettingsSerializer(settings, data=request.data, partial=True)
+            
+            if serializer.is_valid():
+                serializer.save()
+                return APIResponse.success(
+                    data=serializer.data,
+                    message='ESS settings updated successfully',
+                    correlation_id=correlation_id
+                )
+            
+            return APIResponse.validation_error(
+                message='Validation failed',
+                errors=serializer.errors,
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            from core.response import APIResponse, get_correlation_id
+            correlation_id = get_correlation_id(request)
+            logger.error(f"Error updating ESS settings: {str(e)}", exc_info=True)
+            
+            return APIResponse.server_error(
+                message='Failed to update ESS settings. Please run migrations first.',
+                error_id=str(e),
+                correlation_id=correlation_id
+            )
 
 
 @api_view(['GET'])

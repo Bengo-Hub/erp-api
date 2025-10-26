@@ -3,13 +3,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import permissions
 from notifications.services import EmailService
 from hrm.employees.models import Employee
+from hrm.employees.permissions import StaffDataFilterMixin, SensitiveModuleFilterMixin
 from datetime import datetime, date
 from rest_framework.exceptions import ValidationError
 from rest_framework import viewsets, status
 import json
 from hrm.payroll.utils import PayrollGenerator
 from .tasks import batch_process_payslips, process_single_payslip, rerun_payslip
-from .models import Payslip
+from .models import Payslip, CustomReport
 from .serializers import *
 from itertools import groupby
 from django.db.models import Sum, Count, Q
@@ -29,10 +30,16 @@ from hrm.payroll.tasks import process_single_payslip, batch_process_payslips, di
 from core.modules.email_tasks import send_email_with_retry, send_bulk_emails
 from rest_framework.decorators import api_view
 from .analytics.payroll_analytics import PayrollAnalyticsService
+from core.modules.report_export import export_report_to_csv, export_report_to_pdf
+from hrm.payroll.services.reports_service import PayrollReportsService
 from rest_framework.decorators import action
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from .services.payroll_approval_service import PayrollApprovalService
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.decorators import action
 
 User = get_user_model()
 
@@ -121,12 +128,74 @@ class ProcessPayrollViewSet(viewsets.ViewSet):
         serializer = PayrollEmployeeSerializer(employees, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+class CustomReportViewSet(viewsets.ModelViewSet):
+    queryset = CustomReport.objects.all()
+    serializer_class = CustomReportSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = CustomReport.objects.filter(Q(is_public=True) | Q(created_by=self.request.user))
+        report_type = self.request.query_params.get('report_type')
+        if report_type:
+            qs = qs.filter(report_type=report_type)
+        return qs.order_by('-updated_at')
+
+    @action(detail=True, methods=['post'])
+    def run(self, request, pk=None):
+        """Execute a saved custom report and optionally export as CSV/PDF."""
+        custom_report = self.get_object()
+        params = custom_report.params or {}
+        service = PayrollReportsService()
+
+        rt = custom_report.report_type
+        if rt == 'p9':
+            result = service.generate_p9_report(params)
+        elif rt == 'p10a':
+            result = service.generate_p10a_report(params)
+        elif rt == 'statutory':
+            deduction = params.get('deduction_type', 'nssf')
+            result = service.generate_statutory_deductions_report(params, deduction)
+        elif rt == 'bank_net_pay':
+            result = service.generate_bank_net_pay_report(params)
+        elif rt == 'muster_roll':
+            result = service.generate_muster_roll_report(params)
+        elif rt == 'withholding_tax':
+            result = service.generate_withholding_tax_report(params)
+        elif rt == 'variance':
+            result = service.generate_variance_report(params)
+        else:
+            return Response({'error': 'Unsupported report type'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'error' in result:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+        export_fmt = request.query_params.get('export')
+        if export_fmt == 'csv':
+            return export_report_to_csv(result.get('data', []), filename=f'{rt}.csv')
+        if export_fmt == 'pdf':
+            company = {
+                'name': params.get('company_name') or 'Company',
+                'address': params.get('company_address'),
+                'email': params.get('company_email'),
+                'phone': params.get('company_phone'),
+            }
+            return export_report_to_pdf(result.get('data', []), filename=f'{rt}.pdf', title=rt.replace('_', ' ').title(), company=company)
+
+        return Response(result)
+
     def list(self, request):
+        from core.pagination import paginated_response
+        from hrm.utils.filter_utils import get_filter_params, apply_hrm_filters
+        
         fromdate = request.query_params.get("fromdate", None)
         todate = request.query_params.get("todate", None)
-        department_ids = request.query_params.getlist("department[]", None)
-        region_ids = request.query_params.getlist("region[]", None)
-        employee_ids = request.query_params.getlist("employee_ids[]", None)
+        
+        # Get standardized filter parameters
+        filter_params = get_filter_params(request)
+        department_ids = filter_params.get('department_ids')
+        region_ids = filter_params.get('region_ids')
+        employee_ids = filter_params.get('employee_ids')
 
         # Apply filters dynamically
         payslips = Payslip.objects.filter(payroll_status='complete',delete_status=False).order_by('employee__id')
@@ -822,25 +891,27 @@ class EmailPayslipsView(APIView):
             print(f"Error: {e}")
             return JsonResponse({'error': f'Failed to email payslips: {str(e)}'}, status=500)
 
-class EmployeeAdvancesViewSet(viewsets.ModelViewSet):
+class EmployeeAdvancesViewSet(SensitiveModuleFilterMixin, viewsets.ModelViewSet):
     queryset = Advances.objects.all()
     serializer_class = EmployeeAdvancesSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Advances.objects.all()
-        employee_id = self.request.query_params.get('employee', None)
-        department_id = self.request.query_params.get('department', None)
-        region_id = self.request.query_params.get('region', None)
+        from hrm.utils.filter_utils import get_filter_params, apply_hrm_filters
+        
+        # Get filtered queryset based on permissions (from mixin)
+        queryset = super().get_queryset()
+        
+        # Get standardized filter parameters
+        filter_params = get_filter_params(self.request)
+        
+        # Apply HRM filters (branch, department, region, project, employee)
+        queryset = apply_hrm_filters(queryset, filter_params, filter_prefix='employee__hr_details')
+        
+        # Additional specific filters
         from_date = self.request.query_params.get('from_date', None)
         to_date = self.request.query_params.get('to_date', None)
-
-        if employee_id:
-            queryset = queryset.filter(employee_id=employee_id)
-        if department_id:
-            queryset = queryset.filter(employee__hr_details__department_id=department_id)
-        if region_id:
-            queryset = queryset.filter(employee__hr_details__region_id=region_id)
+        
         if from_date and to_date:
             queryset = queryset.filter(issue_date__range=[from_date, to_date])
 
@@ -935,25 +1006,27 @@ class EmployeeAdvancesViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-class EmployeeLossDamagesViewSet(viewsets.ModelViewSet): 
+class EmployeeLossDamagesViewSet(SensitiveModuleFilterMixin, viewsets.ModelViewSet): 
     queryset = LossesAndDamages.objects.all() 
     serializer_class = EmployeeLossDamagesSerializer  
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = LossesAndDamages.objects.all()
-        employee_id = self.request.query_params.get('employee', None)
-        department_id = self.request.query_params.get('department', None)
-        region_id = self.request.query_params.get('region', None)
+        from hrm.utils.filter_utils import get_filter_params, apply_hrm_filters
+        
+        # Get filtered queryset based on permissions (from mixin)
+        queryset = super().get_queryset()
+        
+        # Get standardized filter parameters
+        filter_params = get_filter_params(self.request)
+        
+        # Apply HRM filters (branch, department, region, project, employee)
+        queryset = apply_hrm_filters(queryset, filter_params, filter_prefix='employee__hr_details')
+        
+        # Additional specific filters
         from_date = self.request.query_params.get('from_date', None)
         to_date = self.request.query_params.get('to_date', None)
-
-        if employee_id:
-            queryset = queryset.filter(employee_id=employee_id)
-        if department_id:
-            queryset = queryset.filter(employee__hr_details__department_id=department_id)
-        if region_id:
-            queryset = queryset.filter(employee__hr_details__region_id=region_id)
+        
         if from_date and to_date:
             queryset = queryset.filter(issue_date__range=[from_date, to_date])
 
@@ -1078,7 +1151,61 @@ class ClaimItemViewSet(viewsets.ModelViewSet):
     queryset = ClaimItems.objects.all()
     serializer_class = ClaimItemSerializer
 
-class ExpenseClaimViewSet(viewsets.ModelViewSet):
+class ExpenseClaimSettingsViewSet(viewsets.ViewSet):
+    """
+    ViewSet for Expense Claim Settings (Singleton).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        """Get expense claim settings"""
+        try:
+            settings = ExpenseClaimSettings.load()
+            serializer = ExpenseClaimSettingsSerializer(settings)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def retrieve(self, request, pk=None):
+        """Get expense claim settings by ID (always returns the singleton)"""
+        return self.list(request)
+
+    def update(self, request, pk=None):
+        """Update expense claim settings"""
+        try:
+            settings = ExpenseClaimSettings.load()
+            serializer = ExpenseClaimSettingsSerializer(settings, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(
+                    {'message': 'Expense claim settings updated successfully'},
+                    status=status.HTTP_200_OK
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ExpenseCodeViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing expense codes.
+    """
+    queryset = ExpenseCode.objects.filter(is_active=True)
+    serializer_class = ExpenseCodeSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['code', 'title', 'description']
+    ordering_fields = ['code', 'title']
+    ordering = ['code']
+
+
+class ExpenseClaimViewSet(SensitiveModuleFilterMixin, viewsets.ModelViewSet):
     queryset = ExpenseClaims.objects.filter(delete_status=False)
     serializer_class = ExpenseClaimSerializer
 
