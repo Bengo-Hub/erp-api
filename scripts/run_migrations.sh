@@ -195,7 +195,8 @@ fi
 
 set +e
 kubectl apply -f /tmp/migrate-job.yaml
-stream_job "${NAMESPACE}" "${APP_NAME}-migrate-${GIT_COMMIT_ID}" "300s"
+# Increased timeout to 600s (10 minutes) to handle large number of migrations
+stream_job "${NAMESPACE}" "${APP_NAME}-migrate-${GIT_COMMIT_ID}" "600s"
 JOB_STATUS=$?
 set -e
 
