@@ -131,7 +131,8 @@ fi
 
 set +e
 kubectl apply -f /tmp/seed-job.yaml
-stream_job "${NAMESPACE}" "${APP_NAME}-seed-${GIT_COMMIT_ID}" "300s"
+# Increased timeout to 600s (10 minutes) to handle large seeding operations
+stream_job "${NAMESPACE}" "${APP_NAME}-seed-${GIT_COMMIT_ID}" "600s"
 SEED_STATUS=$?
 set -e
 
