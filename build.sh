@@ -259,22 +259,26 @@ if [[ "$DEPLOY" == "true" ]]; then
     if [[ "$DEPLOY" == "true" ]]; then
         log_step "Starting enhanced deployment process..."
 
-        # Database setup logic (using modular script)
+        # Setup environment secrets from existing databases (skip DB installation - handled by devops-k8s)
         if [[ "$SETUP_DATABASES" == "true" ]]; then
             ensure_kube_config
             
-            if [[ -f "scripts/setup_databases.sh" ]]; then
-                chmod +x scripts/setup_databases.sh
-                ./scripts/setup_databases.sh || { log_error "Database setup failed"; exit 1; }
-            else
-                log_error "scripts/setup_databases.sh not found"
-                exit 1
-            fi
+            log_info "Databases are managed by devops-k8s infrastructure"
+            log_info "Retrieving credentials from existing secrets and setting up app environment"
             
-            # Configure VPA for databases
-            if [[ -f "scripts/configure_vpa.sh" ]]; then
-                chmod +x scripts/configure_vpa.sh
-                NAMESPACE="$NAMESPACE" ./scripts/configure_vpa.sh || log_warning "VPA configuration failed"
+            if [[ -f "scripts/setup_env_secrets.sh" ]]; then
+                chmod +x scripts/setup_env_secrets.sh
+                VALIDATION_OUTPUT=$(./scripts/setup_env_secrets.sh) || { log_error "Environment secret setup failed"; exit 1; }
+                
+                # Parse output for validated credentials
+                export EFFECTIVE_PG_PASS=$(echo "$VALIDATION_OUTPUT" | grep "^EFFECTIVE_PG_PASS=" | cut -d= -f2-)
+                export VALIDATED_DB_USER=$(echo "$VALIDATION_OUTPUT" | grep "^VALIDATED_DB_USER=" | cut -d= -f2-)
+                export VALIDATED_DB_NAME=$(echo "$VALIDATION_OUTPUT" | grep "^VALIDATED_DB_NAME=" | cut -d= -f2-)
+                
+                log_success "Environment secrets configured successfully"
+            else
+                log_error "scripts/setup_env_secrets.sh not found"
+                exit 1
             fi
         fi
 
@@ -346,7 +350,7 @@ if [[ "$DEPLOY" == "true" ]]; then
             # Ensure kubeconfig is set up
             ensure_kube_config
 
-            # Wait for databases to be ready
+            # Wait for databases to be ready (already managed by devops-k8s)
             log_info "Waiting for PostgreSQL to be ready..."
             kubectl -n "$NAMESPACE" rollout status statefulset/postgresql --timeout=180s || log_warning "PostgreSQL not fully ready"
             
@@ -357,30 +361,7 @@ if [[ "$DEPLOY" == "true" ]]; then
             log_info "Waiting 5 seconds to allow database services to stabilize before connecting..."
             sleep 5
             
-            # Validate database password and update env secret (using modular scripts)
-            if [[ -f "scripts/validate_db_password.sh" ]]; then
-                chmod +x scripts/validate_db_password.sh
-                VALIDATION_OUTPUT=$(./scripts/validate_db_password.sh) || { log_error "Password validation failed"; exit 1; }
-                
-                # Parse validation output
-                export EFFECTIVE_PG_PASS=$(echo "$VALIDATION_OUTPUT" | grep "^EFFECTIVE_PG_PASS=" | cut -d= -f2-)
-                export VALIDATED_DB_USER=$(echo "$VALIDATION_OUTPUT" | grep "^VALIDATED_DB_USER=" | cut -d= -f2-)
-                export VALIDATED_DB_NAME=$(echo "$VALIDATION_OUTPUT" | grep "^VALIDATED_DB_NAME=" | cut -d= -f2-)
-                
-                # Update env secret with validated credentials
-                if [[ -f "scripts/update_env_secret.sh" ]]; then
-                    chmod +x scripts/update_env_secret.sh
-                    ./scripts/update_env_secret.sh || { log_error "Env secret update failed"; exit 1; }
-                else
-                    log_error "scripts/update_env_secret.sh not found"
-                    exit 1
-                fi
-            else
-                log_error "scripts/validate_db_password.sh not found"
-                exit 1
-            fi
-            
-            # Verify env secret exists
+            # Verify env secret exists (created by setup_env_secrets.sh earlier)
             if ! kubectl -n "$NAMESPACE" get secret "$ENV_SECRET_NAME" >/dev/null 2>&1; then
                 log_error "Environment secret ${ENV_SECRET_NAME} not found; cannot run migrations"
                 exit 1
