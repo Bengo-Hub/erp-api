@@ -333,20 +333,33 @@ if [[ "$DEPLOY" == "true" ]]; then
             fi
         fi
 
-        # Handle immutable app PVCs (media/static) safely; NEVER touch database PVCs
+        # Ensure ArgoCD Application has correct ignoreDifferences for PVCs
         if [[ -n "${KUBE_CONFIG:-}" ]]; then
-            MEDIA_PVC_NAME=${MEDIA_PVC_NAME:-"erp-api-media"}
-            STATIC_PVC_NAME=${STATIC_PVC_NAME:-"erp-api-static"}
-            ALLOW_RECREATE_MEDIA_PVC=${ALLOW_RECREATE_MEDIA_PVC:-true}
-
-            if [[ "${ALLOW_RECREATE_MEDIA_PVC}" == "true" ]]; then
-                log_step "Reconciling immutable app PVCs (media/static)"
-                # Delete only app-owned PVCs that are safe to recreate; do not touch DB PVCs
-                kubectl -n "$NAMESPACE" delete pvc "${MEDIA_PVC_NAME}" --ignore-not-found || true
-                kubectl -n "$NAMESPACE" delete pvc "${STATIC_PVC_NAME}" --ignore-not-found || true
-                log_info "Requested deletion of media/static PVCs (if present). ArgoCD/Helm will recreate them."
+            log_step "Ensuring ArgoCD Application has PVC ignoreDifferences configured..."
+            
+            # Check if ArgoCD Application exists and has ignoreDifferences for PVCs
+            if kubectl -n argocd get application erp-api >/dev/null 2>&1; then
+                HAS_PVC_IGNORE=$(kubectl -n argocd get application erp-api -o jsonpath='{.spec.ignoreDifferences}' | grep -i persistentvolumeclaim || echo "")
+                
+                if [[ -z "$HAS_PVC_IGNORE" ]]; then
+                    log_info "Updating ArgoCD Application with PVC ignoreDifferences..."
+                    kubectl -n argocd patch application erp-api --type merge -p '{
+                      "spec": {
+                        "ignoreDifferences": [
+                          {
+                            "group": "",
+                            "kind": "PersistentVolumeClaim",
+                            "jsonPointers": ["/spec/volumeName", "/spec/volumeMode", "/status"]
+                          }
+                        ]
+                      }
+                    }' || log_warning "Could not patch ArgoCD Application"
+                    log_success "ArgoCD Application updated with PVC ignoreDifferences"
+                else
+                    log_info "ArgoCD Application already has PVC ignoreDifferences configured"
+                fi
             else
-                log_info "Skipping app PVC reconciliation (ALLOW_RECREATE_MEDIA_PVC=${ALLOW_RECREATE_MEDIA_PVC})"
+                log_info "ArgoCD Application 'erp-api' not found yet - will be created with correct config"
             fi
         fi
 
