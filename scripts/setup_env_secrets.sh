@@ -189,6 +189,123 @@ kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" \
 
 log_success "Environment secret created/updated with production configuration"
 
+# Update kubeSecrets/devENV.yaml with verified credentials for consistency
+# This ensures local deployments and Helm values use the same verified credentials
+if [[ -f "kubeSecrets/devENV.yaml" ]]; then
+    log_step "Updating kubeSecrets/devENV.yaml with verified credentials..."
+    
+    # Backup existing file
+    cp kubeSecrets/devENV.yaml kubeSecrets/devENV.yaml.bak
+    
+    # Create updated devENV.yaml with verified credentials
+    cat > kubeSecrets/devENV.yaml <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${ENV_SECRET_NAME}
+  namespace: ${NAMESPACE}
+type: Opaque
+stringData:
+  # Database credentials (verified from K8s secrets)
+  DATABASE_URL: "postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}"
+  DB_HOST: "postgresql.${NAMESPACE}.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_NAME: "${APP_DB_NAME}"
+  DB_USER: "${APP_DB_USER}"
+  DB_PASSWORD: "${APP_DB_PASS}"
+  
+  # Redis credentials (verified from K8s secrets)
+  REDIS_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0"
+  REDIS_HOST: "redis-master.${NAMESPACE}.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: "${REDIS_PASS}"
+  
+  # Celery configuration
+  CELERY_BROKER_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0"
+  CELERY_RESULT_BACKEND: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1"
+  
+  # Django secrets
+  DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY}"
+  SECRET_KEY: "${DJANGO_SECRET_KEY}"
+  JWT_SECRET: "${JWT_SECRET}"
+  
+  # Django configuration
+  DJANGO_SETTINGS_MODULE: "ProcureProKEAPI.settings"
+  DEBUG: "False"
+  DJANGO_ENV: "production"
+  
+  # Network configuration (with comprehensive ALLOWED_HOSTS)
+  ALLOWED_HOSTS: "${ALLOWED_HOSTS}"
+  CORS_ALLOWED_ORIGINS: "https://erp.masterspace.co.ke,http://localhost:3000,*.masterspace.co.ke"
+  FRONTEND_URL: "https://erp.masterspace.co.ke"
+  CSRF_TRUSTED_ORIGINS: "https://erp.masterspace.co.ke,https://erpapi.masterspace.co.ke"
+  
+  # Static and media files
+  MEDIA_ROOT: "/app/media"
+  MEDIA_URL: "/media/"
+  STATIC_ROOT: "/app/staticfiles"
+  STATIC_URL: "/static/"
+EOF
+
+    log_success "✓ kubeSecrets/devENV.yaml updated with verified credentials"
+    log_info "Backup saved to kubeSecrets/devENV.yaml.bak"
+else
+    log_warning "kubeSecrets/devENV.yaml not found - creating new file"
+    mkdir -p kubeSecrets
+    
+    # Create new devENV.yaml with verified credentials
+    cat > kubeSecrets/devENV.yaml <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${ENV_SECRET_NAME}
+  namespace: ${NAMESPACE}
+type: Opaque
+stringData:
+  # Database credentials (verified from K8s secrets)
+  DATABASE_URL: "postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}"
+  DB_HOST: "postgresql.${NAMESPACE}.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_NAME: "${APP_DB_NAME}"
+  DB_USER: "${APP_DB_USER}"
+  DB_PASSWORD: "${APP_DB_PASS}"
+  
+  # Redis credentials (verified from K8s secrets)
+  REDIS_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0"
+  REDIS_HOST: "redis-master.${NAMESPACE}.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: "${REDIS_PASS}"
+  
+  # Celery configuration
+  CELERY_BROKER_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0"
+  CELERY_RESULT_BACKEND: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1"
+  
+  # Django secrets
+  DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY}"
+  SECRET_KEY: "${DJANGO_SECRET_KEY}"
+  JWT_SECRET: "${JWT_SECRET}"
+  
+  # Django configuration
+  DJANGO_SETTINGS_MODULE: "ProcureProKEAPI.settings"
+  DEBUG: "False"
+  DJANGO_ENV: "production"
+  
+  # Network configuration (with comprehensive ALLOWED_HOSTS)
+  ALLOWED_HOSTS: "${ALLOWED_HOSTS}"
+  CORS_ALLOWED_ORIGINS: "https://erp.masterspace.co.ke,http://localhost:3000,*.masterspace.co.ke"
+  FRONTEND_URL: "https://erp.masterspace.co.ke"
+  CSRF_TRUSTED_ORIGINS: "https://erp.masterspace.co.ke,https://erpapi.masterspace.co.ke"
+  
+  # Static and media files
+  MEDIA_ROOT: "/app/media"
+  MEDIA_URL: "/media/"
+  STATIC_ROOT: "/app/staticfiles"
+  STATIC_URL: "/static/"
+EOF
+
+    log_success "✓ kubeSecrets/devENV.yaml created with verified credentials"
+fi
+
 # Export validated credentials for use by parent script
 echo "EFFECTIVE_PG_PASS=${APP_DB_PASS}"
 echo "VALIDATED_DB_USER=${APP_DB_USER}"
