@@ -18,3 +18,7 @@ dist
 .eslintcache
 api-generator/typedoc.json
 **/.DS_Store
+
+# Backup files
+*.bak
+kubeSecrets/*.bak
