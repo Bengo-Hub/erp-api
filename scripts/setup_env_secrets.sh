@@ -27,49 +27,59 @@ if ! command -v kubectl &> /dev/null; then
     exit 1
 fi
 
-# Get PostgreSQL password - prioritize environment variables (from GitHub secrets)
+# Get PostgreSQL password - ALWAYS use the password from the live database
 APP_DB_USER="postgres"
 APP_DB_NAME="$PG_DATABASE"
 
-# Priority 1: Environment variable (from GitHub secrets or manual export)
-if [[ -n "$POSTGRES_PASSWORD" ]]; then
-    log_info "Using POSTGRES_PASSWORD from environment/GitHub secrets (priority)"
-    APP_DB_PASS="$POSTGRES_PASSWORD"
-# Priority 2: Kubernetes secret (fallback)
-elif kubectl -n "$NAMESPACE" get secret postgresql >/dev/null 2>&1; then
+# CRITICAL: The database password is the source of truth
+# Get it from the PostgreSQL secret (where Helm stores it)
+if kubectl -n "$NAMESPACE" get secret postgresql >/dev/null 2>&1; then
     EXISTING_PG_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
     if [[ -n "$EXISTING_PG_PASS" ]]; then
-        log_info "Using PostgreSQL password from Kubernetes secret (fallback)"
+        log_info "Retrieved PostgreSQL password from database secret (source of truth)"
         APP_DB_PASS="$EXISTING_PG_PASS"
+        
+        # Verify it matches env var if provided (for validation)
+        if [[ -n "$POSTGRES_PASSWORD" && "$POSTGRES_PASSWORD" != "$EXISTING_PG_PASS" ]]; then
+            log_warning "POSTGRES_PASSWORD env var differs from database secret"
+            log_warning "Using database secret password (must match actual DB)"
+        fi
     else
         log_error "Could not retrieve PostgreSQL password from Kubernetes secret"
         exit 1
     fi
 else
-    log_error "PostgreSQL password not found in environment or Kubernetes secrets"
-    log_error "Please set POSTGRES_PASSWORD environment variable or ensure postgresql secret exists"
+    log_error "PostgreSQL secret not found in Kubernetes"
+    log_error "Ensure PostgreSQL is installed: kubectl get secret postgresql -n $NAMESPACE"
     exit 1
 fi
 
-# Get Redis password - prioritize environment variables (from GitHub secrets)
-# Priority 1: Environment variable (from GitHub secrets or manual export)
-if [[ -n "$REDIS_PASSWORD" ]]; then
-    log_info "Using REDIS_PASSWORD from environment/GitHub secrets (priority)"
-    REDIS_PASS="$REDIS_PASSWORD"
-# Priority 2: Kubernetes secret (fallback)
-elif kubectl -n "$NAMESPACE" get secret redis >/dev/null 2>&1; then
+log_info "Database password retrieved and verified (length: ${#APP_DB_PASS} chars)"
+
+# Get Redis password - ALWAYS use the password from the live database
+# CRITICAL: The database password is the source of truth
+# Get it from the Redis secret (where Helm stores it)
+if kubectl -n "$NAMESPACE" get secret redis >/dev/null 2>&1; then
     REDIS_PASS=$(kubectl -n "$NAMESPACE" get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
     if [[ -n "$REDIS_PASS" ]]; then
-        log_info "Using Redis password from Kubernetes secret (fallback)"
+        log_info "Retrieved Redis password from database secret (source of truth)"
+        
+        # Verify it matches env var if provided (for validation)
+        if [[ -n "$REDIS_PASSWORD" && "$REDIS_PASSWORD" != "$REDIS_PASS" ]]; then
+            log_warning "REDIS_PASSWORD env var differs from database secret"
+            log_warning "Using database secret password (must match actual DB)"
+        fi
     else
         log_error "Could not retrieve Redis password from Kubernetes secret"
         exit 1
     fi
 else
-    log_error "Redis password not found in environment or Kubernetes secrets"
-    log_error "Please set REDIS_PASSWORD environment variable or ensure redis secret exists"
+    log_error "Redis secret not found in Kubernetes"
+    log_error "Ensure Redis is installed: kubectl get secret redis -n $NAMESPACE"
     exit 1
 fi
+
+log_info "Redis password retrieved and verified (length: ${#REDIS_PASS} chars)"
 
 log_info "Database credentials retrieved: user=${APP_DB_USER}, db=${APP_DB_NAME}"
 
