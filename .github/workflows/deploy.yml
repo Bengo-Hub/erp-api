@@ -135,8 +135,8 @@ jobs:
         mkdir -p ~/.kube
         echo "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
 
-        # Ensure deployment is rolled out
-        kubectl rollout status deployment/erp-api -n ${NS} --timeout=300s
+        # Ensure deployment is rolled out (deployment name is erp-api-app from Helm chart)
+        kubectl rollout status deployment/erp-api-app -n ${NS} --timeout=300s
 
         # Try ingress health endpoint(s)
         HOSTS=$(kubectl get ingress -n ${NS} -o jsonpath='{.items[*].spec.rules[*].host}' | tr ' ' '\n' | grep -E '^erpapi(\.|$)' || true)
