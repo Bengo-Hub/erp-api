@@ -386,34 +386,20 @@ if [[ "$DEPLOY" == "true" ]]; then
                 exit 1
             fi
 
-            # Update ALLOWED_HOSTS with cluster internal IPs using dedicated script
-            log_step "Updating ALLOWED_HOSTS with cluster internal IPs..."
-            if [[ -f "scripts/update_allowed_hosts.sh" ]]; then
-                chmod +x scripts/update_allowed_hosts.sh
-                NAMESPACE="$NAMESPACE" ENV_SECRET_NAME="$ENV_SECRET_NAME" ./scripts/update_allowed_hosts.sh || log_warning "ALLOWED_HOSTS update script failed"
-            else
-                log_warning "scripts/update_allowed_hosts.sh not found; using inline logic"
-                # Fallback to inline implementation
-                kubectl -n "$NAMESPACE" rollout restart deployment/erp-api-app || true
-                kubectl -n "$NAMESPACE" rollout status deployment/erp-api-app --timeout=300s || log_warning "API deployment rollout not ready in time"
-                sleep 5
-                
-                POD_IPS=$(kubectl get pods -n "$NAMESPACE" -l app=erp-api-app -o jsonpath='{.items[*].status.podIP}' 2>/dev/null | tr ' ' ',' || true)
-                SVC_IP=$(kubectl get svc erp-api -n "$NAMESPACE" -o jsonpath='{.spec.clusterIP}' 2>/dev/null || true)
-                
-                UPDATED_ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
-                [[ -n "$SVC_IP" ]] && UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},${SVC_IP}"
-                [[ -n "$POD_IPS" ]] && UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},${POD_IPS}"
-                UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-                
-                log_info "Updated ALLOWED_HOSTS: ${UPDATED_ALLOWED_HOSTS}"
-                kubectl -n "$NAMESPACE" patch secret "$ENV_SECRET_NAME" --type merge -p "{\"stringData\":{\"ALLOWED_HOSTS\":\"${UPDATED_ALLOWED_HOSTS}\"}}" || log_warning "Failed to update ALLOWED_HOSTS"
-                
-                kubectl -n "$NAMESPACE" rollout restart deployment/erp-api-app || true
-                kubectl -n "$NAMESPACE" rollout status deployment/erp-api-app --timeout=300s || log_warning "Final API deployment rollout not ready"
-            fi
+            # ALLOWED_HOSTS and database credentials are now set once in setup_env_secrets.sh
+            # They include comprehensive network ranges and are NEVER updated after verification
+            # This prevents unnecessary restarts and ensures stable configuration
+            log_info "ALLOWED_HOSTS and database credentials set in environment secret"
+            log_info "Secret will NOT be modified again to prevent pod restarts"
             
-            log_success "ALLOWED_HOSTS updated with cluster IPs"
+            # Force ONE restart to pick up the verified credentials
+            log_step "Restarting deployment to apply verified credentials..."
+            if kubectl -n "$NAMESPACE" get deployment erp-api-app >/dev/null 2>&1; then
+                kubectl -n "$NAMESPACE" rollout restart deployment/erp-api-app || log_warning "Could not restart deployment"
+                log_info "Deployment restart triggered - ArgoCD will sync and apply new pods"
+            else
+                log_info "Deployment doesn't exist yet - ArgoCD will create it with correct secret"
+            fi
         fi
 
         # Note: ArgoCD applications are configured with automated sync

@@ -83,6 +83,22 @@ log_info "Redis password retrieved and verified (length: ${#REDIS_PASS} chars)"
 
 log_info "Database credentials retrieved: user=${APP_DB_USER}, db=${APP_DB_NAME}"
 
+# Get cluster IPs early for ALLOWED_HOSTS (before creating secret)
+log_step "Retrieving cluster IPs for ALLOWED_HOSTS..."
+POD_IPS=$(kubectl get pods -n "$NAMESPACE" -l app=erp-api-app -o jsonpath='{.items[*].status.podIP}' 2>/dev/null | tr ' ' ',' || true)
+SVC_IP=$(kubectl get svc erp-api -n "$NAMESPACE" -o jsonpath='{.spec.clusterIP}' 2>/dev/null || true)
+NODE_IPS=$(kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null | tr ' ' ',' || true)
+
+# Build comprehensive ALLOWED_HOSTS (set once, never changed)
+ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
+[[ -n "$SVC_IP" ]] && ALLOWED_HOSTS="${ALLOWED_HOSTS},${SVC_IP}"
+[[ -n "$POD_IPS" ]] && ALLOWED_HOSTS="${ALLOWED_HOSTS},${POD_IPS}"
+[[ -n "$NODE_IPS" ]] && ALLOWED_HOSTS="${ALLOWED_HOSTS},${NODE_IPS}"
+# Include network CIDR ranges to allow any cluster IP
+ALLOWED_HOSTS="${ALLOWED_HOSTS},10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+
+log_info "ALLOWED_HOSTS (comprehensive): ${ALLOWED_HOSTS}"
+
 # CRITICAL: Test database connectivity to verify password is correct
 log_step "Verifying PostgreSQL password by testing connection..."
 PGPASSWORD="$APP_DB_PASS" kubectl run -n "$NAMESPACE" pg-test-$$ --rm -i --restart=Never --image=postgres:15-alpine --command -- \
@@ -141,7 +157,7 @@ kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" \
   --from-literal=DJANGO_SETTINGS_MODULE="ProcureProKEAPI.settings" \
   --from-literal=DEBUG="False" \
   --from-literal=DJANGO_ENV="production" \
-  --from-literal=ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke" \
+  --from-literal=ALLOWED_HOSTS="${ALLOWED_HOSTS}" \
   --from-literal=CORS_ALLOWED_ORIGINS="https://erp.masterspace.co.ke,http://localhost:3000,*.masterspace.co.ke" \
   --from-literal=FRONTEND_URL="https://erp.masterspace.co.ke" \
   --from-literal=CSRF_TRUSTED_ORIGINS="https://erp.masterspace.co.ke,https://erpapi.masterspace.co.ke" \
