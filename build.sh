@@ -291,20 +291,25 @@ if [[ "$DEPLOY" == "true" ]]; then
             # Create namespace if needed
             kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create ns "$NAMESPACE"
 
-            # Apply dev environment secrets if available
-            if [[ -f "kubeSecrets/devENV.yaml" ]]; then
+            # CRITICAL: Do NOT apply kubeSecrets/devENV.yaml in CI/CD
+            # It contains outdated credentials and will overwrite the verified credentials
+            # from setup_env_secrets.sh. Only apply it in local/manual deployments.
+            if [[ -z "${CI:-}${GITHUB_ACTIONS:-}" && -f "kubeSecrets/devENV.yaml" ]]; then
+                log_info "Local deployment detected - applying kubeSecrets/devENV.yaml"
                 kubectl apply -f kubeSecrets/devENV.yaml || log_warning "Failed to apply dev secrets"
+            elif [[ -f "kubeSecrets/devENV.yaml" ]]; then
+                log_info "CI/CD deployment - skipping kubeSecrets/devENV.yaml (uses setup_env_secrets.sh instead)"
             fi
 
-            # Ensure JWT secret exists
+            # Ensure JWT secret exists (patch existing secret, don't recreate)
             if ! kubectl -n "$NAMESPACE" get secret "$ENV_SECRET_NAME" -o jsonpath='{.data.JWT_SECRET}' >/dev/null 2>&1; then
                 JWT_SECRET=$(openssl rand -hex 32)
                 if kubectl -n "$NAMESPACE" get secret "$ENV_SECRET_NAME" >/dev/null 2>&1; then
                     kubectl -n "$NAMESPACE" patch secret "$ENV_SECRET_NAME" -p "{\"stringData\":{\"JWT_SECRET\":\"$JWT_SECRET\"}}"
+                    log_success "JWT secret added to existing secret"
                 else
-                    kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" --from-literal=JWT_SECRET="$JWT_SECRET"
+                    log_warning "Environment secret doesn't exist yet - JWT will be added later"
                 fi
-                log_success "JWT secret configured"
             fi
 
             # Create/Update docker registry pull secret if credentials are provided
