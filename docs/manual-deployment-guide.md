@@ -132,6 +132,8 @@ export PG_DATABASE=${PG_DATABASE:-bengo_erp}
 helm upgrade --install postgresql bitnami/postgresql -n $NAMESPACE \
   --set global.postgresql.auth.postgresPassword="$POSTGRES_PASSWORD" \
   --set global.postgresql.auth.database="$PG_DATABASE" \
+  --set global.defaultFips=false \
+  --set fips.openssl=false \
   --wait --timeout=600s
 
 # Install/upgrade Redis

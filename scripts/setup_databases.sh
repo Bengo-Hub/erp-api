@@ -50,8 +50,11 @@ for db in "${types[@]}"; do
                 if [[ -n "$EXISTING_PG_PASS" ]]; then
                     kubectl -n "$NAMESPACE" patch secret postgresql --type merge -p "{\"stringData\":{\"password\":\"$EXISTING_PG_PASS\"}}" 2>/dev/null || true
                 fi
+                # Set FIPS configuration for newer chart versions
                 helm upgrade postgresql bitnami/postgresql -n "$NAMESPACE" \
                     --reuse-values \
+                    --set global.defaultFips=false \
+                    --set fips.openssl=false \
                     --wait --timeout=600s || log_warning "PostgreSQL safe upgrade failed"
             else
                 log_info "PostgreSQL not found; installing fresh"
@@ -62,6 +65,8 @@ for db in "${types[@]}"; do
                 helm install postgresql bitnami/postgresql -n "$NAMESPACE" \
                     --set global.postgresql.auth.postgresPassword="$POSTGRES_PASSWORD" \
                     --set global.postgresql.auth.database="$PG_DATABASE" \
+                    --set global.defaultFips=false \
+                    --set fips.openssl=false \
                     --wait --timeout=600s || log_warning "PostgreSQL installation failed"
             fi
             ;;
