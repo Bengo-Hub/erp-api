@@ -58,22 +58,74 @@ ${PULL_SECRETS_YAML}
         - -c
         - |
           set -e
-          echo "Checking database state..."
+          echo "==================================="
+          echo "Django Migrations - Smart Mode"
+          echo "==================================="
           
-          # Check if database has existing tables (indicating existing deployment)
-          if python manage.py showmigrations 2>&1 | grep -q "\[X\]"; then
-            echo "✓ Existing database detected with migration history"
-            echo "Running migrations with --fake-initial to handle existing schema..."
+          # Install PostgreSQL client for table checking
+          apt-get update -qq && apt-get install -y -qq postgresql-client >/dev/null 2>&1 || true
+          
+          # Check database state by counting tables
+          echo "Checking database state..."
+          TABLE_COUNT=\$(PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
+            -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" 2>/dev/null | xargs || echo "0")
+          
+          echo "Database has \$TABLE_COUNT tables"
+          
+          # Check if critical core tables exist (indicates properly migrated database)
+          CORE_TABLES_EXIST=0
+          for table in auth_user django_migrations core_businessdetail core_department core_region; do
+            if PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
+              -c "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='\$table';" 2>/dev/null | grep -q 1; then
+              ((CORE_TABLES_EXIST++))
+            fi
+          done
+          
+          echo "Core tables found: \$CORE_TABLES_EXIST/5"
+          
+          # Decision tree for migration strategy
+          if [[ "\$TABLE_COUNT" -eq "0" ]]; then
+            echo "✓ Fresh database (0 tables) - running normal migrations"
+            python manage.py migrate --noinput
+            
+          elif [[ "\$CORE_TABLES_EXIST" -ge "4" ]]; then
+            echo "✓ Well-established database (\$CORE_TABLES_EXIST/5 core tables) - using --fake-initial"
             python manage.py migrate --fake-initial --noinput || {
-              echo "⚠️  Migration with --fake-initial failed, trying regular migrate..."
+              echo "⚠️  --fake-initial failed, trying regular migrate..."
               python manage.py migrate --noinput
             }
+            
           else
-            echo "✓ Fresh database or no migration history - running normal migrations"
-            python manage.py migrate --noinput
+            echo "⚠️  Partial database (\$TABLE_COUNT tables but only \$CORE_TABLES_EXIST/5 core) - using regular migrations"
+            echo "This may fail if schema conflicts exist, but will ensure all tables are created"
+            python manage.py migrate --noinput || {
+              echo "⚠️  Regular migrate failed due to conflicts - trying --fake-initial as last resort..."
+              python manage.py migrate --fake-initial --noinput || {
+                echo "✗ Both migration strategies failed - database may be in inconsistent state"
+                exit 1
+              }
+            }
           fi
           
           echo "✅ Migrations completed successfully"
+          
+          # Verify critical tables exist after migrations
+          echo "Verifying critical tables..."
+          MISSING_TABLES=()
+          for table in auth_user django_migrations core_businessdetail attendance_timesheet; do
+            if ! PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
+              -c "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='\$table';" 2>/dev/null | grep -q 1; then
+              MISSING_TABLES+=("\$table")
+            fi
+          done
+          
+          if [[ \${#MISSING_TABLES[@]} -gt 0 ]]; then
+            echo "⚠️  WARNING: Some expected tables are missing after migrations:"
+            printf '  - %s\n' "\${MISSING_TABLES[@]}"
+            echo "This may cause seeding failures. Consider investigating migration issues."
+          else
+            echo "✓ All critical tables verified"
+          fi
         env:
         - name: DATABASE_URL
           valueFrom:

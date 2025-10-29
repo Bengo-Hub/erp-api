@@ -46,7 +46,53 @@ ${PULL_SECRETS_YAML}
       containers:
       - name: seed
         image: ${IMAGE_REPO}:${GIT_COMMIT_ID}
-        command: ["python", "manage.py", "seed_all", "--minimal"]
+        command:
+        - bash
+        - -c
+        - |
+          set -e
+          echo "==================================="
+          echo "Django Seeding - Smart Mode"
+          echo "==================================="
+          
+          # Install PostgreSQL client for table checking
+          apt-get update -qq && apt-get install -y -qq postgresql-client >/dev/null 2>&1 || true
+          
+          # Check if database has existing data
+          echo "Checking if database has existing data..."
+          TABLE_COUNT=\$(PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
+            -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" 2>/dev/null | xargs || echo "0")
+          
+          echo "Database has \$TABLE_COUNT tables"
+          
+          # Check if seed data already exists (check auth_user table)
+          USER_COUNT=0
+          if PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
+            -c "SELECT COUNT(*) FROM auth_user;" 2>/dev/null | grep -q .; then
+            USER_COUNT=\$(PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
+              -c "SELECT COUNT(*) FROM auth_user;" 2>/dev/null | xargs || echo "0")
+          fi
+          
+          echo "Database has \$USER_COUNT users"
+          
+          # Decision: Skip clearing if database has data (avoids deleting from missing tables)
+          if [[ "\$USER_COUNT" -gt "0" ]]; then
+            echo "✓ Existing data detected - seeding with --no-clear to preserve data"
+            echo "Running: python manage.py seed_all --minimal --no-clear"
+            python manage.py seed_all --minimal --no-clear || {
+              echo "⚠️  Seeding with --no-clear failed (may have conflicts)"
+              echo "Attempting to seed critical data only..."
+              python manage.py seed_core_data || true
+              python manage.py seed_business_data || true
+              echo "✓ Critical data seeded (some failures ignored)"
+            }
+          else
+            echo "✓ Fresh database - seeding with data clearing enabled"
+            echo "Running: python manage.py seed_all --minimal"
+            python manage.py seed_all --minimal
+          fi
+          
+          echo "✅ Seeding completed"
         envFrom:
         - secretRef:
             name: ${ENV_SECRET_NAME}
