@@ -147,11 +147,13 @@ else
     exit 1
 fi
 
-# Generate Django secret key if not provided
+# Generate Django secret key and JWT secret if not provided
 DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-$(openssl rand -hex 50)}
+JWT_SECRET=${JWT_SECRET:-$(openssl rand -hex 32)}
 
 # Create/update environment secret
 log_info "Creating/updating environment secret: ${ENV_SECRET_NAME}"
+log_info "Secret will include: DB credentials, Redis credentials, Django settings, JWT secret, ALLOWED_HOSTS"
 
 # CRITICAL: Delete and recreate to ensure clean state (prevents stale password issues)
 # Using replace --force ensures ALL keys are updated, not merged with old values
@@ -172,6 +174,7 @@ kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" \
   --from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1" \
   --from-literal=DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}" \
   --from-literal=SECRET_KEY="${DJANGO_SECRET_KEY}" \
+  --from-literal=JWT_SECRET="${JWT_SECRET}" \
   --from-literal=DJANGO_SETTINGS_MODULE="ProcureProKEAPI.settings" \
   --from-literal=DEBUG="False" \
   --from-literal=DJANGO_ENV="production" \
