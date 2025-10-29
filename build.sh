@@ -392,14 +392,34 @@ if [[ "$DEPLOY" == "true" ]]; then
             log_info "ALLOWED_HOSTS and database credentials set in environment secret"
             log_info "Secret will NOT be modified again to prevent pod restarts"
             
-            # Force ONE restart to pick up the verified credentials
-            log_step "Restarting deployment to apply verified credentials..."
+            # Force ONE restart of ALL deployments to pick up the verified credentials
+            log_step "Restarting all deployments to apply verified credentials..."
+            
+            # Restart main API deployment
             if kubectl -n "$NAMESPACE" get deployment erp-api-app >/dev/null 2>&1; then
-                kubectl -n "$NAMESPACE" rollout restart deployment/erp-api-app || log_warning "Could not restart deployment"
-                log_info "Deployment restart triggered - ArgoCD will sync and apply new pods"
+                kubectl -n "$NAMESPACE" rollout restart deployment/erp-api-app || log_warning "Could not restart API deployment"
+                log_info "API deployment restart triggered"
             else
-                log_info "Deployment doesn't exist yet - ArgoCD will create it with correct secret"
+                log_info "API deployment doesn't exist yet - ArgoCD will create it"
             fi
+            
+            # Restart Celery worker deployment (uses Redis password)
+            if kubectl -n "$NAMESPACE" get deployment erp-api-app-celery-worker >/dev/null 2>&1; then
+                kubectl -n "$NAMESPACE" rollout restart deployment/erp-api-app-celery-worker || log_warning "Could not restart Celery worker"
+                log_info "Celery worker deployment restart triggered"
+            else
+                log_info "Celery worker doesn't exist yet - ArgoCD will create it"
+            fi
+            
+            # Restart Celery beat deployment (uses Redis password)
+            if kubectl -n "$NAMESPACE" get deployment erp-api-app-celery-beat >/dev/null 2>&1; then
+                kubectl -n "$NAMESPACE" rollout restart deployment/erp-api-app-celery-beat || log_warning "Could not restart Celery beat"
+                log_info "Celery beat deployment restart triggered"
+            else
+                log_info "Celery beat doesn't exist yet - ArgoCD will create it"
+            fi
+            
+            log_success "All deployments restarted with verified credentials (DB + Redis)"
         fi
 
         # Note: ArgoCD applications are configured with automated sync
