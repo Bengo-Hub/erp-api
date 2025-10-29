@@ -80,38 +80,38 @@ stream_job() {
 # =============================================================================
 
 # Application configuration
-APP_NAME="erp-api"
-DEPLOY=${DEPLOY:-true}
-SETUP_DATABASES=${SETUP_DATABASES:-true}
-DB_TYPES=${DB_TYPES:-postgres,redis}
-NAMESPACE=${NAMESPACE:-erp}
-ENV_SECRET_NAME=${ENV_SECRET_NAME:-erp-api-env}
-PROVIDER=${PROVIDER:-contabo}
-CONTABO_API=${CONTABO_API:-true}
-SSH_DEPLOY=${SSH_DEPLOY:-false}
+export APP_NAME="erp-api"
+export DEPLOY=${DEPLOY:-true}
+export SETUP_DATABASES=${SETUP_DATABASES:-true}
+export DB_TYPES=${DB_TYPES:-postgres,redis}
+export NAMESPACE=${NAMESPACE:-erp}
+export ENV_SECRET_NAME=${ENV_SECRET_NAME:-erp-api-env}
+export PROVIDER=${PROVIDER:-contabo}
+export CONTABO_API=${CONTABO_API:-true}
+export SSH_DEPLOY=${SSH_DEPLOY:-false}
 
 # Registry configuration
-REGISTRY_SERVER=${REGISTRY_SERVER:-docker.io}
-REGISTRY_NAMESPACE=${REGISTRY_NAMESPACE:-codevertex}
-IMAGE_REPO="${REGISTRY_SERVER}/${REGISTRY_NAMESPACE}/${APP_NAME}"
+export REGISTRY_SERVER=${REGISTRY_SERVER:-docker.io}
+export REGISTRY_NAMESPACE=${REGISTRY_NAMESPACE:-codevertex}
+export IMAGE_REPO="${REGISTRY_SERVER}/${REGISTRY_NAMESPACE}/${APP_NAME}"
 
 # DevOps repository
-DEVOPS_REPO="Bengo-Hub/devops-k8s"
-DEVOPS_DIR=${DEVOPS_DIR:-"$HOME/devops-k8s"}
-VALUES_FILE_PATH="apps/erp-api/values.yaml"
+export DEVOPS_REPO="Bengo-Hub/devops-k8s"
+export DEVOPS_DIR=${DEVOPS_DIR:-"$HOME/devops-k8s"}
+export VALUES_FILE_PATH="apps/erp-api/values.yaml"
 
 # Git configuration
-GIT_EMAIL=${GIT_EMAIL:-"titusowuor30@gmail.com"}
-GIT_USER=${GIT_USER:-"Titus Owuor"}
+export GIT_EMAIL=${GIT_EMAIL:-"titusowuor30@gmail.com"}
+export GIT_USER=${GIT_USER:-"Titus Owuor"}
 
 # Security scanning - be less strict for deployment
-TRIVY_ECODE=${TRIVY_ECODE:-0}
+export TRIVY_ECODE=${TRIVY_ECODE:-0}
 
 # Get commit ID
 if [[ -z ${GITHUB_SHA:-} ]]; then
-    GIT_COMMIT_ID=$(git rev-parse --short=8 HEAD)
+    export GIT_COMMIT_ID=$(git rev-parse --short=8 HEAD)
 else
-    GIT_COMMIT_ID=${GITHUB_SHA::8}
+    export GIT_COMMIT_ID=${GITHUB_SHA::8}
 fi
 
 log_info "Starting BengoERP API deployment"
