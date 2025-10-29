@@ -83,11 +83,45 @@ log_info "Redis password retrieved and verified (length: ${#REDIS_PASS} chars)"
 
 log_info "Database credentials retrieved: user=${APP_DB_USER}, db=${APP_DB_NAME}"
 
+# CRITICAL: Test database connectivity to verify password is correct
+log_step "Verifying PostgreSQL password by testing connection..."
+PGPASSWORD="$APP_DB_PASS" kubectl run -n "$NAMESPACE" pg-test-$$ --rm -i --restart=Never --image=postgres:15-alpine --command -- \
+  psql -h postgresql."$NAMESPACE".svc.cluster.local -U "$APP_DB_USER" -d postgres -c "SELECT 1;" >/dev/null 2>&1
+
+if [[ $? -eq 0 ]]; then
+    log_success "✓ PostgreSQL password verified - connection successful"
+else
+    log_error "✗ PostgreSQL password verification FAILED"
+    log_error "The password in the Kubernetes secret does NOT match the actual database password"
+    log_error ""
+    log_error "DIAGNOSIS: Password mismatch detected"
+    log_error "- Secret password length: ${#APP_DB_PASS} chars"
+    log_error "- Database: postgresql.$NAMESPACE.svc.cluster.local:5432"
+    log_error ""
+    log_error "POSSIBLE CAUSES:"
+    log_error "1. PostgreSQL was provisioned with a different password than stored in the secret"
+    log_error "2. The secret was manually edited but database wasn't updated"
+    log_error "3. Password contains special characters that need escaping"
+    log_error ""
+    log_error "FIX: You must update the PostgreSQL password to match the secret, or vice versa"
+    log_error "Option A: Reset PostgreSQL password to match the secret:"
+    log_error "  kubectl exec -n $NAMESPACE postgresql-0 -- psql -U postgres -c \"ALTER USER postgres WITH PASSWORD '$APP_DB_PASS';\""
+    log_error ""
+    log_error "Option B: Update the secret to match the database (if you know the correct password):"
+    log_error "  kubectl -n $NAMESPACE patch secret postgresql --type merge -p '{\"data\":{\"postgres-password\":\"$(echo -n 'CORRECT_PASSWORD' | base64)\"}}'"
+    log_error ""
+    exit 1
+fi
+
 # Generate Django secret key if not provided
 DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-$(openssl rand -hex 50)}
 
 # Create/update environment secret
 log_info "Creating/updating environment secret: ${ENV_SECRET_NAME}"
+
+# CRITICAL: Delete and recreate to ensure clean state (prevents stale password issues)
+# Using replace --force ensures ALL keys are updated, not merged with old values
+kubectl -n "$NAMESPACE" delete secret "$ENV_SECRET_NAME" --ignore-not-found
 
 kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" \
   --from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}" \
@@ -114,8 +148,7 @@ kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" \
   --from-literal=MEDIA_ROOT="/app/media" \
   --from-literal=MEDIA_URL="/media/" \
   --from-literal=STATIC_ROOT="/app/staticfiles" \
-  --from-literal=STATIC_URL="/static/" \
-  --dry-run=client -o yaml | kubectl apply -f -
+  --from-literal=STATIC_URL="/static/"
 
 log_success "Environment secret created/updated with production configuration"
 
