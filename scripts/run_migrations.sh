@@ -53,7 +53,27 @@ ${PULL_SECRETS_YAML}
       containers:
       - name: migrate
         image: ${IMAGE_REPO}:${GIT_COMMIT_ID}
-        command: ["bash", "-lc", "python manage.py showmigrations >/dev/null 2>&1 || true; python manage.py migrate --noinput"]
+        command: 
+        - bash
+        - -c
+        - |
+          set -e
+          echo "Checking database state..."
+          
+          # Check if database has existing tables (indicating existing deployment)
+          if python manage.py showmigrations 2>&1 | grep -q "\[X\]"; then
+            echo "✓ Existing database detected with migration history"
+            echo "Running migrations with --fake-initial to handle existing schema..."
+            python manage.py migrate --fake-initial --noinput || {
+              echo "⚠️  Migration with --fake-initial failed, trying regular migrate..."
+              python manage.py migrate --noinput
+            }
+          else
+            echo "✓ Fresh database or no migration history - running normal migrations"
+            python manage.py migrate --noinput
+          fi
+          
+          echo "✅ Migrations completed successfully"
         env:
         - name: DATABASE_URL
           valueFrom:
