@@ -27,51 +27,48 @@ if ! command -v kubectl &> /dev/null; then
     exit 1
 fi
 
-# Get PostgreSQL password from secret or environment
+# Get PostgreSQL password - prioritize environment variables (from GitHub secrets)
 APP_DB_USER="postgres"
 APP_DB_NAME="$PG_DATABASE"
 
-# Try to get password from existing PostgreSQL secret
-if kubectl -n "$NAMESPACE" get secret postgresql >/dev/null 2>&1; then
+# Priority 1: Environment variable (from GitHub secrets or manual export)
+if [[ -n "$POSTGRES_PASSWORD" ]]; then
+    log_info "Using POSTGRES_PASSWORD from environment/GitHub secrets (priority)"
+    APP_DB_PASS="$POSTGRES_PASSWORD"
+# Priority 2: Kubernetes secret (fallback)
+elif kubectl -n "$NAMESPACE" get secret postgresql >/dev/null 2>&1; then
     EXISTING_PG_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
     if [[ -n "$EXISTING_PG_PASS" ]]; then
-        log_info "Retrieved PostgreSQL password from existing secret"
+        log_info "Using PostgreSQL password from Kubernetes secret (fallback)"
         APP_DB_PASS="$EXISTING_PG_PASS"
-    elif [[ -n "$POSTGRES_PASSWORD" ]]; then
-        log_info "Using POSTGRES_PASSWORD from environment"
-        APP_DB_PASS="$POSTGRES_PASSWORD"
     else
-        log_error "Could not retrieve PostgreSQL password from secret or environment"
+        log_error "Could not retrieve PostgreSQL password from Kubernetes secret"
         exit 1
     fi
 else
-    log_warning "PostgreSQL secret not found; using POSTGRES_PASSWORD from environment"
-    if [[ -z "$POSTGRES_PASSWORD" ]]; then
-        log_error "POSTGRES_PASSWORD environment variable is required"
-        exit 1
-    fi
-    APP_DB_PASS="$POSTGRES_PASSWORD"
+    log_error "PostgreSQL password not found in environment or Kubernetes secrets"
+    log_error "Please set POSTGRES_PASSWORD environment variable or ensure postgresql secret exists"
+    exit 1
 fi
 
-# Get Redis password from secret or environment
-if kubectl -n "$NAMESPACE" get secret redis >/dev/null 2>&1; then
+# Get Redis password - prioritize environment variables (from GitHub secrets)
+# Priority 1: Environment variable (from GitHub secrets or manual export)
+if [[ -n "$REDIS_PASSWORD" ]]; then
+    log_info "Using REDIS_PASSWORD from environment/GitHub secrets (priority)"
+    REDIS_PASS="$REDIS_PASSWORD"
+# Priority 2: Kubernetes secret (fallback)
+elif kubectl -n "$NAMESPACE" get secret redis >/dev/null 2>&1; then
     REDIS_PASS=$(kubectl -n "$NAMESPACE" get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
     if [[ -n "$REDIS_PASS" ]]; then
-        log_info "Retrieved Redis password from existing secret"
-    elif [[ -n "$REDIS_PASSWORD" ]]; then
-        log_info "Using REDIS_PASSWORD from environment"
-        REDIS_PASS="$REDIS_PASSWORD"
+        log_info "Using Redis password from Kubernetes secret (fallback)"
     else
-        log_error "Could not retrieve Redis password from secret or environment"
+        log_error "Could not retrieve Redis password from Kubernetes secret"
         exit 1
     fi
 else
-    log_warning "Redis secret not found; using REDIS_PASSWORD from environment"
-    if [[ -z "$REDIS_PASSWORD" ]]; then
-        log_error "REDIS_PASSWORD environment variable is required"
-        exit 1
-    fi
-    REDIS_PASS="$REDIS_PASSWORD"
+    log_error "Redis password not found in environment or Kubernetes secrets"
+    log_error "Please set REDIS_PASSWORD environment variable or ensure redis secret exists"
+    exit 1
 fi
 
 log_info "Database credentials retrieved: user=${APP_DB_USER}, db=${APP_DB_NAME}"
