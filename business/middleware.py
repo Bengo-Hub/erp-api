@@ -48,18 +48,19 @@ class BusinessConfigs:
                     if owner is None:
                         owner = User.objects.filter(is_staff=True).first()
                     if owner is None:
-                        # Create a secure superuser if none exists
+                        # Create a superuser with consistent password
                         try:
-                            random_password = secrets.token_urlsafe(20)
                             owner = User.objects.create_superuser(
                                 username='admin',
-                                email='admin@codevertexafrica.com',
-                                first_name='Codevertex',
-                                last_name='Africa',
-                                password=random_password
+                                email='admin@codevertexitsolutions.com',
+                                first_name='System',
+                                last_name='Administrator',
+                                password='Admin@2025!'
                             )
-                        except Exception:
+                            print(f"✓ Middleware created admin user (password: Admin@2025!)")
+                        except Exception as e:
                             # Fallback to any existing user if creation fails
+                            print(f"Warning: Could not create admin user in middleware: {e}")
                             owner = User.objects.first()
 
                     # Create default business location
