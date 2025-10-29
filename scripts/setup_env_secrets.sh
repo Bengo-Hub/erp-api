@@ -101,30 +101,48 @@ log_info "ALLOWED_HOSTS (comprehensive): ${ALLOWED_HOSTS}"
 
 # CRITICAL: Test database connectivity to verify password is correct
 log_step "Verifying PostgreSQL password by testing connection..."
-PGPASSWORD="$APP_DB_PASS" kubectl run -n "$NAMESPACE" pg-test-$$ --rm -i --restart=Never --image=postgres:15-alpine --command -- \
-  psql -h postgresql."$NAMESPACE".svc.cluster.local -U "$APP_DB_USER" -d postgres -c "SELECT 1;" >/dev/null 2>&1
 
-if [[ $? -eq 0 ]]; then
+# Clean up any existing test pod first
+kubectl delete pod -n "$NAMESPACE" pg-test-conn --ignore-not-found >/dev/null 2>&1
+
+# Run connection test with detailed error capture
+log_info "Testing connection to postgresql.$NAMESPACE.svc.cluster.local:5432..."
+TEST_OUTPUT=$(mktemp)
+set +e
+kubectl run -n "$NAMESPACE" pg-test-conn --rm -i --restart=Never --image=postgres:15-alpine --timeout=30s \
+  --env="PGPASSWORD=$APP_DB_PASS" \
+  --command -- psql -h postgresql."$NAMESPACE".svc.cluster.local -U "$APP_DB_USER" -d postgres -c "SELECT 1;" >$TEST_OUTPUT 2>&1
+TEST_RC=$?
+set -e
+
+if [[ $TEST_RC -eq 0 ]]; then
     log_success "✓ PostgreSQL password verified - connection successful"
+    rm -f $TEST_OUTPUT
 else
-    log_error "✗ PostgreSQL password verification FAILED"
-    log_error "The password in the Kubernetes secret does NOT match the actual database password"
+    log_error "✗ PostgreSQL password verification FAILED (exit code: $TEST_RC)"
     log_error ""
-    log_error "DIAGNOSIS: Password mismatch detected"
+    log_error "Test output:"
+    cat $TEST_OUTPUT || true
+    rm -f $TEST_OUTPUT
+    log_error ""
+    log_error "DIAGNOSIS: Password mismatch or connectivity issue"
     log_error "- Secret password length: ${#APP_DB_PASS} chars"
-    log_error "- Database: postgresql.$NAMESPACE.svc.cluster.local:5432"
+    log_error "- Database host: postgresql.$NAMESPACE.svc.cluster.local:5432"
+    log_error "- Database user: $APP_DB_USER"
     log_error ""
     log_error "POSSIBLE CAUSES:"
-    log_error "1. PostgreSQL was provisioned with a different password than stored in the secret"
-    log_error "2. The secret was manually edited but database wasn't updated"
-    log_error "3. Password contains special characters that need escaping"
+    log_error "1. PostgreSQL password in K8s secret doesn't match actual database password"
+    log_error "2. PostgreSQL StatefulSet not ready yet"
+    log_error "3. Network connectivity issues"
     log_error ""
-    log_error "FIX: You must update the PostgreSQL password to match the secret, or vice versa"
-    log_error "Option A: Reset PostgreSQL password to match the secret:"
-    log_error "  kubectl exec -n $NAMESPACE postgresql-0 -- psql -U postgres -c \"ALTER USER postgres WITH PASSWORD '$APP_DB_PASS';\""
+    log_error "IMMEDIATE FIX OPTIONS:"
     log_error ""
-    log_error "Option B: Update the secret to match the database (if you know the correct password):"
-    log_error "  kubectl -n $NAMESPACE patch secret postgresql --type merge -p '{\"data\":{\"postgres-password\":\"$(echo -n 'CORRECT_PASSWORD' | base64)\"}}'"
+    log_error "Option A: Reset PostgreSQL password to match the K8s secret:"
+    log_error "  kubectl exec -n $NAMESPACE postgresql-0 -- psql -U postgres -c \"ALTER USER postgres WITH PASSWORD '\$APP_DB_PASS';\""
+    log_error ""
+    log_error "Option B: Re-run provision workflow to sync passwords:"
+    log_error "  This will update PostgreSQL password from GitHub secret POSTGRES_PASSWORD"
+    log_error "  https://github.com/Bengo-Hub/devops-k8s/actions/workflows/provision.yml"
     log_error ""
     exit 1
 fi
