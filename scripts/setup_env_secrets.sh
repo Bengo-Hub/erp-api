@@ -91,14 +91,16 @@ NODE_IPS=$(kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type==
 
 # Build comprehensive ALLOWED_HOSTS (set once, never changed)
 # NOTE: Django doesn't support CIDR notation, use wildcards or explicit IPs
-ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
+ALLOWED_HOSTS="erpapi.masterspace.co.ke,erp.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
 [[ -n "$SVC_IP" ]] && ALLOWED_HOSTS="${ALLOWED_HOSTS},${SVC_IP}"
 [[ -n "$POD_IPS" ]] && ALLOWED_HOSTS="${ALLOWED_HOSTS},${POD_IPS}"
 [[ -n "$NODE_IPS" ]] && ALLOWED_HOSTS="${ALLOWED_HOSTS},${NODE_IPS}"
 # Use wildcards for private IP ranges (Django doesn't support CIDR notation)
+# CRITICAL: This allows health checks from any pod/node in the cluster
 ALLOWED_HOSTS="${ALLOWED_HOSTS},10.*,172.*,192.168.*"
 
-log_info "ALLOWED_HOSTS (comprehensive): ${ALLOWED_HOSTS}"
+log_info "ALLOWED_HOSTS (comprehensive, with wildcards for private IPs): ${ALLOWED_HOSTS}"
+echo "ALLOWED_HOSTS=${ALLOWED_HOSTS}"
 
 # CRITICAL: Test database connectivity to verify password is correct
 log_step "Verifying PostgreSQL password by testing connection..."
@@ -189,6 +191,9 @@ kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" \
   --from-literal=STATIC_URL="/static/"
 
 log_success "Environment secret created/updated with production configuration"
+log_info "ALLOWED_HOSTS set to: ${ALLOWED_HOSTS}"
+log_info "Verifying secret was created..."
+kubectl -n "$NAMESPACE" get secret "$ENV_SECRET_NAME" -o jsonpath='{.data.ALLOWED_HOSTS}' | base64 -d | head -c 100 && echo "..."
 
 # Update kubeSecrets/devENV.yaml with verified credentials for consistency
 # This ensures local deployments and Helm values use the same verified credentials

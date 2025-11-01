@@ -71,7 +71,7 @@ class BusinessConfigs:
                         country='KE',
                         zip_code='00100',
                         postal_code='00100',
-                        website='https://codevertexitsolutions.com',
+                        website='https://www.codevertexafrica.com',
                         default=True,
                         is_active=True
                     )
@@ -89,12 +89,12 @@ class BusinessConfigs:
                     )
                     
                 
-                    # Create default branch
+                    # Create default main branch
                     branch = Branch.objects.create(
                         business=biz,
                         location=location,
-                        name='Nairobi Main Branch',
-                        branch_code='NBO-MAIN-001',
+                        name='Main Branch',
+                        branch_code='MAIN-001',
                         is_active=True,
                         is_main_branch=True
                     )

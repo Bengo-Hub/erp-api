@@ -8,10 +8,11 @@ SVC_IP=$(kubectl get svc erp-api -n ${NAMESPACE} -o jsonpath='{.spec.clusterIP}'
 
 # Build comprehensive ALLOWED_HOSTS
 # NOTE: Django doesn't support CIDR notation, use wildcards or explicit IPs
-UPDATED_ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
+UPDATED_ALLOWED_HOSTS="erpapi.masterspace.co.ke,erp.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
 [[ -n "$SVC_IP" ]] && UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},${SVC_IP}"
 [[ -n "$POD_IPS" ]] && UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},${POD_IPS}"
 # Use wildcards for private IP ranges (Django doesn't support CIDR notation)
+# CRITICAL: This allows health checks from any pod/node in the cluster
 UPDATED_ALLOWED_HOSTS="${UPDATED_ALLOWED_HOSTS},10.*,172.*,192.168.*"
 
 echo "Current pod IPs: ${POD_IPS}"

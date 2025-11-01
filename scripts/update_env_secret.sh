@@ -57,7 +57,8 @@ SECRET_ARGS+=(--from-literal=DJANGO_SETTINGS_MODULE="ProcureProKEAPI.settings")
 SECRET_ARGS+=(--from-literal=DEBUG="False")
 SECRET_ARGS+=(--from-literal=DJANGO_ENV="production")
 # NOTE: Django doesn't support CIDR notation, use wildcards for private IP ranges
-SECRET_ARGS+=(--from-literal=ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke,10.*,172.*,192.168.*")
+# CRITICAL: This allows health checks from any pod/node in the cluster
+SECRET_ARGS+=(--from-literal=ALLOWED_HOSTS="erpapi.masterspace.co.ke,erp.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke,10.*,172.*,192.168.*")
 
 # CORS and Frontend
 SECRET_ARGS+=(--from-literal=CORS_ALLOWED_ORIGINS="https://erp.masterspace.co.ke,http://localhost:3000,*.masterspace.co.ke")
