@@ -42,43 +42,19 @@ for db in "${types[@]}"; do
     case "$db" in
         postgres)
             log_info "Installing PostgreSQL..."
-            # Avoid immutable spec updates: reuse existing chart values on upgrade
+            # Check if PostgreSQL already exists (skip if managed by devops-k8s)
             if helm -n "$NAMESPACE" status postgresql >/dev/null 2>&1; then
-                log_info "PostgreSQL release exists; performing safe upgrade with --reuse-values"
-                # Patch existing secret to include 'password' key if missing (compat with newer chart)
-                EXISTING_PG_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
-                if [[ -n "$EXISTING_PG_PASS" ]]; then
-                    kubectl -n "$NAMESPACE" patch secret postgresql --type merge -p "{\"stringData\":{\"password\":\"$EXISTING_PG_PASS\"}}" 2>/dev/null || true
-                fi
-                # Set FIPS configuration for newer chart versions
-                helm upgrade postgresql bitnami/postgresql -n "$NAMESPACE" \
-                    --reuse-values \
-                    --set global.defaultFips=false \
-                    --set fips.openssl=false \
-                    --wait --timeout=600s || log_warning "PostgreSQL safe upgrade failed"
-            else
-                log_info "PostgreSQL not found; installing fresh"
-                if [[ -z "$POSTGRES_PASSWORD" ]]; then
-                    log_error "POSTGRES_PASSWORD is required for fresh PostgreSQL installation"
-                    exit 1
-                fi
-                helm install postgresql bitnami/postgresql -n "$NAMESPACE" \
-                    --set global.postgresql.auth.postgresPassword="$POSTGRES_PASSWORD" \
-                    --set global.postgresql.auth.database="$PG_DATABASE" \
-                    --set global.defaultFips=false \
-                    --set fips.openssl=false \
-                    --wait --timeout=600s || log_warning "PostgreSQL installation failed"
+                log_info "PostgreSQL already exists and managed by devops-k8s infrastructure"
+                log_info "Skipping PostgreSQL installation/upgrade (handled centrally)"
             fi
             ;;
         redis)
-            log_info "Installing Redis..."
-            if [[ -z "$REDIS_PASSWORD" ]]; then
-                log_error "REDIS_PASSWORD is required for Redis installation"
-                exit 1
+            log_info "Checking Redis..."
+            # Check if Redis already exists (skip if managed by devops-k8s)
+            if helm -n "$NAMESPACE" status redis >/dev/null 2>&1; then
+                log_info "Redis already exists and managed by devops-k8s infrastructure"
+                log_info "Skipping Redis installation/upgrade (handled centrally)"
             fi
-            helm upgrade --install redis bitnami/redis -n "$NAMESPACE" \
-                --set global.redis.password="$REDIS_PASSWORD" \
-                --wait --timeout=300s || log_warning "Redis installation failed"
             ;;
         *)
             log_warning "Unknown database type: $db"
