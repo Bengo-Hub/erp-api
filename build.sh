@@ -98,7 +98,7 @@ export IMAGE_REPO="${REGISTRY_SERVER}/${REGISTRY_NAMESPACE}/${APP_NAME}"
 # DevOps repository
 export DEVOPS_REPO="Bengo-Hub/devops-k8s"
 export DEVOPS_DIR=${DEVOPS_DIR:-"$HOME/devops-k8s"}
-export VALUES_FILE_PATH="apps/erp-api/values.yaml"
+export VALUES_FILE_PATH="apps/${APP_NAME}/values.yaml"
 
 # Git configuration
 export GIT_EMAIL=${GIT_EMAIL:-"titusowuor30@gmail.com"}
