@@ -90,12 +90,13 @@ SVC_IP=$(kubectl get svc erp-api -n "$NAMESPACE" -o jsonpath='{.spec.clusterIP}'
 NODE_IPS=$(kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null | tr ' ' ',' || true)
 
 # Build comprehensive ALLOWED_HOSTS (set once, never changed)
+# NOTE: Django doesn't support CIDR notation, use wildcards or explicit IPs
 ALLOWED_HOSTS="erpapi.masterspace.co.ke,localhost,127.0.0.1,*.masterspace.co.ke"
 [[ -n "$SVC_IP" ]] && ALLOWED_HOSTS="${ALLOWED_HOSTS},${SVC_IP}"
 [[ -n "$POD_IPS" ]] && ALLOWED_HOSTS="${ALLOWED_HOSTS},${POD_IPS}"
 [[ -n "$NODE_IPS" ]] && ALLOWED_HOSTS="${ALLOWED_HOSTS},${NODE_IPS}"
-# Include network CIDR ranges to allow any cluster IP
-ALLOWED_HOSTS="${ALLOWED_HOSTS},10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+# Use wildcards for private IP ranges (Django doesn't support CIDR notation)
+ALLOWED_HOSTS="${ALLOWED_HOSTS},10.*,172.*,192.168.*"
 
 log_info "ALLOWED_HOSTS (comprehensive): ${ALLOWED_HOSTS}"
 
