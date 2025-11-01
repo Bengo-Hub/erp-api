@@ -133,7 +133,7 @@ class Command(BaseCommand):
             country='KE',
             zip_code='00100',
             postal_code='00100',
-            website='www.codevertexafrica.com',
+            website='https://www.codevertexafrica.com',
             default=True,
             is_active=True
         )
