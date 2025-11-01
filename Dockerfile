@@ -71,6 +71,13 @@ EXPOSE 4000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -fsS http://localhost:${PORT}/api/v1/core/health/ || exit 1
 
-CMD ["bash","-lc","python manage.py collectstatic --noinput || true && gunicorn ProcureProKEAPI.wsgi:application --bind 0.0.0.0:${PORT} --workers 3 --timeout 120"]
+# Copy media init script
+COPY scripts/init-media.sh /usr/local/bin/init-media.sh
+USER root
+RUN chmod +x /usr/local/bin/init-media.sh
+USER appuser
+
+# Startup script: initialize media directory, collect static files, then start gunicorn
+CMD ["bash","-lc","/usr/local/bin/init-media.sh && python manage.py collectstatic --noinput || true && gunicorn ProcureProKEAPI.wsgi:application --bind 0.0.0.0:${PORT} --workers 3 --timeout 120"]
 
 

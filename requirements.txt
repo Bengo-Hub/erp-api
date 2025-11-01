@@ -8,6 +8,7 @@ Django
 django-appconf
 django-storages[s3]
 django-apscheduler
+django_celery_beat
 django-compressor
 django-cors-headers
 django-countries
@@ -73,6 +74,7 @@ jsonschema
 jsonschema-specifications
 celery>=5.3,<6
 kombu>=5.3,<6
+django-celery-beat>=2.6.0
 # ASGI and websockets stack
 channels>=4.1.0
 channels-redis>=4.2.0

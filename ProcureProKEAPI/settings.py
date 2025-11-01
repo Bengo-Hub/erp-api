@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'drf_spectacular_sidecar',
     'tinymce',
+    'django_celery_beat',  # Celery Beat periodic task scheduler
     #custom apps
     ##auth
     'authmanagement',
