@@ -777,6 +777,13 @@ class EnhancedLoginView(APIView):
                 "permissions": permissions,
             }
 
+            # Employee mapping
+            try:
+                emp = Employee.objects.filter(user=auth_user).only('id').first()
+                user_payload["employee_id"] = emp.id if emp else None
+            except Exception:
+                user_payload["employee_id"] = None
+
             return Response({
                 'message': 'Login successful',
                 'user': user_payload,

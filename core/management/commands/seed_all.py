@@ -176,6 +176,15 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Comprehensive seeding completed successfully!'))
         self.stdout.write(self.style.SUCCESS('Note: Business, business location, and branding settings are automatically created by middleware'))
 
+        # Ensure centralized RBAC provisioning is applied per roles defined in core.security
+        try:
+            from core.security import ensure_rbac_provisioned
+            self.stdout.write('Applying centralized RBAC provisioning (core.security)...')
+            ensure_rbac_provisioned()
+            self.stdout.write(self.style.SUCCESS('RBAC provisioning completed.'))
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'RBAC provisioning failed: {e}'))
+
     def _clear_seeded_data(self):
         """Clear existing seeded data while preserving system-critical data"""
         with connection.cursor() as cursor:

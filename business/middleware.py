@@ -76,11 +76,11 @@ class BusinessConfigs:
                         is_active=True
                     )
                     
-                    # Create default business
+                    # Create default business (standardized name)
                     biz = Bussiness.objects.create(
                         location=location,
                         owner=owner,
-                        name='Codevertex Africa',
+                        name='Codevertex IT Solutions',
                         start_date='2024-01-01',
                         currency='KES',
                         kra_number='A123456789X',

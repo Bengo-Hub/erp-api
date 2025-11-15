@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class OrderViewSet(BaseModelViewSet):
-    queryset = Order.objects.all().select_related('user')
+    queryset = Order.objects.all().select_related('customer', 'customer__user')
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = PageNumberPagination  # Standardized: 100 records per page
@@ -34,9 +34,9 @@ class OrderViewSet(BaseModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
         
-        # If user is not superuser, only return their orders
+        # If user is not superuser, only return their orders via customer mapping
         if not user.is_superuser:
-            queryset = queryset.filter(user=user)
+            queryset = queryset.filter(customer__user=user)
             
         return queryset
 
@@ -133,7 +133,7 @@ class OrderItemViewSet(BaseModelViewSet):
         
         # Filter to only show order items from the user's orders or for staff
         if not user.is_staff and not user.is_superuser:
-            queryset = queryset.filter(order__user=user)
+            queryset = queryset.filter(order__customer__user=user)
         
         return queryset
 
