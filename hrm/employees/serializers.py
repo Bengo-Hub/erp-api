@@ -313,7 +313,13 @@ class HRDetailsSerializer(serializers.ModelSerializer):
                 'staffNo': hr.job_or_staff_number,
                 'name': f'{employee.user.first_name} {employee.user.last_name}', 
                 'JobTitle': hr.job_title.title if hr.job_title else None, 
-                'Reports to': hr.reports_to.user if hr.reports_to else None,
+                'Reports to': (
+                    {
+                        'id': hr.reports_to.user.id,
+                        'name': f'{hr.reports_to.user.first_name} {hr.reports_to.user.last_name}',
+                        'email': hr.reports_to.user.email
+                    } if getattr(hr, 'reports_to', None) and getattr(hr.reports_to, 'user', None) else None
+                ),
                 'Department': hr.department.title if hr.department else '',
                 'Region': hr.region.name if hr.region else ''
             }

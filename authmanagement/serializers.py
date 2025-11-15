@@ -17,6 +17,7 @@ import threading
 from django.contrib.auth import get_user_model
 from notifications.services import EmailService
 from django.contrib.auth.models import Group, Permission
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -39,10 +40,32 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     timezone=serializers.SerializerMethodField()
+    # Accept groups as a list of role names for writes; we'll format nicely on reads
+    groups = serializers.ListField(child=serializers.CharField(), required=False, write_only=True)
     class Meta:
         model = User
-        fields = ('id','groups', 'first_name','middle_name','last_name','timezone',
-                  'username', 'email','password')
+        fields = (
+            'id',
+            'groups',
+            'first_name',
+            'middle_name',
+            'last_name',
+            'timezone',
+            'username',
+            'email',
+            'password',
+            'phone',
+            'pic',
+            'is_active',
+            'is_staff',
+        )
+        extra_kwargs = {
+            'password': {'write_only': True, 'required': False},
+            'pic': {'required': False},
+            'phone': {'required': False},
+            'is_active': {'required': False},
+            'is_staff': {'required': False},
+        }
         
     @extend_schema_field(OpenApiTypes.STR)
     def get_timezone(self, obj):
@@ -50,15 +73,21 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         try:
+            # Extract and remove groups from validated_data (we handle assignment manually)
+            selectedroles = validated_data.pop('groups', None)
             user = User(
                 first_name=validated_data['first_name'],
                 last_name=validated_data['last_name'],
                 middle_name=validated_data['middle_name'],
                 username=validated_data['username'],
                 email=validated_data['email'],
-                )
-            selectedroles = validated_data['groups'] if 'groups' in validated_data else None
-            user.set_password(validated_data['password'])
+                phone=validated_data.get('phone'),
+                pic=validated_data.get('pic'),
+            )
+            if validated_data.get('password'):
+                user.set_password(validated_data['password'])
+            else:
+                raise serializers.ValidationError({'password': 'This field is required.'})
             user.is_staff = True
             user.save()
             
@@ -72,8 +101,17 @@ class UserSerializer(serializers.ModelSerializer):
             
             # Assign roles
             if selectedroles:
-                # User-specified roles
-                roles = Group.objects.filter(name__in=selectedroles)
+                # User-specified roles (accept ids or names, case-insensitive for names)
+                ids, names = [], []
+                for r in selectedroles:
+                    try:
+                        ids.append(int(r))
+                    except (TypeError, ValueError):
+                        names.append(str(r))
+                name_q = Q()
+                for nm in names:
+                    name_q |= Q(name__iexact=nm)
+                roles = Group.objects.filter(Q(id__in=ids) | name_q)
                 for role in roles:
                     user.groups.add(role)
                 
@@ -120,6 +158,63 @@ class UserSerializer(serializers.ModelSerializer):
             user.delete()
             print("send mail error:{}".format(e))
         return user
+
+    def update(self, instance, validated_data):
+        # Extract write-only groups
+        groups_input = validated_data.pop('groups', None)
+
+        # Update basic fields if provided
+        for field in ['first_name', 'last_name', 'middle_name', 'username', 'email', 'phone', 'is_active', 'is_staff']:
+            if field in validated_data:
+                setattr(instance, field, validated_data[field])
+
+        # Handle password change if provided
+        password = validated_data.pop('password', None)
+        if password:
+            instance.set_password(password)
+
+        # Handle profile picture if provided
+        if 'pic' in validated_data:
+            instance.pic = validated_data['pic']
+
+        instance.save()
+
+        # Update groups if provided - accept names or ids
+        if groups_input is not None:
+            # Normalize to list
+            if not isinstance(groups_input, (list, tuple)):
+                groups_input = [groups_input]
+            # Split int-like vs name-like
+            ids, names = [], []
+            for g in groups_input:
+                try:
+                    ids.append(int(g))
+                except (TypeError, ValueError):
+                    names.append(str(g))
+            name_q = Q()
+            for nm in names:
+                name_q |= Q(name__iexact=nm)
+            roles = Group.objects.filter(Q(id__in=ids) | name_q)
+            instance.groups.set(roles)
+
+        return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Present groups as objects {id, name} for the frontend
+        data['groups'] = [{'id': g.id, 'name': g.name} for g in instance.groups.all()]
+        # Add a few helpful read-only fields often used by UI
+        data['is_superuser'] = getattr(instance, 'is_superuser', False)
+        data['date_joined'] = getattr(instance, 'date_joined', None)
+        data['last_login'] = getattr(instance, 'last_login', None)
+        # Include employee mapping for consistent frontend checks
+        try:
+            from hrm.employees.models import Employee
+            emp_id = Employee.objects.filter(user=instance).values_list('id', flat=True).first()
+        except Exception:
+            emp_id = None
+        data['employee_id'] = emp_id
+        return data
 
 # New serializers for additional functionality
 class PasswordPolicySerializer(serializers.ModelSerializer):

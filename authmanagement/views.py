@@ -40,6 +40,7 @@ from core.base_viewsets import BaseModelViewSet
 from core.response import APIResponse, get_correlation_id
 from core.audit import AuditTrail
 import logging
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 logger = logging.getLogger(__name__)
 
@@ -234,6 +235,7 @@ class LogOutApiView(APIView):
 class UserViewSet(APIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated,]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_object(self, pk):
         try:
@@ -241,26 +243,29 @@ class UserViewSet(APIView):
         except User.DoesNotExist:
             raise Http404
 
-    def get(self, request, format=None):
-        context = None
+    def get(self, request, pk=None, format=None):
+        # Return a single user when pk is provided
+        if pk is not None:
+            user = self.get_object(pk)
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
+
+        # Otherwise list users
         if request.user.is_superuser:
-            context = User.objects.values("username", "first_name", "last_name",
-                                          "email", "phone", "groups__name", "pic", "is_active")
-            # print(request.user.is_superuser)
+            users = User.objects.all().select_related()
+            serializer = UserSerializer(users, many=True)
+            return Response(serializer.data)
         else:
             biz = Bussiness.objects.filter(owner=request.user).first()
-            # print(vendor)
             if biz:
-                context = biz.employees.values(
-                    "user__username", "user__first_name", "user__last_name",
-                    "user__email", "user__phone", "user__groups__name", "user__pic",
-                    "user__is_active", "national_id", "gender", "passport_photo"
-                )
-            else:
-                # If user doesn't own a business, return empty list
-                context = []
-        context = list(context)
-        return Response(context)
+                # Load users linked to this business' employees
+                from hrm.employees.models import Employee
+                employee_user_ids = Employee.objects.filter(organisation=biz).values_list('user_id', flat=True)
+                users = User.objects.filter(id__in=list(employee_user_ids))
+                serializer = UserSerializer(users, many=True)
+                return Response(serializer.data)
+            # If user doesn't own a business, return empty list
+            return Response([])
 
     def post(self, request, format=None):
 
@@ -273,6 +278,14 @@ class UserViewSet(APIView):
     def put(self, request, pk, format=None):
         user = self.get_object(pk)
         serializer = UserSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk, format=None):
+        user = self.get_object(pk)
+        serializer = UserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

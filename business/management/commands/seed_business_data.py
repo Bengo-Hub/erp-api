@@ -29,7 +29,7 @@ class Command(BaseCommand):
         # Ensure admin user exists and has proper permissions
         admin_user = self._ensure_admin_user()
         
-        # Create single business "Codevertex Africa" with one location and one branch
+        # Create or reuse single business "codevertex it solutions" with one location and one branch
         business, location, branch = self._create_single_business_setup(admin_user)
         
         # Create tax rates
@@ -108,51 +108,54 @@ class Command(BaseCommand):
         return admin_user
 
     def _create_single_business_setup(self, admin_user):
-        """Create business "Codevertex Africa" with one main branch only."""
-        # Clear any existing businesses to ensure clean setup
-        Bussiness.objects.all().delete()
-        BusinessLocation.objects.all().delete()
-        Branch.objects.all().delete()
-        
-        # Create business "Codevertex Africa"
-        business = Bussiness.objects.create(
-            name='Codevertex Africa',
-            start_date='2024-01-01',
-            currency='KES',
-            kra_number='A123456789X',
-            business_type='limited_company',
-            county='Nairobi',
-            owner=admin_user
-        )
-        
-        # Create main location
-        location = BusinessLocation.objects.create(
-            city='Nairobi',
-            county='Nairobi',
-            state='KE',
-            country='KE',
-            zip_code='00100',
-            postal_code='00100',
-            website='https://www.codevertexafrica.com',
-            default=True,
-            is_active=True
-        )
-        
-        # Create main branch
-        main_branch = Branch.objects.create(
-            business=business,
-            location=location,
-            name='Main Branch',
-            branch_code='MAIN-001',
-            is_active=True,
-            is_main_branch=True
-        )
-        
+        """Create or reuse business 'Codevertex IT Solutions' with one main branch only."""
+        name = 'Codevertex IT Solutions'
+        business = Bussiness.objects.filter(name__iexact=name).first()
+        if not business:
+            business = Bussiness.objects.create(
+                name=name,
+                start_date='2024-01-01',
+                currency='KES',
+                kra_number='A123456789X',
+                business_type='limited_company',
+                county='Nairobi',
+                owner=admin_user
+            )
+            self.stdout.write(self.style.SUCCESS(f'Created business: {business.name}'))
+        else:
+            self.stdout.write(self.style.SUCCESS(f'Reusing existing business: {business.name}'))
+
+        # Ensure a single main location exists
+        location = BusinessLocation.objects.filter(default=True).first()
+        if not location:
+            location = BusinessLocation.objects.create(
+                city='Nairobi',
+                county='Nairobi',
+                state='KE',
+                country='KE',
+                zip_code='00100',
+                postal_code='00100',
+                website='https://www.codevertexafrica.com',
+                default=True,
+                is_active=True
+            )
+
+        # Ensure a single main branch exists
+        main_branch = Branch.objects.filter(business=business, is_main_branch=True).first()
+        if not main_branch:
+            main_branch = Branch.objects.create(
+                business=business,
+                location=location,
+                name='Main Branch',
+                branch_code='MAIN-001',
+                is_active=True,
+                is_main_branch=True
+            )
+
         # Update business location to point to main branch location
-        business.location = location
-        business.save()
-        
-        self.stdout.write(self.style.SUCCESS(f'Created business: {business.name} with Main Branch ({main_branch.branch_code})'))
+        if not business.location_id:
+            business.location = location
+            business.save()
         
         return business, location, main_branch
 
