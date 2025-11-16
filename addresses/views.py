@@ -50,11 +50,9 @@ class AddressBookViewSet(viewsets.ModelViewSet):
         
         # If user is not superuser, only show their addresses
         if not user.is_superuser:
-            queryset = queryset.filter(
-                Q(user=user) | Q(contact__user=user)
-            )
+            queryset = queryset.filter(Q(user=user))
         
-        return queryset.select_related('user', 'contact', 'delivery_region', 'validation')
+        return queryset.select_related('user', 'delivery_region', 'validation')
     
     def perform_create(self, serializer):
         serializer.save()
@@ -100,9 +98,7 @@ class AddressBookViewSet(viewsets.ModelViewSet):
     def my_addresses(self, request):
         """Get addresses for the current user"""
         user = request.user
-        addresses = self.get_queryset().filter(
-            Q(user=user) | Q(contact__user=user)
-        )
+        addresses = self.get_queryset().filter(Q(user=user))
         
         serializer = self.get_serializer(addresses, many=True)
         return Response(serializer.data)
@@ -111,10 +107,7 @@ class AddressBookViewSet(viewsets.ModelViewSet):
     def default_address(self, request):
         """Get the default address for the current user"""
         user = request.user
-        default_address = self.get_queryset().filter(
-            Q(user=user) | Q(contact__user=user),
-            is_default=True
-        ).first()
+        default_address = self.get_queryset().filter(Q(user=user), is_default=True).first()
         
         if default_address:
             serializer = self.get_serializer(default_address)

@@ -355,6 +355,14 @@ class ContactDetailsSerializer(serializers.ModelSerializer):
             'id', 'employee', 'personal_email', 'country', 'county', 'city',
             'zip', 'address', 'mobile_phone', 'official_phone'
         ]
+        extra_kwargs = {
+            # Make non-critical fields optional for profile updates
+            'country': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'county': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'city': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'zip': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'address': {'required': False, 'allow_null': True, 'allow_blank': True},
+        }
 
 class NextOfKinSerializer(serializers.ModelSerializer):
     class Meta:
@@ -372,7 +380,20 @@ class DocumentsSerializer(serializers.ModelSerializer):
         ]
 
 class EmployeeSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    # Do not require nested user payload during updates
+    user = UserSerializer(read_only=True)
+    # Accept wider date formats including ISO datetime strings
+    date_of_birth = serializers.DateField(
+        required=False,
+        allow_null=True,
+        input_formats=[
+            '%Y-%m-%d',                 # 2010-01-25
+            '%Y-%m-%dT%H:%M:%S.%fZ',    # 2010-01-25T21:00:00.000Z
+            '%Y-%m-%dT%H:%M:%S.%f',     # 2010-01-25T21:00:00.000000
+            '%Y-%m-%dT%H:%M:%SZ',       # 2010-01-25T21:00:00Z
+            'iso-8601',                 # Fallback ISO formats
+        ]
+    )
     salary_details = SalaryDetailsSerializer(many=True, read_only=True)
     hr_details = HRDetailsSerializer(many=True, read_only=True)
     contracts = ContractSerializer(many=True, read_only=True)
