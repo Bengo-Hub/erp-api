@@ -44,11 +44,80 @@ from rest_framework.decorators import action
 User = get_user_model()
 
 
-class ProcessPayrollViewSet(viewsets.ViewSet):
+class ProcessPayrollGenericView(viewsets.ModelViewSet):
     queryset = Payslip.objects.all()
     serializer_class = PayslipSerializer
     permission_classes=[IsAuthenticated]
     pagination_class = PageNumberPagination  # Enable pagination
+
+    def list(self, request):
+        from hrm.utils.filter_utils import get_filter_params
+
+        fromdate = request.query_params.get("fromdate")
+        todate = request.query_params.get("todate")
+        employment_types = (
+            request.query_params.getlist('employment_type', []) or
+            request.query_params.getlist('employment_type[]', []) or
+            request.query_params.getlist('employement_type', []) or
+            request.query_params.getlist('employement_type[]', [])
+        )
+
+        filter_params = get_filter_params(request)
+        department_ids = filter_params.get('department_ids')
+        region_ids = filter_params.get('region_ids')
+        project_ids = filter_params.get('project_ids')
+        employee_ids = filter_params.get('employee_ids')
+
+        payslips = Payslip.objects.filter(delete_status=False).order_by('payment_period__year', 'payment_period__month')
+
+        if department_ids:
+            payslips = payslips.filter(employee__hr_details__department_id__in=department_ids)
+        if region_ids:
+            payslips = payslips.filter(employee__hr_details__region_id__in=region_ids)
+        if project_ids:
+            payslips = payslips.filter(employee__hr_details__project_id__in=project_ids)
+        if employee_ids:
+            payslips = payslips.filter(employee__id__in=employee_ids)
+        if employment_types:
+            payslips = payslips.filter(employee__salary_details__employment_type__in=employment_types)
+
+        if fromdate and todate:
+            try:
+                fromdate_obj = datetime.strptime(fromdate[:10], "%Y-%m-%d").date()
+                todate_obj = datetime.strptime(todate[:10], "%Y-%m-%d").date()
+                payslips = payslips.filter(payment_period__range=[fromdate_obj, todate_obj])
+            except ValueError as exc:
+                return Response(
+                    {"detail": f"{exc}. Invalid date format for payroll date range. Use YYYY-MM-DD.", "success": False},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        grouped = payslips.values('payment_period__year', 'payment_period__month').annotate(
+            total_payslips=Count('id'),
+            total_basic_pay=Sum('employee__salary_details__monthly_salary'),
+            total_net_pay=Sum('net_pay'),
+            approved_payslips=Count('id', filter=Q(approval_status='approved')),
+            unapproved_payslips=Count('id', filter=~Q(approval_status='approved'))
+        ).order_by('payment_period__year', 'payment_period__month').distinct()
+
+        response_data = []
+        for group in grouped:
+            year = group['payment_period__year']
+            month = group['payment_period__month']
+            month_payslips = payslips.filter(payment_period__year=year, payment_period__month=month)
+            month_data = PayslipSerializer(month_payslips, many=True).data
+            response_data.append({
+                "year": year,
+                "month": month,
+                "total_payslips": group['total_payslips'],
+                "total_basic_pay": group['total_basic_pay'],
+                "total_net_pay": group['total_net_pay'],
+                "approved_payslips": group['approved_payslips'],
+                "unapproved_payslips": group['unapproved_payslips'],
+                "payslips": month_data,
+            })
+
+        return Response(response_data)
 
     def get_object(self, pk):
         # Helper method to retrieve a Payslip instance
@@ -67,7 +136,10 @@ class ProcessPayrollViewSet(viewsets.ViewSet):
     def get_employees(self, request):
         fromdate = request.query_params.get("fromdate", None)
         todate = request.query_params.get("todate", None)
-        employement_type = request.query_params.getlist('employement_type', None)
+        employement_type = request.query_params.getlist('employment_type', None) or \
+            request.query_params.getlist('employment_type[]', None) or \
+            request.query_params.getlist('employement_type', None) or \
+            request.query_params.getlist('employement_type[]', None)
         department_ids = request.query_params.getlist("department[]", None)
         region_ids = request.query_params.getlist("region[]", None)
 
@@ -128,6 +200,243 @@ class ProcessPayrollViewSet(viewsets.ViewSet):
         serializer = PayrollEmployeeSerializer(employees, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['post'])
+    def generate_casual_voucher(self, request):
+        """
+        Generate payment voucher for casual employees based on attendance and daily rates.
+        Supports batch processing via Celery.
+        """
+        try:
+            payment_period = request.data.get('payment_period')
+            if not payment_period:
+                return Response({'success': False, 'detail': 'Payment period is required'}, status=400)
+
+            try:
+                if isinstance(payment_period, str):
+                    normalized_period = payment_period if len(payment_period) != 7 else f"{payment_period}-01"
+                    payment_period = datetime.strptime(normalized_period, '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'success': False, 'detail': 'Invalid payment period format. Use YYYY-MM-DD or YYYY-MM'}, status=400)
+
+            employee_ids = request.data.get('employee_ids') or []
+            if isinstance(employee_ids, str):
+                employee_ids = [employee_ids]
+
+            single_employee_id = request.data.get('employee_id')
+            if single_employee_id:
+                employee_ids.append(single_employee_id)
+
+            cleaned_employee_ids = []
+            for emp_id in employee_ids:
+                try:
+                    cleaned_employee_ids.append(int(emp_id))
+                except (TypeError, ValueError):
+                    continue
+
+            # Ensure uniqueness
+            cleaned_employee_ids = list(dict.fromkeys(cleaned_employee_ids))
+
+            if not cleaned_employee_ids:
+                return Response({'success': False, 'detail': 'Provide at least one valid employee ID'}, status=400)
+
+            existing_ids = list(Employee.objects.filter(id__in=cleaned_employee_ids).values_list('id', flat=True))
+            missing_ids = sorted(set(cleaned_employee_ids) - set(existing_ids))
+            if missing_ids:
+                return Response({'success': False, 'detail': f'Employee(s) not found: {missing_ids}'}, status=404)
+
+            recover_advances = bool(request.data.get('recover_advances', False))
+
+            task = batch_process_payslips.delay(
+                employee_ids=cleaned_employee_ids,
+                payment_period=payment_period,
+                recover_advances=recover_advances,
+                command='casual',
+                user_id=request.user.id
+            )
+
+            return Response({
+                "message": f"Queued casual voucher generation for {len(cleaned_employee_ids)} employee(s).",
+                "task_id": task.id,
+                "status": "processing",
+                "success": True,
+                "employee_ids": cleaned_employee_ids
+            })
+
+        except Exception as e:
+            return Response({'success': False, 'detail': f'Error generating casual voucher: {str(e)}'}, status=500)
+
+    @action(detail=False, methods=['post'])
+    def generate_consultant_voucher(self, request):
+        """
+        Generate payment voucher for consultants based on monthly salary and benefits.
+        """
+        try:
+            payment_period = request.data.get('payment_period')
+            if not payment_period:
+                return Response({'success': False, 'detail': 'Payment period is required'}, status=400)
+
+            try:
+                if isinstance(payment_period, str):
+                    normalized_period = payment_period if len(payment_period) != 7 else f"{payment_period}-01"
+                    payment_period = datetime.strptime(normalized_period, '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'success': False, 'detail': 'Invalid payment period format. Use YYYY-MM-DD or YYYY-MM'}, status=400)
+
+            employee_ids = request.data.get('employee_ids') or []
+            if isinstance(employee_ids, str):
+                employee_ids = [employee_ids]
+
+            single_employee_id = request.data.get('employee_id')
+            if single_employee_id:
+                employee_ids.append(single_employee_id)
+
+            cleaned_employee_ids = []
+            for emp_id in employee_ids:
+                try:
+                    cleaned_employee_ids.append(int(emp_id))
+                except (TypeError, ValueError):
+                    continue
+
+            cleaned_employee_ids = list(dict.fromkeys(cleaned_employee_ids))
+
+            if not cleaned_employee_ids:
+                return Response({'success': False, 'detail': 'Provide at least one valid employee ID'}, status=400)
+
+            existing_ids = list(Employee.objects.filter(id__in=cleaned_employee_ids).values_list('id', flat=True))
+            missing_ids = sorted(set(cleaned_employee_ids) - set(existing_ids))
+            if missing_ids:
+                return Response({'success': False, 'detail': f'Employee(s) not found: {missing_ids}'}, status=404)
+
+            recover_advances = bool(request.data.get('recover_advances', False))
+
+            task = batch_process_payslips.delay(
+                employee_ids=cleaned_employee_ids,
+                payment_period=payment_period,
+                recover_advances=recover_advances,
+                command='consultant',
+                user_id=request.user.id
+            )
+
+            return Response({
+                "message": f"Queued consultant voucher generation for {len(cleaned_employee_ids)} employee(s).",
+                "task_id": task.id,
+                "status": "processing",
+                "success": True,
+                "employee_ids": cleaned_employee_ids
+            })
+
+        except Exception as e:
+            return Response({'success': False, 'detail': f'Error generating consultant voucher: {str(e)}'}, status=500)
+
+    @action(detail=False, methods=['post'])
+    def rerun_payslip(self, request):
+        """Rerun a specific payslip calculation asynchronously."""
+        try:
+            payslip_id = request.data.get('payslip_id')
+            if not payslip_id:
+                return Response({'success': False, 'detail': 'payslip_id is required'}, status=400)
+
+            task = rerun_payslip.delay(
+                payslip_id=payslip_id,
+                user_id=request.user.id
+            )
+
+            return Response({
+                "message": f"Payslip rerun for ID {payslip_id} has been queued.",
+                "task_id": task.id,
+                "status": "processing",
+                "success": True
+            })
+
+        except Exception as e:
+            return Response({'success': False, 'detail': f'Error queuing payslip rerun: {str(e)}'}, status=500)
+
+    @action(detail=False, methods=['get'])
+    def task_status(self, request):
+        """Check the status of a background task."""
+        try:
+            task_id = request.query_params.get('task_id')
+            if not task_id:
+                return Response({'success': False, 'detail': 'task_id is required'}, status=400)
+
+            from celery.result import AsyncResult
+            task_result = AsyncResult(task_id)
+
+            response_data = {
+                'task_id': task_id,
+                'status': task_result.status,
+                'success': True
+            }
+
+            if task_result.ready():
+                if task_result.successful():
+                    response_data['result'] = task_result.result
+                    response_data['message'] = 'Task completed successfully'
+                else:
+                    response_data['error'] = str(task_result.result)
+                    response_data['message'] = 'Task failed'
+            else:
+                response_data['message'] = 'Task is still processing'
+
+            return Response(response_data)
+        except Exception as e:
+            return Response({'success': False, 'detail': f'Error checking task status: {str(e)}'}, status=500)
+
+    @action(detail=False, methods=['post'])
+    def process_with_formulas(self, request):
+        """
+        Process payroll with specific formula overrides for enhanced flexibility.
+        """
+        try:
+            employee_ids = request.data.get('employee_ids', [])
+            payment_period = request.data.get('payment_period')
+            formula_overrides = request.data.get('formula_overrides', {})
+            recover_advances = request.data.get('recover_advances', False)
+
+            if not employee_ids or not payment_period:
+                return Response({'success': False, 'detail': 'Employee IDs and payment period are required'}, status=400)
+
+            try:
+                if isinstance(payment_period, str):
+                    payment_period = datetime.strptime(payment_period, '%Y-%m-%d').date()
+                elif isinstance(payment_period, str) and len(payment_period) == 7:
+                    payment_period = datetime.strptime(payment_period + '-01', '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'success': False, 'detail': 'Invalid payment period format. Use YYYY-MM-DD or YYYY-MM'}, status=400)
+
+            from hrm.payroll_settings.models import Formulas
+            validated_overrides = {}
+
+            for formula_type, formula_id in formula_overrides.items():
+                if formula_id:
+                    try:
+                        form_obj = Formulas.objects.get(id=formula_id, is_active=True)
+                        validated_overrides[formula_type] = form_obj.id
+                    except Formulas.DoesNotExist:
+                        return Response({'success': False, 'detail': f'Invalid {formula_type} formula ID: {formula_id}'}, status=400)
+
+            results = []
+            for employee_id in employee_ids:
+                try:
+                    employee = Employee.objects.get(id=employee_id)
+                except Employee.DoesNotExist:
+                    results.append({'employee_id': employee_id, 'success': False, 'detail': 'Employee not found'})
+                    continue
+
+                payroll_result = PayrollGenerator(
+                    request,
+                    employee,
+                    payment_period,
+                    recover_advances,
+                    'process',
+                    formula_overrides=validated_overrides
+                ).generate_payroll()
+
+                results.append({employee_id: payroll_result})
+
+            return Response({'success': True, 'results': results})
+        except Exception as e:
+            return Response({'success': False, 'detail': f'Error processing payroll with formulas: {str(e)}'}, status=500)
 
 class CustomReportViewSet(viewsets.ModelViewSet):
     queryset = CustomReport.objects.all()
@@ -424,96 +733,6 @@ class PayrollAuditsViewSet(viewsets.ViewSet):
         serializer=PayslipAuditSerializer(audits,many=True)
         return Response(serializer.data,status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['post'])
-    def generate_casual_voucher(self, request):
-        """
-        Generate payment voucher for casual employees based on attendance and daily rates.
-        """
-        try:
-            employee_id = request.data.get('employee_id')
-            payment_period = request.data.get('payment_period')
-            
-            if not employee_id or not payment_period:
-                return Response({
-                    'success': False,
-                    'detail': 'Employee ID and payment period are required'
-                }, status=400)
-            
-            # Parse payment period
-            try:
-                if isinstance(payment_period, str):
-                    payment_period = datetime.strptime(payment_period, '%Y-%m-%d').date()
-                elif isinstance(payment_period, str) and len(payment_period) == 7:
-                    payment_period = datetime.strptime(payment_period + '-01', '%Y-%m-%d').date()
-            except ValueError:
-                return Response({
-                    'success': False,
-                    'detail': 'Invalid payment period format. Use YYYY-MM-DD or YYYY-MM'
-                }, status=400)
-            
-            # Get employee
-            try:
-                employee = Employee.objects.get(id=employee_id)
-            except Employee.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'detail': 'Employee not found'
-                }, status=404)
-            
-            # Queue casual voucher generation as background task
-            task = process_single_payslip.delay(
-                employee_id=employee_id,
-                payment_period=payment_period,
-                recover_advances=False,
-                command='casual',
-                user_id=request.user.id
-            )
-            
-            return Response({
-                "message": f"Casual voucher generation for employee {employee_id} has been queued.",
-                "task_id": task.id,
-                "status": "processing",
-                "success": True
-            })
-                
-        except Exception as e:
-            return Response({
-                'success': False,
-                'detail': f'Error generating casual voucher: {str(e)}'
-            }, status=500)
-
-    @action(detail=False, methods=['post'])
-    def rerun_payslip(self, request):
-        """
-        Rerun a specific payslip calculation asynchronously.
-        """
-        try:
-            payslip_id = request.data.get('payslip_id')
-            if not payslip_id:
-                return Response({
-                    'success': False,
-                    'detail': 'payslip_id is required'
-                }, status=400)
-            
-            # Queue payslip rerun as background task
-            task = rerun_payslip.delay(
-                payslip_id=payslip_id,
-                user_id=request.user.id
-            )
-            
-            return Response({
-                "message": f"Payslip rerun for ID {payslip_id} has been queued.",
-                "task_id": task.id,
-                "status": "processing",
-                "success": True
-            })
-                
-        except Exception as e:
-            return Response({
-                'success': False,
-                'detail': f'Error queuing payslip rerun: {str(e)}'
-            }, status=500)
-
     @action(detail=False, methods=['get'])
     def task_status(self, request):
         """
@@ -554,64 +773,6 @@ class PayrollAuditsViewSet(viewsets.ViewSet):
             return Response({
                 'success': False,
                 'detail': f'Error checking task status: {str(e)}'
-            }, status=500)
-
-    @action(detail=False, methods=['post'])
-    def generate_consultant_voucher(self, request):
-        """
-        Generate payment voucher for consultants based on monthly salary and benefits.
-        """
-        try:
-            employee_id = request.data.get('employee_id')
-            payment_period = request.data.get('payment_period')
-            
-            if not employee_id or not payment_period:
-                return Response({
-                    'success': False,
-                    'detail': 'Employee ID and payment period are required'
-                }, status=400)
-            
-            # Parse payment period
-            try:
-                if isinstance(payment_period, str):
-                    payment_period = datetime.strptime(payment_period, '%Y-%m-%d').date()
-                elif isinstance(payment_period, str) and len(payment_period) == 7:
-                    payment_period = datetime.strptime(payment_period + '-01', '%Y-%m-%d').date()
-            except ValueError:
-                return Response({
-                    'success': False,
-                    'detail': 'Invalid payment period format. Use YYYY-MM-DD or YYYY-MM'
-                }, status=400)
-            
-            # Get employee
-            try:
-                employee = Employee.objects.get(id=employee_id)
-            except Employee.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'detail': 'Employee not found'
-                }, status=404)
-            
-            # Queue consultant voucher generation as background task
-            task = process_single_payslip.delay(
-                employee_id=employee_id,
-                payment_period=payment_period,
-                recover_advances=False,
-                command='consultant',
-                user_id=request.user.id
-            )
-            
-            return Response({
-                "message": f"Consultant voucher generation for employee {employee_id} has been queued.",
-                "task_id": task.id,
-                "status": "processing",
-                "success": True
-            })
-                
-        except Exception as e:
-            return Response({
-                'success': False,
-                'detail': f'Error generating consultant voucher: {str(e)}'
             }, status=500)
 
     @action(detail=False, methods=['post'])
@@ -912,8 +1073,10 @@ class EmployeeAdvancesViewSet(SensitiveModuleFilterMixin, viewsets.ModelViewSet)
         from_date = self.request.query_params.get('from_date', None)
         to_date = self.request.query_params.get('to_date', None)
         
-        if from_date and to_date:
-            queryset = queryset.filter(issue_date__range=[from_date, to_date])
+        if from_date:
+            queryset = queryset.filter(issue_date__gte=from_date)
+        if to_date:
+            queryset = queryset.filter(issue_date__lte=to_date)
 
         return queryset
 
@@ -1027,8 +1190,10 @@ class EmployeeLossDamagesViewSet(SensitiveModuleFilterMixin, viewsets.ModelViewS
         from_date = self.request.query_params.get('from_date', None)
         to_date = self.request.query_params.get('to_date', None)
         
-        if from_date and to_date:
-            queryset = queryset.filter(issue_date__range=[from_date, to_date])
+        if from_date:
+            queryset = queryset.filter(issue_date__gte=from_date)
+        if to_date:
+            queryset = queryset.filter(issue_date__lte=to_date)
 
         return queryset
 
@@ -1551,3 +1716,5 @@ class PayrollApprovalViewSet(viewsets.ViewSet):
             #     except ConsultantVoucher.DoesNotExist:
             #         return None
             return None
+
+

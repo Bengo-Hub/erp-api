@@ -171,7 +171,13 @@ class UserSerializer(serializers.ModelSerializer):
         # Handle password change if provided
         password = validated_data.pop('password', None)
         if password:
+            from django.utils import timezone
             instance.set_password(password)
+            try:
+                instance.password_changed_at = timezone.now()
+                instance.must_change_password = False
+            except Exception:
+                pass
 
         # Handle profile picture if provided
         if 'pic' in validated_data:

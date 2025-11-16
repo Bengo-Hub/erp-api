@@ -2,13 +2,16 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
-from django.contrib.auth import get_user_model
 
-User = get_user_model()
+# Lazy import to avoid AppRegistryNotReady errors during ASGI initialization
+def _get_user_model():
+    """Lazy import of User model."""
+    from django.contrib.auth import get_user_model
+    return get_user_model()
 
 class PayrollConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # Get user from scope
+        # Get user from scope (already set by middleware)
         self.user = self.scope["user"]
         
         if self.user.is_authenticated:

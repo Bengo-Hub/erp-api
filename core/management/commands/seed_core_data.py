@@ -18,8 +18,8 @@ class Command(BaseCommand):
         # Note: Business, BusinessLocation, AppSettings, Banner, ContractSetting are created by middleware
         # We only need to seed data that is NOT automatically created by middleware
         
-        # Ensure admin user exists with consistent password
-        admin_user = User.objects.filter(username='admin').first()
+        # Ensure admin user exists (only create if missing; do not override middleware-created account)
+        admin_user = User.objects.filter(username='admin').first() or User.objects.filter(email='admin@codevertexitsolutions.com').first()
         if not admin_user:
             admin_user = User.objects.create_superuser(
                 username='admin', 
@@ -28,15 +28,9 @@ class Command(BaseCommand):
                 first_name='System',
                 last_name='Administrator'
             )
-            self.stdout.write(self.style.SUCCESS('✓ Created admin user (username: admin, password: Admin@2025!)'))
+            self.stdout.write(self.style.SUCCESS('✓ Created admin user (username: admin)'))
         else:
-            # Reset password to ensure consistency (in case middleware created it with random password)
-            admin_user.set_password('Admin@2025!')
-            admin_user.email = 'admin@codevertexitsolutions.com'
-            admin_user.is_superuser = True
-            admin_user.is_staff = True
-            admin_user.save()
-            self.stdout.write(self.style.SUCCESS('✓ Admin user exists - password reset to Admin@2025!'))
+            self.stdout.write(self.style.SUCCESS('✓ Admin user already exists - leaving as-is'))
         
         # Get existing business (created by middleware)
         business = Bussiness.objects.first()
@@ -117,7 +111,18 @@ class Command(BaseCommand):
             'Stanbic Bank',
             'Commercial Bank of Africa'
         ]
-        
+
+        # De-duplicate existing banks by name (keep oldest, remove others) to avoid MultipleObjectsReturned on get_or_create
+        try:
+            from django.db.models import Count
+            dup_banks = BankInstitution.objects.values('name').annotate(c=Count('id')).filter(c__gt=1)
+            for dup in dup_banks:
+                same_named = BankInstitution.objects.filter(name=dup['name']).order_by('id')
+                keeper = same_named.first()
+                same_named.exclude(id=keeper.id).delete()
+        except Exception:
+            pass
+
         for bank_name in banks_data:
             # Create unique codes for banks
             code = bank_name[:3].upper()
@@ -125,17 +130,22 @@ class Command(BaseCommand):
                 code = 'SCB'
             elif code == 'COM':  # Handle Commercial Bank of Africa
                 code = 'CBA'
-            
-            bank_institution, created = BankInstitution.objects.get_or_create(
-                name=bank_name,
-                defaults={
-                    'code': code,
-                    'short_code': code,
-                    'swift_code': f"{code}KENA",
-                    'country': 'Kenya',
-                    'is_active': True
-                }
-            )
+
+            # Be tolerant of existing duplicates
+            try:
+                bank_institution, created = BankInstitution.objects.get_or_create(
+                    name=bank_name,
+                    defaults={
+                        'code': code,
+                        'short_code': code,
+                        'swift_code': f"{code}KENA",
+                        'country': 'Kenya',
+                        'is_active': True
+                    }
+                )
+            except Exception:
+                bank_institution = BankInstitution.objects.filter(name=bank_name).order_by('id').first()
+                created = False
             if created:
                 self.stdout.write(f'Created bank institution: {bank_institution.name}')
         
@@ -199,7 +209,7 @@ class Command(BaseCommand):
         ]
         
         for project_data in projects_data:
-            category = ProjectCategory.objects.get(title=project_data['category'])
+            category = ProjectCategory.objects.filter(title=project_data['category']).order_by('id').first()
             project, created = Projects.objects.get_or_create(
                 title=project_data['title'],
                 defaults={

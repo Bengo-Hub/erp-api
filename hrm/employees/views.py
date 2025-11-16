@@ -206,7 +206,12 @@ class EmployeeViewSet(BaseModelViewSet):#cruds
             # Fallback to query param
             branch_id = self.request.query_params.get('branch_id', None)
         
-        employement_type = self.request.query_params.getlist('employement_type', None)
+        employement_type = (
+            self.request.query_params.getlist('employment_type', None)
+            or self.request.query_params.getlist('employment_type[]', None)
+            or self.request.query_params.getlist('employement_type', None)
+            or self.request.query_params.getlist('employement_type[]', None)
+        )
         contract_start_date = self.request.query_params.get("contract_start_date", None)
         contract_end_date = self.request.query_params.get("contract_end_date", None)
         

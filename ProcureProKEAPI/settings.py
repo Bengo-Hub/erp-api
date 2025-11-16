@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
 
     #third pirty
+    'channels',  # Django Channels for WebSocket support
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
@@ -289,6 +290,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'ProcureProKEAPI.wsgi.application'
+ASGI_APPLICATION = 'ProcureProKEAPI.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases

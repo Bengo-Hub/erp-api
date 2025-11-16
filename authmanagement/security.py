@@ -652,6 +652,35 @@ class EnhancedLoginView(APIView):
             login(request, auth_user)
             SecurityService.record_successful_login(auth_user, ip_address, user_agent)
 
+            # Determine if password change is required (first login or expired)
+            from authmanagement.models import PasswordPolicy
+            from django.utils import timezone
+            policy = PasswordPolicy.objects.first()
+            if policy is None:
+                policy = PasswordPolicy.objects.create()  # defaults
+
+            password_change_required = False
+            password_change_reason = None
+            expires_on = None
+
+            # First-login enforcement
+            if getattr(policy, 'require_password_change_on_first_login', True):
+                if getattr(auth_user, 'password_changed_at', None) is None and getattr(auth_user, 'last_login', None) is None:
+                    password_change_required = True
+                    password_change_reason = 'first_login'
+
+            # Expiry enforcement
+            try:
+                if getattr(policy, 'enforce_password_expiry', True) and policy.password_expiry_days > 0:
+                    reference_time = getattr(auth_user, 'password_changed_at', None) or getattr(auth_user, 'date_joined', None)
+                    if reference_time is not None:
+                        expires_on = reference_time + timezone.timedelta(days=policy.password_expiry_days)
+                        if timezone.now() >= expires_on:
+                            password_change_required = True
+                            password_change_reason = 'password_expired'
+            except Exception:
+                pass
+
             # Build extended response (business, addresses, roles, permissions)
             # Addresses
             try:
@@ -790,7 +819,10 @@ class EnhancedLoginView(APIView):
                 'business': business,
                 'addresses': addresses,
                 'roles': [group.name for group in auth_user.groups.all()] if hasattr(auth_user, 'groups') else [],
-                'requires_2fa': False
+                'requires_2fa': False,
+                'password_change_required': password_change_required,
+                'password_change_reason': password_change_reason,
+                'password_expires_on': expires_on
             })
         except Exception as e:
             safe_email = locals().get('email', 'unknown')

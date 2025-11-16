@@ -29,6 +29,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.encoding import force_bytes
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import Group, Permission
+from django.utils import timezone
 from django.db import transaction
 import os
 import subprocess
@@ -183,6 +184,12 @@ class PasswordResetConfirmView(APIView):
                 if new_password !=None:
                     user.set_password(new_password)
                     print('password->',new_password,user.password)
+                    # Track password lifecycle
+                    try:
+                        user.password_changed_at = timezone.now()
+                        user.must_change_password = False
+                    except Exception:
+                        pass
                     user.save()
                 else:
                     return Response({"detail":"New password cannot be null!"}, status=status.HTTP_400_BAD_REQUEST)
@@ -211,6 +218,12 @@ class ChangePasswordView(UpdateAPIView):
                 return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
 
             self.object.set_password(new_password)
+            # Track password lifecycle
+            try:
+                self.object.password_changed_at = timezone.now()
+                self.object.must_change_password = False
+            except Exception:
+                pass
             self.object.save()
             update_session_auth_hash(request, self.object)  # Important to keep the user logged in
 

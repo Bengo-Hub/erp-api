@@ -58,6 +58,9 @@ class CustomUser(AbstractUser):
     device = models.CharField(max_length=100, default="Phone")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Password lifecycle fields
+    password_changed_at = models.DateTimeField(blank=True, null=True)
+    must_change_password = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ['first_name','last_name']
@@ -90,6 +93,9 @@ class PasswordPolicy(models.Model):
     require_numbers = models.BooleanField(default=True)
     require_special_chars = models.BooleanField(default=True)
     password_expiry_days = models.PositiveIntegerField(default=90)
+    # Enforcements
+    require_password_change_on_first_login = models.BooleanField(default=True)
+    enforce_password_expiry = models.BooleanField(default=True)
     max_login_attempts = models.PositiveIntegerField(default=5)
     lockout_duration_minutes = models.PositiveIntegerField(default=30)
     created_at = models.DateTimeField(auto_now_add=True)

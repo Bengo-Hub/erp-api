@@ -70,7 +70,7 @@ class Command(BaseCommand):
 
     def _ensure_admin_user(self):
         """Ensure admin user exists and has proper permissions."""
-        admin_user = User.objects.filter(username='admin').first()
+        admin_user = User.objects.filter(username='admin').first() or User.objects.filter(email='admin@codevertexitsolutions.com').first()
         if not admin_user:
             admin_user = User.objects.create_superuser(
                 username='admin', 
@@ -79,17 +79,9 @@ class Command(BaseCommand):
                 first_name='System',
                 last_name='Administrator',
             )
-            self.stdout.write(self.style.SUCCESS('✓ Created admin user (username: admin, password: Admin@2025!)'))
+            self.stdout.write(self.style.SUCCESS('✓ Created admin user (username: admin)'))
         else:
-            # Reset password to ensure consistency
-            admin_user.set_password('Admin@2025!')
-            admin_user.email = 'admin@codevertexitsolutions.com'
-            admin_user.is_superuser = True
-            admin_user.is_staff = True
-            admin_user.first_name = 'System'
-            admin_user.last_name = 'Administrator'
-            admin_user.save()
-            self.stdout.write(self.style.SUCCESS('✓ Admin user password reset to Admin@2025!'))
+            self.stdout.write(self.style.SUCCESS('✓ Admin user already exists - leaving as-is'))
         
         # Ensure superusers group exists
         superusers_group, created = Group.objects.get_or_create(name='superusers')

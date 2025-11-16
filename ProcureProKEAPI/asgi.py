@@ -11,6 +11,7 @@ import os
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
+from core.middleware.websocket_auth import TokenAuthMiddlewareStack
 from ecommerce.pos import routing as pos_routing
 from hrm.payroll import routing as payroll_routing
 from task_management import routing as task_routing
@@ -19,7 +20,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ProcureProKEAPI.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    "websocket": AuthMiddlewareStack(
+    "websocket": TokenAuthMiddlewareStack(
         URLRouter(
             pos_routing.websocket_urlpatterns + 
             payroll_routing.websocket_urlpatterns +
