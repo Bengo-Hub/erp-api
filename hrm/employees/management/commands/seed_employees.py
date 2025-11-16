@@ -18,16 +18,16 @@ class Command(BaseCommand):
     help = 'Seed database with demo employee records linked to Codevertex Africa business'
 
     def add_arguments(self, parser):
-        parser.add_argument('--count', type=int, default=10, help='Number of employees to generate')
+        parser.add_argument('--count', type=int, default=1, help='Number of employees to generate')
 
     def handle(self, *args, **options):
-        count = options.get('count', 10)
+        count = options.get('count', 1)
         self.stdout.write(self.style.SUCCESS(f'Starting to seed {count} demo employees across multiple branches...'))
     
-        # Get the business "Codevertex Africa"
-        business = Bussiness.objects.filter(name='Codevertex Africa').first()
+        # Get the business "Codevertex IT Solutions" (standardized), fallback to first
+        business = Bussiness.objects.filter(name__iexact='Codevertex IT Solutions').first() or Bussiness.objects.first()
         if not business:
-            self.stdout.write(self.style.ERROR('Business "Codevertex Africa" not found. Please run business seeding first.'))
+            self.stdout.write(self.style.ERROR('No business found. Please run business seeding first.'))
             return
         
         # Get all branches for distribution

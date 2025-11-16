@@ -13,7 +13,7 @@ class Command(BaseCommand):
         parser.add_argument('--simulate', action='store_true', help='Simulate manufacturing workflows where supported')
         parser.add_argument('--full', action='store_true', help='Run full manufacturing seeding (products + raw materials)')
         parser.add_argument('--products', type=int, default=20, help='Number of demo products to generate')
-        parser.add_argument('--employees', type=int, default=5, help='Number of demo employees to generate')
+        parser.add_argument('--employees', type=int, default=1, help='Number of demo employees to generate')
         parser.add_argument('--minimal', action='store_true', help='Seed a minimal dataset (1-2 per model)')
 
     def handle(self, *args, **options):
@@ -26,9 +26,9 @@ class Command(BaseCommand):
         employees_count = options.get('employees')
 
         if minimal:
-            # Cap counts to 1-2 for lightweight seeding
-            products_count = max(1, min(2, int(products_count)))
-            employees_count = max(1, min(2, int(employees_count)))
+            # Strict minimal mode: seed only ONE item per dataset where applicable
+            products_count = 1
+            employees_count = 1
 
         self.stdout.write(self.style.SUCCESS('Starting comprehensive seeding process...'))
         
@@ -79,7 +79,7 @@ class Command(BaseCommand):
 
         try:
             # 4. HRM employees seeding
-            self.stdout.write(f'4. Seeding HRM employees ({employees_count} employees)...')
+            self.stdout.write(f'4. Seeding HRM employees ({employees_count} employee{"s" if employees_count != 1 else ""})...')
             call_command('seed_employees', count=employees_count)
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'HRM employees seeding failed: {e}'))
@@ -107,8 +107,12 @@ class Command(BaseCommand):
 
         try:
             # 8. Ecommerce products seeding
-            self.stdout.write(f'8. Seeding ecommerce products ({products_count} products)...')
-            call_command('seed_products', count=products_count)
+            if minimal:
+                self.stdout.write(f'8. Seeding ecommerce products ({products_count})...')
+                call_command('seed_products', count=products_count)
+            else:
+                self.stdout.write(f'8. Seeding ecommerce products ({products_count} products)...')
+                call_command('seed_products', count=products_count)
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Ecommerce products seeding failed: {e}'))
 
@@ -126,7 +130,7 @@ class Command(BaseCommand):
             # 10. Finance payment accounts seeding
             self.stdout.write('10. Seeding finance payment accounts...')
             if minimal:
-                call_command('seed_payment_accounts', count=2)
+                call_command('seed_payment_accounts', count=1)
             else:
                 call_command('seed_payment_accounts')
         except Exception as e:
@@ -136,7 +140,7 @@ class Command(BaseCommand):
             # 11. Finance bank statements seeding
             self.stdout.write('11. Seeding finance bank statements...')
             if minimal:
-                call_command('seed_bank_statements', count=2)
+                call_command('seed_bank_statements', count=1)
             else:
                 call_command('seed_bank_statements')
         except Exception as e:
@@ -144,15 +148,21 @@ class Command(BaseCommand):
 
         try:
             # 12. CRM campaigns seeding
-            self.stdout.write('12. Seeding CRM campaigns data...')
-            call_command('seed_campaigns')
+            if minimal:
+                self.stdout.write('12. Skipping CRM campaigns in minimal mode')
+            else:
+                self.stdout.write('12. Seeding CRM campaigns data...')
+                call_command('seed_campaigns')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'CRM campaigns seeding failed: {e}'))
 
         try:
             # 13. Procurement data seeding
-            self.stdout.write('13. Seeding procurement data...')
-            call_command('seed_procurement_data')
+            if minimal:
+                self.stdout.write('13. Skipping procurement data in minimal mode')
+            else:
+                self.stdout.write('13. Seeding procurement data...')
+                call_command('seed_procurement_data')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Procurement data seeding failed: {e}'))
 
@@ -160,7 +170,7 @@ class Command(BaseCommand):
         try:
             self.stdout.write('14. Seeding assets data...')
             if minimal:
-                call_command('seed_assets', users=1, categories=2, assets=2)
+                call_command('seed_assets', users=1, categories=1, assets=1)
             else:
                 call_command('seed_assets')
         except Exception as e:
