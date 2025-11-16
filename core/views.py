@@ -106,12 +106,77 @@ class BankInstitutionViewSet(viewsets.ModelViewSet):
     queryset = BankInstitution.objects.all()
     serializer_class = BankInstitutionSerializer
 
+    def create(self, request, *args, **kwargs):
+        """Sanitize and avoid duplicates by case-insensitive matching on name/code."""
+        data = request.data.copy()
+        name = str(data.get('name', '')).strip()
+        code = str(data.get('code', '')).strip().upper()
+        short_code = str(data.get('short_code', '')).strip().upper()
+        swift_code = str(data.get('swift_code', '')).strip().upper() if data.get('swift_code') else None
+        country = data.get('country') or 'Kenya'
+
+        if not name or not code or not short_code:
+            return Response({'detail': 'name, code and short_code are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Try find existing by code/short_code OR name (case-insensitive)
+        inst = BankInstitution.objects.filter(code__iexact=code).first() or \
+               BankInstitution.objects.filter(short_code__iexact=short_code).first() or \
+               BankInstitution.objects.filter(name__iexact=name).first()
+        if inst:
+            # Update existing and return
+            inst.name = name
+            inst.code = code
+            inst.short_code = short_code
+            inst.swift_code = swift_code or inst.swift_code
+            inst.country = country
+            inst.is_active = True
+            inst.save()
+            serializer = self.get_serializer(inst)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        data.update({'name': name, 'code': code, 'short_code': short_code, 'swift_code': swift_code, 'country': country})
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 # Legacy alias for backward compatibility
 BanksViewSet = BankInstitutionViewSet
 
 class BankBranchesViewSet(viewsets.ModelViewSet):
     queryset = BankBranches.objects.all()
     serializer_class = BankBranchesSerializer
+
+    def create(self, request, *args, **kwargs):
+        """Sanitize and avoid duplicates per (bank, code) ignoring case; normalize name/codes."""
+        data = request.data.copy()
+        bank_id = data.get('bank')
+        name = str(data.get('name', '')).strip()
+        code = str(data.get('code', '')).strip().upper()
+        if not bank_id or not name or not code:
+            return Response({'detail': 'bank, name and code are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check duplicate by (bank, code) case-insensitive
+        existing = BankBranches.objects.filter(bank_id=bank_id, code__iexact=code).first()
+        if existing:
+            # Update existing with sanitized name and return
+            existing.name = name
+            existing.code = code
+            existing.address = data.get('address') or existing.address
+            existing.phone = data.get('phone') or existing.phone
+            existing.email = data.get('email') or existing.email
+            existing.is_active = True
+            existing.save()
+            serializer = self.get_serializer(existing)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        data.update({'name': name, 'code': code})
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 # ActiveBannersView moved to centralized campaigns app
 # Use: /api/v1/campaigns/active_banners/ endpoint

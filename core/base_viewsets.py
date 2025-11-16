@@ -28,6 +28,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import Http404
 import logging
 
 from .response import APIResponse, get_correlation_id
@@ -135,6 +137,12 @@ class BaseModelViewSet(viewsets.ModelViewSet):
             return APIResponse.success(
                 data=serializer.data,
                 message=f'{self.get_entity_type()} retrieved successfully',
+                correlation_id=correlation_id
+            )
+        except (ObjectDoesNotExist, Http404):
+            correlation_id = self.get_correlation_id()
+            return APIResponse.not_found(
+                message=f'{self.get_entity_type()} not found',
                 correlation_id=correlation_id
             )
         except Exception as e:
@@ -248,6 +256,12 @@ class BaseModelViewSet(viewsets.ModelViewSet):
                 errors={'detail': str(e)},
                 correlation_id=correlation_id
             )
+        except (ObjectDoesNotExist, Http404):
+            correlation_id = self.get_correlation_id()
+            return APIResponse.not_found(
+                message=f'{self.get_entity_type()} not found',
+                correlation_id=correlation_id
+            )
         except Exception as e:
             logger.error(f'Error updating {self.get_entity_type()}: {str(e)}', exc_info=True)
             correlation_id = self.get_correlation_id()
@@ -292,6 +306,12 @@ class BaseModelViewSet(viewsets.ModelViewSet):
                 data={'id': entity_id, 'deleted': True},
                 message=f'{entity_type} deleted successfully',
                 status_code=status.HTTP_204_NO_CONTENT,
+                correlation_id=correlation_id
+            )
+        except (ObjectDoesNotExist, Http404):
+            correlation_id = self.get_correlation_id()
+            return APIResponse.not_found(
+                message=f'{self.get_entity_type()} not found',
                 correlation_id=correlation_id
             )
         except Exception as e:

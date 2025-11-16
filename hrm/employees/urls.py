@@ -20,6 +20,7 @@ router.register(r'loans', EmployeeLoansViewSet)  # Use an appropriate URL prefix
 router.register(r'contact-details', ContactDetailsViewSet)
 router.register(r'next-of-kin', NextOfKinViewSet)
 router.register(r'employee-payroll-data', EmployeePayrollDataViewSet, basename='employee-payroll-data')
+router.register(r'bank-accounts', EmployeeBankAccountViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),  # Remove the extra 'employees/' prefix

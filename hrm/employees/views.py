@@ -36,6 +36,35 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+class EmployeeBankAccountViewSet(viewsets.ModelViewSet):
+    queryset = EmployeeBankAccount.objects.all()
+    serializer_class = EmployeeBankAccountSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination
+
+    def list(self, request, *args, **kwargs):
+        emp_id = request.query_params.get('emp_id')
+        qs = self.get_queryset()
+        if emp_id:
+            qs = qs.filter(employee__id=emp_id)
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        """Ensure only one primary account per employee."""
+        instance = serializer.save()
+        if instance.is_primary:
+            EmployeeBankAccount.objects.filter(employee=instance.employee).exclude(pk=instance.pk).update(is_primary=False)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if instance.is_primary:
+            EmployeeBankAccount.objects.filter(employee=instance.employee).exclude(pk=instance.pk).update(is_primary=False)
+
 
 class UploadEmployData(APIView):
     permission_classes=[IsAuthenticated]
@@ -54,7 +83,7 @@ class UploadEmployData(APIView):
         # Call the import_employee_data function
         #try:
         path=default_storage.path(file_name)
-        import_response = EmployeeDataImport(path=path,request=request).import_employee_data()
+        import_response = EmployeeDataImport(request=request, path=path, organisation=organisation).import_employee_data()
         if fileType =='products':
             res = ImportProducts(request,path,organisation).save_product()
             if fileType =='contacts':
@@ -69,6 +98,97 @@ class EmployeeViewSet(BaseModelViewSet):#cruds
     #serializer_class = PersonalDataSerializer
     permission_classes=[IsAuthenticated]
     pagination_class = PageNumberPagination  # Enable pagination
+
+    def update(self, request, *args, **kwargs):
+        """
+        Treat PUT as partial update to avoid forcing non-critical fields.
+        Also normalize date_of_birth if provided as ISO datetime.
+        """
+        # Normalize date_of_birth to YYYY-MM-DD if provided as datetime string
+        data = request.data
+        try:
+            # request.data may be immutable (e.g., QueryDict). Copy if possible.
+            data = data.copy() if hasattr(data, 'copy') else dict(data)
+        except Exception:
+            data = request.data
+        dob = data.get('date_of_birth')
+        if isinstance(dob, str) and 'T' in dob:
+            # Best-effort normalization: keep the date portion
+            try:
+                # Attempt common formats then fallback to slicing
+                for fmt in ('%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S'):
+                    try:
+                        parsed = datetime.strptime(dob, fmt).date()
+                        data['date_of_birth'] = parsed.isoformat()
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    data['date_of_birth'] = dob[:10]
+            except Exception:
+                # If parsing fails, let serializer handle it with expanded formats
+                pass
+
+        # Force partial updates to relax required fields
+        kwargs['partial'] = True
+        # Reuse BaseModelViewSet update flow but pass our normalized data explicitly
+        try:
+            correlation_id = self.get_correlation_id()
+            instance = self.get_object()
+            old_data = self.get_serializer(instance).data
+            serializer = self.get_serializer(instance, data=data, partial=True)
+            if not serializer.is_valid():
+                return APIResponse.validation_error(
+                    message='Validation failed',
+                    errors=serializer.errors,
+                    correlation_id=correlation_id
+                )
+            updated_instance = serializer.save()
+            new_data = self.get_serializer(updated_instance).data
+            changes = {key: {'old': old_data.get(key), 'new': new_data.get(key)}
+                       for key in new_data if old_data.get(key) != new_data.get(key)}
+            self.log_operation(
+                operation=AuditTrail.UPDATE,
+                obj=updated_instance,
+                changes=changes,
+                reason=f'Updated {self.get_entity_type()}'
+            )
+            return APIResponse.success(
+                data=new_data,
+                message=f'{self.get_entity_type()} updated successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            # Defer to parent standardized handler on unexpected errors
+            return super().update(request, *args, **kwargs)
+
+    def get_object(self):
+        """
+        Override get_object to allow retrieving:
+        - Any employee when superuser
+        - The current user's own employee record regardless of organisation filters
+        - Employees within the same organisation context as the requesting user
+        """
+        from django.http import Http404
+        pk = self.kwargs.get(self.lookup_field or 'pk')
+        try:
+            obj = Employee.objects.select_related('organisation', 'user').get(pk=pk)
+        except Employee.DoesNotExist:
+            raise Http404
+        user = self.request.user
+        if getattr(user, 'is_superuser', False):
+            return obj
+        # Allow if the employee belongs to the requester
+        if obj.user_id == getattr(user, 'id', None):
+            return obj
+        # Allow if within user's organisation context (owner or same organisation as user's employee)
+        org_ids = Bussiness.objects.filter(
+            Q(owner=user) | Q(id=getattr(getattr(user, "employee", None), "organisation_id", None))
+        ).values_list('id', flat=True)
+        if obj.organisation_id in list(org_ids):
+            return obj
+        # Otherwise, act as not found
+        raise Http404
 
     def get_queryset(self):
         """Filter employees with optimized queries using select_related and prefetch_related."""
@@ -113,12 +233,36 @@ class EmployeeViewSet(BaseModelViewSet):#cruds
 
         # Apply branch filtering if branch_id is available
         if branch_id:
-            # Filter through hr_details which has branch relationship
-            queryset = queryset.filter(hr_details__branch_id=branch_id)
+            # Filter through hr_details which has branch relationship; if no matches yet (e.g., data not linked),
+            # skip to avoid hiding all employees.
+            branch_qs = queryset.filter(hr_details__branch_id=branch_id)
+            if branch_qs.exists():
+                queryset = branch_qs
             
         if not self.request.user.is_superuser:
-            orgs=Bussiness.objects.filter(Q(owner=self.request.user)|Q(id=getattr(getattr(self.request.user, "employee", None), "organisation_id", None)))
-            queryset = queryset.filter(Q(organisation__in=orgs))
+            orgs = Bussiness.objects.filter(
+                Q(owner=self.request.user) |
+                Q(id=getattr(getattr(self.request.user, "employee", None), "organisation_id", None))
+            )
+            if orgs.exists():
+                queryset = queryset.filter(Q(organisation__in=orgs))
+            else:
+                # Fallback to business context header if provided
+                try:
+                    from core.utils import get_business_id_from_request
+                    biz_id = get_business_id_from_request(self.request)
+                except Exception:
+                    biz_id = None
+                if biz_id:
+                    queryset = queryset.filter(organisation_id=biz_id)
+                else:
+                    # If there is only one business in the system, default to it
+                    try:
+                        total_biz = Bussiness.objects.count()
+                        if total_biz == 1:
+                            queryset = queryset.filter(organisation=Bussiness.objects.first())
+                    except Exception:
+                        pass
         
         # Apply employment type filtering - this is the key fix
         if employement_type:
@@ -914,19 +1058,54 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response({"status": "Contract terminated successfully."})
         return Response({"error": "Contract is already terminated."}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=True, methods=['patch'], url_path='renew')
+    @action(detail=True, methods=['patch','post'], url_path='renew')
     def renew(self, request, pk=None):
         """
-        Renew an existing contract
+        Renew an existing contract (single).
+        Accepts:
+          - renewal_duration (months, default 12)
+          - salary_adjustment (percent, default 0)
+          - status (default 'active')
         """
+        from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
         contract = self.get_object()
-        if contract.status == 'expired':
-            new_end_date = datetime.now().date() + timedelta(days=int(request.data.get('days', 365)))  # Default renewal period is 1 year
-            contract.contract_end_date = new_end_date
-            contract.status = 'active'  # Renew the contract to active status
-            contract.save()
-            return Response({"status": f"Contract renewed until {new_end_date}."})
-        return Response({"error": "Contract is not expired and cannot be renewed."}, status=status.HTTP_400_BAD_REQUEST)
+        months = int(request.data.get('renewal_duration', 12) or 12)
+        pct = request.data.get('salary_adjustment', 0) or 0
+        try:
+            pct = Decimal(str(pct))
+        except (InvalidOperation, ValueError):
+            pct = Decimal('0')
+        new_status = str(request.data.get('status', 'active') or 'active')
+
+        # Compute new end date by adding months to current end date (or start if missing)
+        base_date = contract.contract_end_date or contract.contract_start_date or timezone.now().date()
+        # Add months safely
+        total_months = base_date.month - 1 + months
+        new_year = base_date.year + total_months // 12
+        new_month = (total_months % 12) + 1
+        from calendar import monthrange
+        last_day = monthrange(new_year, new_month)[1]
+        new_day = min(base_date.day, last_day)
+        new_end_date = base_date.replace(year=new_year, month=new_month, day=new_day)
+
+        # Adjust salary by percentage
+        try:
+            new_salary = (contract.salary * (Decimal('1') + (pct / Decimal('100')))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except Exception:
+            new_salary = contract.salary
+
+        contract.contract_end_date = new_end_date
+        contract.salary = new_salary
+        contract.status = new_status
+        contract.save()
+
+        return Response({
+            "message": "Contract renewed successfully",
+            "id": contract.id,
+            "contract_end_date": contract.contract_end_date,
+            "salary": str(contract.salary),
+            "status": contract.status
+        }, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['patch'], url_path='extend')
     def extend(self, request, pk=None):
@@ -941,11 +1120,68 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response({"status": f"Contract extended by {extra_days} days."})
         return Response({"error": "Only active contracts can be extended."}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['post'], url_path='renew')
+    def renew_batch(self, request):
+        """
+        Batch renew contracts.
+        Body:
+          - ids: [contractId,...] (required)
+          - renewal_duration: months (default 12)
+          - salary_adjustment: percent (default 0)
+          - status: new status (default 'active')
+        """
+        from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+        ids = request.data.get('ids') or request.data.get('contract_ids') or []
+        if not isinstance(ids, list) or not ids:
+            return Response({"error": "ids array is required"}, status=status.HTTP_400_BAD_REQUEST)
+        months = int(request.data.get('renewal_duration', 12) or 12)
+        pct = request.data.get('salary_adjustment', 0) or 0
+        try:
+            pct = Decimal(str(pct))
+        except (InvalidOperation, ValueError):
+            pct = Decimal('0')
+        new_status = str(request.data.get('status', 'active') or 'active')
+
+        updated = []
+        errors = []
+        from calendar import monthrange
+        for cid in ids:
+            try:
+                contract = Contract.objects.get(pk=cid)
+                base_date = contract.contract_end_date or contract.contract_start_date or timezone.now().date()
+                total_months = base_date.month - 1 + months
+                new_year = base_date.year + total_months // 12
+                new_month = (total_months % 12) + 1
+                last_day = monthrange(new_year, new_month)[1]
+                new_day = min(base_date.day, last_day)
+                new_end_date = base_date.replace(year=new_year, month=new_month, day=new_day)
+                # Adjust salary by percentage
+                try:
+                    new_salary = (contract.salary * (Decimal('1') + (pct / Decimal('100')))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                except Exception:
+                    new_salary = contract.salary
+                contract.contract_end_date = new_end_date
+                contract.salary = new_salary
+                contract.status = new_status
+                contract.save()
+                updated.append({"id": contract.id, "contract_end_date": contract.contract_end_date, "salary": str(contract.salary), "status": contract.status})
+            except Exception as e:
+                errors.append({"id": cid, "error": str(e)})
+
+        return Response({"updated": updated, "errors": errors, "count": len(updated)}, status=status.HTTP_200_OK)
+
 class ContactDetailsViewSet(viewsets.ModelViewSet):
     queryset = ContactDetails.objects.all()
     serializer_class = ContactDetailsSerializer
     permission_classes=[IsAuthenticated]
     pagination_class = PageNumberPagination  # Enable pagination
+
+    def update(self, request, *args, **kwargs):
+        """
+        Treat PUT as partial updates so profile edits don't require full address payload.
+        """
+        kwargs['partial'] = True
+        return super().update(request, *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
         department_ids = request.query_params.getlist("department[]", None)
