@@ -8,16 +8,15 @@ from .reports_views import (
 )
 router = DefaultRouter()
 router.register(r'payroll', ProcessPayrollViewSet, basename='payroll')
-router.register(r'payroll-audits', PayrollAuditsViewSet, basename='payroll-audits')
 router.register(r'advances', EmployeeAdvancesViewSet, basename='advances')
 router.register(r'losses-damages', EmployeeLossDamagesViewSet, basename='loss-damages')
 router.register(r'claims', ExpenseClaimViewSet, basename='claim')
+router.register(r'payroll-audits', PayrollAuditsViewSet, basename='payroll-audits')
 router.register(r'expense-claim-settings', ExpenseClaimSettingsViewSet, basename='expense-claim-settings')
 router.register(r'expense-codes', ExpenseCodeViewSet, basename='expense-codes')
 router.register(r'claim-items', ClaimItemViewSet, basename='claim-item')
 router.register(r'approvals', PayrollApprovalViewSet, basename='payroll_approval')
 router.register(r'custom-reports', CustomReportViewSet, basename='custom-report')
-
 
 urlpatterns = [
     path('', include(router.urls)),

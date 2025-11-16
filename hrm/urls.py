@@ -4,7 +4,6 @@ HRM module main URL configuration.
 from django.urls import path, include
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework.routers import DefaultRouter
 from .api import hrm_analytics
 
 
@@ -16,6 +15,7 @@ def hrm_root(request):
     
     return Response({
         "employees": abs_path('employees/'),
+        "contract-status": abs_path('contracts/status/'),
         "job_titles": abs_path('job-titles/'),
         "job_groups": abs_path('job-groups/'),
         "payroll": abs_path('payroll/'),
@@ -38,17 +38,14 @@ urlpatterns = [
     path('', hrm_root, name='hrm-root'),
     path('analytics/', hrm_analytics, name='hrm-analytics'),
     
-    # Legacy compatibility routes under /employees/ for payroll resources
-    path('employees/', include((legacy_payroll_router.urls, 'hrm-legacy-payroll'))),
-    
     # Include HRM submodule URLs
-    path('', include('hrm.payroll.urls')),
-    path('', include('hrm.employees.urls')),
-    path('', include('hrm.attendance.urls')),
-    path('', include('hrm.leave.urls')),
-    path('', include('hrm.payroll_settings.urls')),
-    path('', include('hrm.appraisals.urls')),
-    path('', include('hrm.recruitment.urls')),
-    path('', include('hrm.training.urls')),
-    path('', include('hrm.performance.urls')),
+    path('payroll/', include('hrm.payroll.urls')),
+    path('employees/', include('hrm.employees.urls')),
+    path('attendance/', include('hrm.attendance.urls')),
+    path('leave/', include('hrm.leave.urls')),
+    path('payroll-settings/', include('hrm.payroll_settings.urls')),
+    path('appraisals/', include('hrm.appraisals.urls')),
+    path('recruitment/', include('hrm.recruitment.urls')),
+    path('training/', include('hrm.training.urls')),
+    path('performance/', include('hrm.performance.urls')),
 ]
