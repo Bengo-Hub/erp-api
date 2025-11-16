@@ -77,7 +77,7 @@ USER root
 RUN chmod +x /usr/local/bin/init-media.sh
 USER appuser
 
-# Startup script: initialize media directory, collect static files, then start gunicorn
-CMD ["bash","-lc","/usr/local/bin/init-media.sh && python manage.py collectstatic --noinput || true && daphne ProcureProKEAPI.asgi:application --bind 0.0.0.0:${PORT} --workers 3 --timeout 120"]
+# Startup script: initialize media directory, collect static files, then start ASGI server (Daphne)
+CMD ["bash","-lc","/usr/local/bin/init-media.sh && python manage.py collectstatic --noinput || true && daphne -b 0.0.0.0 -p ${PORT} ProcureProKEAPI.asgi:application"]
 
 
