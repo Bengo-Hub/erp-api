@@ -75,21 +75,27 @@ ${PULL_SECRETS_YAML}
           
           echo "Database has \$USER_COUNT users"
           
-          # Decision: Skip clearing if database has data (avoids deleting from missing tables)
-          if [[ "\$USER_COUNT" -gt "0" ]]; then
-            echo "✓ Existing data detected - seeding with --no-clear to preserve data"
-            echo "Running: python manage.py seed_all --minimal --no-clear"
-            python manage.py seed_all --minimal --no-clear || {
-              echo "⚠️  Seeding with --no-clear failed (may have conflicts)"
-              echo "Attempting to seed critical data only..."
-              python manage.py seed_core_data || true
-              python manage.py seed_business_data || true
-              echo "✓ Critical data seeded (some failures ignored)"
-            }
-          else
-            echo "✓ Fresh database - seeding with data clearing enabled"
+          # Decision: Force clear if SEED_FORCE_CLEAR=true (default true)
+          if [[ "\${SEED_FORCE_CLEAR:-true}" == "true" ]]; then
+            echo "✓ Forcing data clear - running full minimal seed"
             echo "Running: python manage.py seed_all --minimal"
             python manage.py seed_all --minimal
+          else
+            if [[ "\$USER_COUNT" -gt "0" ]]; then
+              echo "✓ Existing data detected - seeding with --no-clear to preserve data"
+              echo "Running: python manage.py seed_all --minimal --no-clear"
+              python manage.py seed_all --minimal --no-clear || {
+                echo "⚠️  Seeding with --no-clear failed (may have conflicts)"
+                echo "Attempting to seed critical data only..."
+                python manage.py seed_core_data || true
+                python manage.py seed_business_data || true
+                echo "✓ Critical data seeded (some failures ignored)"
+              }
+            else
+              echo "✓ Fresh database - seeding with data clearing enabled"
+              echo "Running: python manage.py seed_all --minimal"
+              python manage.py seed_all --minimal
+            fi
           fi
           
           echo "✅ Seeding completed"
