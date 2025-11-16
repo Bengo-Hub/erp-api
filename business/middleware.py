@@ -110,7 +110,17 @@ class BusinessConfigs:
                 # Initialize other business settings idempotently
                 self.initialize_product_settings(biz)
                 PrefixSettings.objects.get_or_create(business=biz)
-                TaxRates.objects.get_or_create(business=biz, defaults={'tax_name': 'VAT', 'tax_number': 'T001', 'percentage': 16.0})
+                # Ensure at least VAT tax rate exists; tax_number is globally unique - reuse if present
+                vat = TaxRates.objects.filter(tax_number='T001').first()
+                if not vat:
+                    try:
+                        TaxRates.objects.create(business=biz, tax_name='VAT', tax_number='T001', percentage=16.0)
+                    except IntegrityError:
+                        pass
+                else:
+                    if vat.business_id != biz.id:
+                        vat.business = biz
+                        vat.save(update_fields=['business'])
 
                 print(f"Business ensured: {biz.name}; branch ensured: {(branch.name if branch else 'N/A')}")
                     

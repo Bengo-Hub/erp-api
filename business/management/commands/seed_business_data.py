@@ -176,14 +176,31 @@ class Command(BaseCommand):
         
         tax_rates = []
         for tax_data in tax_rates_data:
-            tax_rate, created = TaxRates.objects.get_or_create(
-                business=business,
-                tax_name=tax_data['tax_name'],
-                defaults={
-                    'tax_number': tax_data['tax_number'],
-                    'percentage': tax_data['percentage']
-                }
-            )
+            # TaxRates.tax_number is globally unique; reuse by tax_number to avoid unique constraint errors
+            tax_rate = TaxRates.objects.filter(tax_number=tax_data['tax_number']).first()
+            created = False
+            if not tax_rate:
+                tax_rate = TaxRates.objects.create(
+                    business=business,
+                    tax_name=tax_data['tax_name'],
+                    tax_number=tax_data['tax_number'],
+                    percentage=tax_data['percentage']
+                )
+                created = True
+            else:
+                # Ensure it points to current business and has correct name/percentage
+                update_fields = []
+                if tax_rate.business_id != business.id:
+                    tax_rate.business = business
+                    update_fields.append('business')
+                if tax_rate.tax_name != tax_data['tax_name']:
+                    tax_rate.tax_name = tax_data['tax_name']
+                    update_fields.append('tax_name')
+                if tax_rate.percentage != tax_data['percentage']:
+                    tax_rate.percentage = tax_data['percentage']
+                    update_fields.append('percentage')
+                if update_fields:
+                    tax_rate.save(update_fields=update_fields)
             tax_rates.append(tax_rate)
             if created:
                 self.stdout.write(f'Created tax rate: {tax_rate.tax_name} ({tax_rate.percentage}%)')
