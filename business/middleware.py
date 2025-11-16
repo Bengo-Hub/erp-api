@@ -39,72 +39,80 @@ class BusinessConfigs:
                 pass
 
     def initialize_business_details(self):
-        """Ensure all businesses have business details and proper multi-branch structure"""
+        """Ensure a single business exists and reuse it; idempotent and safe for concurrent runs"""
         try:
             with transaction.atomic():
-                if Bussiness.objects.count() == 0:
-                    # Resolve or create an owner account for the default business
-                    owner = User.objects.filter(is_superuser=True).first()
-                    if owner is None:
-                        owner = User.objects.filter(is_staff=True).first()
-                    if owner is None:
-                        # Create a superuser with consistent password
-                        try:
-                            owner = User.objects.create_superuser(
-                                username='admin',
-                                email='admin@codevertexitsolutions.com',
-                                first_name='System',
-                                last_name='Administrator',
-                                password='Admin@2025!'
-                            )
-                            print(f"✓ Middleware created admin user (password: Admin@2025!)")
-                        except Exception as e:
-                            # Fallback to any existing user if creation fails
-                            print(f"Warning: Could not create admin user in middleware: {e}")
-                            owner = User.objects.first()
+                # Resolve or create an owner account for the default business
+                owner = User.objects.filter(is_superuser=True).first() or User.objects.filter(is_staff=True).first()
+                if owner is None:
+                    try:
+                        owner = User.objects.create_superuser(
+                            username='admin',
+                            email='admin@codevertexitsolutions.com',
+                            first_name='System',
+                            last_name='Administrator',
+                            password='Admin@2025!'
+                        )
+                        print(f"✓ Middleware created admin user (password: Admin@2025!)")
+                    except Exception as e:
+                        print(f"Warning: Could not create admin user in middleware: {e}")
+                        owner = User.objects.first()
 
-                    # Create default business location
-                    location = BusinessLocation.objects.create(
+                # Get or create standardized business by name
+                biz, _ = Bussiness.objects.get_or_create(
+                    name='Codevertex IT Solutions',
+                    defaults={
+                        'owner': owner,
+                        'start_date': '2024-01-01',
+                        'currency': 'KES',
+                        'kra_number': 'A123456789X',
+                        'business_type': 'limited_company',
+                        'county': 'Nairobi'
+                    }
+                )
+
+                # Ensure there is a default location
+                location = biz.location or BusinessLocation.objects.filter(default=True).first()
+                if location is None:
+                    location, _ = BusinessLocation.objects.get_or_create(
                         city='Nairobi',
-                        county='Nairobi',
-                        state='KE',
-                        country='KE',
-                        zip_code='00100',
-                        postal_code='00100',
-                        website='https://www.codevertexafrica.com',
-                        default=True,
-                        is_active=True
+                        defaults={
+                            'county': 'Nairobi',
+                            'state': 'KE',
+                            'country': 'KE',
+                            'zip_code': '00100',
+                            'postal_code': '00100',
+                            'website': 'https://www.codevertexafrica.com',
+                            'default': True,
+                            'is_active': True
+                        }
                     )
-                    
-                    # Create default business (standardized name)
-                    biz = Bussiness.objects.create(
-                        location=location,
-                        owner=owner,
-                        name='Codevertex IT Solutions',
-                        start_date='2024-01-01',
-                        currency='KES',
-                        kra_number='A123456789X',
-                        business_type='limited_company',
-                        county='Nairobi'
-                    )
-                    
-                
-                    # Create default main branch
-                    branch = Branch.objects.create(
-                        business=biz,
-                        location=location,
-                        name='Main Branch',
+                if biz.location_id is None:
+                    biz.location = location
+                    biz.save(update_fields=['location'])
+
+                # Create or reuse default main branch with unique code
+                try:
+                    branch, _ = Branch.objects.get_or_create(
                         branch_code='MAIN-001',
-                        is_active=True,
-                        is_main_branch=True
+                        defaults={
+                            'business': biz,
+                            'location': location,
+                            'name': 'Main Branch',
+                            'is_active': True,
+                            'is_main_branch': True
+                        }
                     )
-                    
-                    # Initialize other business settings
-                    self.initialize_product_settings(biz)
-                    _, created = PrefixSettings.objects.get_or_create(business=biz)
-                    _, created = TaxRates.objects.get_or_create(business=biz)
-                    
-                    print(f"Created default business: {biz.name} with branch: {branch.name}")
+                    # If branch exists but not linked to this business, skip creating a duplicate
+                except IntegrityError:
+                    branch = Branch.objects.filter(branch_code='MAIN-001').first()
+
+                # Initialize other business settings idempotently
+                self.initialize_product_settings(biz)
+                PrefixSettings.objects.get_or_create(business=biz)
+                TaxRates.objects.get_or_create(business=biz, defaults={'tax_name': 'VAT', 'tax_number': 'T001', 'percentage': 16.0})
+
+                print(f"Business ensured: {biz.name}; branch ensured: {(branch.name if branch else 'N/A')}")
                     
         except Exception as e:
             print(f"Error initializing business details: {e}")
