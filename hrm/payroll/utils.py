@@ -37,6 +37,9 @@ class PayrollGenerator:
         self.calculation_engine = PayrollCalculationEngine(payment_period, formula_overrides)
         self.notification_service = PayrollNotificationService()
         
+        # Resolve employee instance lazily (supports passing IDs or lightweight objects)
+        self.employee_instance = self._resolve_employee()
+
         # Get employee details
         self.salary_details = self._get_salary_details()
         self._set_deduction_preferences()
@@ -48,9 +51,10 @@ class PayrollGenerator:
         if isinstance(self.employee, Employee):
             return self.employee
 
-        employee_id = getattr(self.employee, 'id', None) or getattr(self.employee, 'pk', None)
         if isinstance(self.employee, int):
             employee_id = self.employee
+        else:
+            employee_id = getattr(self.employee, 'id', None) or getattr(self.employee, 'pk', None)
 
         if not employee_id:
             return None
@@ -60,7 +64,9 @@ class PayrollGenerator:
     def _get_salary_details(self):
         """Get employee's salary details"""
         try:
-            return SalaryDetails.objects.get(employee=self.employee)
+            if not self.employee_instance:
+                return None
+            return SalaryDetails.objects.get(employee=self.employee_instance)
         except SalaryDetails.DoesNotExist:
             return None
     
@@ -104,13 +110,16 @@ class PayrollGenerator:
     def _validate_payment_period(self):
         """Validate payment period"""
         try:
+            if not self.employee_instance:
+                return False
+
             # Allow future dates for payroll planning, but not too far in the future (max 1 year)
             max_future_date = date.today().replace(year=date.today().year + 1)
             if self.payment_period > max_future_date:
                 return False
             
             # Check if employee has active contracts that cover the payment period
-            active_contracts = self.employee.contracts.filter(
+            active_contracts = self.employee_instance.contracts.filter(
                 status='active',
                 contract_start_date__lte=self.payment_period,
                 contract_end_date__gte=self.payment_period
@@ -208,7 +217,7 @@ class PayrollGenerator:
                 
                 engine_deductions = deduction_engine.calculate_deductions_in_order(
                     gross_pay=gross_pay,
-                    employee=self.employee,
+                    employee=self.employee_instance or self.employee,
                     payment_period=self.payment_period,
                     formula_overrides=self.formula_overrides
                 )
@@ -348,7 +357,7 @@ class PayrollGenerator:
         """Calculate gross pay for casual employees"""
         try:
             attendance_records = AttendanceRecord.objects.filter(
-                employee=self.employee,
+                employee=self.employee_instance or self.employee,
                 date__year=self.payment_period.year,
                 date__month=self.payment_period.month,
                 status='present'
@@ -454,8 +463,9 @@ class PayrollGenerator:
         """Calculate additional payments for consultants"""
         try:
             additional_payments = Decimal('0')
-            if hasattr(self.employee, 'consultant_benefits'):
-                consultant_benefits = self.employee.consultant_benefits.filter(
+            employee = self.employee_instance or self.employee
+            if hasattr(employee, 'consultant_benefits'):
+                consultant_benefits = employee.consultant_benefits.filter(
                     benefit__is_active=True,
                     is_active=True,
                     effective_from__lte=self.payment_period
@@ -470,9 +480,10 @@ class PayrollGenerator:
         """Calculate allowances for casual employees"""
         try:
             casual_allowances = Decimal('0')
-            if hasattr(self.employee, 'casual_allowances'):
+            employee = self.employee_instance or self.employee
+            if hasattr(employee, 'casual_allowances'):
                 casual_allowances = sum(
-                    allowance.amount for allowance in self.employee.casual_allowances.filter(
+                    allowance.amount for allowance in employee.casual_allowances.filter(
                         is_active=True,
                         effective_from__lte=self.payment_period
                     )
@@ -485,8 +496,12 @@ class PayrollGenerator:
     def _check_existing_payroll(self):
         """Check for existing payroll"""
         try:
+            employee = self.employee_instance or self.employee
+            if not employee:
+                return None
+
             existing_payslip = Payslip.objects.filter(
-                employee=self.employee,
+                employee=employee,
                 payment_period=self.payment_period
             ).first()
             
@@ -515,7 +530,7 @@ class PayrollGenerator:
                 "period_end": self._get_period_end()
             }
             
-            employee_instance = self._resolve_employee()
+            employee_instance = self.employee_instance or self._resolve_employee()
             if employee_instance is None:
                 raise ValueError("Employee context is required to queue payroll.")
 

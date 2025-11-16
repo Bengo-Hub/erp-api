@@ -43,7 +43,6 @@ urlpatterns = [
     path('api/v1/crm/', include(('crm.campaigns.urls', 'crm-campaigns'), namespace='v1-crm-campaigns')),
     path('api/v1/integrations/', include(('integrations.urls', 'integrations'), namespace='v1-integrations')),
     path('api/v1/notifications/', include(('notifications.urls', 'notifications'), namespace='v1-notifications')),
-    #path('api/',include('hrm.recruitment.urls')),
     path('api/v1/ecommerce/pos/', include(('ecommerce.pos.urls', 'ecommerce-pos'), namespace='v1-ecommerce-pos')),
     path('api/v1/ecommerce/cart/', include(('ecommerce.cart.urls', 'ecommerce-cart'), namespace='v1-ecommerce-cart')),
     path('api/v1/ecommerce/product/', include(('ecommerce.product.urls', 'ecommerce-product'), namespace='v1-ecommerce-product')),

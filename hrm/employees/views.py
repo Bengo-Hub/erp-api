@@ -1305,7 +1305,6 @@ class EmployeePayrollDataViewSet(viewsets.ViewSet):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class JobTitleViewSet(BaseModelViewSet):
     """
     ViewSet for managing job titles.
@@ -1317,7 +1316,6 @@ class JobTitleViewSet(BaseModelViewSet):
     search_fields = ['title']
     ordering_fields = ['title']
     ordering = ['title']
-
 
 class JobGroupViewSet(BaseModelViewSet):
     """
@@ -1331,7 +1329,6 @@ class JobGroupViewSet(BaseModelViewSet):
     ordering_fields = ['title']
     ordering = ['title']
 
-
 class WorkersUnionViewSet(BaseModelViewSet):
     """
     ViewSet for managing workers unions.
@@ -1343,7 +1340,6 @@ class WorkersUnionViewSet(BaseModelViewSet):
     search_fields = ['name', 'code', 'registration_number']
     ordering_fields = ['name', 'code']
     ordering = ['name']
-
 
 class ESSSettingsViewSet(APIView):
     """
@@ -1445,7 +1441,6 @@ class ESSSettingsViewSet(APIView):
                 error_id=str(e),
                 correlation_id=correlation_id
             )
-
 
 @api_view(['GET'])
 def employee_analytics(request):

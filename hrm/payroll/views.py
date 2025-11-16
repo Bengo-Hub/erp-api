@@ -44,7 +44,7 @@ from rest_framework.decorators import action
 User = get_user_model()
 
 
-class ProcessPayrollGenericView(viewsets.ModelViewSet):
+class ProcessPayrollViewSet(viewsets.ModelViewSet):
     queryset = Payslip.objects.all()
     serializer_class = PayslipSerializer
     permission_classes=[IsAuthenticated]
@@ -1356,7 +1356,6 @@ class ExpenseClaimSettingsViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
 class ExpenseCodeViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing expense codes.
@@ -1368,7 +1367,6 @@ class ExpenseCodeViewSet(viewsets.ModelViewSet):
     search_fields = ['code', 'title', 'description']
     ordering_fields = ['code', 'title']
     ordering = ['code']
-
 
 class ExpenseClaimViewSet(SensitiveModuleFilterMixin, viewsets.ModelViewSet):
     queryset = ExpenseClaims.objects.filter(delete_status=False)
@@ -1531,7 +1529,6 @@ class ExpenseClaimViewSet(SensitiveModuleFilterMixin, viewsets.ModelViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET'])
 def payroll_analytics(request):
     """
@@ -1558,7 +1555,6 @@ def payroll_analytics(request):
             'message': f'Error fetching payroll analytics: {str(e)}',
             'timestamp': datetime.now().isoformat()
         }, status=500)
-
 
 class PayrollApprovalViewSet(viewsets.ViewSet):
     """
@@ -1716,5 +1712,6 @@ class PayrollApprovalViewSet(viewsets.ViewSet):
             #     except ConsultantVoucher.DoesNotExist:
             #         return None
             return None
+
 
 
