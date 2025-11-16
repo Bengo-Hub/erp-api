@@ -6,7 +6,6 @@ from .reports_views import (
     bank_net_pay_report, muster_roll_report, withholding_tax_report,
     variance_report
 )
-
 router = DefaultRouter()
 router.register(r'payroll', ProcessPayrollViewSet, basename='payroll')
 router.register(r'payroll-audits', PayrollAuditsViewSet, basename='payroll-audits')
@@ -18,6 +17,7 @@ router.register(r'expense-codes', ExpenseCodeViewSet, basename='expense-codes')
 router.register(r'claim-items', ClaimItemViewSet, basename='claim-item')
 router.register(r'approvals', PayrollApprovalViewSet, basename='payroll_approval')
 router.register(r'custom-reports', CustomReportViewSet, basename='custom-report')
+
 
 urlpatterns = [
     path('', include(router.urls)),

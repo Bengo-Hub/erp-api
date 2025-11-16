@@ -228,9 +228,16 @@ def batch_process_payslips(self, employee_ids, payment_period, recover_advances,
                 process_single_payslip.s(emp_id, payment_period, recover_advances, command, user_id)
             )
         
-        # Execute tasks in parallel using group for proper async handling
+        # Use a chord so we can emit completion events when all subtasks finish
+        callback = finalize_batch_processing.s(
+            task_id,
+            user_id,
+            command,
+            employee_ids,
+            payment_period.isoformat() if hasattr(payment_period, 'isoformat') else str(payment_period)
+        )
         job = group(tasks)
-        result = job.apply_async()
+        result = chord(job)(callback)
         
         # Return the group result (this will be processed asynchronously)
         return {
@@ -254,6 +261,56 @@ def batch_process_payslips(self, employee_ids, payment_period, recover_advances,
                 'message': f'Batch payroll processing failed for {len(employee_ids)} employees'
             }, user_id=user_id, task_id=task_id)
         
+        return {"success": False, "detail": error_msg}
+
+
+@shared_task
+def finalize_batch_processing(results, batch_task_id, user_id, command, employee_ids, payment_period):
+    """
+    Callback executed after all payslip subtasks complete. Emits websocket updates and marks the batch task finished.
+    """
+    try:
+        successful_results = [
+            res for res in results if res and not (isinstance(res, dict) and res.get('success') is False)
+        ]
+        payslips_created = len(successful_results)
+        
+        # Mark the parent task as completed
+        complete_task(batch_task_id, output_data={
+            'results': results,
+            'employee_ids': employee_ids,
+            'command': command,
+            'payment_period': payment_period
+        }, message=f"Batch payroll processing completed for {len(employee_ids)} employees")
+        
+        # Emit completion websocket event
+        emit_websocket_event('payroll_processing_completed', {
+            'task_id': batch_task_id,
+            'result': results,
+            'payslips_created': payslips_created,
+            'message': f'Payroll processing completed for {len(employee_ids)} employees',
+            'employee_ids': employee_ids,
+            'payment_period': payment_period,
+            'command': command,
+            'module': 'hrm.payroll'
+        }, user_id=user_id, task_id=batch_task_id)
+        
+        return {
+            "success": True,
+            "task_id": batch_task_id,
+            "payslips_created": payslips_created
+        }
+    except Exception as e:
+        error_msg = f"Error finalizing batch payroll processing: {str(e)}"
+        logger.error(error_msg)
+        fail_task(batch_task_id, error_msg)
+        emit_websocket_event('task_failed', {
+            'task_id': batch_task_id,
+            'task_type': 'batch_payroll',
+            'error': error_msg,
+            'message': 'Batch payroll processing failed during finalization',
+            'module': 'hrm.payroll'
+        }, user_id=user_id, task_id=batch_task_id)
         return {"success": False, "detail": error_msg}
 
 @shared_task

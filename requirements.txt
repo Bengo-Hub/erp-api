@@ -192,6 +192,7 @@ waitress
 wcwidth
 webencodings
 websockets
+websocket-client
 whitenoise
 win32_setctime
 yarl

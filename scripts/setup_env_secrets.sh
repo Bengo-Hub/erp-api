@@ -173,6 +173,8 @@ kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" \
   --from-literal=REDIS_HOST="redis-master.${NAMESPACE}.svc.cluster.local" \
   --from-literal=REDIS_PORT="6379" \
   --from-literal=REDIS_PASSWORD="${REDIS_PASS}" \
+  --from-literal=CHANNEL_BACKEND="channels_redis.core.RedisChannelLayer" \
+  --from-literal=CHANNEL_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/2" \
   --from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0" \
   --from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1" \
   --from-literal=DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}" \
@@ -225,6 +227,8 @@ stringData:
   REDIS_HOST: "redis-master.${NAMESPACE}.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_PASSWORD: "${REDIS_PASS}"
+  CHANNEL_BACKEND: "channels_redis.core.RedisChannelLayer"
+  CHANNEL_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/2"
   
   # Celery configuration
   CELERY_BROKER_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0"
@@ -281,6 +285,8 @@ stringData:
   REDIS_HOST: "redis-master.${NAMESPACE}.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_PASSWORD: "${REDIS_PASS}"
+  CHANNEL_BACKEND: "channels_redis.core.RedisChannelLayer"
+  CHANNEL_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/2"
   
   # Celery configuration
   CELERY_BROKER_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0"

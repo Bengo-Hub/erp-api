@@ -31,7 +31,10 @@ class Command(BaseCommand):
             employees_count = 1
 
         self.stdout.write(self.style.SUCCESS('Starting comprehensive seeding process...'))
-        
+
+        # Always clear existing user data before seeding to ensure consistent initial accounts
+        self._clear_user_data()
+
         if clear_data:
             self.stdout.write(self.style.WARNING('Clearing existing seeded data...'))
             self._clear_seeded_data()
@@ -198,6 +201,31 @@ class Command(BaseCommand):
     def _clear_seeded_data(self):
         """Clear existing seeded data while preserving system-critical data"""
         with connection.cursor() as cursor:
+            # Clear user-related data FIRST to avoid FK constraints and ensure fresh user state
+            self.stdout.write('  Clearing user data...')
+            try:
+                cursor.execute("DELETE FROM authmanagement_userpreferences")
+            except Exception as e:
+                self.stdout.write(f'    Warning: User preferences table may not exist: {e}')
+            try:
+                cursor.execute("DELETE FROM authmanagement_userlog")
+            except Exception as e:
+                self.stdout.write(f'    Warning: User log table may not exist: {e}')
+            # Clear M2M relations (names are Django defaults; may be present even with custom user)
+            try:
+                cursor.execute("DELETE FROM auth_user_groups")
+            except Exception as e:
+                self.stdout.write(f'    Warning: auth_user_groups table may not exist: {e}')
+            try:
+                cursor.execute("DELETE FROM auth_user_user_permissions")
+            except Exception as e:
+                self.stdout.write(f'    Warning: auth_user_user_permissions table may not exist: {e}')
+            # Finally clear users (middleware/seed will recreate admin/demo as needed)
+            try:
+                cursor.execute("DELETE FROM authmanagement_customuser")
+            except Exception as e:
+                self.stdout.write(f'    Warning: CustomUser table may not exist: {e}')
+
             # Clear core data FIRST (since other data depends on it)
             self.stdout.write('  Clearing core data...')
             try:
@@ -288,6 +316,7 @@ class Command(BaseCommand):
             self.stdout.write('  Resetting auto-increment counters...')
             try:
                 # PostgreSQL uses sequences instead of AUTO_INCREMENT
+                cursor.execute("SELECT setval('authmanagement_customuser_id_seq', 1, false)")
                 cursor.execute("SELECT setval('manufacturing_qualitycheck_id_seq', 1, false)")
                 cursor.execute("SELECT setval('manufacturing_batchrawmaterial_id_seq', 1, false)")
                 cursor.execute("SELECT setval('manufacturing_productionbatch_id_seq', 1, false)")
@@ -310,3 +339,40 @@ class Command(BaseCommand):
             self.stdout.write('  Data clearing completed')
 
 
+    def _clear_user_data(self):
+        """Always clear existing user data before seeding"""
+        with connection.cursor() as cursor:
+            self.stdout.write('  (pre-seed) Clearing user data...')
+            try:
+                # Clear custom user M2M relations first (for custom user model)
+                cursor.execute("DELETE FROM authmanagement_customuser_groups")
+            except Exception as e:
+                self.stdout.write(f'    Warning: authmanagement_customuser_groups table may not exist: {e}')
+            try:
+                cursor.execute("DELETE FROM authmanagement_customuser_user_permissions")
+            except Exception as e:
+                self.stdout.write(f'    Warning: authmanagement_customuser_user_permissions table may not exist: {e}')
+            try:
+                cursor.execute("DELETE FROM authmanagement_userpreferences")
+            except Exception as e:
+                self.stdout.write(f'    Warning: User preferences table may not exist: {e}')
+            try:
+                cursor.execute("DELETE FROM authmanagement_userlog")
+            except Exception as e:
+                self.stdout.write(f'    Warning: User log table may not exist: {e}')
+            try:
+                cursor.execute("DELETE FROM auth_user_groups")
+            except Exception as e:
+                self.stdout.write(f'    Warning: auth_user_groups table may not exist: {e}')
+            try:
+                cursor.execute("DELETE FROM auth_user_user_permissions")
+            except Exception as e:
+                self.stdout.write(f'    Warning: auth_user_user_permissions table may not exist: {e}')
+            try:
+                cursor.execute("DELETE FROM authmanagement_customuser")
+            except Exception as e:
+                self.stdout.write(f'    Warning: CustomUser table may not exist: {e}')
+            try:
+                cursor.execute("SELECT setval('authmanagement_customuser_id_seq', 1, false)")
+            except Exception as e:
+                self.stdout.write(f'    Warning: Could not reset user id sequence: {e}')

@@ -40,6 +40,22 @@ class PayrollGenerator:
         # Get employee details
         self.salary_details = self._get_salary_details()
         self._set_deduction_preferences()
+
+    def _resolve_employee(self):
+        """Return a concrete Employee instance regardless of how it was provided."""
+        from hrm.employees.models import Employee
+
+        if isinstance(self.employee, Employee):
+            return self.employee
+
+        employee_id = getattr(self.employee, 'id', None) or getattr(self.employee, 'pk', None)
+        if isinstance(self.employee, int):
+            employee_id = self.employee
+
+        if not employee_id:
+            return None
+
+        return Employee.objects.filter(id=employee_id).first()
     
     def _get_salary_details(self):
         """Get employee's salary details"""
@@ -416,9 +432,15 @@ class PayrollGenerator:
                 "period_end": self._get_period_end()
             }
             
+            employee_instance = self._resolve_employee()
+            if employee_instance is None:
+                raise ValueError("Employee context is required to generate a payslip.")
+
+            created_by_user = getattr(self.request, 'user', None)
+
             payslip, created = Payslip.objects.update_or_create(
-                employee=self.employee,
-                created_by=self.request.user,
+                employee=employee_instance,
+                created_by=created_by_user,
                 payment_period=self.payment_period,
                 defaults=payslip_defaults
             )
@@ -493,9 +515,15 @@ class PayrollGenerator:
                 "period_end": self._get_period_end()
             }
             
+            employee_instance = self._resolve_employee()
+            if employee_instance is None:
+                raise ValueError("Employee context is required to queue payroll.")
+
+            created_by_user = getattr(self.request, 'user', None)
+
             payslip, created = Payslip.objects.update_or_create(
-                employee=self.employee,
-                created_by=self.request.user,
+                employee=employee_instance,
+                created_by=created_by_user,
                 payment_period=self.payment_period,
                 defaults=payslip_defaults
             )

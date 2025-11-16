@@ -48,18 +48,25 @@ def get_filter_params(request):
         # Fallback to query param
         branch_id = request.query_params.get('branch_id', None) or request.query_params.get('branch', None)
     
-    # Filter out None and empty string values
-    if department_ids:
-        department_ids = [d for d in department_ids if d is not None and d != '']
-    
-    if region_ids:
-        region_ids = [r for r in region_ids if r is not None and r != '']
-    
-    if project_ids:
-        project_ids = [p for p in project_ids if p is not None and p != '']
-    
-    if employee_ids:
-        employee_ids = [e for e in employee_ids if e is not None and e != '']
+    # Filter out None/empty and coerce to integers where applicable (ignore invalid tokens)
+    def to_int_list(values):
+        if not values:
+            return None
+        result = []
+        for v in values:
+            if v in (None, '', 'null', 'None'):
+                continue
+            try:
+                result.append(int(v))
+            except (TypeError, ValueError):
+                # Ignore non-integer values to prevent errors like "expected a number but got 'advances'"
+                continue
+        return result or None
+
+    department_ids = to_int_list(department_ids)
+    region_ids = to_int_list(region_ids)
+    project_ids = to_int_list(project_ids)
+    employee_ids = to_int_list(employee_ids)
     
     return {
         'branch_id': branch_id,
