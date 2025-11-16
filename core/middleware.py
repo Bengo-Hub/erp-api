@@ -49,55 +49,11 @@ class CoreMiddleware(MiddlewareMixin):
         return HttpResponse("Middleware error", status=500)
 
     def _initialize_business_and_branch(self):
-        """Initialize business and branch only if they don't exist"""
-        try:
-            # Check if business already exists
-            if Bussiness.objects.exists():
-                self._business_initialized = True
-                return
-            
-            # Check if any users exist first
-            if not User.objects.exists():
-                logger.warning("No users exist yet. Skipping business initialization until users are created.")
-                return
-            
-            # Create default business only if none exists
-            default_business = Bussiness.objects.create(
-                name='BengoBox ERP', 
-                owner=User.objects.first()
-            )
-            logger.info(f"Created default business: {default_business.name}")
-            
-            # Create default business location
-            default_location = BusinessLocation.objects.create(
-                city='Nairobi',
-                county='Nairobi',
-                state='KE',
-                country='KE',
-                zip_code='00100',
-                postal_code='00100',
-                website='codevertexitsolutions.com',
-                default=True,
-                is_active=True
-            )
-            logger.info(f"Created default business location: {default_location.city}")
-            
-            # Create default branch
-            business_branch = Branch.objects.create(
-                business=default_business,
-                location=default_location,
-                name="Main Branch",
-                is_main_branch=True
-            )
-            logger.info(f"Created default branch: {business_branch.name}")
-            
-            self._business_initialized = True
-            logger.info("Business initialization completed successfully")
-            
-        except Exception as e:
-            logger.error(f"Error initializing business: {str(e)}")
-            # Don't mark as initialized if there's an error, so we can try again
-            self._business_initialized = False
+        """
+        Do not create business/branch here to avoid duplication with dedicated business middleware and seed scripts.
+        Mark as initialized to skip further attempts.
+        """
+        self._business_initialized = True
 
     # Banner initialization moved to campaigns app
 

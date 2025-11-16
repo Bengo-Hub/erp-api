@@ -140,16 +140,20 @@ class Command(BaseCommand):
                 is_active=True
             )
 
-        # Ensure a single main branch exists
-        main_branch = Branch.objects.filter(business=business, is_main_branch=True).first()
-        if not main_branch:
-            main_branch = Branch.objects.create(
-                business=business,
-                location=location,
-                name='Main Branch',
+        # Ensure a single main branch exists (idempotent; reuse by unique branch_code)
+        existing_by_code = Branch.objects.filter(branch_code='MAIN-001').first()
+        if existing_by_code and existing_by_code.business_id != business.id:
+            main_branch = existing_by_code  # Reuse existing to avoid unique conflicts
+        else:
+            main_branch, _ = Branch.objects.get_or_create(
                 branch_code='MAIN-001',
-                is_active=True,
-                is_main_branch=True
+                defaults={
+                    'business': business,
+                    'location': location,
+                    'name': 'Main Branch',
+                    'is_active': True,
+                    'is_main_branch': True
+                }
             )
 
         # Update business location to point to main branch location
