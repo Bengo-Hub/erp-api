@@ -24,24 +24,24 @@ fi
 log_info "Updating ${ENV_SECRET_NAME} with validated credentials and production config..."
 
 SECRET_ARGS=(
-  --from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${EFFECTIVE_PG_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}"
-  --from-literal=DB_HOST="postgresql.${NAMESPACE}.svc.cluster.local"
+  --from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${EFFECTIVE_PG_PASS}@postgresql.infra.svc.cluster.local:5432/${APP_DB_NAME}"
+  --from-literal=DB_HOST="postgresql.infra.svc.cluster.local"
   --from-literal=DB_PORT="5432"
   --from-literal=DB_NAME="${APP_DB_NAME}"
   --from-literal=DB_USER="${APP_DB_USER}"
   --from-literal=DB_PASSWORD="${EFFECTIVE_PG_PASS}"
 )
 
-# Add Redis credentials
-REDIS_PASS=$(kubectl -n "$NAMESPACE" get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
+# Add Redis credentials (from infra namespace)
+REDIS_PASS=$(kubectl -n infra get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
 if [[ -z "$REDIS_PASS" && -n "${REDIS_PASSWORD:-}" ]]; then
     REDIS_PASS="$REDIS_PASSWORD"
 fi
 if [[ -n "$REDIS_PASS" ]]; then
-  SECRET_ARGS+=(--from-literal=REDIS_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
-  SECRET_ARGS+=(--from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0")
-  SECRET_ARGS+=(--from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1")
-  SECRET_ARGS+=(--from-literal=REDIS_HOST="redis-master.${NAMESPACE}.svc.cluster.local")
+  SECRET_ARGS+=(--from-literal=REDIS_URL="redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/0")
+  SECRET_ARGS+=(--from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/0")
+  SECRET_ARGS+=(--from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/1")
+  SECRET_ARGS+=(--from-literal=REDIS_HOST="redis-master.infra.svc.cluster.local")
   SECRET_ARGS+=(--from-literal=REDIS_PORT="6379")
   SECRET_ARGS+=(--from-literal=REDIS_PASSWORD="${REDIS_PASS}")
 fi
@@ -74,7 +74,7 @@ SECRET_ARGS+=(--from-literal=STATIC_URL="/static/")
 # Channels/ASGI configuration for WebSockets in production
 # Use Redis for channel layer
 SECRET_ARGS+=(--from-literal=CHANNEL_BACKEND="channels_redis.core.RedisChannelLayer")
-SECRET_ARGS+=(--from-literal=CHANNEL_URL="redis://:${REDIS_PASS:-${REDIS_PASSWORD:-}}@redis-master.${NAMESPACE}.svc.cluster.local:6379/2")
+SECRET_ARGS+=(--from-literal=CHANNEL_URL="redis://:${REDIS_PASS:-${REDIS_PASSWORD:-}}@redis-master.infra.svc.cluster.local:6379/2")
 
 # Email configuration (if provided)
 if [[ -n "${EMAIL_HOST_USER:-}" ]]; then

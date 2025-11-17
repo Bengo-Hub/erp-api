@@ -32,9 +32,9 @@ APP_DB_USER="postgres"
 APP_DB_NAME="$PG_DATABASE"
 
 # CRITICAL: The database password is the source of truth
-# Get it from the PostgreSQL secret (where Helm stores it)
-if kubectl -n "$NAMESPACE" get secret postgresql >/dev/null 2>&1; then
-    EXISTING_PG_PASS=$(kubectl -n "$NAMESPACE" get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+# Get it from the PostgreSQL secret (where Helm stores it) in infra namespace
+if kubectl -n infra get secret postgresql >/dev/null 2>&1; then
+    EXISTING_PG_PASS=$(kubectl -n infra get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
     if [[ -n "$EXISTING_PG_PASS" ]]; then
         log_info "Retrieved PostgreSQL password from database secret (source of truth)"
         APP_DB_PASS="$EXISTING_PG_PASS"
@@ -50,7 +50,7 @@ if kubectl -n "$NAMESPACE" get secret postgresql >/dev/null 2>&1; then
     fi
 else
     log_error "PostgreSQL secret not found in Kubernetes"
-    log_error "Ensure PostgreSQL is installed: kubectl get secret postgresql -n $NAMESPACE"
+    log_error "Ensure PostgreSQL is installed: kubectl get secret postgresql -n infra"
     exit 1
 fi
 
@@ -58,9 +58,9 @@ log_info "Database password retrieved and verified (length: ${#APP_DB_PASS} char
 
 # Get Redis password - ALWAYS use the password from the live database
 # CRITICAL: The database password is the source of truth
-# Get it from the Redis secret (where Helm stores it)
-if kubectl -n "$NAMESPACE" get secret redis >/dev/null 2>&1; then
-    REDIS_PASS=$(kubectl -n "$NAMESPACE" get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
+# Get it from the Redis secret (where Helm stores it) in infra namespace
+if kubectl -n infra get secret redis >/dev/null 2>&1; then
+    REDIS_PASS=$(kubectl -n infra get secret redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d || true)
     if [[ -n "$REDIS_PASS" ]]; then
         log_info "Retrieved Redis password from database secret (source of truth)"
         
@@ -75,7 +75,7 @@ if kubectl -n "$NAMESPACE" get secret redis >/dev/null 2>&1; then
     fi
 else
     log_error "Redis secret not found in Kubernetes"
-    log_error "Ensure Redis is installed: kubectl get secret redis -n $NAMESPACE"
+    log_error "Ensure Redis is installed: kubectl get secret redis -n infra"
     exit 1
 fi
 
@@ -163,20 +163,20 @@ log_info "Secret will include: DB credentials, Redis credentials, Django setting
 kubectl -n "$NAMESPACE" delete secret "$ENV_SECRET_NAME" --ignore-not-found
 
 kubectl -n "$NAMESPACE" create secret generic "$ENV_SECRET_NAME" \
-  --from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}" \
-  --from-literal=DB_HOST="postgresql.${NAMESPACE}.svc.cluster.local" \
+  --from-literal=DATABASE_URL="postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.infra.svc.cluster.local:5432/${APP_DB_NAME}" \
+  --from-literal=DB_HOST="postgresql.infra.svc.cluster.local" \
   --from-literal=DB_PORT="5432" \
   --from-literal=DB_NAME="${APP_DB_NAME}" \
   --from-literal=DB_USER="${APP_DB_USER}" \
   --from-literal=DB_PASSWORD="${APP_DB_PASS}" \
-  --from-literal=REDIS_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0" \
-  --from-literal=REDIS_HOST="redis-master.${NAMESPACE}.svc.cluster.local" \
+  --from-literal=REDIS_URL="redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/0" \
+  --from-literal=REDIS_HOST="redis-master.infra.svc.cluster.local" \
   --from-literal=REDIS_PORT="6379" \
   --from-literal=REDIS_PASSWORD="${REDIS_PASS}" \
   --from-literal=CHANNEL_BACKEND="channels_redis.core.RedisChannelLayer" \
-  --from-literal=CHANNEL_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/2" \
-  --from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0" \
-  --from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1" \
+  --from-literal=CHANNEL_URL="redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/2" \
+  --from-literal=CELERY_BROKER_URL="redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/0" \
+  --from-literal=CELERY_RESULT_BACKEND="redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/1" \
   --from-literal=DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}" \
   --from-literal=SECRET_KEY="${DJANGO_SECRET_KEY}" \
   --from-literal=JWT_SECRET="${JWT_SECRET}" \
@@ -215,24 +215,24 @@ metadata:
 type: Opaque
 stringData:
   # Database credentials (verified from K8s secrets)
-  DATABASE_URL: "postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}"
-  DB_HOST: "postgresql.${NAMESPACE}.svc.cluster.local"
+  DATABASE_URL: "postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.infra.svc.cluster.local:5432/${APP_DB_NAME}"
+  DB_HOST: "postgresql.infra.svc.cluster.local"
   DB_PORT: "5432"
   DB_NAME: "${APP_DB_NAME}"
   DB_USER: "${APP_DB_USER}"
   DB_PASSWORD: "${APP_DB_PASS}"
   
   # Redis credentials (verified from K8s secrets)
-  REDIS_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0"
-  REDIS_HOST: "redis-master.${NAMESPACE}.svc.cluster.local"
+  REDIS_URL: "redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/0"
+  REDIS_HOST: "redis-master.infra.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_PASSWORD: "${REDIS_PASS}"
   CHANNEL_BACKEND: "channels_redis.core.RedisChannelLayer"
-  CHANNEL_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/2"
+  CHANNEL_URL: "redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/2"
   
   # Celery configuration
-  CELERY_BROKER_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0"
-  CELERY_RESULT_BACKEND: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1"
+  CELERY_BROKER_URL: "redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/0"
+  CELERY_RESULT_BACKEND: "redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/1"
   
   # Django secrets
   DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY}"
@@ -273,24 +273,24 @@ metadata:
 type: Opaque
 stringData:
   # Database credentials (verified from K8s secrets)
-  DATABASE_URL: "postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.${NAMESPACE}.svc.cluster.local:5432/${APP_DB_NAME}"
-  DB_HOST: "postgresql.${NAMESPACE}.svc.cluster.local"
+  DATABASE_URL: "postgresql://${APP_DB_USER}:${APP_DB_PASS}@postgresql.infra.svc.cluster.local:5432/${APP_DB_NAME}"
+  DB_HOST: "postgresql.infra.svc.cluster.local"
   DB_PORT: "5432"
   DB_NAME: "${APP_DB_NAME}"
   DB_USER: "${APP_DB_USER}"
   DB_PASSWORD: "${APP_DB_PASS}"
   
   # Redis credentials (verified from K8s secrets)
-  REDIS_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0"
-  REDIS_HOST: "redis-master.${NAMESPACE}.svc.cluster.local"
+  REDIS_URL: "redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/0"
+  REDIS_HOST: "redis-master.infra.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_PASSWORD: "${REDIS_PASS}"
   CHANNEL_BACKEND: "channels_redis.core.RedisChannelLayer"
-  CHANNEL_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/2"
+  CHANNEL_URL: "redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/2"
   
   # Celery configuration
-  CELERY_BROKER_URL: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/0"
-  CELERY_RESULT_BACKEND: "redis://:${REDIS_PASS}@redis-master.${NAMESPACE}.svc.cluster.local:6379/1"
+  CELERY_BROKER_URL: "redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/0"
+  CELERY_RESULT_BACKEND: "redis://:${REDIS_PASS}@redis-master.infra.svc.cluster.local:6379/1"
   
   # Django secrets
   DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY}"
