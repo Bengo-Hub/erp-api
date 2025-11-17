@@ -89,6 +89,10 @@ export ENV_SECRET_NAME=${ENV_SECRET_NAME:-erp-api-env}
 export PROVIDER=${PROVIDER:-contabo}
 export CONTABO_API=${CONTABO_API:-true}
 export SSH_DEPLOY=${SSH_DEPLOY:-false}
+# Per-service database configuration
+export SERVICE_DB_NAME=${SERVICE_DB_NAME:-bengo_erp}
+export SERVICE_DB_USER=${SERVICE_DB_USER:-erp_user}
+export PG_DATABASE=${PG_DATABASE:-${SERVICE_DB_NAME}}
 
 # Registry configuration
 export REGISTRY_SERVER=${REGISTRY_SERVER:-docker.io}
@@ -262,6 +266,33 @@ if [[ "$DEPLOY" == "true" ]]; then
         # Setup environment secrets from existing databases (skip DB installation - handled by devops-k8s)
         if [[ "$SETUP_DATABASES" == "true" ]]; then
             ensure_kube_config
+            
+            # Create per-service database if PostgreSQL is available
+            if kubectl -n infra get statefulset postgresql >/dev/null 2>&1; then
+                log_info "Waiting for PostgreSQL to be ready..."
+                kubectl -n infra rollout status statefulset/postgresql --timeout=180s || log_warning "PostgreSQL not fully ready"
+                
+                # Create service database using devops-k8s script
+                if [[ -d "$DEVOPS_DIR" ]] || [[ -n "${DEVOPS_REPO:-}" ]]; then
+                    # Ensure devops repo is cloned
+                    if [[ ! -d "$DEVOPS_DIR" ]]; then
+                        TOKEN="${GH_PAT:-${GIT_SECRET:-${GITHUB_TOKEN:-}}}"
+                        CLONE_URL="https://github.com/${DEVOPS_REPO}.git"
+                        [[ -n $TOKEN ]] && CLONE_URL="https://x-access-token:${TOKEN}@github.com/${DEVOPS_REPO}.git"
+                        git clone "$CLONE_URL" "$DEVOPS_DIR" || { log_warning "Unable to clone devops repo for database setup"; }
+                    fi
+                    
+                    if [[ -d "$DEVOPS_DIR" && -f "$DEVOPS_DIR/scripts/create-service-database.sh" ]]; then
+                        log_info "Creating database '${SERVICE_DB_NAME}' for service ${APP_NAME}..."
+                        SERVICE_DB_NAME="$SERVICE_DB_NAME" \
+                        APP_NAME="$APP_NAME" \
+                        NAMESPACE="$NAMESPACE" \
+                        bash "$DEVOPS_DIR/scripts/create-service-database.sh" || log_warning "Database creation failed or already exists"
+                    fi
+                fi
+            else
+                log_warning "PostgreSQL not found in infra namespace - skipping database creation"
+            fi
             
             log_info "Databases are managed by devops-k8s infrastructure"
             log_info "Retrieving credentials from existing secrets and setting up app environment"
