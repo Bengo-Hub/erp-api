@@ -282,12 +282,15 @@ if [[ "$DEPLOY" == "true" ]]; then
                         git clone "$CLONE_URL" "$DEVOPS_DIR" || { log_warning "Unable to clone devops repo for database setup"; }
                     fi
                     
-                    if [[ -d "$DEVOPS_DIR" && -f "$DEVOPS_DIR/scripts/create-service-database.sh" ]]; then
+                    if [[ -d "$DEVOPS_DIR" && -f "$DEVOPS_DIR/scripts/infrastructure/create-service-database.sh" ]]; then
                         log_info "Creating database '${SERVICE_DB_NAME}' for service ${APP_NAME}..."
                         SERVICE_DB_NAME="$SERVICE_DB_NAME" \
                         APP_NAME="$APP_NAME" \
                         NAMESPACE="$NAMESPACE" \
-                        bash "$DEVOPS_DIR/scripts/create-service-database.sh" || log_warning "Database creation failed or already exists"
+                        bash "$DEVOPS_DIR/scripts/infrastructure/create-service-database.sh" || log_warning "Database creation failed or already exists"
+                    else
+                        log_warning "create-service-database.sh not found in devops-k8s repo"
+                        log_info "Database should be created automatically via devops-k8s infrastructure scripts"
                     fi
                 fi
             else
@@ -399,12 +402,12 @@ if [[ "$DEPLOY" == "true" ]]; then
             # Ensure kubeconfig is set up
             ensure_kube_config
 
-            # Wait for databases to be ready (already managed by devops-k8s)
-            log_info "Waiting for PostgreSQL to be ready..."
-            kubectl -n "$NAMESPACE" rollout status statefulset/postgresql --timeout=180s || log_warning "PostgreSQL not fully ready"
+            # Wait for databases to be ready (managed by devops-k8s in infra namespace)
+            log_info "Waiting for PostgreSQL to be ready in infra namespace..."
+            kubectl -n infra rollout status statefulset/postgresql --timeout=180s || log_warning "PostgreSQL not fully ready"
             
-            log_info "Waiting for Redis to be ready..."
-            kubectl -n "$NAMESPACE" rollout status statefulset/redis-master --timeout=120s || log_warning "Redis not fully ready"
+            log_info "Waiting for Redis to be ready in infra namespace..."
+            kubectl -n infra rollout status statefulset/redis-master --timeout=120s || log_warning "Redis not fully ready"
             
             # Grace period after readiness before connections (minimum 5 seconds)
             log_info "Waiting 5 seconds to allow database services to stabilize before connecting..."
