@@ -27,16 +27,24 @@ if ! command -v kubectl &> /dev/null; then
     exit 1
 fi
 
-# Get PostgreSQL password - ALWAYS use the password from the live database
-APP_DB_USER="postgres"
+# Get PostgreSQL password - Use master password for service-specific user
+APP_DB_USER="${APP_DB_USER:-erp_user}"  # Service-specific user (created by create-service-database.sh)
 APP_DB_NAME="$PG_DATABASE"
 
-# CRITICAL: The database password is the source of truth
-# Get it from the PostgreSQL secret (where Helm stores it) in infra namespace
+# CRITICAL: Service users now use POSTGRES_PASSWORD (master password)
+# Get it from the PostgreSQL secret in infra namespace
 if kubectl -n infra get secret postgresql >/dev/null 2>&1; then
-    EXISTING_PG_PASS=$(kubectl -n infra get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+    # Get admin password (master password used for all service users)
+    EXISTING_PG_PASS=$(kubectl -n infra get secret postgresql -o jsonpath='{.data.admin-user-password}' 2>/dev/null | base64 -d || true)
+    
+    if [[ -z "$EXISTING_PG_PASS" ]]; then
+        # Fallback to postgres-password if admin-user-password not found
+        EXISTING_PG_PASS=$(kubectl -n infra get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+    fi
+    
     if [[ -n "$EXISTING_PG_PASS" ]]; then
-        log_info "Retrieved PostgreSQL password from database secret (source of truth)"
+        log_info "Retrieved PostgreSQL master password from database secret"
+        log_info "Using service-specific user: ${APP_DB_USER}"
         APP_DB_PASS="$EXISTING_PG_PASS"
         
         # Verify it matches env var if provided (for validation)
@@ -108,13 +116,13 @@ log_step "Verifying PostgreSQL password by testing connection..."
 # Clean up any existing test pod first
 kubectl delete pod -n "$NAMESPACE" pg-test-conn --ignore-not-found >/dev/null 2>&1
 
-# Run connection test with detailed error capture
-log_info "Testing connection to postgresql.$NAMESPACE.svc.cluster.local:5432..."
+# Run connection test with detailed error capture (connecting to infra namespace)
+log_info "Testing connection to postgresql.infra.svc.cluster.local:5432 as ${APP_DB_USER}..."
 TEST_OUTPUT=$(mktemp)
 set +e
 kubectl run -n "$NAMESPACE" pg-test-conn --rm -i --restart=Never --image=postgres:15-alpine --timeout=30s \
   --env="PGPASSWORD=$APP_DB_PASS" \
-  --command -- psql -h postgresql."$NAMESPACE".svc.cluster.local -U "$APP_DB_USER" -d postgres -c "SELECT 1;" >$TEST_OUTPUT 2>&1
+  --command -- psql -h postgresql.infra.svc.cluster.local -U "$APP_DB_USER" -d "$APP_DB_NAME" -c "SELECT 1;" >$TEST_OUTPUT 2>&1
 TEST_RC=$?
 set -e
 
