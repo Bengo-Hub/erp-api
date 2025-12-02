@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
+from django.http import JsonResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from hrm.employees.management.commands.tasks import check_expiring_contracts
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -25,7 +27,23 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 # Prometheus metrics
 from django_prometheus.exports import ExportToDjangoView
 
+def api_root(request):
+    """Root API endpoint showing available endpoints"""
+    return JsonResponse({
+        'message': 'Welcome to ProcureProKE ERP API',
+        'version': '1.0.0',
+        'endpoints': {
+            'docs': '/api/docs/',
+            'schema': '/api/schema/',
+            'admin': '/admin/',
+            'health': '/api/v1/core/health/',
+            'api_v1': '/api/v1/',
+        },
+        'documentation': 'Visit /api/docs/ for interactive API documentation'
+    })
+
 urlpatterns = [
+    path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
     path('i18n/', include('django.conf.urls.i18n')), # Add the language switching URL pattern
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
