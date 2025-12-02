@@ -128,20 +128,15 @@ export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-"change-me-strong"}
 export REDIS_PASSWORD=${REDIS_PASSWORD:-"change-me-strong"}
 export PG_DATABASE=${PG_DATABASE:-bengo_erp}
 
-# Install/upgrade PostgreSQL
-helm upgrade --install postgresql bitnami/postgresql -n $NAMESPACE \
-  --set global.postgresql.auth.postgresPassword="$POSTGRES_PASSWORD" \
-  --set global.postgresql.auth.database="$PG_DATABASE" \
-  --set global.defaultFips=false \
-  --set fips.openssl=false \
-  --wait --timeout=600s
+# PRODUCTION NOTE:
+#   Shared PostgreSQL and Redis are provisioned centrally via devops-k8s infrastructure scripts.
+#   Do NOT install infra databases from this app. Instead, from the devops-k8s repo:
+#
+#   DB_NAMESPACE=$NAMESPACE PG_DATABASE=$PG_DATABASE ./scripts/infrastructure/install-postgres.sh
+#   DB_NAMESPACE=$NAMESPACE ./scripts/infrastructure/install-redis.sh
+#
+# After infra is ready, create/update app env secret with DB/Redis URLs and production config:
 
-# Install/upgrade Redis
-helm upgrade --install redis bitnami/redis -n $NAMESPACE \
-  --set global.redis.password="$REDIS_PASSWORD" \
-  --wait --timeout=300s
-
-# Create/update app env secret with DB/Redis URLs and production config
 # Generate a secure Django secret key if not already set
 export DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-$(openssl rand -hex 50)}
 
