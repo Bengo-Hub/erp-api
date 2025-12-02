@@ -53,17 +53,64 @@ ${PULL_SECRETS_YAML}
       containers:
       - name: migrate
         image: ${IMAGE_REPO}:${GIT_COMMIT_ID}
+        # Increase file descriptor limits to prevent "too many open files" errors
+        securityContext:
+          capabilities:
+            add:
+            - SYS_RESOURCE
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
         command: 
         - bash
         - -c
         - |
           set -e
+          
+          # Increase file descriptor limits immediately
+          ulimit -n 65535 || echo "⚠️  Could not increase file descriptor limit"
+          
           echo "==================================="
           echo "Django Migrations - Smart Mode"
           echo "==================================="
+          echo "File descriptor limit: \$(ulimit -n)"
           
-          # Install PostgreSQL client for table checking
-          apt-get update -qq && apt-get install -y -qq postgresql-client >/dev/null 2>&1 || true
+          # Install PostgreSQL client for table checking (minimize file operations)
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/debian.sources \
+            -o Dir::Etc::sourceparts="-" -o APT::Get::List-Cleanup="0" && \
+          apt-get install -y -qq --no-install-recommends postgresql-client >/dev/null 2>&1 || true
+          apt-get clean && rm -rf /var/lib/apt/lists/* || true
+          
+          # Wait for database to be fully ready with retry logic
+          echo "Waiting for database connection..."
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          DB_READY=false
+          
+          while [ \$RETRY_COUNT -lt \$MAX_RETRIES ]; do
+            if PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" \
+              -c "SELECT 1" >/dev/null 2>&1; then
+              DB_READY=true
+              echo "✓ Database connection established"
+              break
+            fi
+            RETRY_COUNT=\$((RETRY_COUNT + 1))
+            echo "Waiting for database... (attempt \$RETRY_COUNT/\$MAX_RETRIES)"
+            sleep 2
+          done
+          
+          if [ "\$DB_READY" = "false" ]; then
+            echo "✗ Failed to connect to database after \$MAX_RETRIES attempts"
+            exit 1
+          fi
+          
+          # Give database a moment to stabilize
+          sleep 3
           
           # Check database state by counting tables
           echo "Checking database state..."
@@ -73,13 +120,10 @@ ${PULL_SECRETS_YAML}
           echo "Database has \$TABLE_COUNT tables"
           
           # Check if critical core tables exist (indicates properly migrated database)
-          CORE_TABLES_EXIST=0
-          for table in auth_user django_migrations core_businessdetail core_department core_region; do
-            if PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
-              -c "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='\$table';" 2>/dev/null | grep -q 1; then
-              ((CORE_TABLES_EXIST++))
-            fi
-          done
+          # Use a single query to reduce file descriptors and improve performance
+          CORE_TABLES_EXIST=\$(PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
+            -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('auth_user', 'django_migrations', 'core_businessdetail', 'core_department', 'core_region');" \
+            2>/dev/null | xargs || echo "0")
           
           echo "Core tables found: \$CORE_TABLES_EXIST/5"
           
@@ -109,22 +153,34 @@ ${PULL_SECRETS_YAML}
           
           echo "✅ Migrations completed successfully"
           
-          # Verify critical tables exist after migrations
+          # Verify critical tables exist after migrations (single query for efficiency)
           echo "Verifying critical tables..."
-          MISSING_TABLES=()
-          for table in auth_user django_migrations core_businessdetail attendance_timesheet; do
-            if ! PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
-              -c "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='\$table';" 2>/dev/null | grep -q 1; then
-              MISSING_TABLES+=("\$table")
-            fi
-          done
+          EXPECTED_TABLES="('auth_user', 'django_migrations', 'core_businessdetail', 'attendance_timesheet')"
+          FOUND_TABLES=\$(PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
+            -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN \$EXPECTED_TABLES;" \
+            2>/dev/null | xargs || echo "0")
           
-          if [[ \${#MISSING_TABLES[@]} -gt 0 ]]; then
+          if [[ "\$FOUND_TABLES" -lt "4" ]]; then
             echo "⚠️  WARNING: Some expected tables are missing after migrations:"
-            printf '  - %s\n' "\${MISSING_TABLES[@]}"
+            echo "   Expected 4 critical tables, found \$FOUND_TABLES"
+            
+            # Get list of missing tables with single query
+            MISSING=\$(PGPASSWORD="\$DB_PASSWORD" psql -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" -t \
+              -c "SELECT unnest(ARRAY['auth_user', 'django_migrations', 'core_businessdetail', 'attendance_timesheet']) 
+                  EXCEPT 
+                  SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN \$EXPECTED_TABLES;" \
+              2>/dev/null | sed 's/^[ \t]*//')
+            
+            if [[ -n "\$MISSING" ]]; then
+              echo "   Missing tables:"
+              echo "\$MISSING" | while read -r table; do
+                [[ -n "\$table" ]] && echo "     - \$table"
+              done
+            fi
+            
             echo "This may cause seeding failures. Consider investigating migration issues."
           else
-            echo "✓ All critical tables verified"
+            echo "✓ All critical tables verified (\$FOUND_TABLES/4)"
           fi
         env:
         - name: DATABASE_URL
