@@ -90,7 +90,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: psql
-        image: registry-1.docker.io/bitnami/postgresql:15
+        image: postgres:18
         env:
         - name: PGPASSWORD
           value: "${PASS}"
