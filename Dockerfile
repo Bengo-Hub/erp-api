@@ -78,7 +78,7 @@ USER root
 RUN chmod +x /usr/local/bin/init-media.sh /usr/local/bin/entrypoint.sh
 USER appuser
 
-# Use entrypoint script that runs migrations automatically
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Use entrypoint script that runs migrations automatically on every container start
+CMD ["/usr/local/bin/entrypoint.sh"]
 
 
