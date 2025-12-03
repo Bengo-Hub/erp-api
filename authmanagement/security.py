@@ -652,7 +652,7 @@ class EnhancedLoginView(APIView):
             login(request, auth_user)
             SecurityService.record_successful_login(auth_user, ip_address, user_agent)
 
-            # Determine if password change is required (first login or expired)
+            # Determine if password change is required (first login, expired, or forced)
             from authmanagement.models import PasswordPolicy
             from django.utils import timezone
             policy = PasswordPolicy.objects.first()
@@ -663,8 +663,13 @@ class EnhancedLoginView(APIView):
             password_change_reason = None
             expires_on = None
 
+            # Check must_change_password flag (set for new employees)
+            if getattr(auth_user, 'must_change_password', False) and not auth_user.is_superuser:
+                password_change_required = True
+                password_change_reason = 'temporary_password'
+            
             # First-login enforcement
-            if getattr(policy, 'require_password_change_on_first_login', True):
+            elif getattr(policy, 'require_password_change_on_first_login', True):
                 if getattr(auth_user, 'password_changed_at', None) is None and getattr(auth_user, 'last_login', None) is None:
                     password_change_required = True
                     password_change_reason = 'first_login'

@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from crm.contacts.models import Contact
 from business.models import Branch,TaxRates,Bussiness
 from finance.accounts.models import PaymentAccounts
@@ -86,3 +87,35 @@ class ExpensePayment(models.Model):
     @property
     def status(self):
         return self.payment.status
+
+
+class ExpenseEmailLog(models.Model):
+    """Track all emails sent for expenses - similar to Invoice email tracking"""
+    expense = models.ForeignKey(Expense, on_delete=models.CASCADE, related_name='email_logs')
+    email_type = models.CharField(max_length=20, choices=[
+        ('sent', 'Expense Report Sent'),
+        ('approval_request', 'Approval Request'),
+        ('approved', 'Approval Notification'),
+        ('rejected', 'Rejection Notification'),
+        ('payment_request', 'Payment Request'),
+    ])
+    recipient_email = models.EmailField()
+    sent_at = models.DateTimeField(default=timezone.now)
+    opened_at = models.DateTimeField(null=True, blank=True)
+    clicked_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, default='sent', choices=[
+        ('sent', 'Sent'),
+        ('delivered', 'Delivered'),
+        ('opened', 'Opened'),
+        ('clicked', 'Clicked'),
+        ('bounced', 'Bounced'),
+        ('failed', 'Failed'),
+    ])
+    
+    class Meta:
+        verbose_name = 'Expense Email Log'
+        verbose_name_plural = 'Expense Email Logs'
+        ordering = ['-sent_at']
+    
+    def __str__(self):
+        return f"{self.expense.reference_no} - {self.get_email_type_display()} to {self.recipient_email}"

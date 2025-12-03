@@ -108,6 +108,8 @@ INSTALLED_APPS = [
     'finance.budgets',
     'finance.cashflow',
     'finance.reconciliation',
+    'finance.invoicing',  # NEW: Invoice management (Zoho-like)
+    'finance.quotations',  # NEW: Quotation to Invoice workflow
     ###Manufacturing
     'manufacturing',
     ##Integrations

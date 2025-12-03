@@ -76,12 +76,17 @@ class CustomerAnalyticsViewSet(BaseModelViewSet):
         """Get top customers by revenue"""
         try:
             correlation_id = get_correlation_id(request)
-            business_location_id = request.query_params.get('business_location_id')
+            # Get branch ID from request (supports both old and new param names)
+            branch_id = request.query_params.get('branch_id') or request.query_params.get('business_location_id')
+            if not branch_id:
+                from core.utils import get_branch_id_from_request
+                branch_id = get_branch_id_from_request(request)
+            
             limit = int(request.query_params.get('limit', 10))
             
             queryset = self.get_queryset()
-            if business_location_id:
-                queryset = queryset.filter(business_location_id=business_location_id)
+            if branch_id:
+                queryset = queryset.filter(branch_id=branch_id)
             
             top_customers = queryset.order_by('-total_spent')[:limit]
             serializer = self.get_serializer(top_customers, many=True)
@@ -95,12 +100,17 @@ class CustomerAnalyticsViewSet(BaseModelViewSet):
         """Get customer behavior analysis"""
         try:
             correlation_id = get_correlation_id(request)
-            business_location_id = request.query_params.get('business_location_id')
+            # Get branch ID from request (supports both old and new param names)
+            branch_id = request.query_params.get('branch_id') or request.query_params.get('business_location_id')
+            if not branch_id:
+                from core.utils import get_branch_id_from_request
+                branch_id = get_branch_id_from_request(request)
+            
             segment = request.query_params.get('segment')
             
             queryset = self.get_queryset()
-            if business_location_id:
-                queryset = queryset.filter(business_location_id=business_location_id)
+            if branch_id:
+                queryset = queryset.filter(branch_id=branch_id)
             if segment:
                 queryset = queryset.filter(customer_segment=segment)
             
@@ -129,11 +139,15 @@ class CustomerAnalyticsViewSet(BaseModelViewSet):
         """Update analytics for all customers"""
         try:
             correlation_id = get_correlation_id(request)
-            business_location_id = request.data.get('business_location_id')
+            # Get branch ID from request (supports both old and new param names)
+            branch_id = request.data.get('branch_id') or request.data.get('business_location_id')
+            if not branch_id:
+                from core.utils import get_branch_id_from_request
+                branch_id = get_branch_id_from_request(request)
             
             queryset = self.get_queryset()
-            if business_location_id:
-                queryset = queryset.filter(business_location_id=business_location_id)
+            if branch_id:
+                queryset = queryset.filter(branch_id=branch_id)
             
             updated_count = 0
             for analytics in queryset:
@@ -148,20 +162,25 @@ class CustomerAnalyticsViewSet(BaseModelViewSet):
 class SalesForecastViewSet(BaseModelViewSet):
     """ViewSet for SalesForecast model"""
     
-    queryset = SalesForecast.objects.all().select_related('business_location', 'product')
+    queryset = SalesForecast.objects.all().select_related('branch', 'product')
     serializer_class = SalesForecastSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         """Filter queryset based on business location and date range"""
         queryset = super().get_queryset()
-        business_location_id = self.request.query_params.get('business_location_id')
+        # Get branch ID from request (supports both old and new param names)
+        branch_id = self.request.query_params.get('branch_id') or self.request.query_params.get('business_location_id')
+        if not branch_id:
+            from core.utils import get_branch_id_from_request
+            branch_id = get_branch_id_from_request(self.request)
+        
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
         forecast_period = self.request.query_params.get('forecast_period')
         
-        if business_location_id:
-            queryset = queryset.filter(business_location_id=business_location_id)
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
         if start_date:
             queryset = queryset.filter(forecast_date__gte=start_date)
         if end_date:
@@ -239,21 +258,26 @@ class SalesForecastViewSet(BaseModelViewSet):
         """Generate sales forecast for a specific period"""
         try:
             correlation_id = get_correlation_id(request)
-            business_location_id = request.data.get('business_location_id')
+            # Get branch ID from request (supports both old and new param names)
+            branch_id = request.data.get('branch_id') or request.data.get('business_location_id')
+            if not branch_id:
+                from core.utils import get_branch_id_from_request
+                branch_id = get_branch_id_from_request(request)
+            
             product_id = request.data.get('product_id')
             forecast_period = request.data.get('forecast_period', 'monthly')
             start_date = request.data.get('start_date')
             end_date = request.data.get('end_date')
             
-            if not all([business_location_id, start_date, end_date]):
-                return APIResponse.bad_request(message='business_location_id, start_date, and end_date are required', error_id='missing_required_fields', correlation_id=correlation_id)
+            if not all([branch_id, start_date, end_date]):
+                return APIResponse.bad_request(message='branch_id, start_date, and end_date are required', error_id='missing_required_fields', correlation_id=correlation_id)
             
             # Simple forecasting logic (in a real implementation, this would use ML models)
             from ecommerce.order.models import Order
             
             # Get historical data
             historical_orders = Order.objects.filter(
-                business_location_id=business_location_id,
+                branch_id=branch_id,
                 status__in=['completed', 'delivered'],
                 created_at__date__range=[start_date, end_date]
             )
@@ -279,7 +303,7 @@ class SalesForecastViewSet(BaseModelViewSet):
             
             while current_date <= end_date_obj:
                 forecast, created = SalesForecast.objects.get_or_create(
-                    business_location_id=business_location_id,
+                    branch_id=branch_id,
                     product_id=product_id,
                     forecast_date=current_date,
                     forecast_period=forecast_period,
@@ -318,16 +342,21 @@ class SalesForecastViewSet(BaseModelViewSet):
 class CustomerSegmentViewSet(BaseModelViewSet):
     """ViewSet for CustomerSegment model"""
     
-    queryset = CustomerSegment.objects.all().select_related('business_location')
+    queryset = CustomerSegment.objects.all().select_related('branch')
     serializer_class = CustomerSegmentSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         """Filter queryset based on business location"""
         queryset = super().get_queryset()
-        business_location_id = self.request.query_params.get('business_location_id')
-        if business_location_id:
-            queryset = queryset.filter(business_location_id=business_location_id)
+        # Get branch ID from request (supports both old and new param names)
+        branch_id = self.request.query_params.get('branch_id') or self.request.query_params.get('business_location_id')
+        if not branch_id:
+            from core.utils import get_branch_id_from_request
+            branch_id = get_branch_id_from_request(self.request)
+        
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
         return queryset
     
     @action(detail=True, methods=['post'])
@@ -347,20 +376,25 @@ class CustomerSegmentViewSet(BaseModelViewSet):
 class AnalyticsSnapshotViewSet(BaseModelViewSet):
     """ViewSet for AnalyticsSnapshot model"""
     
-    queryset = AnalyticsSnapshot.objects.all().select_related('business_location')
+    queryset = AnalyticsSnapshot.objects.all().select_related('branch')
     serializer_class = AnalyticsSnapshotSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         """Filter queryset based on business location and date range"""
         queryset = super().get_queryset()
-        business_location_id = self.request.query_params.get('business_location_id')
+        # Get branch ID from request (supports both old and new param names)
+        branch_id = self.request.query_params.get('branch_id') or self.request.query_params.get('business_location_id')
+        if not branch_id:
+            from core.utils import get_branch_id_from_request
+            branch_id = get_branch_id_from_request(self.request)
+        
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
         snapshot_type = self.request.query_params.get('snapshot_type')
         
-        if business_location_id:
-            queryset = queryset.filter(business_location_id=business_location_id)
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
         if start_date:
             queryset = queryset.filter(snapshot_date__gte=start_date)
         if end_date:

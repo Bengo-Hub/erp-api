@@ -1,7 +1,7 @@
 #views 
 from rest_framework import viewsets
-from .models import PurchaseOrder
-from .serializers import PurchaseOrderSerializer, PurchaseOrderListSerializer
+from .models import PurchaseOrder, PurchaseOrderPayment
+from .serializers import PurchaseOrderSerializer, PurchaseOrderListSerializer, PurchaseOrderPaymentSerializer
 from rest_framework import permissions
 from rest_framework import filters
 from rest_framework.response import Response
@@ -203,6 +203,149 @@ class PurchaseOrderViewSet(BaseModelViewSet):
             logger.error(f'Error cancelling purchase order: {str(e)}', exc_info=True)
             return APIResponse.server_error(
                 message='Error cancelling purchase order',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
+    
+    @action(detail=True, methods=['post'], url_path='mark-received', name='mark_received')
+    def mark_received(self, request, pk=None):
+        """
+        Mark purchase order as received
+        CRITICAL: Triggers inventory stock increase
+        """
+        try:
+            correlation_id = get_correlation_id(request)
+            with transaction.atomic():
+                purchase_order = self.get_object()
+                
+                if purchase_order.status == 'received':
+                    return APIResponse.bad_request(
+                        message='Purchase order is already marked as received',
+                        correlation_id=correlation_id
+                    )
+                
+                # Mark as received (this triggers inventory update via signal/Purchase)
+                purchase_order.mark_as_received()
+                
+                # Log receipt
+                AuditTrail.log(
+                    operation=AuditTrail.UPDATE,
+                    module='procurement',
+                    entity_type='PurchaseOrder',
+                    entity_id=purchase_order.id,
+                    user=request.user,
+                    reason=f'Purchase order {purchase_order.order_number} marked as received - inventory updated',
+                    request=request
+                )
+                
+                return APIResponse.success(
+                    data=self.get_serializer(purchase_order).data,
+                    message='Purchase order marked as received and inventory updated',
+                    correlation_id=correlation_id
+                )
+        
+        except Exception as e:
+            logger.error(f'Error marking PO as received: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error marking purchase order as received',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
+    
+    @action(detail=True, methods=['post'], url_path='record-payment', name='record_payment')
+    def record_payment(self, request, pk=None):
+        """
+        CRITICAL: Record payment for Purchase Order
+        Integrates with Finance module as single source of truth for money-OUT
+        """
+        try:
+            correlation_id = get_correlation_id(request)
+            purchase_order = self.get_object()
+            
+            # Validate input
+            amount = request.data.get('amount')
+            payment_method = request.data.get('payment_method')
+            payment_account_id = request.data.get('payment_account')
+            reference = request.data.get('reference')
+            payment_date = request.data.get('payment_date')
+            notes = request.data.get('notes', '')
+            
+            if not amount or not payment_method or not payment_account_id:
+                return APIResponse.bad_request(
+                    message='Amount, payment method, and payment account are required',
+                    correlation_id=correlation_id
+                )
+            
+            with transaction.atomic():
+                from decimal import Decimal
+                amount = Decimal(str(amount))
+                
+                if amount <= 0:
+                    return APIResponse.bad_request(
+                        message='Amount must be greater than zero',
+                        correlation_id=correlation_id
+                    )
+                
+                if amount > purchase_order.balance_due:
+                    return APIResponse.bad_request(
+                        message=f'Amount ({amount}) exceeds balance due ({purchase_order.balance_due})',
+                        correlation_id=correlation_id
+                    )
+                
+                # Create payment in Finance module (Money OUT)
+                from finance.payment.models import Payment
+                from finance.accounts.models import PaymentAccounts
+                
+                payment_account = PaymentAccounts.objects.get(id=payment_account_id)
+                
+                payment = Payment.objects.create(
+                    payment_type='purchase_order_payment',
+                    direction='out',
+                    amount=amount,
+                    payment_method=payment_method,
+                    reference_number=reference or f"PO-PAY-{purchase_order.order_number}-{timezone.now().timestamp()}",
+                    payment_date=payment_date or timezone.now(),
+                    supplier=purchase_order.supplier,
+                    payment_account=payment_account,
+                    notes=notes,
+                    status='completed',
+                    verified_by=request.user,
+                    verification_date=timezone.now()
+                )
+                
+                # Create PO Payment link
+                po_payment = PurchaseOrderPayment.objects.create(
+                    purchase_order=purchase_order,
+                    payment=payment,
+                    amount=amount,
+                    payment_account=payment_account,
+                    notes=notes
+                )
+                
+                # Log payment
+                AuditTrail.log(
+                    operation=AuditTrail.UPDATE,
+                    module='procurement',
+                    entity_type='PurchaseOrder',
+                    entity_id=purchase_order.id,
+                    user=request.user,
+                    reason=f'Payment of {amount} recorded for PO {purchase_order.order_number}',
+                    request=request
+                )
+                
+                return APIResponse.success(
+                    data={
+                        'purchase_order': self.get_serializer(purchase_order).data,
+                        'payment': PurchaseOrderPaymentSerializer(po_payment).data
+                    },
+                    message=f'Payment of {amount} recorded successfully',
+                    correlation_id=correlation_id
+                )
+        
+        except Exception as e:
+            logger.error(f'Error recording PO payment: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error recording payment',
                 error_id=str(e),
                 correlation_id=get_correlation_id(request)
             )

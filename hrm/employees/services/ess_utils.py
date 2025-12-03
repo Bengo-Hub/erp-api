@@ -26,7 +26,8 @@ def create_ess_account(employee):
     - Sets allow_ess = True
     - Records activation timestamp
     - Sets temporary password for user
-    - Sends welcome email
+    - Forces password change on first login (except superusers)
+    - Sends welcome email with credentials
     """
     if not employee.allow_ess:
         return {
@@ -36,9 +37,14 @@ def create_ess_account(employee):
     
     user = employee.user
     
-    # Generate temporary password
-    temp_password = generate_temporary_password()
+    # Use standard password for consistency or generate random
+    temp_password = "ChangeMe123!"  # Standardized password
     user.set_password(temp_password)
+    
+    # Force password change on first login (except for superusers)
+    if not user.is_superuser:
+        user.must_change_password = True
+    
     user.save()
     
     # Update ESS activation timestamp
@@ -52,7 +58,8 @@ def create_ess_account(employee):
     return {
         'success': True,
         'message': 'ESS account created successfully',
-        'email_sent': email_sent
+        'email_sent': email_sent,
+        'temporary_password': temp_password
     }
 
 

@@ -127,27 +127,64 @@ class EmployeeDataImport:
             return date_obj + timedelta(days=(years * 365) + (months * 30))
 
     def map_role_group_by_job_title(self, title: str) -> str:
-        """Map job title to an RBAC group name; default to 'staff' when unknown."""
+        """
+        Enhanced role mapping based on job title
+        Maps job titles to appropriate RBAC groups for permission management
+        """
         if not title:
             return 'staff'
+        
         t = str(title).strip().lower()
-        # Simple contains-based mapping
-        if 'chief executive' in t or t == 'ceo' or 'ceo' in t:
+        
+        # Executive Level
+        if any(x in t for x in ['chief executive', 'ceo', 'managing director', 'md']):
             return 'ceo'
-        if 'chief technology' in t or t == 'cto' or 'cto' in t:
+        if any(x in t for x in ['chief financial', 'cfo', 'finance director']):
+            return 'cfo'
+        if any(x in t for x in ['chief technology', 'cto', 'it director']):
             return 'cto'
-        if 'ict manager' in t or ('ict' in t and 'manager' in t):
-            return 'ict_manager'
-        if 'ict officer' in t or ('ict' in t and 'officer' in t):
+        if any(x in t for x in ['chief operating', 'coo', 'operations director']):
+            return 'coo'
+        
+        # Management Level
+        if 'manager' in t:
+            if any(x in t for x in ['hr', 'human resource', 'people']):
+                return 'hr_manager'
+            if any(x in t for x in ['finance', 'accounting', 'accounts']):
+                return 'finance_manager'
+            if any(x in t for x in ['sales', 'business development']):
+                return 'sales_manager'
+            if any(x in t for x in ['procurement', 'purchasing', 'supply chain']):
+                return 'procurement_manager'
+            if any(x in t for x in ['ict', 'it', 'technology']):
+                return 'ict_manager'
+            if any(x in t for x in ['operations', 'production']):
+                return 'operations_manager'
+            return 'manager'  # Generic manager
+        
+        # Specialized Roles
+        if any(x in t for x in ['accountant', 'accounts officer', 'finance officer']):
+            return 'accountant'
+        if any(x in t for x in ['hr officer', 'hr assistant', 'human resource officer']):
+            return 'hr_officer'
+        if any(x in t for x in ['procurement officer', 'purchasing officer']):
+            return 'procurement_officer'
+        if any(x in t for x in ['sales officer', 'sales executive', 'sales rep']):
+            return 'sales_officer'
+        if any(x in t for x in ['ict officer', 'it officer', 'system admin', 'developer']):
             return 'ict_officer'
-        if 'hr manager' in t or ('human resource' in t and 'manager' in t):
-            return 'hr_manager'
-        if 'hr assistant' in t or ('human resource' in t and 'assistant' in t):
-            return 'hr_assistant'
-        if 'receptionist' in t:
+        if any(x in t for x in ['receptionist', 'front desk']):
             return 'receptionist'
-        if 'secretary' in t:
+        if any(x in t for x in ['secretary', 'admin assistant', 'personal assistant']):
             return 'secretary'
+        if any(x in t for x in ['driver', 'chauffeur']):
+            return 'driver'
+        if any(x in t for x in ['security', 'guard']):
+            return 'security'
+        if any(x in t for x in ['cleaner', 'janitor', 'housekeeper']):
+            return 'support_staff'
+        
+        # Default
         return 'staff'
         
     def import_employee_data(self):
@@ -234,10 +271,17 @@ class EmployeeDataImport:
                             })
                         try:
                             if created:
-                                user.set_password("User@123")
+                                # Set default password and force password change on first login
+                                user.set_password("ChangeMe123!")
+                                user.must_change_password = True
                                 user.save()
-                        except Exception:
-                            pass
+                                
+                                # Send welcome email with credentials
+                                from hrm.employees.services.ess_utils import send_welcome_email
+                                send_welcome_email(employee, "ChangeMe123!")
+                                print(f"✅ User account created for {user.email} with temporary password")
+                        except Exception as e:
+                            print(f"❌ Error setting password or sending email: {e}")
                     except Exception as e:
                         print("user error:"+str(e))
                     try:

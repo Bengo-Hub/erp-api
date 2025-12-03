@@ -233,6 +233,34 @@ class BillingItem(BaseModel):
         )
 
 class Payment(BaseModel):
+    """
+    Universal Payment Model - Single Source of Truth for ALL Money Movements
+    Tracks money IN and money OUT across all modules (Invoice, Expense, PO, Payroll)
+    """
+    PAYMENT_TYPES = [
+        # Money IN
+        ('invoice_payment', 'Invoice Payment'),
+        ('sales_payment', 'Sales Payment'),
+        ('refund_received', 'Refund Received'),
+        
+        # Money OUT
+        ('expense_payment', 'Expense Payment'),
+        ('purchase_order_payment', 'Purchase Order Payment'),
+        ('payroll_payment', 'Payroll Payment'),
+        ('supplier_payment', 'Supplier Payment'),
+        ('tax_payment', 'Tax Payment'),
+        ('refund_issued', 'Refund Issued'),
+        
+        # Internal
+        ('transfer', 'Account Transfer'),
+        ('adjustment', 'Balance Adjustment'),
+    ]
+    
+    DIRECTION_CHOICES = [
+        ('in', 'Money In'),
+        ('out', 'Money Out'),
+    ]
+    
     PAYMENT_METHODS = [
         ('cash', 'Cash'),
         ('mpesa', 'M-Pesa'),
@@ -241,6 +269,7 @@ class Payment(BaseModel):
         ('stripe', 'Stripe'),
         ('bank', 'Bank Transfer'),
         ('cod', 'Cash on Delivery'),
+        ('cheque', 'Cheque'),
     ]
     
     PAYMENT_STATUS_CHOICES = [
@@ -255,7 +284,12 @@ class Payment(BaseModel):
     
     MOBILE_MONEY_PROVIDERS = [
         ("mpesa", "M-Pesa"),
+        ("airtel_money", "Airtel Money"),
     ]
+    
+    # CRITICAL: Payment Type and Direction
+    payment_type = models.CharField(max_length=30, choices=PAYMENT_TYPES, default='invoice_payment', help_text="Type of payment transaction")
+    direction = models.CharField(max_length=10, choices=DIRECTION_CHOICES, default='in', help_text="Money flow direction")
     
     # Core Payment Fields
     amount = models.DecimalField(max_digits=15, decimal_places=2)
@@ -286,13 +320,33 @@ class Payment(BaseModel):
     
     # Notes
     notes = models.TextField(blank=True)
+    
+    # CRITICAL: Link to payment account for tracking
+    payment_account = models.ForeignKey(PaymentAccounts, on_delete=models.PROTECT, null=True, blank=True, related_name='payments', help_text="Account from/to which payment flows")
+    
+    # CRITICAL: Link to source/destination contact
+    customer = models.ForeignKey(Contact, on_delete=models.SET_NULL, null=True, blank=True, related_name='payments_received', help_text="Customer for money IN")
+    supplier = models.ForeignKey(Contact, on_delete=models.SET_NULL, null=True, blank=True, related_name='payments_made', help_text="Supplier for money OUT")
+    
+    # Approval workflow for high-value payments
+    requires_approval = models.BooleanField(default=False)
+    approval_threshold = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, help_text="Auto-approval threshold")
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_payments')
+    approved_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.reference_number} - {self.amount} ({self.payment_method})"
+        return f"{self.reference_number} - {self.get_payment_type_display()} - {self.amount} ({self.payment_method})"
 
     def save(self, *args, **kwargs):
         if not self.reference_number:
             self.reference_number = self.generate_reference_number()
+        
+        # Auto-set direction based on payment_type
+        if not self.direction:
+            if self.payment_type in ['invoice_payment', 'sales_payment', 'refund_received']:
+                self.direction = 'in'
+            else:
+                self.direction = 'out'
         
         # Set mobile money provider based on payment method
         if self.payment_method in ['mpesa']:
@@ -305,6 +359,10 @@ class Payment(BaseModel):
             self.payment_processor = 'Stripe'
         elif self.payment_method == 'paypal':
             self.payment_processor = 'PayPal'
+        
+        # Check if approval required based on amount threshold
+        if self.approval_threshold and self.amount >= self.approval_threshold:
+            self.requires_approval = True
             
         super().save(*args, **kwargs)
         
@@ -319,12 +377,18 @@ class Payment(BaseModel):
         db_table = 'finance_payments'
         verbose_name = 'Payment'
         verbose_name_plural = 'Payments'
+        ordering = ['-payment_date']
         indexes = [
+            models.Index(fields=['payment_type'], name='idx_payment_type'),
+            models.Index(fields=['direction'], name='idx_payment_direction'),
             models.Index(fields=['payment_method'], name='idx_payment_method'),
             models.Index(fields=['status'], name='idx_payment_status'),
             models.Index(fields=['reference_number'], name='idx_payment_reference'),
             models.Index(fields=['transaction_id'], name='idx_payment_transaction'),
             models.Index(fields=['payment_date'], name='idx_payment_date'),
+            models.Index(fields=['payment_account'], name='idx_payment_account'),
+            models.Index(fields=['customer'], name='idx_payment_customer'),
+            models.Index(fields=['supplier'], name='idx_payment_supplier'),
             models.Index(fields=['mobile_money_provider'], name='idx_payment_mobile_provider'),
             models.Index(fields=['phone_number'], name='idx_payment_phone'),
             models.Index(fields=['kra_compliance'], name='idx_payment_kra_compliance'),

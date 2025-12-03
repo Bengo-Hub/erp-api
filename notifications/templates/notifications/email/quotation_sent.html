@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .quotation-details {
+            background-color: #f0fdf4;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .quotation-details table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .quotation-details td {
+            padding: 8px 0;
+        }
+        .quotation-details td:first-child {
+            font-weight: 600;
+            color: #065f46;
+        }
+        .quotation-details td:last-child {
+            text-align: right;
+        }
+        .amount-box {
+            background-color: #d1fae5;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .amount-box .label {
+            font-size: 14px;
+            color: #065f46;
+            margin-bottom: 5px;
+        }
+        .amount-box .amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #065f46;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #059669;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+        .button:hover {
+            background-color: #047857;
+        }
+        .footer {
+            background-color: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .validity-notice {
+            background-color: #fef3c7;
+            border-left: 4px solid: #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                margin: 0;
+                border-radius: 0;
+            }
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>📋 Quotation</h1>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{customer_name}},</p>
+            
+            <p>Thank you for your interest in our products/services. We are pleased to provide you with the following quotation.</p>
+            
+            <div class="quotation-details">
+                <table>
+                    <tr>
+                        <td>Quotation Number:</td>
+                        <td><strong>{{quotation_number}}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Date:</td>
+                        <td>{{quotation_date}}</td>
+                    </tr>
+                    <tr>
+                        <td>Valid Until:</td>
+                        <td><strong>{{valid_until}}</strong></td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="amount-box">
+                <div class="label">Quotation Amount</div>
+                <div class="amount">KES {{total_amount}}</div>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{quotation_url}}" class="button">View Quotation</a>
+            </div>
+            
+            <div class="validity-notice">
+                <strong>⚠️ Validity Notice:</strong><br>
+                This quotation is valid until <strong>{{valid_until}}</strong>. Please confirm your order before this date.
+            </div>
+            
+            {% if introduction %}
+            <p>{{introduction}}</p>
+            {% endif %}
+            
+            {% if customer_notes %}
+            <div style="background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
+                <strong>Notes:</strong><br>
+                {{customer_notes}}
+            </div>
+            {% endif %}
+            
+            <p style="margin-top: 30px;">
+                If you have any questions about this quotation or would like to proceed with the order, please don't hesitate to contact us.
+            </p>
+            
+            <p>
+                Best regards,<br>
+                <strong>{{company_name}}</strong>
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated email. Please do not reply to this message.</p>
+            <p>&copy; {{year}} {{company_name}}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -71,26 +71,44 @@ class UploadEmployData(APIView):
 
     @csrf_exempt
     def post(self, request, format=None):
-        organisation=Bussiness.objects.filter(Q(owner=self.request.user)|Q(employees__user=self.request.user)).first()
-        if organisation is None:
-            return Response({'error': "No Company or Business Details found. Please register company details before importing employees"}, status=status.HTTP_400_BAD_REQUEST)
-        if 'file' not in request.FILES:
-            return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
-        file_obj = request.FILES['file']
-        fileType = request.data.get('fileType')
-        # Save the uploaded file
-        file_name = default_storage.save(file_obj.name, ContentFile(file_obj.read()))
-        # Call the import_employee_data function
-        #try:
-        path=default_storage.path(file_name)
-        import_response = EmployeeDataImport(request=request, path=path, organisation=organisation).import_employee_data()
-        if fileType =='products':
-            res = ImportProducts(request,path,organisation).save_product()
-            if fileType =='contacts':
-               res = ImportContacts(request,path,organisation).save_contact()
-        return Response({'message': import_response}, status=status.HTTP_201_CREATED)
-        # except Exception as e:
-        #     return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        file_name = None
+        try:
+            organisation=Bussiness.objects.filter(Q(owner=self.request.user)|Q(employees__user=self.request.user)).first()
+            if organisation is None:
+                return Response({'error': "No Company or Business Details found. Please register company details before importing employees"}, status=status.HTTP_400_BAD_REQUEST)
+            if 'file' not in request.FILES:
+                return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            file_obj = request.FILES['file']
+            fileType = request.data.get('fileType')
+            
+            # Save the uploaded file temporarily
+            file_name = default_storage.save(file_obj.name, ContentFile(file_obj.read()))
+            path = default_storage.path(file_name)
+            
+            # Process the file based on fileType
+            if fileType == 'products':
+                import_response = ImportProducts(request, path, organisation).save_product()
+            elif fileType == 'contacts':
+                import_response = ImportContacts(request, path, organisation).save_contact()
+            else:
+                # Default to employee import
+                import_response = EmployeeDataImport(request=request, path=path, organisation=organisation).import_employee_data()
+            
+            return Response({'message': import_response}, status=status.HTTP_201_CREATED)
+        
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        finally:
+            # Always clean up the uploaded file after processing (success or failure)
+            if file_name:
+                try:
+                    if default_storage.exists(file_name):
+                        default_storage.delete(file_name)
+                        print(f"✓ Cleaned up uploaded file: {file_name}")
+                except Exception as cleanup_error:
+                    print(f"Warning: Failed to delete uploaded file {file_name}: {cleanup_error}")
 
 class EmployeeViewSet(BaseModelViewSet):#cruds
     queryset = Employee.objects.all()
