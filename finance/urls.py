@@ -30,4 +30,8 @@ urlpatterns = [
     path('budgets/', include('finance.budgets.urls')),
     path('cashflow/', include('finance.cashflow.urls')),
     path('reconciliation/', include('finance.reconciliation.urls')),
+    
+    # NEW: Invoice and Quotation modules
+    path('invoicing/', include('finance.invoicing.urls')),
+    path('quotations/', include('finance.quotations.urls')),
 ]

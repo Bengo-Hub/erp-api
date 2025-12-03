@@ -39,13 +39,103 @@ class ProductViewSet(BaseModelViewSet):
         'discount',
         'reviews',
         'unit',
-        'location',
         'supplier'
+    ).select_related(
+        'product',
+        'branch'
     ).all()
     serializer_class = StockSerializer
     #authentication_classes = []
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     pagination_class = PageNumberPagination  # Standardized: 100 records per page
+    
+    @action(detail=False, methods=['get'], url_path='search-lite', name='search_lite')
+    def search_lite(self, request):
+        """
+        Lightweight product search for autocomplete/dropdowns
+        Returns only essential fields: id, title, sku, price, stock, tax
+        """
+        try:
+            correlation_id = get_correlation_id(request)
+            query = request.query_params.get('search', '')
+            branch_id = request.query_params.get('branch_id')
+            
+            # Get branch from header if not in params
+            if not branch_id:
+                from core.utils import get_branch_id_from_request
+                branch_id = get_branch_id_from_request(request)
+            
+            # Base queryset with minimal fields
+            queryset = StockInventory.objects.select_related(
+                'product',
+                'applicable_tax'
+            ).only(
+                'id',
+                'selling_price',
+                'stock_level',
+                'availability',
+                'product__id',
+                'product__title',
+                'product__sku',
+                'product__serial',
+                'product__description',
+                'applicable_tax__id',
+                'applicable_tax__tax_name',
+                'applicable_tax__percentage'
+            )
+            
+            # Filter by branch
+            if branch_id:
+                queryset = queryset.filter(branch_id=branch_id)
+            
+            # Filter by search query
+            if query:
+                queryset = queryset.filter(
+                    Q(product__title__icontains=query) |
+                    Q(product__sku__icontains=query) |
+                    Q(product__serial__icontains=query)
+                )
+            
+            # Limit results for performance
+            queryset = queryset[:100]
+            
+            # Build lightweight response
+            products = []
+            for stock in queryset:
+                products.append({
+                    'id': stock.id,
+                    'product': {
+                        'id': stock.product.id,
+                        'title': stock.product.title,
+                        'sku': stock.product.sku,
+                        'serial': stock.product.serial,
+                        'description': stock.product.description
+                    },
+                    'selling_price': float(stock.selling_price),
+                    'stock_level': stock.stock_level,
+                    'availability': stock.availability,
+                    'applicable_tax': {
+                        'id': stock.applicable_tax.id,
+                        'tax_name': stock.applicable_tax.tax_name,
+                        'percentage': float(stock.applicable_tax.percentage)
+                    } if stock.applicable_tax else None,
+                    # For autocomplete display
+                    'displayName': f"{stock.product.title} ({stock.product.sku})"
+                })
+            
+            return APIResponse.success(
+                data=products,
+                message=f'Found {len(products)} products',
+                correlation_id=correlation_id
+            )
+        
+        except Exception as e:
+            logger.error(f'Error in product search lite: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error searching products',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
 
     @monitor_performance('product_list_query')
     def get_queryset(self):

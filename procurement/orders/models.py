@@ -9,10 +9,12 @@ from procurement.orders.functions import generate_purchase_order
 from procurement.requisitions.models import ProcurementRequest
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-
+import logging
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 # Create your models here.
 
@@ -73,10 +75,24 @@ class PurchaseOrder(BaseOrder):
         self.save(update_fields=['status', 'ordered_at'])
     
     def mark_as_received(self):
-        """Mark order as received"""
+        """
+        Mark order as received
+        CRITICAL: Triggers inventory update via linked Purchase
+        """
         self.status = 'received'
         self.received_at = timezone.now()
         self.save(update_fields=['status', 'received_at'])
+        
+        # Update linked Purchase status to trigger stock increase
+        try:
+            from procurement.purchases.models import Purchase
+            purchase = Purchase.objects.filter(purchase_order=self).first()
+            if purchase:
+                purchase.purchase_status = 'received'
+                purchase.save()  # This triggers inventory update in Purchase.save()
+                logger.info(f"Updated Purchase {purchase.purchase_id} status to 'received' for PO {self.order_number}")
+        except Exception as e:
+            logger.error(f"Error updating Purchase for PO {self.order_number}: {str(e)}")
     
     def cancel_order(self, reason=None):
         """Cancel the purchase order"""
@@ -119,3 +135,56 @@ def generate_order_number():
 
 
 # OrderApproval moved to centralized approvals app - import from there
+
+
+class PurchaseOrderPayment(models.Model):
+    """
+    CRITICAL: Link Purchase Orders to Finance Payment Module
+    Ensures ALL money-OUT for procurement is tracked in Finance
+    """
+    purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='po_payments')
+    payment = models.ForeignKey('payment.Payment', on_delete=models.CASCADE, related_name='purchase_order_payments')
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    payment_account = models.ForeignKey('accounts.PaymentAccounts', on_delete=models.PROTECT)
+    payment_date = models.DateField(default=timezone.now)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Purchase Order Payment'
+        verbose_name_plural = 'Purchase Order Payments'
+        ordering = ['-payment_date']
+        indexes = [
+            models.Index(fields=['purchase_order'], name='idx_po_payment_po'),
+            models.Index(fields=['payment'], name='idx_po_payment_payment'),
+            models.Index(fields=['payment_date'], name='idx_po_payment_date'),
+        ]
+    
+    def __str__(self):
+        return f"{self.purchase_order.order_number} - Payment {self.amount}"
+    
+    def save(self, *args, **kwargs):
+        # Update purchase order's amount_paid
+        super().save(*args, **kwargs)
+        
+        # Recalculate PO's total paid amount
+        from django.db.models import Sum
+        total_paid = PurchaseOrderPayment.objects.filter(
+            purchase_order=self.purchase_order
+        ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        
+        self.purchase_order.amount_paid = total_paid
+        self.purchase_order.balance_due = self.purchase_order.total - total_paid
+        
+        # Update payment status
+        if self.purchase_order.balance_due <= 0:
+            self.purchase_order.payment_status = 'paid'
+        elif self.purchase_order.amount_paid > 0:
+            self.purchase_order.payment_status = 'partial'
+        
+        PurchaseOrder.objects.filter(pk=self.purchase_order.pk).update(
+            amount_paid=total_paid,
+            balance_due=self.purchase_order.balance_due,
+            payment_status=self.purchase_order.payment_status
+        )

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ExpenseCategory, Expense, ExpensePayment
+from .models import ExpenseCategory, Expense, ExpensePayment, ExpenseEmailLog
 from django.contrib.auth.admin import UserAdmin
 from .models import *
 from django.db.models import Q
@@ -64,3 +64,12 @@ class ExpensePaymentAdmin(admin.ModelAdmin):
     list_display = ('expense', 'payment', 'amount', 'paid_on', 'payment_account')
     search_fields = ('expense__reference_no', 'payment__reference_number', 'payment__payment_method', 'payment_account__name')
     list_filter = ('paid_on', 'payment__payment_method')
+
+@admin.register(ExpenseEmailLog)
+class ExpenseEmailLogAdmin(admin.ModelAdmin):
+    list_per_page = 10
+    list_display = ('expense', 'email_type', 'recipient_email', 'status', 'sent_at', 'opened_at')
+    list_filter = ('email_type', 'status', 'sent_at')
+    search_fields = ('expense__reference_no', 'recipient_email')
+    date_hierarchy = 'sent_at'
+    readonly_fields = ('sent_at', 'opened_at', 'clicked_at')

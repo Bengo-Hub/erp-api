@@ -56,7 +56,7 @@ def calculate_profit(start_date, end_date=None, time_period='daily', branch_id=N
         stock_transactions=stock_transactions.filter(branch__branch_id=branch_id)
         purchases=purchases.filter(purchaseitems__stock_item__branch__branch_code=branch_id)
         purchase_returns=purchase_returns.filter(return_items__stock_item__branch__branch_code=branch_id)
-        expenses=expenses.filter(business_location__branch__branch_code=branch_id)
+        expenses=expenses.filter(branch__branch_code=branch_id)
         stock_adjustments=stock_adjustments.filter(branch__branch_code=branch_id)
         stock_transfers=stock_transfers.filter(Q(location_from__branch_code=branch_id)|(Q(location_to__branch_code=branch_id)))
         shippings=shippings.filter(sale__salesitems__stock_item__branch__branch_code=branch_id)
