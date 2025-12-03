@@ -39,7 +39,7 @@ if kubectl -n infra get secret postgresql >/dev/null 2>&1; then
     
     if [[ -z "$EXISTING_PG_PASS" ]]; then
         # Fallback to postgres-password if admin-user-password not found
-        EXISTING_PG_PASS=$(kubectl -n infra get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
+    EXISTING_PG_PASS=$(kubectl -n infra get secret postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d || true)
     fi
     
     if [[ -n "$EXISTING_PG_PASS" ]]; then
