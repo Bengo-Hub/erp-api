@@ -71,13 +71,14 @@ EXPOSE 4000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -fsS http://localhost:${PORT}/api/v1/core/health/ || exit 1
 
-# Copy media init script
+# Copy startup scripts
 COPY scripts/init-media.sh /usr/local/bin/init-media.sh
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 USER root
-RUN chmod +x /usr/local/bin/init-media.sh
+RUN chmod +x /usr/local/bin/init-media.sh /usr/local/bin/entrypoint.sh
 USER appuser
 
-# Startup script: initialize media directory, collect static files, then start ASGI server (Daphne)
-CMD ["bash","-lc","/usr/local/bin/init-media.sh && python manage.py collectstatic --noinput || true && daphne -b 0.0.0.0 -p ${PORT} ProcureProKEAPI.asgi:application"]
+# Use entrypoint script that runs migrations automatically
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 
