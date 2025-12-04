@@ -663,14 +663,17 @@ class EnhancedLoginView(APIView):
             password_change_reason = None
             expires_on = None
 
-            # Check must_change_password flag (set for new employees)
+            # Check must_change_password flag (set for new employees) - HIGHEST PRIORITY
             if getattr(auth_user, 'must_change_password', False) and not auth_user.is_superuser:
                 password_change_required = True
                 password_change_reason = 'temporary_password'
             
-            # First-login enforcement
-            elif getattr(policy, 'require_password_change_on_first_login', True):
-                if getattr(auth_user, 'password_changed_at', None) is None and getattr(auth_user, 'last_login', None) is None:
+            # First-login enforcement - check if this is truly first login
+            elif getattr(policy, 'require_password_change_on_first_login', True) and not auth_user.is_superuser:
+                # Force password change if:
+                # 1. Never changed password AND never logged in before
+                # 2. OR password_changed_at is None (regardless of last_login)
+                if getattr(auth_user, 'password_changed_at', None) is None:
                     password_change_required = True
                     password_change_reason = 'first_login'
 
