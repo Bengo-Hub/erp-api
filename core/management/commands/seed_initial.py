@@ -69,15 +69,23 @@ class Command(BaseCommand):
             raise
 
     def _create_superuser(self):
-        """Create superuser account if not exists"""
+        """Create superuser account if not exists (idempotent)"""
         self.stdout.write('\n1️⃣  Creating Superuser Account...')
 
-        # Check if superuser exists
+        # Check if superuser exists (idempotent)
         admin = User.objects.filter(username='admin').first() or \
                 User.objects.filter(email='admin@codevertexitsolutions.com').first()
 
         if admin:
-            self.stdout.write(self.style.WARNING('   ⚠️  Superuser already exists'))
+            # Update to ensure it's a superuser with correct permissions
+            if not admin.is_superuser or not admin.is_staff or not admin.is_active:
+                admin.is_superuser = True
+                admin.is_staff = True
+                admin.is_active = True
+                admin.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
+                self.stdout.write(self.style.SUCCESS('   ✅ Superuser updated'))
+            else:
+                self.stdout.write(self.style.SUCCESS('   ✅ Superuser already exists'))
             self.stdout.write(f'   Username: {admin.username}')
             self.stdout.write(f'   Email: {admin.email}')
         else:
@@ -94,18 +102,18 @@ class Command(BaseCommand):
             self.stdout.write(f'   Email: admin@codevertexitsolutions.com')
 
     def _setup_roles(self):
-        """Setup essential user roles with permissions"""
+        """Setup essential user roles with permissions (idempotent)"""
         self.stdout.write('\n2️⃣  Setting Up Roles & Permissions...')
 
         # Superusers group
         superusers_group, created = Group.objects.get_or_create(name='superusers')
-        if created:
-            # Assign all permissions to superusers
+        if created or superusers_group.permissions.count() == 0:
+            # Assign all permissions to superusers (idempotent)
             all_permissions = Permission.objects.all()
             superusers_group.permissions.set(all_permissions)
-            self.stdout.write(self.style.SUCCESS(f'   ✅ Created superusers group with {all_permissions.count()} permissions'))
+            self.stdout.write(self.style.SUCCESS(f'   ✅ Superusers group configured with {all_permissions.count()} permissions'))
         else:
-            self.stdout.write('   ✅ Superusers group already exists')
+            self.stdout.write(f'   ✅ Superusers group ready ({superusers_group.permissions.count()} permissions)')
 
         # Staff role with ESS permissions
         staff_group, created = Group.objects.get_or_create(name='staff')

@@ -21,27 +21,9 @@ class Command(BaseCommand):
         # Note: Admin user creation moved to seed_initial.py to avoid duplication
         self.stdout.write(self.style.SUCCESS('✓ Superuser handled by seed_initial command'))
         
-        # Get existing business (created by middleware)
-        business = Bussiness.objects.first()
-        if not business:
-            self.stdout.write(self.style.ERROR('No business found. Please ensure middleware has run first.'))
-            return
-        
-        # Get existing business location (created by middleware)
-        location = BusinessLocation.objects.filter(default=True, is_active=True).first()
-        if not location:
-            self.stdout.write(self.style.WARNING('No business location found. Creating default location...'))
-            location = BusinessLocation.objects.create(
-                city='Nairobi',
-                county='Nairobi',
-                state='KE',
-                country='KE',
-                zip_code='00100',
-                postal_code='00100',
-                website='codevertexitsolutions.com',
-                default=True,
-                is_active=True
-            )
+        # Note: Business and BusinessLocation are created by middleware
+        # Do not create them here to avoid duplication
+        self.stdout.write(self.style.SUCCESS('✓ Business & Location handled by middleware'))
         
         # Create regions
         regions_data = [
@@ -58,12 +40,12 @@ class Command(BaseCommand):
         ]
         
         for region_data in regions_data:
-            region, created = Regions.objects.get_or_create(
+            region, created = Regions.objects.update_or_create(
                 name=region_data['name'],
                 defaults={'code': region_data['code']}
             )
-            if created:
-                self.stdout.write(f'Created region: {region.name}')
+            status = 'Created' if created else 'Updated'
+            self.stdout.write(f'{status} region: {region.name}')
         
         # Create departments
         departments_data = [
@@ -80,12 +62,12 @@ class Command(BaseCommand):
         ]
         
         for dept_data in departments_data:
-            dept, created = Departments.objects.get_or_create(
+            dept, created = Departments.objects.update_or_create(
                 title=dept_data['title'],
                 defaults={'code': dept_data['code']}
             )
-            if created:
-                self.stdout.write(f'Created department: {dept.title}')
+            status = 'Created' if created else 'Updated'
+            self.stdout.write(f'{status} department: {dept.title}')
         
         # Create banks
         banks_data = [
