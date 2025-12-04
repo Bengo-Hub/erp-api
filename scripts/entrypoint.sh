@@ -50,6 +50,15 @@ else
   echo ""
   echo "📋 Migration status (first 15 apps):"
   python manage.py showmigrations --list 2>&1 | head -40 || echo "Status check unavailable"
+  
+  # Seed initial required data (idempotent)
+  echo ""
+  echo "🌱 Seeding initial required data..."
+  if python manage.py seed_initial 2>&1 | head -50; then
+      echo "✅ Initial data seeded successfully"
+  else
+      echo "⚠️ Initial data seeding failed (non-critical)"
+  fi
 fi
 
 # Collect static files (for production)

@@ -18,19 +18,8 @@ class Command(BaseCommand):
         # Note: Business, BusinessLocation, AppSettings, Banner, ContractSetting are created by middleware
         # We only need to seed data that is NOT automatically created by middleware
         
-        # Ensure admin user exists (only create if missing; do not override middleware-created account)
-        admin_user = User.objects.filter(username='admin').first() or User.objects.filter(email='admin@codevertexitsolutions.com').first()
-        if not admin_user:
-            admin_user = User.objects.create_superuser(
-                username='admin', 
-                email='admin@codevertexitsolutions.com', 
-                password='Admin@2025!',
-                first_name='System',
-                last_name='Administrator'
-            )
-            self.stdout.write(self.style.SUCCESS('✓ Created admin user (username: admin)'))
-        else:
-            self.stdout.write(self.style.SUCCESS('✓ Admin user already exists - leaving as-is'))
+        # Note: Admin user creation moved to seed_initial.py to avoid duplication
+        self.stdout.write(self.style.SUCCESS('✓ Superuser handled by seed_initial command'))
         
         # Get existing business (created by middleware)
         business = Bussiness.objects.first()

@@ -5,7 +5,7 @@ from django.core.management.base import CommandError
 
 
 class Command(BaseCommand):
-    help = 'Runs all seeders across apps (clears existing data by default)'
+    help = 'Seeds comprehensive DEMO data across all apps (for development/testing only - NOT for production)'
 
     def add_arguments(self, parser):
         # Default: CLEAR data before seeding. Use --no-clear to preserve data.
@@ -30,7 +30,9 @@ class Command(BaseCommand):
             products_count = 1
             employees_count = 1
 
-        self.stdout.write(self.style.SUCCESS('Starting comprehensive seeding process...'))
+        self.stdout.write(self.style.WARNING('⚠️  DEMO DATA SEEDING - For Development/Testing Only'))
+        self.stdout.write(self.style.WARNING('⚠️  NOT for production use! Use seed_initial for production.'))
+        self.stdout.write(self.style.SUCCESS('\nStarting comprehensive demo data seeding...'))
 
         # Always clear existing user data before seeding to ensure consistent initial accounts
         self._clear_user_data()
