@@ -93,8 +93,25 @@ urlpatterns = [
     path('api/v1/errors/', include(('error_handling.urls', 'error-handling'), namespace='v1-error-handling')),
     path('api/v1/cache/', include(('caching.urls', 'caching'), namespace='v1-caching')),
 ]
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Serve media files in all environments (including production)
+# Django's static() only works when DEBUG=True, so we add custom serving for production
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+else:
+    # Production media serving
+    from django.views.static import serve
+    from django.urls import re_path
+    
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', serve, {
+            'document_root': settings.MEDIA_ROOT,
+        }),
+        re_path(r'^static/(?P<path>.*)$', serve, {
+            'document_root': settings.STATIC_ROOT,
+        }),
+    ]
 # default: "Django Administration"
 admin.site.site_header = 'ProcureProKE'
 # default: "Site administration"
