@@ -420,23 +420,14 @@ if [[ "$DEPLOY" == "true" ]]; then
             fi
             log_info "Environment secret ${ENV_SECRET_NAME} verified"
 
-            # Run database migrations (using modular script)
-            if [[ -f "scripts/run_migrations.sh" ]]; then
-                chmod +x scripts/run_migrations.sh
-                ./scripts/run_migrations.sh || { log_error "Migration failed"; exit 1; }
-            else
-                log_error "scripts/run_migrations.sh not found"
-                exit 1
-            fi
+            # Skip external migration jobs - migrations now handled by application entrypoint
+            log_info "✅ Migrations will run automatically when containers start (via entrypoint.sh)"
+            log_info "ℹ️ Each pod is independent and runs migrations on its own"
 
-            # Seed initial data after migrations (using modular script)
-            if [[ -f "scripts/run_seeding.sh" ]]; then
-                chmod +x scripts/run_seeding.sh
-                ./scripts/run_seeding.sh || { log_error "Seeding failed"; exit 1; }
-            else
-                log_error "scripts/run_seeding.sh not found"
-                exit 1
-            fi
+            # Skip external seeding jobs - use Django management commands if needed
+            log_info "ℹ️ Seeding can be done manually via Django management commands:"
+            log_info "   kubectl exec -it -n erp deployment/erp-api-app -- python manage.py seed_employees"
+            log_info "   kubectl exec -it -n erp deployment/erp-api-app -- python manage.py setup_ess_settings"
 
             # ALLOWED_HOSTS and database credentials are now set once in setup_env_secrets.sh
             # They include comprehensive network ranges and are NEVER updated after verification
