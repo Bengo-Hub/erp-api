@@ -52,7 +52,8 @@ class SalesItemsSerializer(serializers.ModelSerializer):
     class Meta:
         model = salesItems
         fields = '__all__'
-        depth = 2
+        # Prevent deep automatic nesting which can expand business objects with timezone
+        depth = 0
 
 class CustomerRewardSerializer(serializers.ModelSerializer):
     class Meta:
@@ -70,7 +71,7 @@ class SaleItemDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = salesItems
         fields = ['id', 'stock_item', 'qty', 'unit_price', 'sub_total', 'tax_amount', 'discount_amount']
-        depth = 2
+        depth = 0
 
 class SalesDetailSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer()
@@ -82,7 +83,7 @@ class SalesDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'sale_id', 'customer', 'attendant', 'date_added', 'grand_total', 
                  'amount_paid', 'balance_due', 'payment_status', 'status', 'paymethod', 
                  'sell_note', 'staff_note', 'sales_items', 'sale_tax', 'sale_discount', 'sub_total']
-        depth = 2
+        depth = 0
 
     branch_id = serializers.SerializerMethodField(read_only=True)
 

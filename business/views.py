@@ -39,6 +39,26 @@ class BussinessViewSet(viewsets.ModelViewSet):
         branding_data = business.get_branding_settings()
         return Response(branding_data)
 
+    @action(detail=True, methods=['get'], url_path='branches')
+    def get_branches_for_business(self, request, pk=None):
+        """Return branches for this business (convenience endpoint for frontend)"""
+        business = self.get_object()
+        branches = Branch.objects.filter(business=business, is_active=True)
+        serializer = BranchSerializer(branches, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='branches')
+    def create_branch_for_business(self, request, pk=None):
+        """Create a new branch for this business (sets business automatically)."""
+        business = self.get_object()
+        data = request.data.copy()
+        data['business'] = business.id
+        serializer = BranchSerializer(data=data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        branch = serializer.save()
+        return Response(BranchSerializer(branch).data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['post'], url_path='branding/update')
     def update_branding(self, request, pk=None):
         """Update branding settings for a business"""

@@ -34,11 +34,12 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class StockItemsSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
-    
+
     class Meta:
         model = StockInventory
         fields = ['product']
-        depth = 2
+        # avoid automatic depth expansion that may pull in timezone fields
+        depth = 0
 
 
 class OrderItemsSerializer(BaseOrderItemSerializer):
@@ -63,12 +64,25 @@ class OrderSerializer(BaseOrderSerializer):
 class OrdersSerializer(serializers.ModelSerializer):
     """Simplified e-commerce order serializer for list views"""
     customer = CustomerSerializer(required=False)
-    branch_id = serializers.IntegerField(source='branch.id', read_only=True)
+    branch = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Order
         fields = '__all__'
-        depth = 1
+        depth = 0
+
+    def get_branch(self, obj):
+        try:
+            branch = obj.branch
+            if not branch:
+                return None
+            return {
+                'id': branch.id,
+                'name': branch.name,
+                'branch_code': branch.branch_code,
+            }
+        except Exception:
+            return None
 
 
 class OrderItemSerializer(BaseOrderItemSerializer):

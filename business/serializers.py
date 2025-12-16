@@ -8,6 +8,7 @@ from addresses.serializers import AddressBookSerializer as CentralizedAddressBoo
 from drf_spectacular.utils import extend_schema_field
 from drf_spectacular.types import OpenApiTypes
 
+
 class BusinessLocationSerializer(serializers.ModelSerializer):
     state = serializers.SerializerMethodField()
     country = serializers.SerializerMethodField()
@@ -44,11 +45,28 @@ class DeliveryAddressSerializer(serializers.ModelSerializer):
 class PickupStationsSerializer(serializers.ModelSerializer):
     region_name = serializers.SerializerMethodField()
     business_name = serializers.SerializerMethodField()
+    # Provide a minimal business representation and ensure timezone is a string
+    # to avoid ZoneInfo objects leaking into API responses.
+    business = serializers.SerializerMethodField()
     
     class Meta:
         model = PickupStations
+        # Avoid automatic depth expansion; prefer explicit nested serializers
+        # to ensure timezone objects are converted to strings.
         fields = '__all__'
-        depth = 1
+        depth = 0
+
+    def get_business(self, obj):
+        b = getattr(obj, 'business', None)
+        if not b:
+            return None
+        tz = getattr(b, 'timezone', None)
+        tz_str = getattr(tz, 'key', None) or getattr(tz, 'zone', None) or str(tz) if tz is not None else None
+        return {
+            'id': b.id,
+            'name': b.name,
+            'timezone': tz_str
+        }
         
     def get_region_name(self, obj):
         return obj.region.name if obj.region else None
@@ -61,6 +79,23 @@ class PickupStationMinimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = PickupStations
         fields = ['id', 'pickup_location', 'description', 'open_hours', 'helpline', 'shipping_charge', 'google_pin']
+
+
+class BussinessMinimalSerializer(serializers.ModelSerializer):
+    """A compact business representation for nested serializers used by the frontend.
+
+    Keeps only the fields the frontend needs to render lists and selects and
+    ensures timezone is always a string (no ZoneInfo objects).
+    """
+    timezone = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Bussiness
+        fields = ('id', 'name', 'timezone')
+
+    def get_timezone(self, obj):
+        tz = getattr(obj, 'timezone', None)
+        return getattr(tz, 'key', None) or getattr(tz, 'zone', None) or str(tz) if tz is not None else None
 
 # Using centralized AddressBookSerializer from addresses app
 
@@ -153,19 +188,25 @@ class BussinessSerializer(serializers.ModelSerializer):
     def get_timezone(self, obj):
         """Return a JSON-serializable timezone representation (string).
 
-        Some TimeZoneField implementations return tzinfo/ZoneInfo objects which are
-        not JSON serializable by default. Force a string representation here so
-        nested serializers and API responses can be safely JSON encoded.
+        Central helper to coerce TimeZoneField / ZoneInfo objects into their
+        standard string key (e.g. 'Africa/Nairobi'). Keeps behaviour stable
+        across serializers that need the timezone value.
         """
         try:
             tz = getattr(obj, 'timezone', None)
             if tz is None:
                 return None
 
-            # Prefer common attributes if present (ZoneInfo.key or tz.zone),
-            # otherwise fall back to str(tz)
-            return getattr(tz, 'key', None) or getattr(tz, 'zone', None) or str(tz)
+            # Try common attributes and fall back to str()
+            if hasattr(tz, 'key') and tz.key:
+                return tz.key
+            if hasattr(tz, 'zone') and tz.zone:
+                return tz.zone
+            # Some implementations (zoneinfo.ZoneInfo) stringify to 'zoneinfo.ZoneInfo("Africa/Nairobi")'
+            # but calling str(tz) on modern implementations returns 'Africa/Nairobi'
+            return str(tz)
         except Exception:
+            # As a last resort, coerce to string
             return str(getattr(obj, 'timezone', ''))
     
 class BranchSerializer(serializers.ModelSerializer):

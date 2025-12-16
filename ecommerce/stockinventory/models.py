@@ -160,6 +160,14 @@ class StockInventory(models.Model):
     delete_status=models.BooleanField(default=False)
 
     def save(self,*args,**kwargs):
+        # Prevent creating stock entries for service-type products
+        try:
+            if self.product and hasattr(self.product, 'product_type') and self.product.product_type == 'service':
+                from django.core.exceptions import ValidationError as DjangoValidationError
+                raise DjangoValidationError('Stock cannot be created for service items.')
+        except Exception:
+            # Re-raise validation errors to surface to API layer
+            raise
         # First check if this is a new object without a primary key
         is_new = self.pk is None
         # set default unit if not set

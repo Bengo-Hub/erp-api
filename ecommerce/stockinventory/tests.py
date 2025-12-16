@@ -72,3 +72,39 @@ class PurchaseStockTransactionTests(TestCase):
 		purchase.save()
 		qs2 = StockTransaction.objects.filter(transaction_type='PURCHASE', stock_item=self.stock, purchase=purchase)
 		self.assertEqual(qs2.count(), 1)
+
+	def test_cannot_create_stock_for_service_model(self):
+		# Create a service product
+		service = Products.objects.create(title='Consulting', business=self.biz, product_type='service', default_price=100)
+		# Attempt to create stock directly should raise ValidationError
+		with self.assertRaises(Exception) as cm:
+			StockInventory.objects.create(product=service, branch=self.branch, stock_level=5, buying_price=100)
+		self.assertIn('Stock cannot be created for service items', str(cm.exception))
+
+	def test_cannot_create_stock_for_service_api(self):
+		# Create a service product
+		service = Products.objects.create(title='Consulting2', business=self.biz, product_type='service', default_price=120)
+		self.client.force_login(self.user)
+		payload = {
+			'product': service.id,
+			'branch': self.branch.id,
+			'stock_level': 10,
+			'buying_price': '100.00',
+			'selling_price': '150.00'
+		}
+		response = self.client.post('/ecommerce/stockinventory/stock/', payload, content_type='application/json')
+		self.assertEqual(response.status_code, 400)
+		# Check response contains our validation message
+		self.assertFalse(response.data.get('success', True))
+		errors = response.data.get('errors', [])
+		self.assertTrue(any(e['field'] == 'product' and 'service' in e['message'].lower() for e in errors))
+
+	def test_service_appears_in_search_lite(self):
+		# Create a service product
+		service = Products.objects.create(title='ConsultingSearch', business=self.biz, product_type='service', default_price=200)
+		self.client.force_login(self.user)
+		response = self.client.get('/ecommerce/product/search-lite/', {'search': 'ConsultingSearch'})
+		self.assertEqual(response.status_code, 200)
+		data = response.data.get('data', [])
+		# Ensure at least one service with our title is returned
+		self.assertTrue(any('ConsultingSearch' in (p.get('product', {}).get('title', '') or p.get('displayName', '')) for p in data))

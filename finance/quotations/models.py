@@ -193,8 +193,8 @@ class Quotation(BaseOrder):
             shipping_cost=self.shipping_cost,
             total=self.total,
             
-            # Link to quotation
-            quotation=self,
+            # Link to quotation (invoice.source_quotation)
+            source_quotation=self,
             
             # Copy delivery info
             shipping_address=self.shipping_address,

@@ -122,6 +122,35 @@ class ProductViewSet(BaseModelViewSet):
                     # For autocomplete display
                     'displayName': f"{stock.product.title} ({stock.product.sku})"
                 })
+
+            # Also include service-type products (they don't have StockInventory entries)
+            # so services are selectable in autocomplete/dropdowns
+            service_qs = Products.objects.filter(product_type='service')
+            if query:
+                service_qs = service_qs.filter(
+                    Q(title__icontains=query) |
+                    Q(sku__icontains=query) |
+                    Q(serial__icontains=query)
+                )
+            service_qs = service_qs.distinct()[:100]
+            for prod in service_qs:
+                products.append({
+                    # Use product id (numeric) and mark as service for the frontend
+                    'id': prod.id,
+                    'is_service': True,
+                    'product': {
+                        'id': prod.id,
+                        'title': prod.title,
+                        'sku': prod.sku,
+                        'serial': prod.serial,
+                        'description': prod.description
+                    },
+                    'selling_price': float(prod.default_price or 0.0),
+                    'stock_level': 0,
+                    'availability': 'Service',
+                    'applicable_tax': None,
+                    'displayName': f"{prod.title} (service)"
+                })
             
             return APIResponse.success(
                 data=products,
@@ -175,6 +204,8 @@ class ProductViewSet(BaseModelViewSet):
         # Price range filtering
         min_price = params.get('min_price')
         max_price = params.get('max_price')
+        # Product type filter (goods/service)
+        product_type = params.get('product_type')
         
         # Rating filter
         min_rating = params.get('min_rating')
@@ -256,6 +287,10 @@ class ProductViewSet(BaseModelViewSet):
         # Stock availability filter
         if in_stock and in_stock.lower() in ['true', '1', 'yes']:
             queryset = queryset.filter(stock_level__gt=0)
+
+        # Filter by product type (goods/service)
+        if product_type:
+            queryset = queryset.filter(product__product_type=product_type)
         
         # Special filter types
         if filter_type:

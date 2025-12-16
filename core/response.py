@@ -183,6 +183,31 @@ class APIResponse:
             errors=errors_list,
             correlation_id=correlation_id
         )
+
+    @staticmethod
+    def bad_request(
+        message: str = "Bad request",
+        errors: Optional[Dict[str, Any]] = None,
+        error_id: Optional[str] = None,
+        correlation_id: Optional[str] = None
+    ) -> Response:
+        """
+        Convenience wrapper for 400 Bad Request responses.
+
+        Keeps backward compatibility with code that used APIResponse.bad_request.
+        """
+        details = None
+        if error_id:
+            details = {'error_id': error_id}
+
+        return APIResponse.error(
+            error_code='BAD_REQUEST',
+            message=message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            details=details,
+            errors=[{'field': k, 'message': str(v)} for k, v in (errors or {}).items()] if isinstance(errors, dict) else errors,
+            correlation_id=correlation_id
+        )
     
     @staticmethod
     def not_found(

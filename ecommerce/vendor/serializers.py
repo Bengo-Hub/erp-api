@@ -10,4 +10,5 @@ class VendoeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vendor
         fields = '__all__'
-        depth = 3
+        # Avoid deep automatic nesting which may serialize timezone objects or other complex types
+        depth = 0

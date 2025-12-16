@@ -3,9 +3,9 @@ from .models import *
 from rest_framework import status
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from ecommerce.product.serializers import ProductsSerializer
+from ecommerce.product.serializers import ProductsSerializer, StockProductSerializer
 from authmanagement.serializers import UserSerializer
-from business.serializers import BusinessLocationSerializer, BussinessSerializer
+from business.serializers import BusinessLocationSerializer, BussinessMinimalSerializer
 from business.models import BusinessLocation
 from .models import StockTransaction, StockTransfer, StockTransferItem, StockAdjustment,Favourites
 from django.core.exceptions import ValidationError
@@ -40,9 +40,11 @@ class DiscountsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class BranchSerializer(serializers.ModelSerializer):
-    # Explicitly nest business and location to control timezone serialization
-    business = BussinessSerializer(read_only=True)
-    location = BusinessLocationSerializer(read_only=True)
+    # Use a minimal business representation here to avoid sending large
+    # nested business objects for every stock row.
+    business = BussinessMinimalSerializer(read_only=True)
+    # Keep only the location id for compactness; frontend can request location details separately if needed
+    location_id = serializers.IntegerField(source='location.id', read_only=True)
 
     class Meta:
         model = Branch
@@ -52,7 +54,8 @@ class StockSerializer(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
     branch=BranchSerializer()
     branch_id = serializers.IntegerField(source='branch.id', read_only=True)
-    product=ProductsSerializer()
+    # Use compact product serializer for inventory rows to avoid repeating full business data
+    product=StockProductSerializer()
     supplier=SupplierSerializer()
     variation = VariationSerializer() 
     total_sales = serializers.SerializerMethodField()

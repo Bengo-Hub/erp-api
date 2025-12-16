@@ -143,14 +143,52 @@ class PaymentAccountsViewSet(BaseModelViewSet):
         try:
             correlation_id = get_correlation_id(request)
             account = self.get_object()
-            
-            transactions = Transaction.objects.filter(account=account).select_related('account').order_by('-transaction_date')
+            # Base queryset
+            transactions = Transaction.objects.filter(account=account).select_related('account')
+
+            # Filtering
+            tx_type = request.query_params.get('transaction_type')
+            if tx_type:
+                transactions = transactions.filter(transaction_type=tx_type)
+
+            search = request.query_params.get('search')
+            if search:
+                transactions = transactions.filter(
+                    Q(description__icontains=search) | Q(reference_id__icontains=search)
+                )
+
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            if start_date:
+                transactions = transactions.filter(transaction_date__gte=start_date)
+            if end_date:
+                transactions = transactions.filter(transaction_date__lte=end_date)
+
+            min_amount = request.query_params.get('min_amount')
+            max_amount = request.query_params.get('max_amount')
+            if min_amount:
+                transactions = transactions.filter(amount__gte=min_amount)
+            if max_amount:
+                transactions = transactions.filter(amount__lte=max_amount)
+
+            # Ordering (client may pass 'transaction_date' or '-transaction_date')
+            ordering = request.query_params.get('ordering', '-transaction_date')
+            transactions = transactions.order_by(ordering)
             
             page = self.paginate_queryset(transactions)
             if page is not None:
                 serializer = TransactionSerializer(page, many=True)
-                return self.get_paginated_response(serializer.data)
-                
+                # Use DRF paginated response and add helpful metadata (page, page_size, total_pages)
+                resp = self.get_paginated_response(serializer.data)
+                try:
+                    resp.data['page_size'] = getattr(page.paginator, 'per_page', None)
+                    resp.data['page'] = getattr(page, 'number', None)
+                    resp.data['total_pages'] = getattr(page.paginator, 'num_pages', None)
+                except Exception:
+                    # best effort - ignore if paginator behaves differently
+                    pass
+                return resp
+
             serializer = TransactionSerializer(transactions, many=True)
             return APIResponse.success(
                 data=serializer.data,
