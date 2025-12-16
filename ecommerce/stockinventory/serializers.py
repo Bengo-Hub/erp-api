@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from ecommerce.product.serializers import ProductsSerializer
 from authmanagement.serializers import UserSerializer
-from business.serializers import BusinessLocationSerializer
+from business.serializers import BusinessLocationSerializer, BussinessSerializer
 from business.models import BusinessLocation
 from .models import StockTransaction, StockTransfer, StockTransferItem, StockAdjustment,Favourites
 from django.core.exceptions import ValidationError
@@ -40,6 +40,10 @@ class DiscountsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class BranchSerializer(serializers.ModelSerializer):
+    # Explicitly nest business and location to control timezone serialization
+    business = BussinessSerializer(read_only=True)
+    location = BusinessLocationSerializer(read_only=True)
+
     class Meta:
         model = Branch
         fields = '__all__'
@@ -56,7 +60,8 @@ class StockSerializer(serializers.ModelSerializer):
     class Meta:
         model = StockInventory
         fields = '__all__'
-        depth=1
+        # Avoid automatic depth-based expansion which can include tzinfo objects
+        depth=0
 
     def get_total_sales(self, obj):
         return obj.salesitems.aggregate(total_sales=Sum('qty'))['total_sales'] if obj.salesitems.exists() else 0

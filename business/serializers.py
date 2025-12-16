@@ -130,6 +130,43 @@ class BussinessSerializer(serializers.ModelSerializer):
             'is_active': branch.is_active,
             'created_at': branch.created_at
         } for branch in branches]
+
+    def get_owner(self, obj):
+        try:
+            owner = getattr(obj, 'owner', None)
+            if not owner:
+                return None
+            return {
+                'id': owner.id,
+                'username': getattr(owner, 'username', None),
+                'email': getattr(owner, 'email', None)
+            }
+        except Exception:
+            return None
+
+    def get_branding_settings(self, obj):
+        try:
+            # Use model helper to return branding settings dict if available
+            return obj.get_branding_settings() if hasattr(obj, 'get_branding_settings') else None
+        except Exception:
+            return None
+    def get_timezone(self, obj):
+        """Return a JSON-serializable timezone representation (string).
+
+        Some TimeZoneField implementations return tzinfo/ZoneInfo objects which are
+        not JSON serializable by default. Force a string representation here so
+        nested serializers and API responses can be safely JSON encoded.
+        """
+        try:
+            tz = getattr(obj, 'timezone', None)
+            if tz is None:
+                return None
+
+            # Prefer common attributes if present (ZoneInfo.key or tz.zone),
+            # otherwise fall back to str(tz)
+            return getattr(tz, 'key', None) or getattr(tz, 'zone', None) or str(tz)
+        except Exception:
+            return str(getattr(obj, 'timezone', ''))
     
 class BranchSerializer(serializers.ModelSerializer):
     location = serializers.SerializerMethodField()
