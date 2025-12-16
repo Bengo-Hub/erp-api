@@ -120,7 +120,7 @@ class Command(BaseCommand):
         if created or staff_group.permissions.count() == 0:
             staff_permissions = self._get_staff_permissions()
             staff_group.permissions.set(staff_permissions)
-            self.stdout.write(self.style.SUCCESS(f'   ✅ Staff role configured with {staff_permissions.count()} ESS permissions'))
+            self.stdout.write(self.style.SUCCESS(f'   ✅ Staff role configured with {len(staff_permissions)} ESS permissions'))
         else:
             self.stdout.write(f'   ✅ Staff role already configured ({staff_group.permissions.count()} permissions)')
 
