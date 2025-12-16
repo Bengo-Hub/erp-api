@@ -493,8 +493,17 @@ SPECTACULAR_SETTINGS = {
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-STATIC_URL = os.getenv('STATIC_URL', "/static/")
+if CDN_CONFIG['ENABLED'] and CDN_CONFIG['DOMAIN']:
+    # When using CDN, use compressed static files but serve admin files locally
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+    STATIC_URL = f"https://{CDN_CONFIG['DOMAIN']}/static/"
+    MEDIA_URL = f"https://{CDN_CONFIG['DOMAIN']}/media/"
+else:
+    # In development/local, use manifest storage for caching
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    STATIC_URL = "/static/"
+    MEDIA_URL = '/media/'
+
 STATIC_ROOT = os.getenv('STATIC_ROOT', os.path.join(BASE_DIR, "staticfiles"))
 
 # Only include STATICFILES_DIRS if the directory exists (dev mode)
@@ -504,7 +513,6 @@ STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),) if os.path.isdir(_static_
 # Media files configuration
 # In production, use S3/CDN or shared PersistentVolume
 # In development, use local directory
-MEDIA_URL = os.getenv('MEDIA_URL', '/media/')
 MEDIA_ROOT = os.getenv('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 
 REST_FRAMEWORK = {
@@ -622,12 +630,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB - increased from default 2.5MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB - increased from default 2.5MB
 
 # Static and Media Files CDN Configuration
-if CDN_CONFIG['ENABLED'] and CDN_CONFIG['DOMAIN']:
-    STATIC_URL = f"https://{CDN_CONFIG['DOMAIN']}/static/"
-    MEDIA_URL = f"https://{CDN_CONFIG['DOMAIN']}/media/"
-else:
-    STATIC_URL = "/static/"
-    MEDIA_URL = '/media/'
+# Handled above with STATICFILES_STORAGE logic
 
 # Channels Configuration for WebSocket support
 CHANNEL_LAYERS = {
