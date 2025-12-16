@@ -22,7 +22,7 @@ class BussinessSerializer(serializers.ModelSerializer):
 class ContactCustomerGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerGroup
-        fields = ('group_name',)
+        fields = ('id', 'group_name')
 
 class ContactAccountSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,14 +32,14 @@ class ContactAccountSerializer(serializers.ModelSerializer):
 class ContactSerializer(serializers.ModelSerializer):
     user=ContactUserSerializer()
     created_by=ContactUserSerializer(required=False,read_only=True)
-    customer_group=ContactCustomerGroupSerializer()
+    customer_group=ContactCustomerGroupSerializer(required=False, allow_null=True)
     accounts=ContactAccountSerializer(many=True, read_only=True)
     # Provide serialized location (branch location) for API responses
-    location = BusinessLocationSerializer(read_only=True)
+    location = BusinessLocationSerializer(read_only=True, allow_null=True)
     class Meta:
         model = Contact
         fields = ['id', 'contact_id', 'contact_type', 'user', 'location', 'designation', 'customer_group', 'account_type',
-                  'tax_number', 'business_name', 'business_address', 'alternative_contact', 'phone', 'credit_limit', 'added_on','accounts', 'created_by']
+                  'tax_number', 'business_name', 'business_address', 'alternative_contact', 'phone', 'landline', 'credit_limit', 'added_on','accounts', 'created_by']
 
 class CustomerGroupSerializer(serializers.ModelSerializer):
     class Meta:
