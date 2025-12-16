@@ -11,21 +11,26 @@ from ecommerce.stockinventory.models import StockInventory, Unit
 User = get_user_model()
 
 class Command(BaseCommand):
-    help = 'Seeds the database with demo product data linked to Codevertex Africa business'
+    help = 'Seeds the database with demo product data linked to Codevertex IT Solutions business'
 
     def add_arguments(self, parser):
         parser.add_argument('--count', type=int, default=20, help='Number of products to generate')
+        parser.add_argument('--minimal', action='store_true', help='Seed a minimal number of products (1)')
 
     def handle(self, *args, **options):
         count = options['count']
+        minimal = options.get('minimal')
 
-        # Get the single business "Codevertex Africa"
-        business = Bussiness.objects.filter(name='Codevertex Africa').first()
+        if minimal:
+            count = 1
+
+        # Prefer the standardized single business 'Codevertex IT Solutions'; fallback to first business
+        business = Bussiness.objects.filter(name__iexact='Codevertex IT Solutions').first() or Bussiness.objects.first()
         if not business:
-            self.stdout.write(self.style.ERROR('Business "Codevertex Africa" not found. Please run business seeding first.'))
+            self.stdout.write(self.style.ERROR('No business found. Please run business seeding first.'))
             return
 
-        # Get the single main branch
+        # Get the single main branch (prefer branch for business)
         business_branch = Branch.objects.filter(business=business, is_main_branch=True).first()
         if not business_branch:
             self.stdout.write(self.style.ERROR('Main branch not found. Please run business seeding first.'))
@@ -92,8 +97,15 @@ class Command(BaseCommand):
                         }
                     )
 
+                    # Assign business and a product type (goods or service)
+                    product.business = business
+                    product.product_type = random.choice(['goods'] * 8 + ['service'] * 2)
+
                     buying_price = Decimal(str(round(random.uniform(100, 1000), 2)))
                     selling_price = (buying_price * Decimal('1.3')).quantize(Decimal('0.01'))
+                    # Set default price on product (useful for services)
+                    product.default_price = selling_price
+                    product.save()
                     stock_level = random.randint(5, 100)
 
                     StockInventory.objects.update_or_create(
@@ -111,6 +123,22 @@ class Command(BaseCommand):
                         }
                     )
 
+                    # Only create stock inventory for tangible goods
+                    if product.product_type == 'goods':
+                        StockInventory.objects.update_or_create(
+                            product=product,
+                            branch=business_branch,
+                            defaults={
+                                'product_type': 'single',
+                                'buying_price': buying_price,
+                                'selling_price': selling_price,
+                                'stock_level': stock_level,
+                                'reorder_level': max(2, stock_level // 5),
+                                'availability': 'In Stock' if stock_level > 0 else 'Out of Stock',
+                                'is_new_arrival': True,
+                                'is_top_pick': bool(random.getrandbits(1))
+                            }
+                        )
                     if created:
                         products_created += 1
                         self.stdout.write(f"Created product: {product_name}")

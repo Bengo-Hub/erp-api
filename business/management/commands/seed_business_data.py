@@ -133,16 +133,16 @@ class Command(BaseCommand):
             )
 
         # Ensure a single main branch exists (idempotent; reuse by unique branch_code)
-        existing_by_code = Branch.objects.filter(branch_code='MAIN-001').first()
+        existing_by_code = Branch.objects.filter(branch_code='HQ-001').first()
         if existing_by_code and existing_by_code.business_id != business.id:
             main_branch = existing_by_code  # Reuse existing to avoid unique conflicts
         else:
             main_branch, _ = Branch.objects.get_or_create(
-                branch_code='MAIN-001',
+                branch_code='HQ-001',
                 defaults={
                     'business': business,
                     'location': location,
-                    'name': 'Main Branch',
+                    'name': 'HQ',
                     'is_active': True,
                     'is_main_branch': True
                 }

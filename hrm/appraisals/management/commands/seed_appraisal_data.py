@@ -10,8 +10,16 @@ User = get_user_model()
 class Command(BaseCommand):
     help = 'Seeds the database with sample appraisal data'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--minimal',
+            action='store_true',
+            help='Seed a minimal set of appraisal data (1 cycle, 1 template, 1 employee)',
+        )
+
     def handle(self, *args, **kwargs):
         self.stdout.write('Seeding appraisal data...')
+        minimal = kwargs.get('minimal')
         
         # Create locations
         locations = Regions.objects.all()
@@ -99,7 +107,7 @@ class Command(BaseCommand):
             ])
 
         # Create goals
-        employees = Employee.objects.all()[:3]  # Get first 3 employees
+        employees = Employee.objects.all()[: (1 if minimal else 3)]  # Get first N employees based on minimal
         goals = []
         for employee in employees:
             goals.extend([

@@ -243,6 +243,9 @@ class StockTransaction(models.Model):
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
     transaction_date = models.DateTimeField(auto_now_add=True)
     stock_item = models.ForeignKey(StockInventory, on_delete=models.CASCADE)
+    # Reference to originating purchase (if any) to make transactions idempotent
+    # Use app_label.ModelName string form (app_label is 'purchases' for procurement.purchases)
+    purchase = models.ForeignKey('purchases.Purchase', on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_transactions')
     quantity = models.IntegerField(default=0)
     notes = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL,related_name='stock',null=True,blank=True)

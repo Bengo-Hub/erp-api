@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+import logging
 from django.core.validators import MinValueValidator
 from django.contrib.auth import get_user_model
 from decimal import Decimal
@@ -10,6 +11,8 @@ from business.models import Branch, Bussiness
 from finance.accounts.models import PaymentAccounts
 from approvals.models import Approval
 import uuid
+from django.db.models import Sum
+from core.audit import AuditTrail
 
 User = get_user_model()
 
@@ -99,6 +102,13 @@ class Invoice(BaseOrder):
     payment_gateway_name = models.CharField(max_length=50, blank=True, help_text="e.g., Stripe, M-Pesa")
     payment_link = models.URLField(max_length=500, blank=True, help_text="Payment gateway link")
     
+    # Share functionality
+    share_token = models.CharField(max_length=64, unique=True, blank=True, null=True, help_text="Public share token for view-only access")
+    share_url = models.URLField(max_length=500, blank=True, help_text="Public share URL")
+    is_shared = models.BooleanField(default=False, help_text="Whether this invoice has been shared publicly")
+    shared_at = models.DateTimeField(null=True, blank=True, help_text="When invoice was first shared")
+    allow_public_payment = models.BooleanField(default=False, help_text="Allow customers to pay via public share link")
+    
     # Advanced features
     is_recurring = models.BooleanField(default=False)
     recurring_interval = models.CharField(max_length=20, blank=True, choices=[
@@ -171,9 +181,7 @@ class Invoice(BaseOrder):
         """Mark invoice as sent"""
         self.status = 'sent'
         self.sent_at = timezone.now()
-        if user:
-            self.updated_by = user
-        self.save(update_fields=['status', 'sent_at', 'updated_by'])
+        self.save(update_fields=['status', 'sent_at'])
     
     def mark_as_viewed(self):
         """Mark invoice as viewed by customer"""
@@ -183,23 +191,56 @@ class Invoice(BaseOrder):
                 self.status = 'viewed'
             self.save(update_fields=['viewed_at', 'status'])
     
+    def generate_share_token(self):
+        """Generate a unique share token for public access"""
+        import secrets
+        if not self.share_token:
+            self.share_token = secrets.token_urlsafe(32)
+            self.is_shared = True
+            self.shared_at = timezone.now()
+            self.save(update_fields=['share_token', 'is_shared', 'shared_at'])
+        return self.share_token
+    
+    def get_public_share_url(self, request=None):
+        """Get the public share URL for this invoice"""
+        if not self.share_token:
+            self.generate_share_token()
+        
+        from django.urls import reverse
+        if request:
+            base_url = request.build_absolute_uri('/')
+        else:
+            from django.conf import settings
+            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        
+        return f"{base_url}public/invoice/{self.id}/{self.share_token}"
+    
     def record_payment(self, amount, payment_method, reference=None, payment_date=None):
         """Record a payment against this invoice"""
         from finance.payment.models import Payment
-        
+        # Create payment record (link to invoice via InvoicePayment relation, not a field on Payment)
+        # Ensure payment_date is a timezone-aware datetime when creating Payment (Payment.payment_date is DateTimeField)
+        pd = payment_date or timezone.now()
         payment = Payment.objects.create(
             payment_type='invoice_payment',
             amount=amount,
             payment_method=payment_method,
             reference_number=reference or f"PAY-{self.invoice_number}-{timezone.now().timestamp()}",
-            payment_date=payment_date or timezone.now().date(),
+            payment_date=pd,
             customer=self.customer,
-            invoice=self,
             status='completed'
         )
         
+        # Persist change and then ensure invoice totals/status are consistent with stored InvoicePayments
         self.amount_paid += amount
         self.save()
+
+        try:
+            # Recalculate based on actual InvoicePayment rows to avoid mismatches
+            self.recalculate_payments()
+        except Exception:
+            # best effort - don't fail the payment flow if recalculation has issues
+            pass
         
         return payment
     
@@ -241,6 +282,59 @@ class Invoice(BaseOrder):
     def __str__(self):
         return f"{self.invoice_number} - {self.customer} - {self.get_status_display()}"
 
+    def recalculate_payments(self, user=None):
+        """Recalculate amount_paid, balance_due and status from InvoicePayment records.
+
+        This ensures the invoice reflects the actual payments stored and avoids stale/partial updates.
+        """
+        try:
+            total_paid = self.invoice_payments.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            old_amount = self.amount_paid
+            old_balance = getattr(self, 'balance_due', None)
+            old_status = self.status
+
+            self.amount_paid = total_paid
+            self.balance_due = self.total - self.amount_paid
+
+            # Determine status
+            if self.amount_paid >= self.total and self.total > 0:
+                self.status = 'paid'
+            elif self.amount_paid > 0:
+                self.status = 'partially_paid'
+            elif self.due_date and self.due_date < timezone.now().date() and self.status not in ['paid', 'cancelled', 'void']:
+                self.status = 'overdue'
+
+            # Save only if something changed
+            update_fields = []
+            if self.amount_paid != old_amount:
+                update_fields.append('amount_paid')
+            if self.balance_due != old_balance:
+                update_fields.append('balance_due')
+            if self.status != old_status:
+                update_fields.append('status')
+
+            if update_fields:
+                # Persist and log audit trail
+                self.save(update_fields=list(set(update_fields)))
+                try:
+                    AuditTrail.log(
+                        operation=AuditTrail.UPDATE,
+                        module='finance',
+                        entity_type='Invoice',
+                        entity_id=self.id,
+                        user=user,
+                        changes={f: getattr(self, f) for f in update_fields},
+                        reason='Recalculated payments/status after payment change'
+                    )
+                except Exception:
+                    # best effort; don't block
+                    pass
+        except Exception as e:
+            # Log and re-raise if necessary
+            logger = logging.getLogger(__name__)
+            logger.error(f'Error recalculating payments for invoice {self.id}: {e}', exc_info=True)
+            raise
+
 
 class InvoicePayment(BaseModel):
     """
@@ -251,7 +345,11 @@ class InvoicePayment(BaseModel):
     payment = models.ForeignKey('payment.Payment', on_delete=models.CASCADE, related_name='invoice_payments')
     amount = models.DecimalField(max_digits=15, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
     payment_account = models.ForeignKey(PaymentAccounts, on_delete=models.PROTECT)
-    payment_date = models.DateField(default=timezone.now)
+    # Use a date (not datetime) as default to avoid DRF DateField coercion errors
+    def _today():
+        return timezone.now().date()
+
+    payment_date = models.DateField(default=_today)
     notes = models.TextField(blank=True)
     
     class Meta:

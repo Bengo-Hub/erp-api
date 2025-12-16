@@ -17,6 +17,7 @@ from finance.payment.services import get_payment_service
 from finance.payment.models import BillingDocument
 from finance.payment.pdf_utils import download_invoice_pdf
 from core.base_viewsets import BaseModelViewSet
+from core.utils import get_branch_id_from_request, get_business_id_from_request
 from core.response import APIResponse, get_correlation_id
 from core.audit import AuditTrail
 import logging
@@ -33,9 +34,16 @@ class OrderViewSet(BaseModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
+        # Branch/Business scoping
+        branch_id = get_branch_id_from_request(self.request)
+        business_id = get_business_id_from_request(self.request)
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
+        elif business_id:
+            queryset = queryset.filter(branch__business_id=business_id)
         
         # If user is not superuser, only return their orders via customer mapping
-        if not user.is_superuser:
+        if not user.is_superuser and not user.is_staff:
             queryset = queryset.filter(customer__user=user)
             
         return queryset
@@ -130,7 +138,14 @@ class OrderItemViewSet(BaseModelViewSet):
         queryset = super().get_queryset()
         # Apply filters based on query parameters
         user = self.request.user
-        
+        # Branch scoping
+        branch_id = get_branch_id_from_request(self.request)
+        business_id = get_business_id_from_request(self.request)
+        if branch_id:
+            queryset = queryset.filter(order__branch_id=branch_id)
+        elif business_id:
+            queryset = queryset.filter(order__branch__business_id=business_id)
+
         # Filter to only show order items from the user's orders or for staff
         if not user.is_staff and not user.is_superuser:
             queryset = queryset.filter(order__customer__user=user)
@@ -177,8 +192,10 @@ def checkout(request):
                 status=status.HTTP_404_NOT_FOUND
             )
     
-    # Initialize checkout service
-    checkout_service = CheckoutService(cart=cart, user=user)
+        # Determine branch from header or request data
+        branch_id = get_branch_id_from_request(request)
+        # Initialize checkout service
+    checkout_service = CheckoutService(cart=cart, user=user, branch_id=branch_id)
     
     try:
         # Process checkout with the provided data
@@ -236,7 +253,8 @@ def guest_checkout(request):
         )
     
     # Initialize checkout service (user=None indicates guest checkout)
-    checkout_service = CheckoutService(cart=cart, user=None)
+    branch_id = get_branch_id_from_request(request)
+    checkout_service = CheckoutService(cart=cart, user=None, branch_id=branch_id)
     
     try:
         # Process checkout - this will create a user account from billing info

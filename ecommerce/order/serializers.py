@@ -63,6 +63,7 @@ class OrderSerializer(BaseOrderSerializer):
 class OrdersSerializer(serializers.ModelSerializer):
     """Simplified e-commerce order serializer for list views"""
     customer = CustomerSerializer(required=False)
+    branch_id = serializers.IntegerField(source='branch.id', read_only=True)
 
     class Meta:
         model = Order
@@ -154,6 +155,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         
         # Determine if cancellable
         representation['can_cancel'] = instance.status in ['pending', 'confirmed']
+        representation['branch_id'] = instance.branch.id if instance.branch else None
         
         return representation
 

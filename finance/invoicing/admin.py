@@ -33,7 +33,7 @@ class InvoiceAdmin(admin.ModelAdmin):
             'fields': ('is_recurring', 'recurring_interval', 'next_invoice_date')
         }),
         ('Links', {
-            'fields': ('quotation',)
+            'fields': ('source_quotation',)
         }),
     )
 

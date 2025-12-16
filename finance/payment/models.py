@@ -151,6 +151,7 @@ class BillingDocument(BaseModel):
             payment_date=payment_date or timezone.now(),
             notes=notes or '',
             verified_by=created_by,
+            branch=self.branch if getattr(self, 'branch', None) else None,
         )
         # Optional transaction bookkeeping
         PaymentTransaction.objects.create(
@@ -161,6 +162,7 @@ class BillingDocument(BaseModel):
             transaction_id=payment.transaction_id or payment.reference_number,
             transaction_date=payment.payment_date,
             raw_response=None,
+            branch=payment.branch,
         )
         # Update document amounts
         self.add_payment(amount)
@@ -323,6 +325,8 @@ class Payment(BaseModel):
     
     # CRITICAL: Link to payment account for tracking
     payment_account = models.ForeignKey(PaymentAccounts, on_delete=models.PROTECT, null=True, blank=True, related_name='payments', help_text="Account from/to which payment flows")
+    # Branch where the payment was received/processed
+    branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, related_name='finance_payments')
     
     # CRITICAL: Link to source/destination contact
     customer = models.ForeignKey(Contact, on_delete=models.SET_NULL, null=True, blank=True, related_name='payments_received', help_text="Customer for money IN")
@@ -390,6 +394,7 @@ class Payment(BaseModel):
             models.Index(fields=['customer'], name='idx_payment_customer'),
             models.Index(fields=['supplier'], name='idx_payment_supplier'),
             models.Index(fields=['mobile_money_provider'], name='idx_payment_mobile_provider'),
+            models.Index(fields=['branch'], name='idx_payment_branch'),
             models.Index(fields=['phone_number'], name='idx_payment_phone'),
             models.Index(fields=['kra_compliance'], name='idx_payment_kra_compliance'),
             models.Index(fields=['created_at'], name='idx_payment_created_at'),
@@ -428,6 +433,8 @@ class PaymentTransaction(BaseModel):
     transaction_id = models.CharField(max_length=100)
     transaction_date = models.DateTimeField(default=timezone.now)
     raw_response = models.JSONField(null=True, blank=True)
+    # Branch context for transaction (optional overridden by payment.branch)
+    branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, related_name='payment_transactions')
 
     def __str__(self):
         return f"{self.transaction_id} - {self.amount}"

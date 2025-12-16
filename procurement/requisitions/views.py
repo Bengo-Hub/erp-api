@@ -6,6 +6,8 @@ from .serializers import ProcurementRequestSerializer
 from core.base_viewsets import BaseModelViewSet
 from core.response import APIResponse, get_correlation_id
 from core.audit import AuditTrail
+from core.utils import get_branch_id_from_request, get_business_id_from_request
+from business.models import Branch
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,12 +17,22 @@ class ProcurementRequestViewSet(BaseModelViewSet):
     """
     API endpoint that allows procurement requests to be viewed or edited.
     """
+    queryset = ProcurementRequest.objects.all()
     serializer_class = ProcurementRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Optimize queries with select_related for related objects."""
-        queryset = ProcurementRequest.objects.all().select_related('requester', 'approved_by')
+        """Optimize queries with select_related and prefetch_related for related objects."""
+        queryset = ProcurementRequest.objects.all().select_related(
+            'requester'
+        ).prefetch_related(
+            'approvals',
+            'approvals__approver',
+            'items',
+            'items__stock_item',
+            'items__supplier',
+            'items__provider'
+        )
         
         # Filter by query parameters
         requester = self.request.query_params.get('requester', None)
@@ -33,6 +45,21 @@ class ProcurementRequestViewSet(BaseModelViewSet):
             queryset = queryset.filter(status=status_filter)
         if request_type:
             queryset = queryset.filter(request_type=request_type)
+        # Branch scoping
+        try:
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(items__stock_item__branch_id=branch_id)
+
+        if not self.request.user.is_superuser:
+            user = self.request.user
+            owned_branches = Branch.objects.filter(business__owner=user)
+            employee_branches = Branch.objects.filter(business__employees__user=user)
+            branches = owned_branches | employee_branches
+            queryset = queryset.filter(items__stock_item__branch__in=branches)
             
         return queryset
 

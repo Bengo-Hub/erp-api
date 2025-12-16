@@ -1,3 +1,25 @@
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from .models import InvoicePayment
+
+
+@receiver(post_save, sender=InvoicePayment)
+def invoice_payment_saved(sender, instance, created, **kwargs):
+    try:
+        invoice = instance.invoice
+        invoice.recalculate_payments()
+    except Exception:
+        # Best-effort, don't crash the signal
+        pass
+
+
+@receiver(post_delete, sender=InvoicePayment)
+def invoice_payment_deleted(sender, instance, **kwargs):
+    try:
+        invoice = instance.invoice
+        invoice.recalculate_payments()
+    except Exception:
+        pass
 """
 Invoice Signals - Inventory Integration
 Automatically updates stock levels when invoices are finalized

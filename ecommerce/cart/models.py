@@ -4,6 +4,7 @@ from ecommerce.stockinventory.models import StockInventory
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
+from business.models import Branch
 import uuid
 
 User = get_user_model()
@@ -17,6 +18,7 @@ class CartSession(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     converted_to_order = models.ForeignKey('core_orders.BaseOrder', on_delete=models.SET_NULL, null=True, blank=True, related_name='source_cart')
+    branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, related_name='carts')
     
     def __str__(self):
         if self.user:

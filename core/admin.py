@@ -1,16 +1,9 @@
 from django.contrib import admin
 from .models import *
 
-# Register your models here.
-# EmailConfigs and EmailLogs moved to centralized notifications app
-# Use: from notifications.admin import EmailConfigurationAdmin, EmailLogAdmin
-
 @admin.register(AppSettings)
 class AppSettingsAdmin(admin.ModelAdmin):
     pass
-
-# BannerAdmin moved to centralized campaigns app
-# Use: from crm.campaigns.admin import CampaignAdmin
 
 # CompanyDetails is deprecated in favor of business.Bussiness
 class BankBranchesInline(admin.StackedInline):

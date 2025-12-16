@@ -104,7 +104,8 @@ class Purchase(models.Model):
 class PurchaseItems(models.Model):
     purchase = models.ForeignKey(
         Purchase, on_delete=models.CASCADE, related_name='purchaseitems')
-    stock_item = models.ForeignKey(StockInventory,verbose_name="Purchasse Item",on_delete=models.CASCADE,related_name='purchaseitems')
+    stock_item = models.ForeignKey(StockInventory,verbose_name="Purchasse Item",on_delete=models.SET_NULL,related_name='purchaseitems', null=True, blank=True)
+    product = models.ForeignKey(Products, on_delete=models.SET_NULL, related_name='purchase_items', null=True, blank=True)
     qty = models.PositiveIntegerField(default=0)
     tax_amount=models.DecimalField(max_digits=14,decimal_places=2,default=0)
     discount_amount=models.DecimalField(max_digits=14,decimal_places=2,default=0,help_text="Specify precentage value or Fixed value")

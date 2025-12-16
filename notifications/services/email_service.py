@@ -4,6 +4,7 @@ Consolidates email functionality from core and integrations apps
 """
 import logging
 import re
+import base64
 from typing import List, Dict, Any, Optional, Union
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.core.mail.backends.smtp import EmailBackend
@@ -18,6 +19,84 @@ from ..models import (
 )
 
 logger = logging.getLogger('notifications')
+
+
+def _encode_attachments_for_celery(attachments: Optional[List]) -> Optional[List]:
+    """
+    Encode binary attachment content to base64 for Celery serialization.
+    
+    Celery uses JSON serialization by default and cannot handle binary data.
+    This function converts attachment tuples to a format that can survive
+    the serialization/deserialization process.
+    
+    Args:
+        attachments: List of attachment tuples (filename, content, mimetype)
+        
+    Returns:
+        List of encoded attachment tuples with binary content as base64 strings
+    """
+    if not attachments:
+        return None
+    
+    encoded = []
+    for attachment in attachments:
+        if isinstance(attachment, tuple) and len(attachment) >= 3:
+            filename, content, mimetype = attachment[0], attachment[1], attachment[2]
+            
+            # If content is bytes, encode to base64
+            if isinstance(content, bytes):
+                try:
+                    encoded_content = base64.b64encode(content).decode('utf-8')
+                    # Mark as base64 by prepending marker
+                    encoded.append((filename, f"__b64__{encoded_content}", mimetype))
+                except Exception as e:
+                    logger.warning(f"Failed to encode attachment {filename}: {str(e)}")
+                    # Fall back to original (may fail in Celery, but worth trying)
+                    encoded.append(attachment)
+            else:
+                # String or other type, pass through
+                encoded.append(attachment)
+        else:
+            encoded.append(attachment)
+    
+    return encoded if encoded else None
+
+
+def _decode_attachments_from_celery(attachments: Optional[List]) -> Optional[List]:
+    """
+    Decode base64 attachment content that was encoded for Celery serialization.
+    
+    Args:
+        attachments: List of attachment tuples with base64-encoded content
+        
+    Returns:
+        List of attachment tuples with binary content decoded from base64
+    """
+    if not attachments:
+        return None
+    
+    decoded = []
+    for attachment in attachments:
+        if isinstance(attachment, tuple) and len(attachment) >= 3:
+            filename, content, mimetype = attachment[0], attachment[1], attachment[2]
+            
+            # If content has base64 marker, decode it
+            if isinstance(content, str) and content.startswith("__b64__"):
+                try:
+                    encoded_content = content[7:]  # Remove marker
+                    decoded_content = base64.b64decode(encoded_content)
+                    decoded.append((filename, decoded_content, mimetype))
+                except Exception as e:
+                    logger.warning(f"Failed to decode attachment {filename}: {str(e)}")
+                    # Fall back to original
+                    decoded.append(attachment)
+            else:
+                # Not base64 encoded, pass through
+                decoded.append(attachment)
+        else:
+            decoded.append(attachment)
+    
+    return decoded if decoded else None
 
 
 class EmailService:
@@ -64,16 +143,22 @@ class EmailService:
     def get_connection(self) -> Optional[EmailBackend]:
         """
         Get the email backend connection using the integration configuration.
+        Ensures encrypted passwords are decrypted before use.
         """
         if not self.config:
             logger.warning("No email configuration available, using default settings")
             return None
+        
+        # Get decrypted password
+        decrypted_password = self.config.get_decrypted_smtp_password()
+        if not decrypted_password:
+            logger.warning("SMTP password not available or failed to decrypt")
             
         return EmailBackend(
             host=self.config.smtp_host,
             port=self.config.smtp_port,
             username=self.config.smtp_username,
-            password=self.config.smtp_password,
+            password=decrypted_password,  # Use decrypted password
             use_tls=self.config.use_tls,
             use_ssl=self.config.use_ssl,
             fail_silently=self.config.fail_silently,
@@ -133,6 +218,9 @@ class EmailService:
         )
         
         if async_send:
+            # Encode attachments for Celery serialization (JSON-safe)
+            encoded_attachments = _encode_attachments_for_celery(attachments)
+            
             # Send using Celery task asynchronously
             task = send_email_task.delay(
                 subject=subject,
@@ -143,7 +231,7 @@ class EmailService:
                 cc=cc,
                 bcc=bcc,
                 reply_to=reply_to,
-                attachments=attachments,
+                attachments=encoded_attachments,
                 email_log_id=email_log.id,
                 integration_id=self.integration.id if self.integration else None
             )
@@ -573,6 +661,9 @@ def send_email_task(
         else:
             email_service = EmailService()
         
+        # Decode attachments that were encoded for Celery serialization
+        decoded_attachments = _decode_attachments_from_celery(attachments)
+        
         # Send the email
         return email_service._send_email_internal(
             subject=subject,
@@ -583,7 +674,7 @@ def send_email_task(
             cc=cc,
             bcc=bcc,
             reply_to=reply_to,
-            attachments=attachments,
+            attachments=decoded_attachments,
             email_log_id=email_log_id
         )
     

@@ -11,8 +11,7 @@ from django.contrib.auth import get_user_model
 from celery import shared_task
 
 from ..models import (
-    NotificationIntegration, UserNotificationPreferences, InAppNotification,
-    NotificationAnalytics, NotificationTest
+    NotificationIntegration, UserNotificationPreferences, InAppNotification 
 )
 from .email_service import EmailService
 from .sms_service import SMSService

@@ -15,15 +15,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('Starting to seed core data...'))
         
-        # Note: Business, BusinessLocation, AppSettings, Banner, ContractSetting are created by middleware
-        # We only need to seed data that is NOT automatically created by middleware
+        # Note: Business will be created by dedicated seed scripts (seed_business_data)
+        # We only need to seed data that is NOT created by seed scripts
         
         # Note: Admin user creation moved to seed_initial.py to avoid duplication
         self.stdout.write(self.style.SUCCESS('✓ Superuser handled by seed_initial command'))
         
-        # Note: Business and BusinessLocation are created by middleware
+        # Note: Business and BusinessLocation are created by `seed_business_data`
         # Do not create them here to avoid duplication
-        self.stdout.write(self.style.SUCCESS('✓ Business & Location handled by middleware'))
+        self.stdout.write(self.style.SUCCESS('✓ Business & Location handled by seed script'))
         
         # Create regions
         regions_data = [

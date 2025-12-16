@@ -34,10 +34,10 @@ class ProductImagesAdmin(admin.ModelAdmin):
 class ProductsAdmin(admin.ModelAdmin):
     list_per_page = 10
     inlines = [ProductImagesInline]
-    list_display = ['id','title','sku','serial','category','status','is_manufactured','model','brand', 'weight', 'dimentions','updated_at']
-    list_filter = ['title','sku','serial','category','status','is_manufactured','model','brand']
-    search_fields = ['title','sku','serial','category__name','status','is_manufactured','model','brand__title']
-    list_editable = ['title','sku','serial','category','status','is_manufactured','model','brand', 'weight', 'dimentions']
+    list_display = ['id','title','sku','serial','category','brand','model','business','status','is_manufactured','weight', 'dimentions','updated_at']
+    list_filter = ['title','sku','serial','category','brand','model','business','status','is_manufactured']
+    search_fields = ['title','sku','serial','category__name','brand__title','model__title','business__name','status','is_manufactured']
+    list_editable = ['title','sku','serial','category','brand','model','business','status','is_manufactured','weight', 'dimentions']
     list_display_links=['id']
 
     fieldsets = (

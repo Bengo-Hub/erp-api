@@ -16,10 +16,33 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ContactSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
-    
+    # Expose user's name/email via helper fields for compatibility
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Contact
-        fields = ['id', 'user', 'first_name', 'last_name', 'email', 'phone']
+        fields = [
+            'id', 'user', 'business_name', 'designation', 'contact_type',
+            'phone', 'alternative_contact', 'business_address',
+            'first_name', 'last_name', 'email', 'full_name'
+        ]
+
+    def get_first_name(self, obj):
+        return obj.user.first_name if obj.user else ''
+
+    def get_last_name(self, obj):
+        return obj.user.last_name if obj.user else ''
+
+    def get_email(self, obj):
+        return obj.user.email if obj.user else ''
+
+    def get_full_name(self, obj):
+        if obj.user:
+            return f"{obj.user.first_name} {obj.user.last_name}".strip()
+        return obj.business_name or ''
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -34,16 +57,19 @@ class PaymentSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     product_title = serializers.SerializerMethodField()
     product_type = serializers.SerializerMethodField()
+    # Accept tax and discount in incoming payloads for compatibility with frontend
+    tax_amount = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, write_only=True)
+    discount_amount = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, write_only=True)
     
     class Meta:
         model = OrderItem
+        # Align serializer fields with the current OrderItem model
         fields = [
-            'id', 'order', 'content_type', 'object_id', 'product_title', 
-            'product_type', 'quantity', 'unit_price', 'total_price', 
-            'tax_amount', 'discount_amount', 'fulfilled_quantity', 
-            'is_fulfilled', 'variant_info', 'created_at', 'updated_at'
+            'id', 'order', 'content_type', 'object_id', 'product_title',
+            'product_type', 'name', 'description', 'sku', 'quantity',
+            'unit_price', 'total_price', 'tax_amount', 'discount_amount', 'notes', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['total_price', 'is_fulfilled']
+        read_only_fields = ['total_price', 'created_at', 'updated_at']
     
     def get_product_title(self, obj):
         if obj.content_object:
@@ -82,8 +108,9 @@ class BaseOrderSerializer(serializers.ModelSerializer):
     customer = ContactSerializer(read_only=True)
     supplier = ContactSerializer(read_only=True)
     created_by = UserSerializer(read_only=True)
-    order_items = OrderItemSerializer(many=True, read_only=True, source='orderitems')
-    order_payments = OrderPaymentSerializer(many=True, read_only=True, source='orderpayments')
+    # related names on BaseOrder are 'items' and 'payments' in the model
+    order_items = OrderItemSerializer(many=True, read_only=True, source='items')
+    order_payments = OrderPaymentSerializer(many=True, read_only=True, source='payments')
     total_items = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
     
@@ -93,15 +120,16 @@ class BaseOrderSerializer(serializers.ModelSerializer):
             'id', 'order_number', 'order_type', 'customer', 'supplier', 
             'branch', 'created_by', 'subtotal', 'tax_amount', 'discount_amount', 
             'shipping_cost', 'total', 'status', 'payment_status', 
-            'fulfillment_status', 'delivery_address', 'billing_address',
-            'tracking_number', 'shipping_provider', 'expected_delivery',
+            'fulfillment_status', 'shipping_address', 'billing_address',
+            'tracking_number', 'shipping_provider', 'estimated_delivery_date',
             'notes', 'kra_compliance', 'order_items', 'order_payments',
             'total_items', 'status_display', 'created_at', 'updated_at'
         ]
         read_only_fields = ['order_number', 'total', 'created_at', 'updated_at']
     
     def get_total_items(self, obj):
-        return obj.orderitems.aggregate(
+        # Use the model's related name 'items'
+        return obj.items.aggregate(
             total=models.Sum('quantity')
         )['total'] or 0
     
@@ -124,6 +152,6 @@ class BaseOrderListSerializer(serializers.ModelSerializer):
         ]
     
     def get_total_items(self, obj):
-        return obj.orderitems.aggregate(
+        return obj.items.aggregate(
             total=models.Sum('quantity')
         )['total'] or 0

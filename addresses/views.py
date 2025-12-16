@@ -51,8 +51,10 @@ class AddressBookViewSet(viewsets.ModelViewSet):
         # If user is not superuser, only show their addresses
         if not user.is_superuser:
             queryset = queryset.filter(Q(user=user))
-        
-        return queryset.select_related('user', 'delivery_region', 'validation')
+
+        # Only select related fields that actually exist on the model to avoid FieldError
+        # AddressBook has FKs: user, pickup_station, verified_by and related_name 'validations'
+        return queryset.select_related('user', 'pickup_station', 'verified_by').prefetch_related('validations')
     
     def perform_create(self, serializer):
         serializer.save()

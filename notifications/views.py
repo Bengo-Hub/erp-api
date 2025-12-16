@@ -15,8 +15,8 @@ from django.http import JsonResponse
 
 from .models import (
     NotificationIntegration, EmailTemplate, SMSTemplate, PushTemplate,
-    EmailLog, SMSLog, PushLog, InAppNotification, UserNotificationPreferences,
-    NotificationAnalytics
+    EmailLog, SMSLog, PushLog, InAppNotification, UserNotificationPreferences
+
 )
 from .services import (
     EmailService, SMSService, PushNotificationService, NotificationService

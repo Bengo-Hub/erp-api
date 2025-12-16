@@ -21,9 +21,17 @@ class Command(BaseCommand):
             default=50,
             help='Number of bank statement entries to create (default: 50)',
         )
+        parser.add_argument(
+            '--minimal',
+            action='store_true',
+            help='Seed a minimal set of bank statement entries (default: 1)',
+        )
 
     def handle(self, *args, **options):
         count = options.get('count', 50)
+        minimal = options.get('minimal')
+        if minimal:
+            count = 1
         
         if options['clear']:
             BankStatementLine.objects.all().delete()

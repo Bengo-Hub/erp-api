@@ -20,9 +20,17 @@ class Command(BaseCommand):
             default=5,
             help='Number of payment accounts to create (default: 5)',
         )
+        parser.add_argument(
+            '--minimal',
+            action='store_true',
+            help='Seed minimal accounts only (defaults to 1 account)',
+        )
 
     def handle(self, *args, **options):
         count = options.get('count', 5)
+        minimal = options.get('minimal')
+        if minimal:
+            count = 1
         
         if options['clear']:
             PaymentAccounts.objects.all().delete()
@@ -30,34 +38,31 @@ class Command(BaseCommand):
                 self.style.SUCCESS('Cleared existing payment accounts')
             )
 
-        # Get the existing "Codevertex Africa" business or create it
-        business = Bussiness.objects.filter(name='Codevertex Africa').first()
-        if not business:
-            # If no business exists, create the default one
-            admin_user = CustomUser.objects.filter(is_superuser=True).first()
-            if not admin_user:
-                admin_user = CustomUser.objects.create_superuser(
-                    username='admin', 
-                    email='admin@codevertexafrica.com', 
-                    password='admin123'
-                )
-            
-            business = Bussiness.objects.create(
-                name='Codevertex Africa',
-                start_date='2024-01-01',
-                currency='KES',
-                kra_number='A123456789X',
-                business_type='limited_company',
-                county='Nairobi',
-                owner=admin_user
+        # Ensure the standard single seeded business exists and use it
+        admin_user = CustomUser.objects.filter(is_superuser=True).first()
+        if not admin_user:
+            admin_user = CustomUser.objects.create_superuser(
+                username='admin',
+                email='admin@codevertexitsolutions.com',
+                password='admin123'
             )
-            self.stdout.write(
-                self.style.SUCCESS(f'Created business: {business.name}')
-            )
+            self.stdout.write(self.style.SUCCESS('Created admin user for demo seeding'))
+
+        business, created = Bussiness.objects.get_or_create(
+            name='Codevertex IT Solutions',
+            defaults={
+                'owner': admin_user,
+                'start_date': '2024-01-01',
+                'currency': 'KES',
+                'kra_number': 'A123456789X',
+                'business_type': 'limited_company',
+                'county': 'Nairobi'
+            }
+        )
+        if created:
+            self.stdout.write(self.style.SUCCESS(f'Created business: {business.name}'))
         else:
-            self.stdout.write(
-                self.style.SUCCESS(f'Using existing business: {business.name}')
-            )
+            self.stdout.write(self.style.SUCCESS(f'Using existing business: {business.name}'))
 
         # Remove the created variable reference since we're not using get_or_create anymore
 

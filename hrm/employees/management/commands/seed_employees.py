@@ -15,13 +15,21 @@ from django.contrib.auth.models import Group
 fake = Faker()
 
 class Command(BaseCommand):
-    help = 'Seed database with demo employee records linked to Codevertex Africa business'
+    help = 'Seed database with demo employee records linked to Codevertex IT Solutions business'
 
     def add_arguments(self, parser):
         parser.add_argument('--count', type=int, default=1, help='Number of employees to generate')
+        parser.add_argument(
+            '--minimal',
+            action='store_true',
+            help='Seed minimal employees only (1)'
+        )
 
     def handle(self, *args, **options):
         count = options.get('count', 1)
+        minimal = options.get('minimal')
+        if minimal:
+            count = 1
         self.stdout.write(self.style.SUCCESS(f'Starting to seed {count} demo employees across multiple branches...'))
     
         # Get the business "Codevertex IT Solutions" (standardized), fallback to first
@@ -72,7 +80,7 @@ class Command(BaseCommand):
         # Create user
         first_name = fake.first_name()
         last_name = fake.last_name()
-        email = f"{first_name.lower()}.{last_name.lower()}@codevertexafrica.com"
+        email = f"{first_name.lower()}.{last_name.lower()}@codevertexitsolutions.com"
         
         user, created = CustomUser.objects.get_or_create(
             email=email,
@@ -252,6 +260,6 @@ class Command(BaseCommand):
                 'name': f"{fake.first_name()} {fake.last_name()}",
                 'relation': random.choice(['Spouse', 'Parent', 'Sibling', 'Child']),
                 'phone': f"+2547{random.randint(10000000, 99999999)}",
-                'email': f"kin.{first_name.lower()}.{last_name.lower()}@codevertexafrica.com",
+                'email': f"kin.{first_name.lower()}.{last_name.lower()}@codevertexitsolutions.com",
             }
         )

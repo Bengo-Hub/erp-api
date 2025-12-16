@@ -5,8 +5,8 @@ from django.contrib import admin
 from .models import (
     NotificationIntegration, EmailConfiguration, SMSConfiguration, PushConfiguration,
     EmailTemplate, SMSTemplate, PushTemplate, EmailLog, SMSLog, PushLog,
-    InAppNotification, UserNotificationPreferences, NotificationAnalytics,
-    BounceRecord, SpamPreventionRule, NotificationTest
+    InAppNotification, UserNotificationPreferences, 
+    BounceRecord, SpamPreventionRule, 
 )
 
 
@@ -93,13 +93,6 @@ class UserNotificationPreferencesAdmin(admin.ModelAdmin):
     search_fields = ['user__username']
 
 
-@admin.register(NotificationAnalytics)
-class NotificationAnalyticsAdmin(admin.ModelAdmin):
-    list_display = ['date', 'total_sent']
-    list_filter = ['date']
-    search_fields = ['date']
-
-
 @admin.register(BounceRecord)
 class BounceRecordAdmin(admin.ModelAdmin):
     list_display = ['bounce_type', 'created_at']
@@ -111,9 +104,3 @@ class SpamPreventionRuleAdmin(admin.ModelAdmin):
     list_display = ['name', 'rule_type', 'is_active']
     list_filter = ['rule_type', 'is_active']
     search_fields = ['name']
-
-
-@admin.register(NotificationTest)
-class NotificationTestAdmin(admin.ModelAdmin):
-    list_display = ['test_type', 'created_at']
-    list_filter = ['test_type', 'created_at']

@@ -95,6 +95,7 @@ class PaymentOrchestrationService:
                 processor_response=transaction_details or {},
                 payment_date=payment_date,
                 verified_by=created_by,
+                branch=getattr(order, 'branch', None) if getattr(order, 'branch', None) else None,
             )
             order_payment = OrderPayment.objects.create(
                 order=order,
@@ -171,6 +172,7 @@ class PaymentOrchestrationService:
                 transaction_id=init_txn_id,
                 processor_response=payment_data,
                 payment_date=timezone.now(),
+                branch=getattr(order, 'branch', None) if order and getattr(order, 'branch', None) else None,
             )
             return {
                 'success': True,
@@ -352,6 +354,7 @@ class PaymentOrchestrationService:
                 processor_response=transaction_details or {},
                 payment_date=payment_date,
                 verified_by=created_by,
+                branch=getattr(purchase, 'branch', None) if getattr(purchase, 'branch', None) else None,
             )
             
             # 2. Update purchase payment amounts

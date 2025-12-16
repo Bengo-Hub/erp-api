@@ -46,7 +46,11 @@ def create_stock_transaction(sender, instance, created, **kwargs):
     try:
         items=[]
         with transaction.atomic():
+            # For purchases, only create stock transactions when a purchase is received
             if isinstance(instance, Purchase):
+                if instance.purchase_status != 'received':
+                    # Do not create purchase stock transactions until the purchase is marked as received
+                    return
                 transaction_type = 'PURCHASE'
                 items = instance.purchaseitems.all()
             elif isinstance(instance, Sales):
@@ -62,18 +66,36 @@ def create_stock_transaction(sender, instance, created, **kwargs):
                 transaction_type = 'TRANSFER_IN'
                 items = instance.transfer_items.all()
             for item in items:
-                if 'TRANSFER' in transaction_type:
-                    current_branch = item.stock_item.branch
-                if current_branch == instance.branch_from:
-                   transaction_type = 'TRANSFER_OUT'
+                # Default branch from stock item
+                current_branch = item.stock_item.branch
+                if 'TRANSFER' in transaction_type and hasattr(instance, 'branch_from'):
+                    if current_branch == instance.branch_from:
+                        t_type = 'TRANSFER_OUT'
+                    else:
+                        t_type = 'TRANSFER_IN'
                 else:
-                   transaction_type = 'TRANSFER_IN'
-                _,created=StockTransaction.objects.update_or_create(
-                    transaction_type=transaction_type,
-                    branch=instance.branch if hasattr(instance, 'branch') else item.stock_item.branch,
-                    stock_item=item.stock_item,
-                    quantity=item.qty if hasattr(item, 'qty') else item.quantity
-                )
+                    t_type = transaction_type
+
+                # If this is a Purchase, attach a reference to the purchase so we can be idempotent
+                if isinstance(instance, Purchase):
+                    lookup = {
+                        'transaction_type': t_type,
+                        'stock_item': item.stock_item,
+                        'purchase': instance
+                    }
+                    defaults = {
+                        'branch': instance.branch if hasattr(instance, 'branch') else item.stock_item.branch,
+                        'quantity': item.qty if hasattr(item, 'qty') else item.quantity
+                    }
+                    _, created = StockTransaction.objects.update_or_create(**lookup, defaults=defaults)
+                else:
+                    # Other transaction types (sales, returns, transfers) remain unchanged
+                    _, created = StockTransaction.objects.update_or_create(
+                        transaction_type=t_type,
+                        branch=instance.branch if hasattr(instance, 'branch') else item.stock_item.branch,
+                        stock_item=item.stock_item,
+                        quantity=item.qty if hasattr(item, 'qty') else item.quantity
+                    )
                 
     except Exception as e:
         # Handle the exception here (e.g., log the error)

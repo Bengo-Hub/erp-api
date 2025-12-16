@@ -8,5 +8,5 @@ router.register(r'requisitions', views.ProcurementRequestViewSet, basename='requ
 router.register(r'user-requests', views.UserRequestViewSet, basename='user-requests')
 
 urlpatterns = [
-    path('requisitions/', include(router.urls)),
+    path('', include(router.urls)),
 ]

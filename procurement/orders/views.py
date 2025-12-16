@@ -16,11 +16,15 @@ from procurement.requisitions.models import *
 from core.models import Departments
 from approvals.models import Approval
 from .functions import generate_purchase_order
+from business.models import Branch
 from rest_framework.views import APIView
 from django.utils import timezone
+from django.http import HttpResponse
 from core.base_viewsets import BaseModelViewSet
+from core.utils import get_branch_id_from_request, get_business_id_from_request
 from core.response import APIResponse, get_correlation_id
 from core.audit import AuditTrail
+from .pdf_generator import generate_lpo_pdf
 import logging
 
 logger = logging.getLogger(__name__)
@@ -48,6 +52,21 @@ class PurchaseOrderViewSet(BaseModelViewSet):
         
         if status_filter:
             queryset = queryset.filter(status=status_filter)
+        # Filter by branch header or query param
+        try:
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
+
+        if not self.request.user.is_superuser:
+            user = self.request.user
+            owned_branches = Branch.objects.filter(business__owner=user)
+            employee_branches = Branch.objects.filter(business__employees__user=user)
+            branches = owned_branches | employee_branches
+            queryset = queryset.filter(branch__in=branches)
             
         return queryset 
 
@@ -348,6 +367,71 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                 message='Error recording payment',
                 error_id=str(e),
                 correlation_id=get_correlation_id(request)
+            )
+    
+    @action(detail=True, methods=['get'], url_path='pdf', name='pdf_stream')
+    def pdf_stream(self, request, pk=None):
+        """
+        Stream the LPO (Purchase Order) as a PDF document
+        Returns inline PDF for browser preview or download
+        
+        Query Parameters:
+        - download: 'true' to force download, 'false' (default) for inline preview
+        """
+        try:
+            correlation_id = get_correlation_id(request)
+            purchase_order = self.get_object()
+            
+            # Prepare company info (customize as needed)
+            company_info = {
+                'name': 'Your Company Name',
+                'address': 'Company Address, City, Country',
+                'email': 'contact@company.com',
+                'phone': '+1234567890',
+                'logo_path': None  # Set path to logo if available
+            }
+            
+            # Generate PDF
+            pdf_bytes = generate_lpo_pdf(purchase_order, company_info)
+            
+            # Determine if download or inline
+            download = request.query_params.get('download', 'false').lower() == 'true'
+            disposition = 'attachment' if download else 'inline'
+            
+            # Return PDF as HTTP response
+            response = HttpResponse(
+                pdf_bytes,
+                content_type='application/pdf'
+            )
+            response['Content-Disposition'] = f'{disposition}; filename="LPO-{purchase_order.order_number}.pdf"'
+            response['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
+            
+            # Log PDF access
+            AuditTrail.log(
+                operation=AuditTrail.READ,
+                module='procurement',
+                entity_type='PurchaseOrder',
+                entity_id=purchase_order.id,
+                user=request.user,
+                reason=f'Generated PDF for LPO {purchase_order.order_number}',
+                request=request
+            )
+            
+            logger.info(f"Generated PDF for LPO {purchase_order.order_number} (correlation_id={correlation_id})")
+            return response
+            
+        except PurchaseOrder.DoesNotExist:
+            return HttpResponse(
+                'Purchase Order not found',
+                status=404,
+                content_type='text/plain'
+            )
+        except Exception as e:
+            logger.error(f'Error generating PDF for LPO: {str(e)}', exc_info=True)
+            return HttpResponse(
+                f'Error generating PDF: {str(e)}',
+                status=500,
+                content_type='text/plain'
             )
 
 

@@ -83,113 +83,133 @@ class Command(BaseCommand):
             raise CommandError(f'Addresses data seeding failed: {e}')
 
         try:
-            # 4. HRM employees seeding
-            self.stdout.write(f'4. Seeding HRM employees ({employees_count} employee{"s" if employees_count != 1 else ""})...')
-            call_command('seed_employees', count=employees_count)
+            # 4. CRM contacts seeding (critical for procurement, invoices, quotes)
+            self.stdout.write('4. Seeding CRM contacts (customers and suppliers)...')
+            if minimal:
+                call_command('seed_contacts', count=1, minimal=True)
+            else:
+                call_command('seed_contacts', count=5)
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'CRM contacts seeding failed: {e}'))
+
+        try:
+            # 5. HRM employees seeding
+            self.stdout.write(f'5. Seeding HRM employees ({employees_count} employee{"s" if employees_count != 1 else ""})...')
+            if minimal:
+                call_command('seed_employees', count=employees_count, minimal=True)
+            else:
+                call_command('seed_employees', count=employees_count)
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'HRM employees seeding failed: {e}'))
 
         try:
-            # 5. HRM payroll formulas seeding (CRITICAL for payroll system)
-            self.stdout.write('5. Seeding HRM payroll formulas...')
+            # 6. HRM payroll formulas seeding (CRITICAL for payroll system)
+            self.stdout.write('6. Seeding HRM payroll formulas...')
             call_command('seed_payroll_formulas')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'HRM payroll formulas seeding failed: {e}'))
 
         try:
-            # 6. HRM leave data seeding
-            self.stdout.write('6. Seeding HRM leave data...')
-            call_command('seed_leave_data')
+            # 7. HRM leave data seeding
+            self.stdout.write('7. Seeding HRM leave data...')
+            if minimal:
+                call_command('seed_leave_data', minimal=True)
+            else:
+                call_command('seed_leave_data')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'HRM leave data seeding failed: {e}'))
 
         try:
-            # 7. HRM appraisals data seeding
-            self.stdout.write('7. Seeding HRM appraisals data...')
-            call_command('seed_appraisal_data')
+            # 8. HRM appraisals data seeding
+            self.stdout.write('8. Seeding HRM appraisals data...')
+            if minimal:
+                call_command('seed_appraisal_data', minimal=True)
+            else:
+                call_command('seed_appraisal_data')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'HRM appraisals data seeding failed: {e}'))
 
         try:
-            # 8. Ecommerce products seeding
+            # 9. Ecommerce products seeding
             if minimal:
-                self.stdout.write(f'8. Seeding ecommerce products ({products_count})...')
-                call_command('seed_products', count=products_count)
+                self.stdout.write(f'9. Seeding ecommerce products ({products_count})...')
+                call_command('seed_products', count=products_count, minimal=True)
             else:
-                self.stdout.write(f'8. Seeding ecommerce products ({products_count} products)...')
+                self.stdout.write(f'9. Seeding ecommerce products ({products_count} products)...')
                 call_command('seed_products', count=products_count)
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Ecommerce products seeding failed: {e}'))
 
         try:
-            # 9. Manufacturing data seeding
+            # 10. Manufacturing data seeding
             if minimal:
-                self.stdout.write('9. Skipping manufacturing data in minimal mode')
+                self.stdout.write('10. Seeding minimal manufacturing data...')
+                call_command('seed_manufacturing', full=full, simulate=simulate, minimal=True)
             else:
-                self.stdout.write('9. Seeding manufacturing data...')
+                self.stdout.write('10. Seeding manufacturing data...')
                 call_command('seed_manufacturing', full=full, simulate=simulate)
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Manufacturing data seeding failed: {e}'))
 
         try:
-            # 10. Finance payment accounts seeding
-            self.stdout.write('10. Seeding finance payment accounts...')
+            # 11. Finance payment accounts seeding
+            self.stdout.write('11. Seeding finance payment accounts...')
             if minimal:
-                call_command('seed_payment_accounts', count=1)
+                    call_command('seed_payment_accounts', count=1, minimal=True)
             else:
                 call_command('seed_payment_accounts')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Finance payment accounts seeding failed: {e}'))
 
         try:
-            # 11. Finance bank statements seeding
-            self.stdout.write('11. Seeding finance bank statements...')
+            # 12. Finance bank statements seeding
+            self.stdout.write('12. Seeding finance bank statements...')
             if minimal:
-                call_command('seed_bank_statements', count=1)
+                    call_command('seed_bank_statements', count=1, minimal=True)
             else:
                 call_command('seed_bank_statements')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Finance bank statements seeding failed: {e}'))
 
         try:
-            # 12. CRM campaigns seeding
+            # 13. CRM campaigns seeding
+            self.stdout.write('13. Seeding CRM campaigns data...')
             if minimal:
-                self.stdout.write('12. Skipping CRM campaigns in minimal mode')
+                call_command('seed_campaigns', minimal=True)
             else:
-                self.stdout.write('12. Seeding CRM campaigns data...')
                 call_command('seed_campaigns')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'CRM campaigns seeding failed: {e}'))
 
         try:
-            # 13. Procurement data seeding
+            # 14. Procurement data seeding
+            self.stdout.write('14. Seeding procurement data...')
             if minimal:
-                self.stdout.write('13. Skipping procurement data in minimal mode')
+                call_command('seed_procurement_data', minimal=True)
             else:
-                self.stdout.write('13. Seeding procurement data...')
                 call_command('seed_procurement_data')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Procurement data seeding failed: {e}'))
 
-        # 14. Assets seeding (depends on business & branches)
+        # 15. Assets seeding (depends on business & branches)
         try:
-            self.stdout.write('14. Seeding assets data...')
+            self.stdout.write('15. Seeding assets data...')
             if minimal:
-                call_command('seed_assets', users=1, categories=1, assets=1)
+                    call_command('seed_assets', users=1, categories=1, assets=1, minimal=True)
             else:
                 call_command('seed_assets')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Assets data seeding failed: {e}'))
 
         try:
-            # 15. Notifications setup
-            self.stdout.write('15. Setting up notifications...')
+            # 16. Notifications setup
+            self.stdout.write('16. Setting up notifications...')
             call_command('setup_notifications')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Notifications setup failed: {e}'))
 
         self.stdout.write(self.style.SUCCESS('Comprehensive seeding completed successfully!'))
-        self.stdout.write(self.style.SUCCESS('Note: Business, business location, and branding settings are automatically created by middleware'))
+        self.stdout.write(self.style.SUCCESS('Note: Business, business location, and branding settings are created by the seed scripts (see seed_business_data)'))
 
         # Ensure centralized RBAC provisioning is applied per roles defined in core.security
         try:
@@ -301,6 +321,13 @@ class Command(BaseCommand):
             try:
                 cursor.execute("DELETE FROM finance_reconciliation_bankstatementline")
                 cursor.execute("DELETE FROM finance_accounts_paymentaccounts")
+                # Clear payment/billing tables so seeds start fresh
+                cursor.execute("DELETE FROM finance_payments")
+                cursor.execute("DELETE FROM payment_paymenttransaction")
+                cursor.execute("DELETE FROM payment_paymentmethod")
+                cursor.execute("DELETE FROM payment_billingitem")
+                cursor.execute("DELETE FROM payment_billingdocumenthistory")
+                cursor.execute("DELETE FROM payment_billingdocument")
             except Exception as e:
                 self.stdout.write(f'    Warning: Some finance tables may not exist: {e}')
             
@@ -318,7 +345,8 @@ class Command(BaseCommand):
             self.stdout.write('  Resetting auto-increment counters...')
             try:
                 # PostgreSQL uses sequences instead of AUTO_INCREMENT
-                cursor.execute("SELECT setval('authmanagement_customuser_id_seq', 1, false)")
+                # For CustomUser, set to max(id) + 1 since it's not cleared
+                cursor.execute("SELECT setval('authmanagement_customuser_id_seq', (SELECT COALESCE(MAX(id), 0) + 1 FROM authmanagement_customuser), false)")
                 cursor.execute("SELECT setval('manufacturing_qualitycheck_id_seq', 1, false)")
                 cursor.execute("SELECT setval('manufacturing_batchrawmaterial_id_seq', 1, false)")
                 cursor.execute("SELECT setval('manufacturing_productionbatch_id_seq', 1, false)")
@@ -374,6 +402,8 @@ class Command(BaseCommand):
                 cursor.execute("DELETE FROM authmanagement_customuser")
             except Exception as e:
                 self.stdout.write(f'    Warning: CustomUser table may not exist: {e}')
+                # If can't delete, don't reset sequence to 1
+                return
             try:
                 cursor.execute("SELECT setval('authmanagement_customuser_id_seq', 1, false)")
             except Exception as e:

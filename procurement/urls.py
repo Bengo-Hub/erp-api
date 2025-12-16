@@ -18,9 +18,9 @@ urlpatterns = [
     path('reports/spend-analysis/', spend_analysis, name='procurement-spend-analysis'),
     
     # Include submodule URLs
-    path('purchases/', include('procurement.purchases.urls')),
-    path('requisitions/', include('procurement.requisitions.urls')),
-    path('orders/', include('procurement.orders.urls')),
-    path('contracts/', include('procurement.contracts.urls')),
-    path('supplier-performance/', include('procurement.supplier_performance.urls')),
+    path('', include('procurement.purchases.urls')),
+    path('', include('procurement.requisitions.urls')),
+    path('', include('procurement.orders.urls')),
+    path('', include('procurement.contracts.urls')),
+    path('', include('procurement.supplier_performance.urls')),
 ]

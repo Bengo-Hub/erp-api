@@ -8,4 +8,8 @@ class InvoicingConfig(AppConfig):
     
     def ready(self):
         # Import signals for inventory integration
-        import finance.invoicing.signals
+        # Import signal handlers
+        try:
+            from . import signals  # noqa: F401
+        except Exception:
+            pass
