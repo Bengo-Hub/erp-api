@@ -46,6 +46,52 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def clean_input_value(value, field_type='string'):
+    """
+    Clean and normalize input values from API requests.
+    Converts N/A, n/a, empty strings, etc. to None or appropriate default.
+    
+    Args:
+        value: The input value to clean
+        field_type: Type of field ('string', 'decimal', 'int', etc.)
+    
+    Returns:
+        Cleaned value (None, empty string, or the original value)
+    """
+    if value is None:
+        return None
+    
+    # Convert to string and strip whitespace
+    str_value = str(value).strip()
+    
+    # Check for common "empty" indicators (case-insensitive)
+    empty_indicators = ['', 'n/a', 'N/A', 'na', 'NA', 'none', 'None', 'null', 'Null', 'NULL']
+    if str_value in empty_indicators:
+        return None
+    
+    # For decimal fields, return None if not a valid number
+    if field_type == 'decimal':
+        try:
+            # Try to convert to float to validate
+            float(str_value)
+            return value  # Return original if valid
+        except (ValueError, TypeError):
+            return None
+    
+    # For integer fields, return None if not a valid number
+    if field_type == 'int':
+        try:
+            int(str_value)
+            return value
+        except (ValueError, TypeError):
+            return None
+    
+    # For string fields, return None if all cleaned up
+    if field_type == 'string':
+        return str_value if str_value else None
+    
+    return value
+
 class ContactsViewSet(BaseModelViewSet):
     queryset = Contact.objects.annotate(
             is_walkin=Case(
@@ -102,61 +148,71 @@ class ContactsViewSet(BaseModelViewSet):
             if hasattr(request.user, 'employee') and request.user.employee.organisation:
                 # prefer branch belonging to the user's organisation, default to main branch
                 branch = Branch.objects.filter(business=request.user.employee.organisation, is_main_branch=True).first() or branch
-            address =query_params.get('address',None)
-            designation=query_params.get('designation','Mr')
-            customer_group=query_params.get('customer_group',None)
-            tax_number=query_params.get('tax_number',None)
-            business=query_params.get('business',None)
-            alternative_contact=query_params.get('alternative_contact',None)
-            landline=query_params.get('landline',None)
-            phone=query_params.get('phone','+254743793901')
-            credit_limit=query_params.get('credit_limit',None)
-            contact_id=query_params.get('contact_id',None)
-            first_name = query_params.get('first_name','')
-            last_name = query_params.get('last_name','')
-            email = query_params.get('email',None)
-            _contact_id=contact_id
-            first_name=first_name if 'Customers' in account_type else str(business).split(' ')[0]
-            username=str(first_name).lower().strip().replace(" ", "_") if 'Customers' in account_type else str(business).split(' ')[0].lower(),
-            if contact_id==None or contact_id=='':
-                _contact_id=generate_contact_id("C")
+            
+            # Clean all input values
+            address = clean_input_value(query_params.get('address',None), 'int')
+            designation = clean_input_value(query_params.get('designation','Mr'), 'string') or 'Mr'
+            customer_group = clean_input_value(query_params.get('customer_group',None), 'int')
+            tax_number = clean_input_value(query_params.get('tax_number',None), 'string')
+            business = clean_input_value(query_params.get('business',None), 'string')
+            alternative_contact = clean_input_value(query_params.get('alternative_contact',None), 'string')
+            landline = clean_input_value(query_params.get('landline',None), 'string')
+            phone = clean_input_value(query_params.get('phone','+254743793901'), 'string') or '+254743793901'
+            credit_limit = clean_input_value(query_params.get('credit_limit',None), 'decimal')
+            contact_id = clean_input_value(query_params.get('contact_id',None), 'string')
+            first_name = clean_input_value(query_params.get('first_name',''), 'string') or ''
+            last_name = clean_input_value(query_params.get('last_name',''), 'string') or ''
+            email = clean_input_value(query_params.get('email',None), 'string')
+            _contact_id = contact_id
+            
+            first_name = first_name if 'Customers' in account_type else (str(business).split(' ')[0] if business else 'Business')
+            username = str(first_name).lower().strip().replace(" ", "_") if 'Customers' in account_type else (str(business).split(' ')[0].lower() if business else 'business')
+            
+            if contact_id is None or contact_id == '':
+                _contact_id = generate_contact_id("C")
+            
             user, created = User.objects.update_or_create(
                 username=username,
                 defaults={
-                "first_name":first_name if 'Customers' in account_type else str(business).split(' ')[0].lower(),
-                "phone":phone,
-                "last_name":last_name,
-                "email":email if email else f'{str(first_name)}.{last_name}@gmail.com',
-                "password":make_password("@User123"),
-                "is_active":True
+                    "first_name": first_name if 'Customers' in account_type else (str(business).split(' ')[0].lower() if business else 'Business'),
+                    "phone": phone,
+                    "last_name": last_name,
+                    "email": email if email else f'{str(first_name)}.{last_name}@gmail.com',
+                    "password": make_password("@User123"),
+                    "is_active": True
                 }
             )
             Token.objects.update_or_create(user=user)
-            biz=None
+            
+            biz = None
             if business is not None:
-               biz,created=Bussiness.objects.update_or_create(owner=user,name=business)
-            contact_defaults={
-                "contact_id":_contact_id,
-                "customer_group":CustomerGroup.objects.filter(id=customer_group).first(),
-                "business":biz,
-                "branch":branch,
-                "designation":designation,
-                "tax_number":tax_number,
-                "credit_limit":credit_limit,
-                "alternative_contact":alternative_contact,
-                "landline":landline,
-                }
-            contact,created=Contact.objects.update_or_create(
+                biz, created = Bussiness.objects.update_or_create(owner=user, name=business)
+            
+            contact_defaults = {
+                "contact_id": _contact_id,
+                "customer_group": CustomerGroup.objects.filter(id=customer_group).first() if customer_group else None,
+                "business": biz,
+                "branch": branch,
+                "designation": designation,
+                "tax_number": tax_number,
+                "credit_limit": credit_limit,
+                "alternative_contact": alternative_contact,
+                "landline": landline,
+            }
+            
+            contact, created = Contact.objects.update_or_create(
                 user=user,
                 contact_type=contact_type,
                 account_type=account_type,
                 defaults=contact_defaults,
-                )
-            _,created=ContactAccount.objects.update_or_create(contact=Contact.objects.get(user=user))
-            if address !=None:
-                pickup_station=PickupStations.objects.filter(id=address).first()
-                if pickup_station !=None:
-                   adr,created=AddressBook.objects.update_or_create(user=user,address_label=pickup_station.pickup_location,phone=user.phone,other_phone=alternative_contact,address=pickup_station)
+            )
+            _, created = ContactAccount.objects.update_or_create(contact=Contact.objects.get(user=user))
+            
+            if address is not None:
+                pickup_station = PickupStations.objects.filter(id=address).first()
+                if pickup_station is not None:
+                    adr, created = AddressBook.objects.update_or_create(user=user, address_label=pickup_station.pickup_location, phone=user.phone, other_phone=alternative_contact, address=pickup_station)
+            
             serializer = ContactSerializer(contact, context={'request': request})
             return APIResponse.created(data=serializer.data, message='Contact created successfully', correlation_id=get_correlation_id(request))
         except Exception as e:
@@ -167,21 +223,21 @@ class ContactsViewSet(BaseModelViewSet):
         try:
             query_params = request.data
             contact = self.get_object(pk)
-            # Update contact details based on query parameters
+            # Update contact details based on query parameters - clean all values
             contact_type = query_params.get('contact_type', contact.contact_type)
-            address = query_params.get('address', None)
-            designation = query_params.get('designation', contact.designation)
-            customer_group = query_params.get('customer_group', contact.customer_group)
+            address = clean_input_value(query_params.get('address', None), 'int')
+            designation = clean_input_value(query_params.get('designation', contact.designation), 'string') or contact.designation
+            customer_group_id = clean_input_value(query_params.get('customer_group', None), 'int')
             account_type = query_params.get('account_type', contact.account_type)
-            tax_number = query_params.get('tax_number', contact.tax_number)
-            business = query_params.get('business', contact.business)
-            alternative_contact = query_params.get('alternative_contact', contact.alternative_contact)
-            landline = query_params.get('landline', contact.landline)
-            credit_limit = query_params.get('credit_limit', contact.credit_limit)
-            contact_id = query_params.get('contact_id', contact.contact_id)
-            first_name = query_params.get('first_name', contact.user.first_name)
-            last_name = query_params.get('last_name', contact.user.last_name)
-            email = query_params.get('email', contact.user.email)
+            tax_number = clean_input_value(query_params.get('tax_number', contact.tax_number), 'string')
+            business = clean_input_value(query_params.get('business', None), 'string')
+            alternative_contact = clean_input_value(query_params.get('alternative_contact', contact.alternative_contact), 'string')
+            landline = clean_input_value(query_params.get('landline', contact.landline), 'string')
+            credit_limit = clean_input_value(query_params.get('credit_limit', contact.credit_limit), 'decimal')
+            contact_id = clean_input_value(query_params.get('contact_id', contact.contact_id), 'string')
+            first_name = clean_input_value(query_params.get('first_name', contact.user.first_name), 'string') or contact.user.first_name
+            last_name = clean_input_value(query_params.get('last_name', contact.user.last_name), 'string') or contact.user.last_name
+            email = clean_input_value(query_params.get('email', contact.user.email), 'string')
 
             # Update user details if necessary
             contact.user.username = str(first_name).lower().strip().replace(" ", "_")
@@ -198,7 +254,7 @@ class ContactsViewSet(BaseModelViewSet):
             contact_defaults = {
                 "contact_type": contact_type,
                 "account_type": account_type,
-                "customer_group": CustomerGroup.objects.filter(id=customer_group).first(),
+                "customer_group": CustomerGroup.objects.filter(id=customer_group_id).first() if customer_group_id else None,
                 "business": biz,
                 "designation": designation,
                 "tax_number": tax_number,
