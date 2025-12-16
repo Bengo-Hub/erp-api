@@ -59,6 +59,101 @@ class QuotationViewSet(BaseModelViewSet):
             queryset = queryset.filter(is_converted=False)
         
         return queryset
+
+    def _resolve_company_info(self, quotation):
+        """Return company info dict using branch (preferred) or business HQ branch."""
+        company = None
+        name = 'Company'
+        email = ''
+        phone = ''
+        address = ''
+
+        try:
+            if getattr(quotation, 'branch', None):
+                branch = quotation.branch
+                company = getattr(branch, 'business', None)
+            else:
+                # Fallback to business first available
+                company = getattr(quotation, 'branch', None) or None
+
+            # If no branch on quote, try to find the main HQ branch for the business attached to the quotation
+            if not getattr(quotation, 'branch', None) and getattr(quotation, 'branch', None) is None:
+                # Try to get related business from quotation.customer.business or from Bussiness
+                from business.models import Bussiness
+                biz = None
+                if getattr(quotation, 'branch', None) and getattr(quotation.branch, 'business', None):
+                    biz = quotation.branch.business
+                else:
+                    # Try to locate a business via quotation.branch.business if any
+                    try:
+                        biz = Bussiness.objects.first()
+                    except Exception:
+                        biz = None
+
+                branch = None
+                if biz:
+                    try:
+                        branch = biz.branches.filter(is_main_branch=True, is_active=True).first()
+                    except Exception:
+                        branch = None
+                if branch:
+                    company = branch.business
+            # At this point, prefer branch contact & location
+            branch = getattr(quotation, 'branch', None)
+            if not branch and company:
+                try:
+                    branch = company.branches.filter(is_main_branch=True, is_active=True).first()
+                except Exception:
+                    branch = None
+
+            if company:
+                name = getattr(company, 'name', name)
+
+            if branch:
+                email = getattr(branch, 'email', '') or getattr(company, 'email', '') if company else ''
+                phone = getattr(branch, 'contact_number', '') or getattr(company, 'contact_number', '') if company else ''
+                loc = getattr(branch, 'location', None)
+                if loc:
+                    def _part_val(x):
+                        if x is None:
+                            return ''
+                        if not isinstance(x, str):
+                            try:
+                                return str(x)
+                            except Exception:
+                                return getattr(x, 'name', '') or ''
+                        return x
+
+                    raw_parts = [getattr(loc, 'building_name', None), getattr(loc, 'street_name', None), getattr(loc, 'city', None), getattr(loc, 'county', None), getattr(loc, 'state', None), getattr(loc, 'country', None)]
+                    parts = [_part_val(p).strip() for p in raw_parts if _part_val(p).strip()]
+                    address = ', '.join(parts)
+            else:
+                # fallback: use company-level location
+                loc = getattr(company, 'location', None) if company else None
+                if loc:
+                    def _part_val(x):
+                        if x is None:
+                            return ''
+                        if not isinstance(x, str):
+                            try:
+                                return str(x)
+                            except Exception:
+                                return getattr(x, 'name', '') or ''
+                        return x
+
+                    raw_parts = [getattr(loc, 'building_name', None), getattr(loc, 'street_name', None), getattr(loc, 'city', None), getattr(loc, 'county', None), getattr(loc, 'state', None), getattr(loc, 'country', None)]
+                    parts = [_part_val(p).strip() for p in raw_parts if _part_val(p).strip()]
+                    address = ', '.join(parts)
+
+        except Exception:
+            pass
+
+        return {
+            'name': name,
+            'address': address,
+            'email': email or '',
+            'phone': phone or ''
+        }
     
     @action(detail=True, methods=['post'], url_path='send')
     def send_quotation(self, request, pk=None):
@@ -106,13 +201,8 @@ class QuotationViewSet(BaseModelViewSet):
             }
             
             # Generate PDF attachment
-            company_info = {
-                'name': company.name if company else 'Company',
-                'address': company.address if company else '',
-                'email': company.email if company else '',
-                'phone': company.contact_number if company else '',
-            } if company else None
-            
+            # Resolve company info (prefer branch or HQ branch location)
+            company_info = self._resolve_company_info(quotation)
             pdf_bytes = generate_quotation_pdf(quotation, company_info)
             
             # Send email with PDF attachment
@@ -146,7 +236,7 @@ class QuotationViewSet(BaseModelViewSet):
             )
             
         except Exception as e:
-            return APIResponse.error(message=f'Failed to send quotation: {str(e)}')
+            return APIResponse.server_error(message=f'Failed to send quotation: {str(e)}')
     
     @action(detail=True, methods=['post'], url_path='mark-as-sent')
     def mark_sent(self, request, pk=None):
@@ -235,7 +325,7 @@ class QuotationViewSet(BaseModelViewSet):
         except ValueError as e:
             return APIResponse.bad_request(message=str(e))
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            return APIResponse.server_error(message=str(e))
     
     @action(detail=True, methods=['post'], url_path='clone')
     def clone_quotation(self, request, pk=None):
@@ -249,7 +339,7 @@ class QuotationViewSet(BaseModelViewSet):
                 message=f'Quotation cloned successfully as {cloned_quotation.quotation_number}'
             )
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            return APIResponse.server_error(message=str(e))
     
     @action(detail=True, methods=['post'], url_path='generate-share-link')
     def generate_share_link(self, request, pk=None):
@@ -369,15 +459,20 @@ class QuotationViewSet(BaseModelViewSet):
         try:
             quotation = self.get_object()
             
-            # Get company info from branch/business
-            company_info = None
-            if quotation.branch:
-                company_info = {
-                    'name': quotation.branch.business.name if hasattr(quotation.branch, 'business') else 'Company Name',
-                    'address': getattr(quotation.branch, 'address', ''),
-                    'email': getattr(quotation.branch, 'email', ''),
-                    'phone': getattr(quotation.branch, 'phone', ''),
-                }
+            # Get company info from branch/business (use branch contact/location when available)
+            company = quotation.branch.business if getattr(quotation.branch, 'business', None) else None
+            company_name = company.name if company else (quotation.branch.business.name if getattr(quotation.branch, 'business', None) else 'Company')
+            company_email = getattr(quotation.branch, 'email', None) or getattr(company, 'email', None) or ''
+            company_phone = getattr(quotation.branch, 'contact_number', None) or getattr(company, 'contact_number', None) or ''
+            from finance.utils import format_location_address
+            company_address = format_location_address(quotation.branch.location, fields=['building_name', 'street_name', 'city', 'county']) if quotation.branch else ''
+
+            company_info = {
+                'name': company_name,
+                'address': company_address,
+                'email': company_email,
+                'phone': company_phone,
+            }
             
             # Generate PDF
             pdf_bytes = generate_quotation_pdf(quotation, company_info)
@@ -399,29 +494,69 @@ class QuotationViewSet(BaseModelViewSet):
         """
         try:
             quotation = self.get_object()
-            
-            # Get company info from branch/business
-            company_info = None
-            if quotation.branch:
-                company_info = {
-                    'name': quotation.branch.business.name if hasattr(quotation.branch, 'business') else 'Company Name',
-                    'address': getattr(quotation.branch, 'address', ''),
-                    'email': getattr(quotation.branch, 'email', ''),
-                    'phone': getattr(quotation.branch, 'phone', ''),
-                }
-            
-            # Generate PDF
+
+            # Ensure DB state is fresh and include related changes (items) before rendering
+            try:
+                quotation.refresh_from_db()
+            except Exception:
+                pass
+
+            # Resolve company info (prefer branch/HQ branch)
+            company_info = self._resolve_company_info(quotation)
             pdf_bytes = generate_quotation_pdf(quotation, company_info)
-            
+
             # Determine if download or inline
             download = request.query_params.get('download', 'false').lower() == 'true'
             disposition = 'attachment' if download else 'inline'
-            
-            # Return PDF as HTTP response
+
+            # Build response
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'{disposition}; filename="Quotation_{quotation.quotation_number}.pdf"'
-            response['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
-            
+
+            # Prevent clients from using stale cached PDF - always revalidate
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+
+            # Compute last_modified considering related items to ensure changes to items
+            # cause a new Last-Modified/ETag value
+            from django.db.models import Max
+            candidates = []
+            q_lm = getattr(quotation, 'updated_at', None) or getattr(quotation, 'created_at', None)
+            if q_lm:
+                candidates.append(q_lm)
+
+            items_lm = quotation.items.aggregate(max_updated=Max('updated_at'))['max_updated']
+            if items_lm:
+                candidates.append(items_lm)
+
+            last_modified = max(candidates) if candidates else None
+            if last_modified:
+                from django.utils.http import http_date
+                response['Last-Modified'] = http_date(last_modified.timestamp())
+
+            try:
+                import hashlib
+                etag_src = f"{quotation.pk}-{getattr(last_modified, 'isoformat', lambda: '')()}-{getattr(quotation, 'total', '')}-{quotation.items.count()}"
+                etag = hashlib.sha1(etag_src.encode()).hexdigest()
+                response['ETag'] = f'W/"{etag}"'
+            except Exception:
+                pass
+
+            # Honor conditional requests: If client provides If-None-Match or If-Modified-Since, respond 304 when appropriate
+            from django.http import HttpResponseNotModified
+            if_none_match = request.META.get('HTTP_IF_NONE_MATCH') or request.headers.get('If-None-Match')
+            if if_none_match and response.get('ETag') and if_none_match == response['ETag']:
+                return HttpResponseNotModified()
+
+            if_modified_since = request.META.get('HTTP_IF_MODIFIED_SINCE') or request.headers.get('If-Modified-Since')
+            if if_modified_since and last_modified:
+                # Compare client-provided date to last_modified
+                from django.utils.http import parse_http_date_safe
+                client_ts = parse_http_date_safe(if_modified_since)
+                if client_ts and int(last_modified.timestamp()) <= client_ts:
+                    return HttpResponseNotModified()
+
             return response
             
         except Quotation.DoesNotExist:

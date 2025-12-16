@@ -215,7 +215,7 @@ class Invoice(BaseOrder):
         
         return f"{base_url}public/invoice/{self.id}/{self.share_token}"
     
-    def record_payment(self, amount, payment_method, reference=None, payment_date=None):
+    def record_payment(self, amount, payment_method, reference=None, payment_date=None, payment_account=None):
         """Record a payment against this invoice"""
         from finance.payment.models import Payment
         # Create payment record (link to invoice via InvoicePayment relation, not a field on Payment)
@@ -228,6 +228,7 @@ class Invoice(BaseOrder):
             reference_number=reference or f"PAY-{self.invoice_number}-{timezone.now().timestamp()}",
             payment_date=pd,
             customer=self.customer,
+            payment_account=payment_account,
             status='completed'
         )
         
@@ -359,6 +360,33 @@ class InvoicePayment(BaseModel):
     
     def __str__(self):
         return f"{self.invoice.invoice_number} - Payment {self.amount}"
+
+
+# Ensure that when an InvoicePayment is created with a payment_account we link the
+# underlying Payment record to the account (this handles flows where InvoicePayment
+# is created separately and the Payment wasn't created with an account). This will
+# also trigger the Payment.post_save handler which creates the Transaction.
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+@receiver(post_save, sender=InvoicePayment)
+def ensure_payment_has_account(sender, instance: InvoicePayment, created, **kwargs):
+    try:
+        payment = getattr(instance, 'payment', None)
+        if not payment:
+            return
+
+        # If payment already has account, nothing to do
+        if getattr(payment, 'payment_account', None):
+            return
+
+        if instance.payment_account:
+            payment.payment_account = instance.payment_account
+            payment.save(update_fields=['payment_account'])
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception('Failed to link payment account from InvoicePayment %s', getattr(instance, 'id', 'unknown'))
 
 
 class InvoiceEmailLog(BaseModel):

@@ -67,11 +67,44 @@ class InvoiceViewSet(BaseModelViewSet):
 
             # Prefer contact details from the branch (if available) falling back to business-level fields
             branch = getattr(invoice, 'branch', None)
+            # If branch is not set on the invoice, try to find the main HQ branch for the business
+            if not branch:
+                try:
+                    branch = biz.branches.filter(is_main_branch=True, is_active=True).first()
+                except Exception:
+                    branch = None
+
             email = ''
             phone = ''
+            address = ''
             if branch:
-                email = getattr(branch, 'email', '') or ''
-                phone = getattr(branch, 'contact_number', '') or ''
+                email = getattr(branch, 'email', '') or getattr(biz, 'email', '') or ''
+                phone = getattr(branch, 'contact_number', '') or getattr(biz, 'contact_number', '') or ''
+                loc = getattr(branch, 'location', None)
+                if loc:
+                    from finance.utils import format_location_address
+                    address = format_location_address(loc)
+
+            # If still no address from branch, fall back to business.location
+            if not address:
+                loc = getattr(biz, 'location', None)
+                if loc:
+                    from finance.utils import format_location_address
+                    address = format_location_address(loc)
+
+                    raw_parts = [getattr(loc, 'building_name', None), getattr(loc, 'street_name', None), getattr(loc, 'city', None), getattr(loc, 'county', None), getattr(loc, 'state', None), getattr(loc, 'country', None)]
+                    seen = set()
+                    cleaned = []
+                    for p in raw_parts:
+                        v = _part_val(p).strip()
+                        if not v:
+                            continue
+                        key = v.lower()
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        cleaned.append(v)
+                    address = ', '.join(cleaned)
 
             # If branch has no contact info, try business-level attributes (older schemas)
             if not email:
@@ -81,7 +114,7 @@ class InvoiceViewSet(BaseModelViewSet):
 
             company_info = {
                 'name': getattr(biz, 'name', 'Company Name'),
-                'address': getattr(biz, 'address', '') if hasattr(biz, 'address') else '',
+                'address': address or (getattr(biz, 'address', '') if hasattr(biz, 'address') else ''),
                 'email': email,
                 'phone': phone,
                 'logo_path': logo_path
@@ -422,12 +455,13 @@ class InvoiceViewSet(BaseModelViewSet):
                 except PaymentAccounts.DoesNotExist:
                     return APIResponse.not_found(message='Payment account not found')
                 
-                # Create payment and link
+                # Create payment and link (pass the payment account so Payment.payment_account is set)
                 payment = invoice.record_payment(
                     amount=amount,
                     payment_method=payment_method,
                     reference=reference,
-                    payment_date=parsed_payment_datetime
+                    payment_date=parsed_payment_datetime,
+                    payment_account=payment_account
                 )
 
                 invoice_payment = InvoicePayment.objects.create(
@@ -446,6 +480,20 @@ class InvoiceViewSet(BaseModelViewSet):
                     invoice.refresh_from_db()
             
             # Return invoice and created invoice payment details to help frontend link the records
+            # Audit log the payment operation
+            try:
+                from core.audit import AuditTrail
+                AuditTrail.log(
+                    operation=AuditTrail.PAYMENT,
+                    module='finance',
+                    entity_type='Invoice',
+                    entity_id=invoice.id,
+                    user=request.user,
+                    changes={'payment_amount': {'new': str(amount)}, 'payment_account': {'new': getattr(payment_account, 'id', None)}},
+                    reason=f'Recorded payment {amount} on invoice {invoice.invoice_number} via {payment_method}'
+                )
+            except Exception:
+                pass
             return APIResponse.success(
                 data={
                     'invoice': InvoiceSerializer(invoice).data,
@@ -664,9 +712,16 @@ class InvoiceViewSet(BaseModelViewSet):
         """
         try:
             invoice = self.get_object()
-            # Ensure latest payment state before rendering
+
+            # Ensure latest payment state and DB state before rendering PDF
             try:
                 invoice.recalculate_payments()
+            except Exception:
+                pass
+
+            # Refresh from DB to make sure totals updated via related-model updates
+            try:
+                invoice.refresh_from_db()
             except Exception:
                 pass
             
@@ -683,8 +738,54 @@ class InvoiceViewSet(BaseModelViewSet):
             # Return PDF as HTTP response
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'{disposition}; filename="Invoice_{invoice.invoice_number}.pdf"'
-            response['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
-            
+            # Prevent clients from using stale cached PDF - always revalidate
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+
+            # Compute an aggregate 'last modified' considering related items and payments
+            from django.db.models import Max
+            last_candidates = []
+            lm_invoice = getattr(invoice, 'updated_at', None) or getattr(invoice, 'created_at', None)
+            if lm_invoice:
+                last_candidates.append(lm_invoice)
+
+            items_lm = invoice.items.aggregate(max_updated=Max('updated_at'))['max_updated']
+            if items_lm:
+                last_candidates.append(items_lm)
+
+            payments_lm = invoice.invoice_payments.aggregate(max_created=Max('created_at'))['max_created']
+            if payments_lm:
+                last_candidates.append(payments_lm)
+
+            # Choose most recent timestamp
+            last_modified = max(last_candidates) if last_candidates else None
+
+            if last_modified:
+                from django.utils.http import http_date
+                response['Last-Modified'] = http_date(last_modified.timestamp())
+
+            try:
+                import hashlib
+                etag_src = f"{invoice.pk}-{getattr(last_modified, 'isoformat', lambda: '')()}-{getattr(invoice, 'total', '')}-{invoice.items.count()}"
+                etag = hashlib.sha1(etag_src.encode()).hexdigest()
+                response['ETag'] = f'W/"{etag}"'
+            except Exception:
+                pass
+
+            # Honor conditional requests
+            from django.http import HttpResponseNotModified
+            if_none_match = request.META.get('HTTP_IF_NONE_MATCH') or request.headers.get('If-None-Match')
+            if if_none_match and response.get('ETag') and if_none_match == response['ETag']:
+                return HttpResponseNotModified()
+
+            if_modified_since = request.META.get('HTTP_IF_MODIFIED_SINCE') or request.headers.get('If-Modified-Since')
+            if if_modified_since and last_modified:
+                from django.utils.http import parse_http_date_safe
+                client_ts = parse_http_date_safe(if_modified_since)
+                if client_ts and int(last_modified.timestamp()) <= client_ts:
+                    return HttpResponseNotModified()
+
             return response
             
         except Invoice.DoesNotExist:

@@ -398,27 +398,75 @@ def generate_quotation_pdf(quotation, company_info=None):
             except:
                 pass
         
-        # Company details
+        # Prepare company_text but do not append it here - header_table will render
+        company_text = ''
         if company_info:
-            company_text = f"<b>{company_info.get('name', 'Company Name')}</b><br/>"
-            company_text += f"{company_info.get('address', '')}<br/>"
-            company_text += f"Email: {company_info.get('email', '')}<br/>"
-            company_text += f"Phone: {company_info.get('phone', '')}"
-            elements.append(Paragraph(company_text, header_style))
-            elements.append(Spacer(1, 0.3*inch))
+            company_text = f"<b>{company_info.get('name', 'Company Name')}</b><br/>{company_info.get('address', '')}<br/>Email: {company_info.get('email', '')}<br/>Phone: {company_info.get('phone', '')}"
         
-        # Quotation Title
+        # Quotation Title (use same branding color as invoices)
+        # Use invoice blue for consistent branding
+        title_style.textColor = colors.HexColor('#2563eb')
         elements.append(Paragraph("QUOTATION", title_style))
         elements.append(Spacer(1, 0.2*inch))
-        
-        # Quotation & Customer Details
-        # Quotation details (use Paragraphs to avoid raw HTML showing in PDF)
+
+        # Use the same two-column company header as invoices (company details + logo)
+        # Attempt to resolve logo path if provided in company_info
+        logo = None
+        logo_path = None
+        if company_info and company_info.get('logo_path'):
+            candidate = company_info.get('logo_path')
+            if isinstance(candidate, str) and os.path.exists(candidate):
+                logo_path = candidate
+            else:
+                try:
+                    if finders:
+                        logo_path = finders.find(candidate.lstrip('/')) or finders.find('logo/logo.png')
+                except Exception:
+                    logo_path = None
+
+        if not logo_path:
+            try:
+                if finders:
+                    logo_path = finders.find('logo/logo.png') or finders.find('static/logo/logo.png')
+                else:
+                    candidate = os.path.join(settings.BASE_DIR, 'static', 'logo', 'logo.png')
+                    if os.path.exists(candidate):
+                        logo_path = candidate
+            except Exception:
+                logo_path = None
+
+        if logo_path:
+            try:
+                logo = Image(logo_path, width=2*inch, height=1*inch)
+            except Exception:
+                logo = None
+
+        company_text = ''
+        if company_info:
+            company_text = f"<b>{company_info.get('name', 'Company Name')}</b><br/>{company_info.get('address', '')}<br/>Email: {company_info.get('email', '')}<br/>Phone: {company_info.get('phone', '')}"
+
+        header_row = [Paragraph(company_text, header_style) if company_text else '', logo if logo else '']
+        header_table = Table([header_row], colWidths=[4.5*inch, 2*inch])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT')
+        ]))
+        if company_text or logo:
+            elements.insert(0, Spacer(1, 0.1*inch))
+            elements.insert(0, header_table)
+            elements.insert(1, Spacer(1, 0.3*inch))
+
+        # Quotation & Customer Details - reuse label styles
+        label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))
+        label_bold_style = ParagraphStyle('LabelBold', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))
+        label_bold_style.fontName = 'Helvetica-Bold'
+
         details_data = [
             [Paragraph('Quotation Number:', label_bold_style), Paragraph(str(quotation.quotation_number), label_style), Paragraph('For:', label_bold_style), Paragraph(get_customer_name(quotation), label_style)],
             [Paragraph('Date:', label_bold_style), Paragraph(quotation.quotation_date.strftime('%d/%m/%Y'), label_style), Paragraph('Email:', label_bold_style), Paragraph(get_customer_email(quotation), label_style)],
             [Paragraph('Valid Until:', label_bold_style), Paragraph(quotation.valid_until.strftime('%d/%m/%Y'), label_style), Paragraph('Phone:', label_bold_style), Paragraph(get_customer_phone(quotation), label_style)],
         ]
-        
+
         details_table = Table(details_data, colWidths=[1.5*inch, 2*inch, 1*inch, 2.5*inch])
         details_table.setStyle(TableStyle([
             ('FONT', (0, 0), (-1, -1), 'Helvetica', 9),
@@ -429,6 +477,16 @@ def generate_quotation_pdf(quotation, company_info=None):
         ]))
         elements.append(details_table)
         elements.append(Spacer(1, 0.3*inch))
+
+        # Debug: Log customer info used for the PDF to help investigate mismatches
+        try:
+            cust = getattr(quotation, 'customer', None)
+            if cust:
+                logger.debug(f"Generating quotation PDF: quotation_id={quotation.id}, customer_id={getattr(cust,'id',None)}, customer_name={getattr(cust,'business_name',None) or getattr(cust.user,'first_name',None) or getattr(cust.user,'username',None)}")
+            else:
+                logger.debug(f"Generating quotation PDF: quotation_id={quotation.id}, no customer set")
+        except Exception:
+            logger.debug(f"Generating quotation PDF: quotation_id={quotation.id}, error reading customer info")
         
         # Introduction
         if quotation.introduction:
@@ -446,19 +504,47 @@ def generate_quotation_pdf(quotation, company_info=None):
         items_data = [['#', 'Description', 'Qty', 'Unit Price', 'Tax', 'Amount']]
         
         for idx, item in enumerate(quotation.items.all(), 1):
-            desc = f"<b>{item.name}</b><br/>{item.description}" if item.description else item.name
+            # Build description and numeric fields defensively. OrderItem model does not
+            # necessarily include tax_rate/tax_amount fields, so use getattr with fallbacks
+            name = _sanitize_text_for_pdf(getattr(item, 'name', '') or '')
+            desc_text = _sanitize_text_for_pdf(getattr(item, 'description', '') or '')
+            desc = f"<b>{name}</b>"
+            if desc_text:
+                desc += '<br/>' + desc_text.replace('\n', '<br/>')
+
+            qty = getattr(item, 'quantity', 1) or 1
+            unit_price = getattr(item, 'unit_price', 0) or 0
+
+            # Determine tax amount: prefer explicit field, otherwise infer from totals
+            tax_amount = getattr(item, 'tax_amount', None)
+            total_price_field = getattr(item, 'total_price', None) or getattr(item, 'total', None)
+            try:
+                if tax_amount is None:
+                    if total_price_field is not None:
+                        tax_amount = float(total_price_field) - (float(unit_price) * float(qty))
+                    else:
+                        tax_amount = 0
+                tax_amount = float(tax_amount)
+            except Exception:
+                tax_amount = 0
+
+            # Total amount - prefer explicit field, else compute
+            if total_price_field is None:
+                total_amount = float(unit_price) * float(qty) + tax_amount
+            else:
+                total_amount = float(total_price_field)
+
             items_data.append([
                 str(idx),
                 Paragraph(desc, header_style),
-                str(item.quantity),
-                f"KES {item.unit_price:,.2f}",
-                f"{item.tax_rate}%",
-                f"KES {item.total:,.2f}"
+                str(qty),
+                f"KES {float(unit_price):,.2f}",
+                f"KES {tax_amount:,.2f}",
+                f"KES {total_amount:,.2f}"
             ])
-        
-        items_table = Table(items_data, colWidths=[0.4*inch, 3*inch, 0.7*inch, 1.2*inch, 0.7*inch, 1.2*inch])
+        items_table = Table(items_data, colWidths=[0.4*inch, 3.3*inch, 0.7*inch, 1.0*inch, 0.6*inch, 1.2*inch], repeatRows=1)
         items_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#059669')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563eb')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (0, -1), 'CENTER'),
             ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
@@ -469,7 +555,9 @@ def generate_quotation_pdf(quotation, company_info=None):
             ('TOPPADDING', (0, 1), (-1, -1), 8),
             ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ROWBACKGROUND', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0fdf4')])
+            ('ROWBACKGROUND', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+            ('LEFTPADDING', (1, 0), (1, -1), 6),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP')
         ]))
         elements.append(items_table)
         elements.append(Spacer(1, 0.3*inch))
@@ -486,17 +574,17 @@ def generate_quotation_pdf(quotation, company_info=None):
         if quotation.shipping_cost > 0:
             totals_data.append(['Shipping:', f"KES {quotation.shipping_cost:,.2f}"])
         
-        totals_data.append(['<b>TOTAL:</b>', f"<b>KES {quotation.total:,.2f}</b>"])
-        
+        totals_data.append(['TOTAL:', f"KES {quotation.total:,.2f}"])
+
         totals_table = Table(totals_data, colWidths=[4.5*inch, 2.5*inch])
         totals_table.setStyle(TableStyle([
             ('FONT', (0, 0), (-1, -2), 'Helvetica', 10),
-            ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 12),
+            ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 11),
             ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
             ('TOPPADDING', (0, 0), (-1, -1), 5),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#059669')),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d1fae5')),
+            ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#2563eb')),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#fef3c7')),
         ]))
         elements.append(totals_table)
         
@@ -559,10 +647,20 @@ def generate_quotation_pdf(quotation, company_info=None):
 def get_customer_name(doc):
     """Get customer name from document"""
     try:
-        customer = doc.customer
-        if customer.business_name:
-            return customer.business_name
-        return f"{customer.user.first_name} {customer.user.last_name}".strip()
+        customer = getattr(doc, 'customer', None)
+        # Prefer customer business name, then customer user name
+        if customer:
+            bname = getattr(customer, 'business_name', None)
+            if bname:
+                return bname
+            user = getattr(customer, 'user', None)
+            if user and (user.first_name or user.last_name):
+                return f"{user.first_name or ''} {user.last_name or ''}".strip()
+        # Fallback: if doc has an associated created_by user, use that
+        created_by = getattr(doc, 'created_by', None)
+        if created_by:
+            return f"{created_by.first_name or ''} {created_by.last_name or ''}".strip() or created_by.username
+        return 'N/A'
     except:
         return "N/A"
 
@@ -570,7 +668,13 @@ def get_customer_name(doc):
 def get_customer_email(doc):
     """Get customer email from document"""
     try:
-        return doc.customer.user.email
+        customer = getattr(doc, 'customer', None)
+        if customer and getattr(customer, 'user', None):
+            return getattr(customer.user, 'email', 'N/A')
+        created_by = getattr(doc, 'created_by', None)
+        if created_by:
+            return getattr(created_by, 'email', 'N/A')
+        return 'N/A'
     except:
         return "N/A"
 
@@ -578,7 +682,20 @@ def get_customer_email(doc):
 def get_customer_phone(doc):
     """Get customer phone from document"""
     try:
-        return doc.customer.user.phone or "N/A"
+        customer = getattr(doc, 'customer', None)
+        if customer:
+            # contact may have phone directly or via user
+            phone = getattr(customer, 'phone', None)
+            if phone:
+                return phone
+            user = getattr(customer, 'user', None)
+            if user and getattr(user, 'phone', None):
+                return user.phone
+        # fallback to created_by phone or N/A
+        created_by = getattr(doc, 'created_by', None)
+        if created_by and getattr(created_by, 'phone', None):
+            return created_by.phone
+        return "N/A"
     except:
         return "N/A"
 

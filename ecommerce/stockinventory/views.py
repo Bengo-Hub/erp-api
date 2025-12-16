@@ -77,6 +77,23 @@ class InventoryViewSet(BaseModelViewSet):
         elif limit:
             queryset = queryset[:int(limit)]
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        """Prevent creating stock entries for service products."""
+        correlation_id = get_correlation_id(request)
+        product_id = request.data.get('product')
+        if not product_id:
+            return APIResponse.validation_error(message='Product is required', errors={'product': 'This field is required.'}, correlation_id=correlation_id)
+
+        try:
+            product_obj = Products.objects.get(pk=product_id)
+        except Products.DoesNotExist:
+            return APIResponse.validation_error(message='Invalid product', errors={'product': 'Product not found.'}, correlation_id=correlation_id)
+
+        if getattr(product_obj, 'product_type', None) == 'service':
+            return APIResponse.validation_error(message='Stock cannot be created for service items.', errors={'product': 'Stock cannot be created for service items.'}, correlation_id=correlation_id)
+
+        return super().create(request, *args, **kwargs)
     
     @action(detail=False, methods=['get'], url_path='valuation', url_name='valuation')
     def valuation(self, request):

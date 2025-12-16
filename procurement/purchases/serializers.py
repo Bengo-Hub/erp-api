@@ -43,7 +43,8 @@ class PurchaseItemsSerializer(serializers.ModelSerializer):
     class Meta:
         model = PurchaseItems
         fields = '__all__'
-        depth = 2
+        # Avoid deep automatic nesting which may serialize timezone objects
+        depth = 0
 
 
 class PurchaseItemWriteSerializer(serializers.ModelSerializer):

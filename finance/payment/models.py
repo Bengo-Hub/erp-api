@@ -450,3 +450,64 @@ class PaymentRefund(BaseModel):
 
     def __str__(self):
         return f"Refund for {self.payment.reference_number} - {self.amount}"
+
+
+# Ensure that when a Payment is completed and associated to a payment account we
+# create a matching Transaction record on that account so account balances are
+# tracked from the transactions themselves. Using a post_save receiver keeps the
+# behavior consistent across all places that create payments.
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from core.audit import AuditTrail
+
+
+@receiver(post_save, sender=Payment)
+def create_transaction_for_payment(sender, instance: Payment, created, **kwargs):
+    """Create an account transaction when a Payment is completed.
+
+    The function is idempotent: it checks for an existing Transaction for the
+    payment reference before creating a new one (avoids duplicates on retries).
+    """
+    try:
+        # Only create a transaction when payment is completed and a payment_account is set
+        if instance.status != 'completed' or not instance.payment_account:
+            return
+
+        from finance.accounts.models import Transaction
+
+        # Avoid duplicating transactions for the same payment reference
+        ref = str(instance.reference_number or instance.transaction_id or instance.id)
+        exists = Transaction.objects.filter(reference_type='payment', reference_id=ref).exists()
+        if exists:
+            return
+
+        # Map direction to a sensible transaction type: money in => income, money out => payment
+        tx_type = 'income' if instance.direction == 'in' else 'payment'
+
+        tx = Transaction.objects.create(
+            account=instance.payment_account,
+            transaction_date=instance.payment_date or instance.created_at,
+            amount=instance.amount,
+            transaction_type=tx_type,
+            description=f"Payment {ref} ({instance.payment_method})",
+            reference_type='payment',
+            reference_id=ref,
+            created_by=getattr(instance, 'verified_by', None)
+        )
+        try:
+            AuditTrail.log(
+                operation=AuditTrail.CREATE,
+                module='finance',
+                entity_type='Transaction',
+                entity_id=getattr(tx, 'id', None),
+                user=getattr(instance, 'verified_by', None),
+                changes={'amount': {'new': str(instance.amount)}, 'payment_reference': {'new': ref}},
+                reason=f'Auto-created transaction for Payment {ref}'
+            )
+        except Exception:
+            # Non-fatal: continue
+            pass
+    except Exception:
+        # Best-effort: do not raise from the signal handler
+        import logging
+        logging.getLogger(__name__).exception('Failed to create account transaction for payment %s', getattr(instance, 'id', 'unknown'))

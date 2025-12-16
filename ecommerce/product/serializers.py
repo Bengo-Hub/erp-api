@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import ProductImages, Products, Category, ProductBrands, ProductModels
 from business.models import PickupStations
+from business.serializers import BussinessSerializer, BussinessMinimalSerializer
 from addresses.models import DeliveryRegion
 from .delivery import DeliveryPolicy, RegionalDeliveryPolicy, ProductDeliveryInfo
 from django.contrib.auth import get_user_model
@@ -13,16 +14,29 @@ class ImagesSerializer(serializers.ModelSerializer):
         model = ProductImages
         fields = ('image',)
 
+class StockProductSerializer(serializers.ModelSerializer):
+    """A compact product representation used when returning stock inventory
+    rows. Keeps payloads small for autocomplete and listing endpoints."""
+    class Meta:
+        model = Products
+        fields = ('id', 'title', 'sku', 'serial', 'product_type', 'default_price', 'category', 'brand')
+
+
 class ProductsSerializer(serializers.ModelSerializer):
     date_updated = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
     images = ImagesSerializer(many=True)
     # expose branch_ids via related stock entries for drill-down
     branch_ids = serializers.SerializerMethodField()
+    # Use a minimal business serializer to avoid large nested payloads when
+    # products are embedded inside inventory responses.
+    business = BussinessMinimalSerializer(read_only=True)
 
     class Meta:
         model = Products
         fields = '__all__'
-        depth=2
+        # Use explicit nested serializers instead of automatic depth expansion
+        # to avoid inadvertently serializing TimeZone/ZoneInfo objects directly.
+        depth = 0
 
     def get_branch_ids(self, obj):
         try:
