@@ -12,6 +12,7 @@ class InvoiceSerializer(BaseOrderSerializer):
     is_overdue = serializers.SerializerMethodField()
     days_until_due = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    balance_due = serializers.DecimalField(read_only=True, max_digits=15, decimal_places=2)
     payment_terms_display = serializers.CharField(source='get_payment_terms_display', read_only=True)
     
     class Meta(BaseOrderSerializer.Meta):
@@ -25,7 +26,7 @@ class InvoiceSerializer(BaseOrderSerializer):
             'source_quotation', 'requires_approval', 'approval_status', 'approved_by', 'approved_at',
             'payment_gateway_enabled', 'payment_gateway_name', 'payment_link',
             'is_recurring', 'recurring_interval', 'next_invoice_date',
-            'customer_details', 'items', 'balance_due_display', 'is_overdue', 'days_until_due',
+            'customer_details', 'items', 'balance_due_display', 'balance_due', 'is_overdue', 'days_until_due',
         ]
         read_only_fields = ['invoice_number', 'order_number', 'sent_at', 'viewed_at', 
                            'approved_by', 'approved_at', 'balance_due']
@@ -44,10 +45,57 @@ class InvoiceSerializer(BaseOrderSerializer):
         return None
 
 
+class InvoiceFrontendSerializer(serializers.ModelSerializer):
+    """Compact serializer for frontend invoice detail/list views"""
+    customer_details = ContactSerializer(source='customer', read_only=True)
+    items = OrderItemSerializer(many=True, read_only=True)
+    balance_due_display = serializers.DecimalField(source='balance_due', read_only=True, max_digits=15, decimal_places=2)
+    is_overdue = serializers.SerializerMethodField()
+    days_until_due = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    balance_due = serializers.DecimalField(read_only=True, max_digits=15, decimal_places=2)
+    payment_terms_display = serializers.CharField(source='get_payment_terms_display', read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = [
+            'id', 'invoice_number', 'invoice_date', 'due_date', 'status', 'status_display',
+            'payment_terms', 'payment_terms_display', 'subtotal', 'tax_amount', 'discount_amount',
+            'shipping_cost', 'total', 'balance_due_display', 'balance_due', 'is_overdue', 'days_until_due',
+            'customer_notes', 'terms_and_conditions', 'template_name', 'customer_details', 'items'
+        ]
+
+    def get_is_overdue(self, obj):
+        from django.utils import timezone
+        if obj.due_date and obj.due_date < timezone.now().date() and obj.status not in ['paid', 'cancelled', 'void']:
+            return True
+        return False
+
+    def get_days_until_due(self, obj):
+        from django.utils import timezone
+        if obj.due_date:
+            delta = obj.due_date - timezone.now().date()
+            return delta.days
+        return None
+
+class InvoiceItemCreateSerializer(serializers.Serializer):
+    """Write-only serializer for incoming invoice line items"""
+    product_id = serializers.IntegerField(required=False, allow_null=True)
+    name = serializers.CharField(required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    quantity = serializers.IntegerField(required=False, default=1)
+    unit_price = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, default=0)
+    subtotal = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, default=0)
+    total = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, default=0)
+    tax_rate = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=0)
+    tax_amount = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, default=0)
+    discount_amount = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, default=0)
+
+
 class InvoicePaymentSerializer(serializers.ModelSerializer):
     """Invoice Payment Serializer"""
     invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
-    payment_account_name = serializers.CharField(source='payment_account.account_name', read_only=True)
+    payment_account_name = serializers.CharField(source='payment_account.name', read_only=True)
     
     class Meta:
         model = InvoicePayment
@@ -69,7 +117,7 @@ class InvoiceEmailLogSerializer(serializers.ModelSerializer):
 
 class InvoiceCreateSerializer(serializers.ModelSerializer):
     """Simplified serializer for creating invoices"""
-    items = OrderItemSerializer(many=True, write_only=True)
+    items = InvoiceItemCreateSerializer(many=True, write_only=True)
     
     class Meta:
         model = Invoice
@@ -87,6 +135,9 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
         # Process custom items (auto-create products/assets if needed)
         from core_orders.utils import process_custom_items
         from core_orders.models import OrderItem
+        from django.contrib.contenttypes.models import ContentType
+        from ecommerce.product.models import Products as Product
+        from decimal import Decimal
         
         processed_items = process_custom_items(
             items=items_data,
@@ -95,10 +146,48 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
             category_name=None,
             created_by=invoice.created_by
         )
-        
-        # Create order items
+
+        # Create order items - sanitize and map fields to OrderItem model
         for item_data in processed_items:
-            OrderItem.objects.create(order=invoice, **item_data)
+            # Remove non-model compatibility fields
+            item_data.pop('tax_amount', None)
+            item_data.pop('discount_amount', None)
+
+            quantity = int(item_data.get('quantity', 1) or 1)
+            unit_price = Decimal(str(item_data.get('unit_price', 0) or 0))
+
+            # Determine total price from payload or compute
+            total_price = item_data.get('total') or item_data.get('total_price') or item_data.get('subtotal')
+            if total_price is None:
+                total_price = unit_price * quantity
+            total_price = Decimal(str(total_price))
+
+            # Build fields accepted by OrderItem model
+            order_item_kwargs = {
+                'order': invoice,
+                'name': item_data.get('name') or item_data.get('description') or 'Item',
+                'description': item_data.get('description', ''),
+                'quantity': quantity,
+                'unit_price': unit_price,
+                'total_price': total_price,
+                'notes': item_data.get('notes', '')
+            }
+
+            # If product_id provided, link via GenericForeignKey
+            product_id = item_data.get('product_id') or item_data.get('product')
+            if product_id:
+                try:
+                    product = Product.objects.get(pk=product_id)
+                    order_item_kwargs['content_type'] = ContentType.objects.get_for_model(product)
+                    order_item_kwargs['object_id'] = product.id
+                    # Prefer product title if name was not supplied
+                    if not item_data.get('name'):
+                        order_item_kwargs['name'] = product.title
+                except Product.DoesNotExist:
+                    # ignore missing product and continue with provided name
+                    pass
+
+            OrderItem.objects.create(**order_item_kwargs)
         
         return invoice
 

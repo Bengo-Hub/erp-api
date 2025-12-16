@@ -16,11 +16,20 @@ class ImagesSerializer(serializers.ModelSerializer):
 class ProductsSerializer(serializers.ModelSerializer):
     date_updated = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
     images = ImagesSerializer(many=True)
+    # expose branch_ids via related stock entries for drill-down
+    branch_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = Products
         fields = '__all__'
         depth=2
+
+    def get_branch_ids(self, obj):
+        try:
+            # collect distinct branch ids from stock inventory entries
+            return list(obj.stock.values_list('branch_id', flat=True).distinct())
+        except Exception:
+            return []
 
 class ProductWriteSerializer(serializers.ModelSerializer):    
     class Meta:

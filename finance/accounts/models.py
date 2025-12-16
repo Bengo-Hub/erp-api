@@ -27,13 +27,48 @@ class AccountTypes(models.Model):
 
 # Create your models here.
 class PaymentAccounts(models.Model):
-    name=models.CharField(max_length=255)
-    account_number=models.CharField(max_length=16)
-    account_type=models.ForeignKey(AccountTypes,on_delete=models.CASCADE,related_name="paymentaccounts")
-    opening_balance=models.DecimalField(max_digits=10,decimal_places=2,default=Decimal('0.00'))
+    ACCOUNT_TYPE_CHOICES = (
+        ('bank', 'Bank Account'),
+        ('cash', 'Cash Account'),
+        ('credit_card', 'Credit Card'),
+        ('investment', 'Investment Account'),
+        ('mobile_money', 'Mobile Money'),
+        ('other', 'Other'),
+    )
+    
+    CURRENCY_CHOICES = (
+        ('KES', 'Kenya Shilling (KES)'),
+        ('USD', 'US Dollar (USD)'),
+        ('EUR', 'Euro (EUR)'),
+        ('GBP', 'British Pound (GBP)'),
+    )
+    
+    STATUS_CHOICES = (
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('suspended', 'Suspended'),
+    )
+    
+    name = models.CharField(max_length=255)
+    account_number = models.CharField(max_length=50, unique=True)
+    account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES, default='bank')
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='KES')
+    opening_balance = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    description = models.TextField(blank=True, null=True)
+    
+    # Bank-specific fields
+    bank_name = models.CharField(max_length=255, blank=True, null=True)
+    branch = models.CharField(max_length=255, blank=True, null=True)
+    swift_code = models.CharField(max_length=20, blank=True, null=True)
+    iban = models.CharField(max_length=50, blank=True, null=True)
+    
+    # Audit fields
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.account_number})"
 
     class Meta:
         db_table = 'payment_accounts'
@@ -43,6 +78,8 @@ class PaymentAccounts(models.Model):
             models.Index(fields=['name'], name='idx_payment_accounts_name'),
             models.Index(fields=['account_number'], name='idx_payment_accounts_number'),
             models.Index(fields=['account_type'], name='idx_payment_accounts_type'),
+            models.Index(fields=['status'], name='idx_payment_accounts_status'),
+            models.Index(fields=['currency'], name='idx_payment_accounts_currency'),
         ]
 
 class TransactionPayment(models.Model):

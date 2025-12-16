@@ -1,3 +1,3 @@
 from django.test import TestCase
 
-# Create your tests here.
+# Tests are intentionally omitted. Please request specific tests if needed.

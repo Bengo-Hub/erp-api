@@ -15,6 +15,7 @@ from finance.accounts.models import PaymentAccounts, Transaction
 from finance.expenses.models import Expense
 from finance.taxes.models import Tax, TaxPeriod
 from finance.payment.models import BillingDocument, Payment
+from finance.invoicing.models import Invoice
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +95,17 @@ class FinanceAnalyticsService:
         """
         try:
             # Build base querysets
-            invoice_qs = BillingDocument.objects.filter(
-                document_type='INVOICE',
+            # Include both legacy BillingDocument invoices and new Invoice model records.
+            billing_qs = BillingDocument.objects.filter(
+                document_type='invoice',
                 issue_date__gte=start_date,
-                issue_date__lte=end_date
+                issue_date__lte=end_date,
+                related_order__isnull=True  # avoid double-counting invoices linked to orders
+            )
+
+            invoice_model_qs = Invoice.objects.filter(
+                invoice_date__gte=start_date,
+                invoice_date__lte=end_date
             )
             payment_qs = Payment.objects.filter(
                 payment_date__gte=start_date,
@@ -115,12 +123,18 @@ class FinanceAnalyticsService:
                 expense_qs = expense_qs.filter(business_id=business_id)
             
             # Calculate totals
-            total_invoices = invoice_qs.aggregate(total=Sum('total'))['total'] or 0
+            total_billing = billing_qs.aggregate(total=Sum('total'))['total'] or 0
+            total_invoice_models = invoice_model_qs.aggregate(total=Sum('total'))['total'] or 0
+            total_invoices = total_billing + total_invoice_models
             total_payments = payment_qs.aggregate(total=Sum('amount'))['total'] or 0
             total_expenses = expense_qs.aggregate(total=Sum('total_amount'))['total'] or 0
-            outstanding_invoices = invoice_qs.filter(balance_due__gt=0).aggregate(
+            outstanding_billing = billing_qs.filter(balance_due__gt=0).aggregate(
                 total=Sum('balance_due')
             )['total'] or 0
+            outstanding_invoice_models = invoice_model_qs.filter(balance_due__gt=0).aggregate(
+                total=Sum('balance_due')
+            )['total'] or 0
+            outstanding_invoices = outstanding_billing + outstanding_invoice_models
             
             return {
                 'total_invoices': round(total_invoices, 2),

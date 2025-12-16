@@ -5,7 +5,7 @@ from django.utils import timezone
 from hrm.employees.models import Employee
 from hrm.leave.models import LeaveCategory, LeaveEntitlement, LeaveRequest, LeaveBalance
 
-def create_sample_leave_data():
+def create_sample_leave_data(minimal=False):
     # Clear existing data (optional)
     LeaveRequest.objects.all().delete()
     LeaveBalance.objects.all().delete()
@@ -71,7 +71,9 @@ def create_sample_leave_data():
 
     # Create Leave Requests
     status_choices = ['pending', 'approved', 'rejected', 'cancelled']
-    for i in range(20):
+    # Control how many leave requests we generate
+    num_requests = 1 if minimal else 20
+    for i in range(num_requests):
         employee = random.choice(employees)
         category = random.choice(created_categories)
         

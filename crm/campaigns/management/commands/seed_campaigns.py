@@ -11,8 +11,17 @@ User = get_user_model()
 class Command(BaseCommand):
     help = 'Seeds sample campaign data for testing and development'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--minimal',
+            action='store_true',
+            help='Seed a minimal set of campaigns (1)'
+        )
+
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('Starting to seed campaign data...'))
+        # Minimal mode support
+        minimal = options.get('minimal', False)
         
         # Get or create admin user
         admin_user = User.objects.filter(is_superuser=True).first()
@@ -25,8 +34,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('No user found to create campaigns'))
             return
         
-        # Get business branch
-        branch = Branch.objects.first()
+        # Get business branch - prefer main HQ branch
+        branch = Branch.objects.filter(is_main_branch=True).first()
+        if not branch:
+            branch = Branch.objects.filter(is_active=True).first()
         if not branch:
             self.stdout.write(self.style.ERROR('No business branch found'))
             return
@@ -134,7 +145,7 @@ class Command(BaseCommand):
         ]
         
         created_campaigns = []
-        for campaign_data in campaigns_data:
+        for campaign_data in (campaigns_data[:1] if minimal else campaigns_data):
             # Create campaign
             campaign, created = Campaign.objects.get_or_create(
                 name=campaign_data['name'],

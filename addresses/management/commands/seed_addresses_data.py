@@ -15,14 +15,22 @@ class Command(BaseCommand):
         # Note: DeliveryRegion and PickupStations are created by middleware
         # We only need to seed data that is NOT automatically created by middleware
         
-        # Get existing business (created by middleware)
-        business = Bussiness.objects.first()
-        if not business:
-            self.stdout.write(self.style.ERROR('No business found. Please ensure middleware has run first.'))
-            return
+        # Ensure the single configured business exists; if missing, create it using a standard name
+        business, created = Bussiness.objects.get_or_create(
+            name='Codevertex IT Solutions',
+            defaults={
+                'start_date': '2024-01-01',
+                'currency': 'KES',
+                'kra_number': 'A123456789X',
+                'business_type': 'limited_company',
+                'county': 'Nairobi'
+            }
+        )
+        if created:
+            self.stdout.write(self.style.SUCCESS(f'Created default business: {business.name}'))
         
-        # Get existing business location (created by middleware)
-        location = BusinessLocation.objects.filter(default=True, is_active=True).first()
+        # Get existing business location if any; otherwise create a default location
+        location = business.location if business.location and business.location.is_active else None
         if not location:
             self.stdout.write(self.style.WARNING('No business location found. Creating default location...'))
             location = BusinessLocation.objects.create(
@@ -36,6 +44,9 @@ class Command(BaseCommand):
                 default=True,
                 is_active=True
             )
+            # link to business
+            business.location = location
+            business.save()
         
         # Ensure admin user exists for address creation
         admin_user = User.objects.filter(is_superuser=True).first()
@@ -149,4 +160,4 @@ class Command(BaseCommand):
                 self.stdout.write(f'Created address book entry: {address_book.address_label}')
         
         self.stdout.write(self.style.SUCCESS('Addresses data seeding completed successfully!'))
-        self.stdout.write(self.style.SUCCESS('Note: DeliveryRegion and PickupStations are automatically created by middleware'))
+        self.stdout.write(self.style.SUCCESS('Note: DeliveryRegion and PickupStations may be created by dedicated seeders or derived from business locations'))

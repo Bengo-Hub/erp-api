@@ -19,7 +19,6 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-
 class ApiRequestMetric(models.Model):
     """Store API request performance metrics."""
     method = models.CharField(max_length=10)

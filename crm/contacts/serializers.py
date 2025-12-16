@@ -2,6 +2,7 @@
 from rest_framework import serializers
 from .models import Contact,CustomerGroup,ContactAccount
 from business.models import Bussiness
+from business.serializers import BusinessLocationSerializer
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -33,6 +34,8 @@ class ContactSerializer(serializers.ModelSerializer):
     created_by=ContactUserSerializer(required=False,read_only=True)
     customer_group=ContactCustomerGroupSerializer()
     accounts=ContactAccountSerializer(many=True, read_only=True)
+    # Provide serialized location (branch location) for API responses
+    location = BusinessLocationSerializer(read_only=True)
     class Meta:
         model = Contact
         fields = ['id', 'contact_id', 'contact_type', 'user', 'location', 'designation', 'customer_group', 'account_type',

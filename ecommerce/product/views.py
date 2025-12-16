@@ -143,6 +143,18 @@ class ProductViewSet(BaseModelViewSet):
         # Get all query parameters
         params = self.request.query_params
         user = self.request.user
+        # Enforce multi-tenant context (Business/Branch)
+        try:
+            from core.utils import get_business_id_from_request, get_branch_id_from_request
+            business_id = get_business_id_from_request(self.request)
+            branch_id = get_branch_id_from_request(self.request)
+            if branch_id:
+                queryset = queryset.filter(branch_id=branch_id)
+            elif business_id:
+                queryset = queryset.filter(branch__business_id=business_id)
+        except Exception:
+            # If context helpers fail, proceed without restricting, but do not break
+            pass
         
         # Basic pagination parameters
         limit = params.get('limit')

@@ -1,7 +1,8 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Q, Sum, Count
@@ -250,6 +251,41 @@ class QuotationViewSet(BaseModelViewSet):
         except Exception as e:
             return APIResponse.error(message=str(e))
     
+    @action(detail=True, methods=['post'], url_path='generate-share-link')
+    def generate_share_link(self, request, pk=None):
+        """
+        Generate a public shareable link for the quotation
+        """
+        quotation = self.get_object()
+        
+        try:
+            # Generate share token if not exists
+            token = quotation.generate_share_token()
+            public_url = quotation.get_public_share_url(request)
+            
+            # Update allow_public_payment flag
+            allow_payment = request.data.get('allow_payment', False)
+            if allow_payment:
+                quotation.allow_public_payment = True
+                quotation.save(update_fields=['allow_public_payment'])
+            
+            return APIResponse.success(
+                data={
+                    'id': quotation.id,
+                    'url': public_url,
+                    'token': token,
+                    'is_shared': quotation.is_shared,
+                    'allow_payment': quotation.allow_public_payment
+                },
+                message='Share link generated successfully'
+            )
+        except Exception as e:
+            return APIResponse.error(
+                error_code='SHARE_LINK_ERROR',
+                message=f'Failed to generate share link: {str(e)}',
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
     @action(detail=True, methods=['post'], url_path='send-follow-up')
     def send_follow_up(self, request, pk=None):
         """Send follow-up reminder"""
@@ -353,6 +389,45 @@ class QuotationViewSet(BaseModelViewSet):
             
         except Exception as e:
             return APIResponse.error(message=str(e))
+    
+    @action(detail=True, methods=['get'], url_path='pdf')
+    def pdf_stream(self, request, pk=None):
+        """
+        Stream quotation as PDF for inline preview or download
+        Query Parameters:
+        - download: 'true' to force download, 'false' (default) for inline preview
+        """
+        try:
+            quotation = self.get_object()
+            
+            # Get company info from branch/business
+            company_info = None
+            if quotation.branch:
+                company_info = {
+                    'name': quotation.branch.business.name if hasattr(quotation.branch, 'business') else 'Company Name',
+                    'address': getattr(quotation.branch, 'address', ''),
+                    'email': getattr(quotation.branch, 'email', ''),
+                    'phone': getattr(quotation.branch, 'phone', ''),
+                }
+            
+            # Generate PDF
+            pdf_bytes = generate_quotation_pdf(quotation, company_info)
+            
+            # Determine if download or inline
+            download = request.query_params.get('download', 'false').lower() == 'true'
+            disposition = 'attachment' if download else 'inline'
+            
+            # Return PDF as HTTP response
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'{disposition}; filename="Quotation_{quotation.quotation_number}.pdf"'
+            response['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
+            
+            return response
+            
+        except Quotation.DoesNotExist:
+            return HttpResponse('Quotation not found', status=404, content_type='text/plain')
+        except Exception as e:
+            return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
     
     @action(detail=False, methods=['post'], url_path='bulk-send')
     def bulk_send(self, request):
@@ -460,6 +535,8 @@ class QuotationViewSet(BaseModelViewSet):
             return APIResponse.error(message=str(e))
 
 
+
+
 class QuotationEmailLogViewSet(viewsets.ReadOnlyModelViewSet):
     """Quotation Email Log (Read-only)"""
     queryset = QuotationEmailLog.objects.all()
@@ -467,3 +544,39 @@ class QuotationEmailLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     filterset_fields = ['quotation', 'email_type', 'status']
     ordering = ['-sent_at']
+
+
+class PublicQuotationView(APIView):
+    """
+    Public API endpoint for viewing quotations via share token
+    Allows unauthenticated access to shared quotations
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request, quotation_id, token):
+        """Retrieve quotation by ID and share token"""
+        try:
+            quotation = Quotation.objects.get(id=quotation_id, share_token=token, is_shared=True)
+            
+            # Mark as viewed if customer is viewing
+            if hasattr(quotation, 'mark_as_viewed'):
+                quotation.mark_as_viewed()
+            
+            serializer = QuotationSerializer(quotation)
+            return APIResponse.success(
+                data=serializer.data,
+                message='Quotation retrieved successfully'
+            )
+        except Quotation.DoesNotExist:
+            return APIResponse.error(
+                error_code='QUOTATION_NOT_FOUND',
+                message='Quotation not found or access denied',
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return APIResponse.error(
+                error_code='QUOTATION_VIEW_ERROR',
+                message=f'Error retrieving quotation: {str(e)}',
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+

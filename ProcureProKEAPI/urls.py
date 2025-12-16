@@ -48,6 +48,8 @@ urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')), # Add the language switching URL pattern
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema')),
+    # Public routes (no authentication required) - must be before versioned API routes
+    path('', include(('finance.invoicing.public_urls', 'public'), namespace='public')),
     path('metrics/', ExportToDjangoView, name='prometheus-metrics'),  # Prometheus metrics endpoint
     # v1 namespace 
     # v1 namespace

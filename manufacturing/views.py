@@ -45,6 +45,15 @@ class FinishedProductViewSet(BaseModelViewSet):
                 Q(title__icontains=search) | 
                 Q(description__icontains=search)
             )
+        # Branch scoping - filter by stock's branch when provided
+        try:
+            from core.utils import get_branch_id_from_request
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(stock__branch_id=branch_id).distinct()
         return queryset
 
 class RawMaterialViewSet(BaseModelViewSet):
@@ -64,6 +73,15 @@ class RawMaterialViewSet(BaseModelViewSet):
                 Q(title__icontains=search) | 
                 Q(description__icontains=search)
             )
+        # Branch scoping - filter by stock's branch when provided
+        try:
+            from core.utils import get_branch_id_from_request
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(stock__branch_id=branch_id).distinct()
         return queryset
 
 # views.py
@@ -178,6 +196,26 @@ class ProductionBatchViewSet(BaseModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        try:
+            from core.utils import get_branch_id_from_request
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
+
+        if not self.request.user.is_superuser:
+            from business.models import Branch
+            user = self.request.user
+            owned_branches = Branch.objects.filter(business__owner=user)
+            employee_branches = Branch.objects.filter(business__employees__user=user)
+            branches = owned_branches | employee_branches
+            queryset = queryset.filter(branch__in=branches)
+        return queryset
     
     @action(detail=True, methods=['post'])
     def start_production(self, request, pk=None):

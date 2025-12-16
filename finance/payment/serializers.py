@@ -12,10 +12,26 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'code', 'is_active', 'requires_verification']
 
 class PaymentTransactionSerializer(serializers.ModelSerializer):
+    branch_id = serializers.SerializerMethodField(read_only=True)
+    branch_details = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = PaymentTransaction
         fields = ['id', 'transaction_type', 'amount', 'status', 'transaction_id', 
-                 'transaction_date', 'raw_response']
+             'transaction_date', 'raw_response', 'branch_id', 'branch_details']
+
+    def get_branch_id(self, obj):
+        try:
+            return obj.branch.id if obj.branch else None
+        except Exception:
+            return None
+
+    def get_branch_details(self, obj):
+        try:
+            if obj.branch:
+                return {'id': obj.branch.id, 'name': obj.branch.name, 'code': getattr(obj.branch, 'branch_code', None)}
+            return None
+        except Exception:
+            return None
 
 class PaymentRefundSerializer(serializers.ModelSerializer):
     processed_by_name = serializers.CharField(source='processed_by.get_full_name', read_only=True)
@@ -50,12 +66,14 @@ class BillingDocumentSerializer(serializers.ModelSerializer):
     customer_details = ContactSerializer(source='customer', read_only=True)
     related_order_details = OrderSerializer(source='related_order', read_only=True)
     days_overdue = serializers.SerializerMethodField()
+    branch_id = serializers.SerializerMethodField(read_only=True)
+    branch_details = serializers.SerializerMethodField(read_only=True)
     
     class Meta:
         model = BillingDocument
         fields = [
             'id', 'document_number', 'document_type', 'document_type_display',
-            'status', 'status_display', 'business', 'location', 'customer',
+            'status', 'status_display', 'business', 'location', 'branch', 'branch_id', 'branch_details', 'customer',
             'customer_details', 'related_order', 'related_order_details', 'account',
             'subtotal', 'tax_amount', 'total', 'amount_paid', 'balance_due',
             'issue_date', 'due_date', 'payment_date', 'days_overdue',
@@ -72,6 +90,20 @@ class BillingDocumentSerializer(serializers.ModelSerializer):
     def get_payments(self, obj):
         payments = Payment.objects.filter(document=obj)
         return PaymentSerializer(payments, many=True).data
+
+    def get_branch_id(self, obj):
+        try:
+            return obj.branch.id if obj.branch else None
+        except Exception:
+            return None
+
+    def get_branch_details(self, obj):
+        try:
+            if obj.branch:
+                return {'id': obj.branch.id, 'name': obj.branch.name, 'code': getattr(obj.branch, 'branch_code', None)}
+            return None
+        except Exception:
+            return None
 
     def get_days_overdue(self, obj):
         from django.utils import timezone
@@ -115,8 +147,24 @@ class PaymentSerializer(serializers.ModelSerializer):
             'reference_number', 'transaction_id', 'payment_date', 'verified_by',
             'verified_by_name', 'verification_date', 'notes', 'transactions', 'refunds',
             'document', 'document_details'
+            , 'branch_id', 'branch_details'
         ]
         read_only_fields = ['reference_number', 'verification_date', 'verified_by']
+
+    # Branch helpers
+    def get_branch_id(self, obj):
+        try:
+            return obj.branch.id if obj.branch else None
+        except Exception:
+            return None
+
+    def get_branch_details(self, obj):
+        try:
+            if obj.branch:
+                return {'id': obj.branch.id, 'name': obj.branch.name, 'code': getattr(obj.branch, 'branch_code', None)}
+            return None
+        except Exception:
+            return None
 
 class POSPaymentSerializer(PaymentSerializer):
     class Meta(PaymentSerializer.Meta):
@@ -135,9 +183,16 @@ class CreatePOSPaymentSerializer(serializers.ModelSerializer):
         change_amount = max(0, float(tendered_amount) - float(amount))
         
         # Create payment with calculated change
+        sale = validated_data.get('sale')
+        branch = None
+        try:
+            branch = sale.register.branch if sale and sale.register else None
+        except Exception:
+            branch = None
         payment = POSPayment.objects.create(
             **validated_data,
             change_amount=change_amount,
+            branch=branch,
             status='completed'  # POS payments are typically completed immediately
         )
         
@@ -147,7 +202,8 @@ class CreatePOSPaymentSerializer(serializers.ModelSerializer):
             transaction_type='payment',
             amount=amount,
             status='completed',
-            transaction_id=payment.reference_number
+            transaction_id=payment.reference_number,
+            branch=payment.branch
         )
         
         return payment 

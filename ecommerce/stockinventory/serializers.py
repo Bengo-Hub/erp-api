@@ -47,6 +47,7 @@ class BranchSerializer(serializers.ModelSerializer):
 class StockSerializer(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
     branch=BranchSerializer()
+    branch_id = serializers.IntegerField(source='branch.id', read_only=True)
     product=ProductsSerializer()
     supplier=SupplierSerializer()
     variation = VariationSerializer() 
@@ -61,6 +62,7 @@ class StockSerializer(serializers.ModelSerializer):
         return obj.salesitems.aggregate(total_sales=Sum('qty'))['total_sales'] if obj.salesitems.exists() else 0
 
 class SingleStockSerializer(serializers.ModelSerializer):
+    branch_id = serializers.IntegerField(source='branch.id', read_only=True)
     class Meta:
         model = StockInventory
         fields = '__all__'

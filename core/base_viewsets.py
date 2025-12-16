@@ -69,8 +69,13 @@ class BaseModelViewSet(viewsets.ModelViewSet):
     
     def get_entity_type(self):
         """Get entity type from model name."""
-        if hasattr(self, 'queryset') and self.queryset.model:
+        if hasattr(self, 'queryset') and self.queryset is not None:
             return self.queryset.model.__name__
+        if hasattr(self, 'serializer_class'):
+            # Try to get model from serializer Meta class
+            serializer = self.serializer_class
+            if hasattr(serializer, 'Meta') and hasattr(serializer.Meta, 'model'):
+                return serializer.Meta.model.__name__
         return self.__class__.__name__.replace('ViewSet', '')
     
     def get_entity_id(self, obj):

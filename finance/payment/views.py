@@ -113,6 +113,29 @@ class SplitPaymentView(APIView):
             
             # Process split payment
             payment_service = get_payment_service()
+
+            # If branch header is provided, validate entity belongs to that branch
+            try:
+                from core.utils import get_branch_id_from_request
+                header_branch_id = request.query_params.get('branch_id') or get_branch_id_from_request(request)
+            except Exception:
+                header_branch_id = None
+
+            if header_branch_id:
+                if entity_type == 'order':
+                    from core_orders.models import BaseOrder as OrderModel
+                    order = OrderModel.objects.filter(id=entity_id).first()
+                    if order and order.branch_id and str(order.branch_id) != str(header_branch_id):
+                        return APIResponse.forbidden(message='Order does not belong to the specified branch', correlation_id=correlation_id)
+                elif entity_type == 'invoice':
+                    bd = BillingDocument.objects.filter(id=entity_id).first()
+                    if bd and bd.branch_id and str(bd.branch_id) != str(header_branch_id):
+                        return APIResponse.forbidden(message='Invoice does not belong to the specified branch', correlation_id=correlation_id)
+                elif entity_type == 'pos_sale':
+                    sale = Sales.objects.filter(id=entity_id).select_related('register__branch').first()
+                    sale_branch_id = sale.register.branch_id if sale and sale.register and sale.register.branch_id else None
+                    if sale_branch_id and str(sale_branch_id) != str(header_branch_id):
+                        return APIResponse.forbidden(message='POS sale does not belong to the specified branch', correlation_id=correlation_id)
             success, message, payment_records = payment_service.process_split_payment(
                 entity_type=entity_type,
                 entity_id=entity_id,
@@ -246,6 +269,30 @@ class ProcessPaymentView(APIView):
             
             # Process the payment
             payment_service = get_payment_service()
+
+            # If a branch header is provided, validate that the target entity belongs to that branch
+            try:
+                from core.utils import get_branch_id_from_request
+                header_branch_id = request.query_params.get('branch_id') or get_branch_id_from_request(request)
+            except Exception:
+                header_branch_id = None
+
+            if header_branch_id:
+                # Validate common entity types
+                if entity_type == 'order':
+                    from core_orders.models import BaseOrder as OrderModel
+                    order = OrderModel.objects.filter(id=entity_id).first()
+                    if order and order.branch_id and str(order.branch_id) != str(header_branch_id):
+                        return APIResponse.forbidden(message='Order does not belong to the specified branch', correlation_id=correlation_id)
+                elif entity_type == 'invoice':
+                    bd = BillingDocument.objects.filter(id=entity_id).first()
+                    if bd and bd.branch_id and str(bd.branch_id) != str(header_branch_id):
+                        return APIResponse.forbidden(message='Invoice does not belong to the specified branch', correlation_id=correlation_id)
+                elif entity_type == 'pos_sale':
+                    sale = Sales.objects.filter(id=entity_id).select_related('register__branch').first()
+                    sale_branch_id = sale.register.branch_id if sale and sale.register and sale.register.branch_id else None
+                    if sale_branch_id and str(sale_branch_id) != str(header_branch_id):
+                        return APIResponse.forbidden(message='POS sale does not belong to the specified branch', correlation_id=correlation_id)
             success, message, payment_record = payment_service.process_payment(
                 entity_type=entity_type,
                 entity_id=entity_id,
@@ -479,6 +526,16 @@ class PaymentViewSet(BaseModelViewSet):
         if document_id:
             queryset = queryset.filter(document_id=document_id)
 
+        # Branch scoping via related billing document
+        try:
+            from core.utils import get_branch_id_from_request
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(document__branch_id=branch_id)
+
         return queryset
 
 class POSPaymentViewSet(BaseModelViewSet):
@@ -486,6 +543,19 @@ class POSPaymentViewSet(BaseModelViewSet):
     permission_classes = [IsAuthenticated]
 
     serializer_class = POSPaymentSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        try:
+            from core.utils import get_branch_id_from_request
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(sale__register__branch_id=branch_id)
+
+        return queryset
 
     @action(detail=False, methods=['post'])
     def process_sale(self, request):
@@ -550,7 +620,23 @@ class BillingDocumentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        # ... (filtering logic from billing/views.py)
+        try:
+            from core.utils import get_branch_id_from_request
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
+
+        if not self.request.user.is_superuser:
+            from business.models import Branch
+            user = self.request.user
+            owned_branches = Branch.objects.filter(business__owner=user)
+            employee_branches = Branch.objects.filter(business__employees__user=user)
+            branches = owned_branches | employee_branches
+            queryset = queryset.filter(branch__in=branches)
+
         return queryset
 
     def perform_create(self, serializer):
@@ -558,6 +644,50 @@ class BillingDocumentViewSet(viewsets.ModelViewSet):
     
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+
+    @action(detail=True, methods=['get'], url_path='pdf')
+    def pdf(self, request, pk=None):
+        """Return a PDF representation of this billing document for preview or download."""
+        try:
+            from django.http import HttpResponse
+            from finance.payment import pdf_utils
+            document = self.get_object()
+            # Use invoice generator for INVOICE, receipt for RECEIPT, and generic invoice for others
+            if document.document_type == BillingDocument.INVOICE:
+                pdf_bytes = pdf_utils.download_invoice_pdf(document.id)
+            elif document.document_type == BillingDocument.RECEIPT:
+                # Build receipt data inline for simplicity and generate
+                receipt_data = {
+                    'receipt_number': document.document_number,
+                    'receipt_date': document.issue_date,
+                    'customer_name': str(document.customer) if document.customer else None,
+                    'items': [
+                        {
+                            'description': item.description,
+                            'quantity': item.quantity,
+                            'unit_price': item.unit_price,
+                            'total': item.total
+                        } for item in document.items.all()
+                    ],
+                    'subtotal': document.subtotal or 0,
+                    'tax': document.tax_amount or 0,
+                    'total': document.total,
+                    'payment_method': ''
+                }
+                pdf_bytes = pdf_utils.generate_receipt_pdf(receipt_data)
+            else:
+                # Default to invoice PDF formatting
+                pdf_bytes = pdf_utils.download_invoice_pdf(document.id)
+
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            filename = f"{document.document_number}.pdf"
+            # Allow preview inline; client may set download query param to force attachment
+            disposition = 'attachment' if request.query_params.get('download', '').lower() in ['1', 'true', 'yes'] else 'inline'
+            response['Content-Disposition'] = f"{disposition}; filename=\"{filename}\""
+            return response
+        except Exception as exc:
+            logger.error(f"Error generating PDF for BillingDocument {pk}: {str(exc)}", exc_info=True)
+            return Response({'detail': 'Failed to generate PDF', 'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # add_payment endpoint removed in favor of ProcessPaymentView
 

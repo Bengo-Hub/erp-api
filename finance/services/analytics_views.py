@@ -17,6 +17,7 @@ from datetime import datetime, date, timedelta
 import logging
 
 from core.utils import get_branch_id_from_request
+from finance.analytics.finance_analytics import FinanceAnalyticsService
 
 logger = logging.getLogger(__name__)
 
@@ -43,17 +44,27 @@ def finance_analytics(request):
         period = request.query_params.get('period', 'month').lower()
         business_id = request.query_params.get('business_id')
         
-        # TODO: Implement financial analytics calculation
-        # This should aggregate transactions, expenses, and revenue data
+        service = FinanceAnalyticsService()
         
-        analytics_data = {
-            'period': period,
-            'revenue': 0.0,
-            'expenses': 0.0,
-            'net_profit': 0.0,
-            'cash_balance': 0.0,
-            'generated_at': datetime.now().isoformat(),
-        }
+        # Get financial summary for the period
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        end_date = timezone.now().date()
+        if period == 'week':
+            start_date = end_date - timedelta(days=7)
+        elif period == 'month':
+            start_date = end_date - timedelta(days=30)
+        elif period == 'quarter':
+            start_date = end_date - timedelta(days=90)
+        elif period == 'year':
+            start_date = end_date - timedelta(days=365)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        analytics_data = service.get_financial_summary(start_date, end_date, business_id)
+        analytics_data['period'] = period
+        analytics_data['generated_at'] = datetime.now().isoformat()
         
         return Response(analytics_data, status=http_status.HTTP_200_OK)
     
@@ -73,6 +84,7 @@ def finance_dashboard(request):
     
     Query Parameters:
     - business_id: Optional business filter
+    - period: Time period for analysis ('week', 'month', 'quarter', 'year')
     
     Returns:
     - Key financial metrics
@@ -82,17 +94,13 @@ def finance_dashboard(request):
     """
     try:
         business_id = request.query_params.get('business_id')
+        period = request.query_params.get('period', 'month').lower()
         
-        # TODO: Implement dashboard data aggregation
-        
-        dashboard_data = {
-            'total_revenue': 0.0,
-            'total_expenses': 0.0,
-            'cash_available': 0.0,
-            'accounts_payable': 0.0,
-            'accounts_receivable': 0.0,
-            'generated_at': datetime.now().isoformat(),
-        }
+        service = FinanceAnalyticsService()
+        dashboard_data = service.get_finance_dashboard_data(
+            business_id=business_id,
+            period=period
+        )
         
         return Response(dashboard_data, status=http_status.HTTP_200_OK)
     

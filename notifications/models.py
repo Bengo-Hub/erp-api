@@ -113,11 +113,11 @@ class EmailConfiguration(BaseModel):
         limit_choices_to={'integration_type': 'EMAIL'}
     )
     provider = models.CharField(max_length=20, choices=EMAIL_PROVIDERS, default='SMTP')
-    from_email = models.EmailField(max_length=100, default="noreply@bengoerp.com")
-    from_name = models.CharField(max_length=100, default="Bengo ERP")
+    from_email = models.EmailField(max_length=100, default="gadmin@masterserpace.co.ke")
+    from_name = models.CharField(max_length=100, default="Masters ERP")
     
     # SMTP Settings
-    smtp_host = models.CharField(max_length=100, default="smtp.gmail.com")
+    smtp_host = models.CharField(max_length=100, default="smtppro.zoho.com")
     smtp_port = models.IntegerField(default=587)
     smtp_username = models.CharField(max_length=100, blank=True, null=True)
     smtp_password = models.CharField(max_length=255, blank=True, null=True)
@@ -144,6 +144,80 @@ class EmailConfiguration(BaseModel):
             self.api_secret = Crypto(self.api_secret, 'encrypt').encrypt()
         
         super().save(*args, **kwargs)
+    
+    def get_decrypted_smtp_password(self):
+        """
+        Get decrypted SMTP password for secure use in email sending.
+        
+        Returns:
+            str: The decrypted password, or empty string if not available
+        """
+        if not self.smtp_password:
+            return ""
+        
+        try:
+            from integrations.utils import Crypto
+            # Check if the password is encrypted (starts with Fernet token prefix)
+            if self.smtp_password.startswith("gAAAAA"):
+                crypto = Crypto(self.smtp_password, 'decrypt')
+                decrypted = crypto.decrypt()
+                return decrypted if not decrypted.startswith("Error") else ""
+            else:
+                # Password is not encrypted, return as-is
+                return self.smtp_password
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('notifications')
+            logger.error(f"Failed to decrypt SMTP password: {str(e)}")
+            return ""
+    
+    def get_decrypted_api_key(self):
+        """
+        Get decrypted API key for secure use.
+        
+        Returns:
+            str: The decrypted API key, or empty string if not available
+        """
+        if not self.api_key:
+            return ""
+        
+        try:
+            from integrations.utils import Crypto
+            if self.api_key.startswith("gAAAAA"):
+                crypto = Crypto(self.api_key, 'decrypt')
+                decrypted = crypto.decrypt()
+                return decrypted if not decrypted.startswith("Error") else ""
+            else:
+                return self.api_key
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('notifications')
+            logger.error(f"Failed to decrypt API key: {str(e)}")
+            return ""
+    
+    def get_decrypted_api_secret(self):
+        """
+        Get decrypted API secret for secure use.
+        
+        Returns:
+            str: The decrypted API secret, or empty string if not available
+        """
+        if not self.api_secret:
+            return ""
+        
+        try:
+            from integrations.utils import Crypto
+            if self.api_secret.startswith("gAAAAA"):
+                crypto = Crypto(self.api_secret, 'decrypt')
+                decrypted = crypto.decrypt()
+                return decrypted if not decrypted.startswith("Error") else ""
+            else:
+                return self.api_secret
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('notifications')
+            logger.error(f"Failed to decrypt API secret: {str(e)}")
+            return ""
     
     def __str__(self):
         return f"{self.integration.name} - {self.from_email}"
@@ -194,6 +268,86 @@ class SMSConfiguration(BaseModel):
             self.aws_secret_key = Crypto(self.aws_secret_key, 'encrypt').encrypt()
         
         super().save(*args, **kwargs)
+    
+    def get_decrypted_account_sid(self):
+        """Get decrypted Twilio account SID"""
+        if not self.account_sid:
+            return ""
+        try:
+            from integrations.utils import Crypto
+            if self.account_sid.startswith("gAAAAA"):
+                crypto = Crypto(self.account_sid, 'decrypt')
+                decrypted = crypto.decrypt()
+                return decrypted if not decrypted.startswith("Error") else ""
+            return self.account_sid
+        except Exception as e:
+            import logging
+            logging.getLogger('notifications').error(f"Failed to decrypt account SID: {str(e)}")
+            return ""
+    
+    def get_decrypted_auth_token(self):
+        """Get decrypted auth token"""
+        if not self.auth_token:
+            return ""
+        try:
+            from integrations.utils import Crypto
+            if self.auth_token.startswith("gAAAAA"):
+                crypto = Crypto(self.auth_token, 'decrypt')
+                decrypted = crypto.decrypt()
+                return decrypted if not decrypted.startswith("Error") else ""
+            return self.auth_token
+        except Exception as e:
+            import logging
+            logging.getLogger('notifications').error(f"Failed to decrypt auth token: {str(e)}")
+            return ""
+    
+    def get_decrypted_api_key(self):
+        """Get decrypted API key"""
+        if not self.api_key:
+            return ""
+        try:
+            from integrations.utils import Crypto
+            if self.api_key.startswith("gAAAAA"):
+                crypto = Crypto(self.api_key, 'decrypt')
+                decrypted = crypto.decrypt()
+                return decrypted if not decrypted.startswith("Error") else ""
+            return self.api_key
+        except Exception as e:
+            import logging
+            logging.getLogger('notifications').error(f"Failed to decrypt API key: {str(e)}")
+            return ""
+    
+    def get_decrypted_aws_access_key(self):
+        """Get decrypted AWS access key"""
+        if not self.aws_access_key:
+            return ""
+        try:
+            from integrations.utils import Crypto
+            if self.aws_access_key.startswith("gAAAAA"):
+                crypto = Crypto(self.aws_access_key, 'decrypt')
+                decrypted = crypto.decrypt()
+                return decrypted if not decrypted.startswith("Error") else ""
+            return self.aws_access_key
+        except Exception as e:
+            import logging
+            logging.getLogger('notifications').error(f"Failed to decrypt AWS access key: {str(e)}")
+            return ""
+    
+    def get_decrypted_aws_secret_key(self):
+        """Get decrypted AWS secret key"""
+        if not self.aws_secret_key:
+            return ""
+        try:
+            from integrations.utils import Crypto
+            if self.aws_secret_key.startswith("gAAAAA"):
+                crypto = Crypto(self.aws_secret_key, 'decrypt')
+                decrypted = crypto.decrypt()
+                return decrypted if not decrypted.startswith("Error") else ""
+            return self.aws_secret_key
+        except Exception as e:
+            import logging
+            logging.getLogger('notifications').error(f"Failed to decrypt AWS secret key: {str(e)}")
+            return ""
     
     def __str__(self):
         return f"{self.integration.name} - {self.provider}"
@@ -501,63 +655,6 @@ class UserNotificationPreferences(BaseModel):
         verbose_name = "User Notification Preferences"
         verbose_name_plural = "User Notification Preferences"
 
-
-class NotificationAnalytics(BaseModel):
-    """Analytics for notification performance tracking"""
-    ANALYTICS_TYPE_CHOICES = [
-        ('email', 'Email'),
-        ('sms', 'SMS'),
-        ('push', 'Push Notification'),
-        ('in_app', 'In-App Notification'),
-    ]
-    
-    analytics_type = models.CharField(max_length=20, choices=ANALYTICS_TYPE_CHOICES)
-    date = models.DateField()
-    
-    # Delivery metrics
-    total_sent = models.IntegerField(default=0)
-    delivered = models.IntegerField(default=0)
-    failed = models.IntegerField(default=0)
-    bounced = models.IntegerField(default=0)
-    delivery_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
-    
-    # Engagement metrics (for email and push)
-    opened = models.IntegerField(default=0)
-    clicked = models.IntegerField(default=0)
-    unsubscribed = models.IntegerField(default=0)
-    open_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
-    click_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
-    
-    # Performance metrics
-    average_response_time = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))  # in seconds
-    total_cost = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    
-    # Template performance
-    template_name = models.CharField(max_length=100, blank=True, null=True)
-    campaign_name = models.CharField(max_length=100, blank=True, null=True)
-    
-    def calculate_rates(self):
-        """Calculate delivery, open, and click rates"""
-        if self.total_sent > 0:
-            self.delivery_rate = (self.delivered / self.total_sent) * 100
-            self.open_rate = (self.opened / self.delivered) * 100 if self.delivered > 0 else 0
-            self.click_rate = (self.clicked / self.delivered) * 100 if self.delivered > 0 else 0
-        self.save()
-    
-    def __str__(self):
-        return f"{self.analytics_type} Analytics - {self.date}"
-    
-    class Meta:
-        verbose_name = "Notification Analytics"
-        verbose_name_plural = "Notification Analytics"
-        unique_together = ['analytics_type', 'date', 'template_name']
-        indexes = [
-            models.Index(fields=['analytics_type', 'date']),
-            models.Index(fields=['template_name']),
-            models.Index(fields=['campaign_name']),
-        ]
-
-
 class BounceRecord(BaseModel):
     """Records for bounced emails and failed SMS"""
     BOUNCE_TYPE_CHOICES = [
@@ -665,51 +762,3 @@ class SpamPreventionRule(BaseModel):
         ordering = ['-priority', 'name']
 
 
-class NotificationTest(BaseModel):
-    """A/B testing and notification testing records"""
-    TEST_TYPE_CHOICES = [
-        ('ab_test', 'A/B Test'),
-        ('template_test', 'Template Test'),
-        ('delivery_test', 'Delivery Test'),
-        ('content_test', 'Content Test'),
-    ]
-    
-    name = models.CharField(max_length=100)
-    test_type = models.CharField(max_length=20, choices=TEST_TYPE_CHOICES)
-    description = models.TextField(blank=True, null=True)
-    
-    # Test configuration
-    is_active = models.BooleanField(default=True)
-    start_date = models.DateTimeField()
-    end_date = models.DateTimeField(null=True, blank=True)
-    
-    # Test variants
-    variant_a = models.JSONField()  # Configuration for variant A
-    variant_b = models.JSONField()  # Configuration for variant B
-    variant_c = models.JSONField(null=True, blank=True)  # Optional third variant
-    
-    # Test metrics
-    total_recipients = models.IntegerField(default=0)
-    variant_a_recipients = models.IntegerField(default=0)
-    variant_b_recipients = models.IntegerField(default=0)
-    variant_c_recipients = models.IntegerField(default=0)
-    
-    # Results
-    winning_variant = models.CharField(max_length=10, blank=True, null=True)
-    confidence_level = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
-    
-    # Test criteria
-    success_metric = models.CharField(max_length=50, default='open_rate')  # open_rate, click_rate, conversion_rate
-    minimum_sample_size = models.IntegerField(default=100)
-    significance_level = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.05'))
-    
-    def __str__(self):
-        return f"{self.name} ({self.test_type})"
-    
-    class Meta:
-        verbose_name = "Notification Test"
-        verbose_name_plural = "Notification Tests"
-        indexes = [
-            models.Index(fields=['test_type', 'is_active']),
-            models.Index(fields=['start_date', 'end_date']),
-        ]

@@ -23,9 +23,17 @@ class CustomerSerializer(serializers.ModelSerializer):
         fields=['id','user']
 
 class SalesSerializer(serializers.ModelSerializer):
+    branch_id = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Sales
-        fields = '__all__'
+        fields = '__all__'  # Keep existing fields but add branch via method
+
+    def get_branch_id(self, obj):
+        try:
+            return obj.register.branch.id if obj.register and obj.register.branch else None
+        except Exception:
+            return None
 
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,6 +83,14 @@ class SalesDetailSerializer(serializers.ModelSerializer):
                  'amount_paid', 'balance_due', 'payment_status', 'status', 'paymethod', 
                  'sell_note', 'staff_note', 'sales_items', 'sale_tax', 'sale_discount', 'sub_total']
         depth = 2
+
+    branch_id = serializers.SerializerMethodField(read_only=True)
+
+    def get_branch_id(self, obj):
+        try:
+            return obj.register.branch.id if obj.register and obj.register.branch else None
+        except Exception:
+            return None
 
 class SuspendedSaleSerializer(serializers.ModelSerializer):
     customer = ContactSerializer(read_only=True)

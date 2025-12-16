@@ -52,6 +52,14 @@ class ProductCRUDViewSet(BaseModelViewSet):
             data = request.data.copy()
             images_data = request.FILES.getlist('images')
 
+            # Resolve branch for stock creation
+            from core.utils import get_branch_id_from_request
+            from business.models import Branch
+
+            branch_id = get_branch_id_from_request(request)
+            if not branch_id and 'branch' in data:
+                branch_id = data.get('branch')
+
             serializer = self.get_serializer(data=data)
             if not serializer.is_valid():
                 return APIResponse.validation_error(message='Product validation failed', errors=serializer.errors, correlation_id=correlation_id)
@@ -61,6 +69,24 @@ class ProductCRUDViewSet(BaseModelViewSet):
             # Handle image uploads
             for image_data in images_data:
                 ProductImages.objects.create(product=product, image=image_data)
+
+            # Create default stock inventory unless sourced from purchase order
+            from_purchase_order = request.data.get('from_purchase_order', False)
+            if not from_purchase_order and branch_id:
+                try:
+                    branch = Branch.objects.get(id=branch_id)
+                    StockInventory.objects.create(
+                        product=product,
+                        product_type='single',
+                        branch=branch,
+                        stock_level=1,
+                        availability='In Stock'
+                    )
+                    logger.info(f'Created default StockInventory for product {product.id} with stock_level=1')
+                except Branch.DoesNotExist:
+                    logger.warning(f'Branch {branch_id} not found when creating StockInventory for product {product.id}')
+                except Exception as e:
+                    logger.error(f'Error creating StockInventory for product {product.id}: {str(e)}', exc_info=True)
 
             AuditTrail.log(operation=AuditTrail.CREATE, module='ecommerce', entity_type='Product', entity_id=product.id, user=request.user, reason='Created product', request=request)
             

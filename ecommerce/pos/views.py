@@ -40,6 +40,7 @@ from django.db import transaction
 from decimal import Decimal
 import logging
 from core.base_viewsets import BaseModelViewSet
+from core.utils import get_branch_id_from_request, get_business_id_from_request
 from core.response import APIResponse, get_correlation_id
 from core.audit import AuditTrail
 
@@ -176,12 +177,12 @@ class SalesReturnViewSet(viewsets.ViewSet):
         status = request.data.get('status', None)
         fromdate = request.data.get('fromdate', None)
         todate = request.data.get('todate', None)
-        branch_id = request.data.get('branch_id', None)
+        branch_id = request.query_params.get('branch_id', None) or get_branch_id_from_request(request)
         queryset=self.queryset.values("id","date_returned","return_id","original_sale__sale_id","original_sale__customer__id","original_sale__customer__user__first_name","original_sale__customer__user__last_name","original_sale__salesitems__stock_item__branch__id","original_sale__salesitems__stock_item__branch__business__name","reason","return_amount","return_amount_due","payment_status").order_by('-return_id').distinct()
         user = request.user
-        filter_branches=Branch.objects.filter(id=branch_id).first()
-        if filter_branches:
-            queryset=queryset.filter(original_sale__salesitems__stock_item__branch__in=filter_branches)            
+        filter_branch = Branch.objects.filter(id=branch_id).first()
+        if filter_branch:
+            queryset = queryset.filter(original_sale__salesitems__stock_item__branch=filter_branch)
         if not request.user.is_superuser:
             # Get the business branches where the user is either the owner or an employee
             owned_branches = Branch.objects.filter(business__owner=user)
@@ -333,11 +334,46 @@ class POSViewSet(BaseModelViewSet):
     serializer_class = SalesSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        try:
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(register__branch_id=branch_id)
+
+        # Restrict to business branches for non-superusers
+        if not self.request.user.is_superuser:
+            user = self.request.user
+            owned_branches = Branch.objects.filter(business__owner=user)
+            employee_branches = Branch.objects.filter(business__employees__user=user)
+            branches = owned_branches | employee_branches
+            queryset = queryset.filter(register__branch__in=branches)
+
+        return queryset
+
     @action(detail=False, methods=['post'])
     def create_sale(self, request):
         try:
             correlation_id = get_correlation_id(request)
             with transaction.atomic():
+                # Validate register belongs to branch header (if provided)
+                try:
+                    header_branch_id = get_branch_id_from_request(request)
+                except Exception:
+                    header_branch_id = None
+
+                if header_branch_id:
+                    reg_id = request.data.get('register', None)
+                    if reg_id:
+                        reg = Register.objects.filter(pk=reg_id, branch_id=header_branch_id).first()
+                        if not reg:
+                            return APIResponse.bad_request(message='Register does not belong to selected branch', error_id='invalid_register', correlation_id=correlation_id)
+                    else:
+                        # If no register provided, do not proceed — require explicit register assignment in POS sale
+                        return APIResponse.bad_request(message='Register is required when using branch header', error_id='register_required', correlation_id=correlation_id)
                 # Create the sale first
                 sale_serializer = self.get_serializer(data=request.data)
                 if not sale_serializer.is_valid():
@@ -587,18 +623,50 @@ class RegisterViewSet(BaseModelViewSet):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        try:
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
+
+        if not self.request.user.is_superuser:
+            user = self.request.user
+            owned_branches = Branch.objects.filter(business__owner=user)
+            employee_branches = Branch.objects.filter(business__employees__user=user)
+            branches = owned_branches | employee_branches
+            queryset = queryset.filter(branch__in=branches)
+
+        return queryset
+
     @action(detail=False, methods=['post'])
     def create_or_get_register(self, request):
         """Create a new register or get existing one for a user and branch"""
         try:
             user_id = request.data.get('user_id')
-            branch_id = request.data.get('branch_id')
+            branch_id = request.query_params.get('branch_id') or get_branch_id_from_request(request)
             
             if not user_id or not branch_id:
                 return Response({
                     'error': 'User ID and Branch ID are required'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
+            # Check if the branch exists
+            branch = Branch.objects.filter(id=branch_id).first()
+            if not branch:
+                return Response({'error': 'Branch not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Check if the user has access to this branch (non-superuser)
+            if not request.user.is_superuser:
+                owned_branches = Branch.objects.filter(business__owner=request.user)
+                employee_branches = Branch.objects.filter(business__employees__user=request.user)
+                allowed = owned_branches | employee_branches
+                if not allowed.filter(id=branch_id).exists():
+                    return Response({'error': 'Not allowed to create register for this branch'}, status=status.HTTP_403_FORBIDDEN)
+
             # Check if there's already a register for this user and branch
             existing_register = Register.objects.filter(
                 user_id=user_id,

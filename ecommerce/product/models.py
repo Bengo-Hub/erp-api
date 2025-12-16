@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from ecommerce.vendor.models import Vendor
+from business.models import Bussiness
 
 User = get_user_model()
 # Create your models here.
@@ -153,6 +154,16 @@ class Products(models.Model):
     seo_title = models.CharField(max_length=100, blank=True, null=True)
     seo_description = models.TextField(blank=True, null=True)
     seo_keywords = models.CharField(max_length=255, blank=True, null=True)
+    # Multi-tenant/business ownership
+    business = models.ForeignKey(Bussiness, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
+    # Product type: goods or service
+    PRODUCT_TYPES = (
+        ('goods', 'Goods'),
+        ('service', 'Service'),
+    )
+    product_type = models.CharField(max_length=20, choices=PRODUCT_TYPES, default='goods')
+    # Default price useful for services or quick creation
+    default_price = models.DecimalField(max_digits=14, decimal_places=2, default=0.00)
 
     def __str__(self):
         return self.title
@@ -171,6 +182,8 @@ class Products(models.Model):
             models.Index(fields=['category'], name='idx_product_category'),
             models.Index(fields=['brand'], name='idx_product_brand'),
             models.Index(fields=['created_at'], name='idx_product_created_at'),
+            models.Index(fields=['business'], name='idx_product_business'),
+            models.Index(fields=['product_type'], name='idx_product_type'),
         ]
 
     def product_total(self):

@@ -29,7 +29,7 @@ class CheckoutService:
     - Order status tracking and notifications
     """
     
-    def __init__(self, cart_id=None, cart=None, user=None):
+    def __init__(self, cart_id=None, cart=None, user=None, branch_id=None):
         """
         Initialize checkout service with either a cart_id or cart object.
         """
@@ -46,6 +46,8 @@ class CheckoutService:
         self.user = user or self.cart.user
         # We'll handle guest checkout case in process_checkout when user is None
         self.is_guest = self.user is None
+        # branch context (int id)
+        self.branch_id = branch_id
 
     @staticmethod
     def _generate_password(length=12):
@@ -337,6 +339,19 @@ class CheckoutService:
         if checkout_data.get('billing_address_id'):
             billing_address = AddressBook.objects.get(id=checkout_data.get('billing_address_id'))
         
+        # Determine order branch
+        branch_id = checkout_data.get('branch_id') or self.branch_id
+        # If no branch provided, derive from cart items (require all items to be from the same branch)
+        if not branch_id:
+            branch_ids = set()
+            for cart_item in self.cart.items.all():
+                stock_item = getattr(cart_item, 'stock_item', None) or getattr(cart_item, 'product', None)
+                if stock_item and getattr(stock_item, 'branch_id', None):
+                    branch_ids.add(stock_item.branch_id)
+            if len(branch_ids) > 1:
+                raise ValueError('All cart items must belong to the same branch for checkout')
+            branch_id = branch_ids.pop() if branch_ids else None
+
         # Create order
         order = Order.objects.create(
             customer=customer,
@@ -352,6 +367,7 @@ class CheckoutService:
             status='pending',
             payment_status='pending',
             balance_due=order_amount,
+            branch_id=branch_id,
             notes=checkout_data.get('notes', '')
         )
         

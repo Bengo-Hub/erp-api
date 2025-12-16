@@ -78,6 +78,12 @@ class Quotation(BaseOrder):
     follow_up_date = models.DateField(null=True, blank=True)
     reminder_sent = models.BooleanField(default=False)
     
+    # Sharing & Public Access
+    share_token = models.CharField(max_length=255, unique=True, null=True, blank=True, help_text="Unique token for public share link")
+    is_shared = models.BooleanField(default=False, help_text="Whether this quotation has been shared publicly")
+    shared_at = models.DateTimeField(null=True, blank=True, help_text="When the quotation was first shared")
+    allow_public_payment = models.BooleanField(default=False, help_text="Allow customer to make payment via public link")
+    
     class Meta:
         verbose_name = 'Quotation'
         verbose_name_plural = 'Quotations'
@@ -248,6 +254,30 @@ class Quotation(BaseOrder):
         self.reminder_sent = True
         self.save(update_fields=['reminder_sent'])
         # TODO: Implement email sending logic
+    
+    def generate_share_token(self):
+        """Generate a unique share token for public access"""
+        import secrets
+        if not self.share_token:
+            self.share_token = secrets.token_urlsafe(32)
+            self.is_shared = True
+            self.shared_at = timezone.now()
+            self.save(update_fields=['share_token', 'is_shared', 'shared_at'])
+        return self.share_token
+    
+    def get_public_share_url(self, request=None):
+        """Get the public share URL for this quotation"""
+        if not self.share_token:
+            self.generate_share_token()
+        
+        from django.urls import reverse
+        if request:
+            base_url = request.build_absolute_uri('/')
+        else:
+            from django.conf import settings
+            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        
+        return f"{base_url}public/quotation/{self.id}/{self.share_token}"
     
     def __str__(self):
         return f"{self.quotation_number} - {self.customer} - {self.get_status_display()}"

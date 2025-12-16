@@ -36,11 +36,17 @@ class Command(BaseCommand):
             action='store_true',
             help='Simulate complete manufacturing workflow with batch production',
         )
+        parser.add_argument(
+            '--minimal',
+            action='store_true',
+            help='Seed a minimal manufacturing dataset (small counts and 1-2 items)',
+        )
 
     def handle(self, *args, **options):
         clear_data = options['clear']
         full_seeding = options['full']
         simulate = options['simulate']
+        minimal = options.get('minimal')
         
         self.stdout.write(self.style.SUCCESS('Starting manufacturing module seeding...'))
         
@@ -74,16 +80,20 @@ class Command(BaseCommand):
         
         # Create products and raw materials if full seeding is requested
         if full_seeding:
-            self._create_products_and_raw_materials(location)
+            # In minimal mode create a reduced set of products/raw materials
+            if minimal:
+                self._create_products_and_raw_materials(location, minimal=True)
+            else:
+                self._create_products_and_raw_materials(location)
         
         # Create manufacturing formulas
         formulas = self._create_formulas(admin_user)
         
         # Create production batches
-        # Get the existing branch for Codevertex Africa
-        business = Bussiness.objects.filter(name='Codevertex Africa').first()
+        # Prefer the standardized single business 'Codevertex IT Solutions'; fall back to the first available business
+        business = Bussiness.objects.filter(name__iexact='Codevertex IT Solutions').first() or Bussiness.objects.first()
         if not business:
-            self.stdout.write(self.style.ERROR('Business "Codevertex Africa" not found. Please run business seeding first.'))
+            self.stdout.write(self.style.ERROR('No business found. Please run business seeding first.'))
             return
         
         branch = Branch.objects.filter(business=business, is_main_branch=True).first()
@@ -91,7 +101,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('Main branch not found. Please run business seeding first.'))
             return
         
-        batches = self._create_production_batches(admin_user, branch, formulas)
+        batches = self._create_production_batches(admin_user, branch, formulas, minimal=minimal)
         
         # Simulate workflow if requested
         if simulate:
@@ -119,12 +129,12 @@ class Command(BaseCommand):
             return User.objects.first()  # Fallback to any available user
 
     def _get_or_create_business_location(self):
-        """Get the existing business location for Codevertex Africa."""
+        """Get the existing business location for the canonical Codevertex business."""
         try:
-            # Get the single business "Codevertex Africa"
-            business = Bussiness.objects.filter(name='Codevertex Africa').first()
+            # Prefer the standardized single business 'Codevertex IT Solutions'; fallback to the first business
+            business = Bussiness.objects.filter(name__iexact='Codevertex IT Solutions').first() or Bussiness.objects.first()
             if not business:
-                self.stdout.write(self.style.ERROR('Business "Codevertex Africa" not found. Please run business seeding first.'))
+                self.stdout.write(self.style.ERROR('No business found. Please run business seeding first.'))
                 return None
             
             # Get the business location
@@ -184,7 +194,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.SUCCESS('All measurement units already exist'))
 
-    def _create_products_and_raw_materials(self, location):
+    def _create_products_and_raw_materials(self, location, minimal=False):
         """Create products and raw materials"""
         # Create categories (Category model)
         root_raw, _ = Category.objects.get_or_create(name='Raw Materials', defaults={'status': 'active'})
@@ -318,8 +328,16 @@ class Command(BaseCommand):
             }
         ]
         
-        # Create raw materials
-        self._create_products_with_inventory(raw_materials, location)
+        if minimal:
+            # Keep only the first item of each type for minimal mode
+            self._create_products_with_inventory(raw_materials[:1], location)
+            self._create_products_with_inventory(finished_products[:1], location)
+            self.stdout.write(self.style.SUCCESS('Minimal mode: created 1 raw material and 1 finished product'))
+        else:
+            # Create raw materials
+            self._create_products_with_inventory(raw_materials, location)
+            # Create finished products
+            self._create_products_with_inventory(finished_products, location)
         
         # Create finished products
         self._create_products_with_inventory(finished_products, location)
@@ -328,10 +346,10 @@ class Command(BaseCommand):
 
     def _create_products_with_inventory(self, products_data, location):
         """Create products and their inventory items"""
-        # Get the existing branch for Codevertex Africa
-        business = Bussiness.objects.filter(name='Codevertex Africa').first()
+        # Prefer the standardized single business 'Codevertex IT Solutions'; fall back to the first business
+        business = Bussiness.objects.filter(name__iexact='Codevertex IT Solutions').first() or Bussiness.objects.first()
         if not business:
-            self.stdout.write(self.style.ERROR('Business "Codevertex Africa" not found. Please run business seeding first.'))
+            self.stdout.write(self.style.ERROR('No business found. Please run business seeding first.'))
             return
         
         branch = Branch.objects.filter(business=business, is_main_branch=True).first()
@@ -395,6 +413,19 @@ class Command(BaseCommand):
 
     def _create_formulas(self, admin_user):
         """Create manufacturing formulas with ingredients"""
+        # Check if required products exist
+        required_products = [
+            'Sodium Lauryl Sulfate', 'Sodium Hydroxide', 'Citric Acid',
+            'Fragrance Oil - Lavender', 'Fragrance Oil - Lemon', 'Purified Water',
+            'Coconut Oil', 'Palm Oil', 'Glycerin', 'Sodium Carbonate',
+            'Liquid Detergent 1L', 'Premium Bar Soap 100g', 'Economy Bar Soap 100g',
+            'Multipurpose Cleaner 500ml', 'Dish Soap 750ml'
+        ]
+        for title in required_products:
+            if not StockInventory.objects.filter(product__title=title).exists():
+                self.stdout.write(self.style.WARNING(f'Required product "{title}" not found. Skipping manufacturing formulas.'))
+                return []
+        
         # Get units
         kg_unit = Unit.objects.get(title='Kg')
         l_unit = Unit.objects.get(title='L')
@@ -527,19 +558,28 @@ class Command(BaseCommand):
         
         return created_formulas
 
-    def _create_production_batches(self, admin_user, branch, formulas):
+    def _create_production_batches(self, admin_user, branch, formulas, minimal=False):
         """Create production batches based on formulas"""
         # Create batches with different statuses
         now = timezone.now()
         
         # Statuses and their count
-        status_counts = {
-            'planned': 3,
-            'in_progress': 2,
-            'completed': 5,
-            'cancelled': 1,
-            'failed': 1
-        }
+        if minimal:
+            status_counts = {
+                'planned': 1,
+                'in_progress': 0,
+                'completed': 1,
+                'cancelled': 0,
+                'failed': 0
+            }
+        else:
+            status_counts = {
+                'planned': 3,
+                'in_progress': 2,
+                'completed': 5,
+                'cancelled': 1,
+                'failed': 1
+            }
         
         all_batches = []
         

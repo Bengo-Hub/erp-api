@@ -17,10 +17,10 @@ class OrderPaymentInline(admin.TabularInline):
 
 @admin.register(BaseOrder)
 class BaseOrderAdmin(admin.ModelAdmin):
-    list_display = ['order_number', 'order_type', 'customer', 'supplier', 'branch', 'status', 'payment_status', 'total', 'order_date']
+    list_display = ['order_number', 'order_type', 'customer', 'supplier', 'branch', 'status', 'payment_status', 'total']
     list_filter = ['order_type', 'status', 'payment_status', 'source', 'delivery_type', 'order_date', 'branch__business', 'branch']
     search_fields = ['order_number', 'reference_id', 'customer__name', 'supplier__name', 'branch__name']
-    readonly_fields = ['order_number', 'created_at', 'updated_at']
+    readonly_fields = ['order_number', 'created_at', 'updated_at','order_date']
     inlines = [OrderItemInline, OrderPaymentInline]
     
     fieldsets = (

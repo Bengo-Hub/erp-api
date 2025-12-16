@@ -24,12 +24,118 @@ class AccountTypesViewSet(BaseModelViewSet):
 
 
 class PaymentAccountsViewSet(BaseModelViewSet):
-    queryset = PaymentAccounts.objects.all()
+    queryset = PaymentAccounts.objects.all().order_by('-created_at')
     serializer_class = PaymentAccountsSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ['name', 'account_number']
-    filterset_fields = ['account_type']
+    filterset_fields = ['account_type', 'status', 'currency']
+    
+    def create(self, request, *args, **kwargs):
+        """Create a new payment account"""
+        try:
+            correlation_id = get_correlation_id(request)
+            serializer = self.get_serializer(data=request.data)
+            
+            if not serializer.is_valid():
+                return APIResponse.validation_error(
+                    message='Payment account validation failed',
+                    errors=serializer.errors,
+                    correlation_id=correlation_id
+                )
+            
+            account = serializer.save()
+            AuditTrail.log(
+                operation=AuditTrail.CREATE,
+                module='finance',
+                entity_type='PaymentAccount',
+                entity_id=account.id,
+                user=request.user,
+                reason=f'Created payment account: {account.name}',
+                request=request
+            )
+            
+            return APIResponse.created(
+                data=self.get_serializer(account).data,
+                message='Payment account created successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error creating payment account: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error creating payment account',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
+    
+    def update(self, request, *args, **kwargs):
+        """Update a payment account"""
+        try:
+            correlation_id = get_correlation_id(request)
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            
+            if not serializer.is_valid():
+                return APIResponse.validation_error(
+                    message='Payment account validation failed',
+                    errors=serializer.errors,
+                    correlation_id=correlation_id
+                )
+            
+            account = serializer.save()
+            AuditTrail.log(
+                operation=AuditTrail.UPDATE,
+                module='finance',
+                entity_type='PaymentAccount',
+                entity_id=account.id,
+                user=request.user,
+                reason=f'Updated payment account: {account.name}',
+                request=request
+            )
+            
+            return APIResponse.success(
+                data=self.get_serializer(account).data,
+                message='Payment account updated successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error updating payment account: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error updating payment account',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete a payment account"""
+        try:
+            correlation_id = get_correlation_id(request)
+            instance = self.get_object()
+            account_name = instance.name
+            
+            instance.delete()
+            AuditTrail.log(
+                operation=AuditTrail.DELETE,
+                module='finance',
+                entity_type='PaymentAccount',
+                entity_id=instance.id,
+                user=request.user,
+                reason=f'Deleted payment account: {account_name}',
+                request=request
+            )
+            
+            return APIResponse.success(
+                message='Payment account deleted successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error deleting payment account: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error deleting payment account',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
     
     @action(detail=True, methods=['get'])
     def transactions(self, request, pk=None):
@@ -65,21 +171,22 @@ class PaymentAccountsViewSet(BaseModelViewSet):
         try:
             correlation_id = get_correlation_id(request)
             account = self.get_object()
+            from decimal import Decimal
             
             # Get all credit transactions (income, refunds)
             credits = Transaction.objects.filter(
                 account=account,
                 transaction_type__in=['income', 'refund']
-            ).aggregate(total=Sum('amount'))['total'] or 0
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
             # Get all debit transactions (expenses, payments, transfers)
             debits = Transaction.objects.filter(
                 account=account,
                 transaction_type__in=['expense', 'payment', 'transfer']
-            ).aggregate(total=Sum('amount'))['total'] or 0
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
             # Calculate balance
-            balance = account.opening_balance + credits - debits
+            balance = (account.opening_balance or Decimal('0.00')) + credits - debits
             
             return APIResponse.success(
                 data={

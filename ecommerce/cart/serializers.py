@@ -56,6 +56,14 @@ class CartItemSerializer(serializers.ModelSerializer):
         # if 'selling_price' not in validated_data or validated_data['selling_price'] == 0:
         #     validated_data['selling_price'] = stock_item.selling_price or 0
         
+        # Validate cart's branch consistency
+        item_branch_id = getattr(stock_item, 'branch_id', None)
+        if cart.branch is None and item_branch_id:
+            cart.branch_id = item_branch_id
+            cart.save(update_fields=['branch_id'])
+        elif cart.branch is not None and item_branch_id and cart.branch_id != item_branch_id:
+            raise serializers.ValidationError("All items in a cart must belong to the same branch")
+
         # Check if item with same stock and variant exists
         existing_item = CartItem.objects.filter(
             cart=cart,
@@ -96,6 +104,8 @@ class CartSessionSerializer(serializers.ModelSerializer):
     applied_coupon = serializers.SerializerMethodField()
     discount = serializers.SerializerMethodField()
     
+    branch_id = serializers.IntegerField(source='branch.id', read_only=True)
+
     class Meta:
         model = CartSession
         fields = ['id', 'session_key', 'user', 'items', 'total_items', 'subtotal', 'total_tax', 

@@ -42,7 +42,25 @@ class ExpenseViewSet(BaseModelViewSet):
     def get_queryset(self):
         """Optimize queries with select_related for foreign keys."""
         queryset = super().get_queryset()
-        return queryset.select_related('category', 'branch', 'expense_for_user', 'expense_for_contact')
+        queryset = queryset.select_related('category', 'branch', 'expense_for_user', 'expense_for_contact')
+        try:
+            from core.utils import get_branch_id_from_request
+            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        except Exception:
+            branch_id = None
+
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
+
+        if not self.request.user.is_superuser:
+            from business.models import Branch
+            user = self.request.user
+            owned_branches = Branch.objects.filter(business__owner=user)
+            employee_branches = Branch.objects.filter(business__employees__user=user)
+            branches = owned_branches | employee_branches
+            queryset = queryset.filter(branch__in=branches)
+
+        return queryset
 
     def create(self, request, *args, **kwargs):
         """Create expense with auto-generated reference number."""
@@ -124,6 +142,16 @@ class ExpenseViewSet(BaseModelViewSet):
                         correlation_id=correlation_id
                     )
                 
+                # Validate branch if header provided
+                try:
+                    from core.utils import get_branch_id_from_request
+                    header_branch_id = request.query_params.get('branch_id') or get_branch_id_from_request(request)
+                except Exception:
+                    header_branch_id = None
+
+                if header_branch_id and expense.branch_id and str(expense.branch_id) != str(header_branch_id):
+                    return APIResponse.forbidden(message='Expense does not belong to the specified branch', correlation_id=correlation_id)
+
                 # Create payment in Finance module (Money OUT)
                 from finance.payment.models import Payment
                 payment_account = PaymentAccounts.objects.get(id=payment_account_id)

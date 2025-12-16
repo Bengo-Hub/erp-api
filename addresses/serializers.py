@@ -50,28 +50,32 @@ class AddressValidationSerializer(serializers.ModelSerializer):
     class Meta:
         model = AddressValidation
         fields = [
-            'id', 'address', 'validation_status', 'validation_date',
+            'id', 'address', 'status', 'validated_at',
             'validation_notes', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['validation_date', 'created_at', 'updated_at']
+        read_only_fields = ['validated_at', 'created_at', 'updated_at']
 
 
 class AddressBookSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
-    delivery_region = DeliveryRegionSerializer(read_only=True)
-    validation = AddressValidationSerializer(read_only=True)
+    # delivery_region is not currently a FK on AddressBook; expose as None for backward compatibility
+    delivery_region = serializers.SerializerMethodField(read_only=True)
+    # Expose validations as a list (related_name 'validations') and provide latest via helper if needed
+    validations = AddressValidationSerializer(many=True, read_only=True)
     full_address = serializers.SerializerMethodField()
     delivery_type_display = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
+    phone_number = serializers.SerializerMethodField()
     
     class Meta:
         model = AddressBook
         fields = [
             'id', 'user', 'address_type', 'delivery_type',
             'delivery_type_display', 'full_name', 'phone_number', 'email',
-            'county', 'constituency', 'ward', 'street_address', 'city',
+            'county', 'constituency', 'ward', 'street_name', 'building_name',
             'postal_code', 'landmark', 'gps_coordinates', 'delivery_region',
-            'pickup_station', 'is_default', 'is_active', 'validation',
-            'full_address', 'created_at', 'updated_at'
+            'pickup_station', 'is_default_shipping', 'is_default_billing', 'is_verified',
+            'validations', 'full_address', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
     
@@ -96,28 +100,44 @@ class AddressBookSerializer(serializers.ModelSerializer):
     def get_delivery_type_display(self, obj):
         return obj.get_delivery_type_display()
 
+    def get_delivery_region(self, obj):
+        # No delivery_region FK exists on AddressBook yet; return None
+        return None
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip()
+
+    def get_phone_number(self, obj):
+        return obj.phone
+
 
 class AddressBookListSerializer(serializers.ModelSerializer):
     """Simplified serializer for list views"""
     user = UserSerializer(read_only=True)
-    delivery_region = DeliveryRegionListSerializer(read_only=True)
+    delivery_region = serializers.SerializerMethodField(read_only=True)
     full_address = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
+    phone_number = serializers.SerializerMethodField()
     
     class Meta:
         model = AddressBook
         fields = [
             'id', 'user', 'address_type', 'delivery_type',
-            'full_name', 'phone_number', 'county', 'city', 'delivery_region',
-            'is_default', 'is_active', 'full_address', 'created_at'
+            'full_name', 'phone_number', 'county', 'ward', 'delivery_region',
+            'is_default_shipping', 'is_default_billing', 'full_address', 'created_at'
         ]
     
     def get_full_address(self, obj):
         """Generate a formatted full address string"""
         parts = []
-        if obj.street_address:
-            parts.append(obj.street_address)
-        if obj.city:
-            parts.append(obj.city)
+        if obj.building_name:
+            parts.append(obj.building_name)
+        if obj.floor_number:
+            parts.append(f"Floor {obj.floor_number}")
+        if obj.room_number:
+            parts.append(f"Room {obj.room_number}")
+        if obj.street_name:
+            parts.append(obj.street_name)
         if obj.ward:
             parts.append(obj.ward)
         if obj.constituency:
@@ -127,17 +147,26 @@ class AddressBookListSerializer(serializers.ModelSerializer):
         
         return ", ".join(parts) if parts else "Address not specified"
 
+    def get_delivery_region(self, obj):
+        return None
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip()
+
+    def get_phone_number(self, obj):
+        return obj.phone
+
 
 class AddressBookCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new addresses"""
     class Meta:
         model = AddressBook
         fields = [
-            'user', 'address_type', 'delivery_type', 'full_name',
-            'phone_number', 'email', 'county', 'constituency', 'ward',
-            'street_address', 'city', 'postal_code', 'landmark',
-            'gps_coordinates', 'delivery_region', 'pickup_station',
-            'is_default', 'is_active'
+            'user', 'address_label', 'address_type', 'delivery_type',
+            'first_name', 'last_name', 'phone', 'other_phone', 'email',
+            'county', 'constituency', 'ward', 'street_name', 'building_name',
+            'floor_number', 'room_number', 'postal_code', 'country',
+            'latitude', 'longitude', 'pickup_station', 'is_default_shipping', 'is_default_billing'
         ]
     
     def validate(self, attrs):

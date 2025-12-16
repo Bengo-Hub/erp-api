@@ -25,6 +25,7 @@ from ecommerce.product.serializers import ProductsSerializer
 from authmanagement.serializers import UserSerializer
 from ecommerce.stockinventory.models import StockInventory
 from business.models import Bussiness, Branch, PickupStations
+from core.utils import get_branch_id_from_request, get_business_id_from_request
 from addresses.models import AddressBook, DeliveryRegion
 
 from rest_framework import viewsets, permissions, status
@@ -68,8 +69,9 @@ class ContactsViewSet(BaseModelViewSet):
         query=self.request.query_params.get('query',None)
         contact_type=self.request.query_params.get('contact_type',None)
         account_type=self.request.query_params.get('account_type',None)
-        branch_id = self.request.query_params.get('branch_id',None)
-        #check if user user is linked to busness organisation or is a business owner
+        # Resolve branch context (query param or authenticated header)
+        branch_id = self.request.query_params.get('branch_id', None) or get_branch_id_from_request(self.request)
+        # check if user user is linked to business organisation or is a business owner
         user_org=None
         owner=None
         if hasattr(self.request.user,'employee') and hasattr(self.request.user.employee,'organisation'):
@@ -79,7 +81,8 @@ class ContactsViewSet(BaseModelViewSet):
             owner=self.request.user.owner
             queryset=queryset.filter(branch__business__owner=owner)
         if branch_id is not None:
-            queryset = queryset.filter(branch__branch_id=branch_id)
+            # Branch field is a foreign key; use branch__id or branch_id
+            queryset = queryset.filter(branch__id=branch_id)
         if query:
             queryset=queryset.filter(Q(user__username__icontains=query)|Q(user__first_name__icontains=query)|Q(user__first_name__icontains=query))
         if contact_type:
@@ -90,13 +93,15 @@ class ContactsViewSet(BaseModelViewSet):
 
     def create(self, request, *args, **kwargs):
         try:
-            query_params=request.POST
+            query_params=request.data
             contact_type = query_params.get('contact_type','Individual')
             account_type=query_params.get('account_type','Customers')
             branch_id = self.request.query_params.get('branch_id',None)
-            branch=Branch.objects.filter(Q(id=branch_id)|Q(business__owner=request.user)).first()
-            if hasattr(request.user,'employee'):
-                branch=Branch.objects.filter(business=request.user.employee.organisation)
+            # Resolve branch by ID or user's business; prefer explicit query param/header
+            branch = Branch.objects.filter(Q(id=branch_id) | Q(business__owner=request.user)).first()
+            if hasattr(request.user, 'employee') and request.user.employee.organisation:
+                # prefer branch belonging to the user's organisation, default to main branch
+                branch = Branch.objects.filter(business=request.user.employee.organisation, is_main_branch=True).first() or branch
             address =query_params.get('address',None)
             designation=query_params.get('designation','Mr')
             customer_group=query_params.get('customer_group',None)
@@ -152,13 +157,15 @@ class ContactsViewSet(BaseModelViewSet):
                 pickup_station=PickupStations.objects.filter(id=address).first()
                 if pickup_station !=None:
                    adr,created=AddressBook.objects.update_or_create(user=user,address_label=pickup_station.pickup_location,phone=user.phone,other_phone=alternative_contact,address=pickup_station)
-            return Response({'message':'Contact Created Successfully!'}, status=status.HTTP_201_CREATED)
+            serializer = ContactSerializer(contact, context={'request': request})
+            return APIResponse.created(data=serializer.data, message='Contact created successfully', correlation_id=get_correlation_id(request))
         except Exception as e:
-            return Response({'error':f"Error:f{str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f'Error creating contact: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error creating contact', error_id=str(e), correlation_id=get_correlation_id(request))
 
     def update(self, request, pk=None):
         try:
-            query_params = request.POST
+            query_params = request.data
             contact = self.get_object(pk)
             # Update contact details based on query parameters
             contact_type = query_params.get('contact_type', contact.contact_type)
@@ -220,9 +227,11 @@ class ContactsViewSet(BaseModelViewSet):
                         address=pickup_station
                     )
 
-            return Response({'message': 'Contact Updated Successfully!'}, status=status.HTTP_200_OK)
+            serializer = ContactSerializer(contact, context={'request': request})
+            return APIResponse.success(data=serializer.data, message='Contact updated successfully', correlation_id=get_correlation_id(request))
         except Exception as e:
-            return Response({'error': f"Error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f'Error updating contact: {str(e)}', exc_info=True)
+            return APIResponse.server_error(message='Error updating contact', error_id=str(e), correlation_id=get_correlation_id(request))
 
     def destroy(self, request, pk=None):
         instance = self.get_object(pk=pk)

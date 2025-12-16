@@ -33,20 +33,25 @@ class Command(BaseCommand):
         parser.add_argument(
             '--users',
             type=int,
-            default=5,
-            help='Number of users to create (default: 5)',
+            default=1,
+            help='Number of users to create (default: 1)',
         )
         parser.add_argument(
             '--categories',
             type=int,
-            default=8,
-            help='Number of asset categories to create (default: 8)',
+            default=2,
+            help='Number of asset categories to create (default: 2)',
         )
         parser.add_argument(
             '--assets',
             type=int,
-            default=25,
-            help='Number of assets to create (default: 25)',
+            default=2,
+            help='Number of assets to create (default: 2)',
+        )
+        parser.add_argument(
+            '--minimal',
+            action='store_true',
+            help='Seed minimal asset data (1 user, 1 category, 1 asset)',
         )
 
     def handle(self, *args, **options):
@@ -54,6 +59,11 @@ class Command(BaseCommand):
         num_users = options['users']
         num_categories = options['categories']
         num_assets = options['assets']
+        minimal = options.get('minimal')
+        if minimal:
+            num_users = 1
+            num_categories = 1
+            num_assets = 1
 
         if clear:
             self.stdout.write(
@@ -143,7 +153,7 @@ class Command(BaseCommand):
         for i in range(num_users):
             first_name, last_name = base_names[i % len(base_names)]
             username = f'{first_name.lower()}.{last_name.lower()}{i+1}'
-            email = f'{username}@bengobox.com'
+            email = f'{username}@codevertexitsolutions.com'
 
             user, created = User.objects.get_or_create(
                 username=username,
@@ -166,9 +176,9 @@ class Command(BaseCommand):
 
     def create_sample_branches(self):
         """Create sample branches"""
-        # First create a sample business if none exists
+        # Find or create the canonical business
         business, created = Bussiness.objects.get_or_create(
-            name='BengoBox Demo Business',
+            name='Codevertex IT Solutions',
             defaults={
                 'owner': self.get_or_create_demo_user(),
                 'start_date': timezone.now().date(),
@@ -177,53 +187,36 @@ class Command(BaseCommand):
             }
         )
 
-        # Create sample business locations
-        locations_data = [
-            {'city': 'Nairobi', 'county': 'Nairobi', 'country': 'KE'},
-            {'city': 'Mombasa', 'county': 'Mombasa', 'country': 'KE'},
-            {'city': 'Kisumu', 'county': 'Kisumu', 'country': 'KE'},
-            {'city': 'Nakuru', 'county': 'Nakuru', 'country': 'KE'},
-            {'city': 'Eldoret', 'county': 'Uasin Gishu', 'country': 'KE'},
-        ]
-
-        locations = []
-        for location_data in locations_data:
-            location, created = BusinessLocation.objects.get_or_create(
-                city=location_data['city'],
-                defaults={
-                    'country': location_data['country'],
-                    'county': location_data['county'],
-                    'is_active': True,
-                }
+        # Ensure the business has a location
+        location = business.location if business.location and business.location.default and business.location.is_active else None
+        if not location:
+            location = BusinessLocation.objects.create(
+                city='Nairobi',
+                county='Nairobi',
+                country='KE',
+                default=True,
+                is_active=True
             )
-            locations.append(location)
+            business.location = location
+            business.save()
 
-        # Create branches
-        branches_data = [
-            {'name': 'Nairobi HQ', 'branch_code': 'NB01', 'location_index': 0},
-            {'name': 'Mombasa Branch', 'branch_code': 'MB01', 'location_index': 1},
-            {'name': 'Kisumu Branch', 'branch_code': 'KB01', 'location_index': 2},
-            {'name': 'Nakuru Branch', 'branch_code': 'NK01', 'location_index': 3},
-            {'name': 'Eldoret Branch', 'branch_code': 'EB01', 'location_index': 4},
-        ]
-
-        branches = []
-        for branch_data in branches_data:
-            location = locations[branch_data['location_index']]
-            branch, created = Branch.objects.get_or_create(
-                branch_code=branch_data['branch_code'],
+        # Ensure a single HQ branch exists and return it
+        main_branch = Branch.objects.filter(business=business, is_main_branch=True).first()
+        if not main_branch:
+            main_branch, _ = Branch.objects.get_or_create(
+                branch_code='HQ-001',
                 defaults={
                     'business': business,
                     'location': location,
-                    'name': branch_data['name'],
+                    'name': 'HQ',
                     'contact_number': '+254700000000',
-                    'email': 'info@bengobox.com',
+                    'email': 'info@codevertexitsolutions.com',
                     'is_active': True,
+                    'is_main_branch': True
                 }
             )
-            branches.append(branch)
 
-        return branches
+        return [main_branch]
 
     def get_or_create_demo_user(self):
         """Get or create a demo user"""
@@ -232,7 +225,7 @@ class Command(BaseCommand):
             defaults={
                 'first_name': 'Demo',
                 'last_name': 'User',
-                'email': 'demo@bengobox.com',
+                'email': 'demo@codevertexitsolutions.com',
                 'is_staff': True,
                 'is_active': True,
             }
@@ -256,42 +249,6 @@ class Command(BaseCommand):
                 'description': 'Desks, chairs, cabinets, and office furniture',
                 'depreciation_rate': Decimal('10.00'),
                 'useful_life_years': 10
-            },
-            {
-                'name': 'Vehicles',
-                'description': 'Company vehicles for transportation',
-                'depreciation_rate': Decimal('20.00'),
-                'useful_life_years': 5
-            },
-            {
-                'name': 'Machinery & Equipment',
-                'description': 'Industrial machinery and production equipment',
-                'depreciation_rate': Decimal('15.00'),
-                'useful_life_years': 7
-            },
-            {
-                'name': 'Electronics',
-                'description': 'TVs, projectors, sound systems, and electronic devices',
-                'depreciation_rate': Decimal('20.00'),
-                'useful_life_years': 5
-            },
-            {
-                'name': 'Software & Licenses',
-                'description': 'Computer software and license subscriptions',
-                'depreciation_rate': Decimal('33.33'),
-                'useful_life_years': 3
-            },
-            {
-                'name': 'Communication Equipment',
-                'description': 'Phones, routers, switches, and networking equipment',
-                'depreciation_rate': Decimal('20.00'),
-                'useful_life_years': 5
-            },
-            {
-                'name': 'Tools & Instruments',
-                'description': 'Hand tools, measuring instruments, and workshop equipment',
-                'depreciation_rate': Decimal('15.00'),
-                'useful_life_years': 7
             },
         ]
 
@@ -370,7 +327,7 @@ class Command(BaseCommand):
 
     def create_asset_transfers(self, assets, users, branches):
         """Create sample asset transfers"""
-        num_transfers = min(len(assets) // 3, 15)  # Create transfers for about 1/3 of assets
+        num_transfers = min(len(assets) // 3, 2)  # Create transfers for about 1/3 of assets
 
         for i in range(num_transfers):
             asset = random.choice(assets)
@@ -402,7 +359,7 @@ class Command(BaseCommand):
 
     def create_asset_maintenance(self, assets, users):
         """Create sample asset maintenance records"""
-        num_maintenance = min(len(assets) // 2, 20)
+        num_maintenance = min(len(assets) // 2, 1)
 
         for i in range(num_maintenance):
             asset = random.choice(assets)
@@ -423,7 +380,7 @@ class Command(BaseCommand):
 
     def create_asset_disposals(self, assets, users):
         """Create sample asset disposals"""
-        num_disposals = min(len(assets) // 5, 8)  # Dispose of about 20% of assets
+        num_disposals = min(len(assets) // 5, 1)  # Dispose of about 20% of assets
 
         for i in range(num_disposals):
             asset = random.choice(assets)
@@ -442,7 +399,7 @@ class Command(BaseCommand):
 
     def create_asset_insurance(self, assets, users):
         """Create sample asset insurance records"""
-        num_insurance = min(len(assets) // 3, 12)
+        num_insurance = min(len(assets) // 3, 1)
 
         for i in range(num_insurance):
             asset = random.choice(assets)
@@ -465,7 +422,7 @@ class Command(BaseCommand):
 
     def create_asset_audits(self, assets, users):
         """Create sample asset audits"""
-        num_audits = min(len(assets) // 4, 10)
+        num_audits = min(len(assets) // 4, 1)
 
         for i in range(num_audits):
             asset = random.choice(assets)
@@ -484,7 +441,7 @@ class Command(BaseCommand):
 
     def create_asset_reservations(self, assets, users):
         """Create sample asset reservations"""
-        num_reservations = min(len(assets) // 4, 10)
+        num_reservations = min(len(assets) // 4, 1)
 
         for i in range(num_reservations):
             asset = random.choice(assets)
