@@ -40,6 +40,8 @@ def env_list(name: str, default: list[str] | None = None) -> list[str]:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool('DEBUG', default=True)
 
+# CDN and Image Optimization Configuration
+# (Defined earlier near DEBUG to avoid referencing before assignment)
 # Hosts and CORS/CSRF configuration from environment for production
 #ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default=['*' if DEBUG else '127.0.0.1,192.168.*,10.*,172.*,localhost,erpapi.masterspace.co.ke,erp.masterspace.co.ke,*.masterspace.co.ke'.split(',')])
 ALLOWED_HOSTS = ['*']
