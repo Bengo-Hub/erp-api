@@ -9,6 +9,12 @@ echo "=========================================="
 echo "🚀 ERP-API Service Startup"
 echo "=========================================="
 
+# Log configuration for debugging
+echo "📋 Configuration:"
+echo "   Environment: ${DJANGO_ENV:-production}"
+echo "   Debug mode: ${DEBUG:-False}"
+echo "   Port: ${PORT:-4000}"
+
 # Initialize media directory
 echo "📁 Initializing media directory..."
 /usr/local/bin/init-media.sh || echo "⚠️ Media initialization failed (non-critical)"
@@ -146,10 +152,30 @@ with connection.cursor() as cursor:
   fi
 fi
 
-# Collect static files (for production)
+# Collect static files (for production) - with proper error checking
 echo ""
 echo "📦 Collecting static files..."
-python manage.py collectstatic --noinput --clear 2>&1 | tail -5 || echo "⚠️ Static files collection failed (non-critical)"
+COLLECTSTATIC_LOG=$(mktemp)
+if python manage.py collectstatic --noinput --clear > "$COLLECTSTATIC_LOG" 2>&1; then
+    # Parse collectstatic output for success message
+    COLLECTED=$(grep -E "^[0-9]+ static" "$COLLECTSTATIC_LOG" 2>/dev/null | tail -1 || echo "completed")
+    echo "✅ Static files collected: $COLLECTED"
+    
+    # Verify collection succeeded by checking directory
+    FILE_COUNT=$(find /app/staticfiles -type f 2>/dev/null | wc -l || echo 0)
+    if [ "$FILE_COUNT" -gt 100 ]; then
+        echo "✅ Verified: $FILE_COUNT files in /app/staticfiles/"
+    else
+        echo "⚠️ WARNING: Only $FILE_COUNT static files collected (expected 1000+)"
+        echo "   Admin panel styling may be missing in production"
+    fi
+    rm -f "$COLLECTSTATIC_LOG"
+else
+    echo "❌ ERROR: Static files collection FAILED!"
+    echo "   Admin panel styling will be broken - see errors below:"
+    tail -30 "$COLLECTSTATIC_LOG"
+    rm -f "$COLLECTSTATIC_LOG"
+fi
 
 echo ""
 echo "=========================================="
