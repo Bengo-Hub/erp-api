@@ -25,6 +25,7 @@ class QuotationSerializer(BaseOrderSerializer):
             'discount_type', 'discount_value',
             'follow_up_date', 'reminder_sent',
             'customer_details', 'items', 'is_expired', 'days_until_expiry', 'can_convert',
+            'tax_mode', 'tax_rate'
         ]
         read_only_fields = ['quotation_number', 'order_number', 'sent_at', 'viewed_at', 
                            'accepted_at', 'declined_at', 'is_converted', 'converted_at', 'converted_by']
@@ -89,7 +90,22 @@ class QuotationCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
-        quotation = Quotation.objects.create(**validated_data)
+        # Attempt to create the quotation; if the DB schema is missing expected
+        # columns (e.g., tax_mode/tax_rate on the orders table), raise a
+        # meaningful validation error to guide operators to run migrations.
+        from django.db import DatabaseError
+        try:
+            quotation = Quotation.objects.create(**validated_data)
+        except DatabaseError as e:
+            # Re-raise as a serializer validation error so the API responds with 4xx
+            # instead of a 500 Internal Server Error. Include guidance for the fix.
+            raise serializers.ValidationError({
+                'detail': (
+                    'Could not create Quotation due to database schema mismatch: '
+                    f'{str(e)}. Please run database migrations (e.g. `python manage.py migrate core_orders`) '
+                    'and retry.'
+                )
+            })
 
         # Process custom items (auto-create products/assets if needed)
         from core_orders.utils import process_custom_items
@@ -168,6 +184,9 @@ class QuotationCreateSerializer(serializers.ModelSerializer):
         for f in money_fields:
             if f in data and data[f] is not None:
                 data[f] = quantize_val(data[f])
+        # Tax rate: keep as 2-decimal percentage
+        if 'tax_rate' in data and data['tax_rate'] is not None:
+            data['tax_rate'] = quantize_val(data['tax_rate'])
 
         # Items: quantize numeric fields inside each item dict before nested validation
         items = data.get('items')

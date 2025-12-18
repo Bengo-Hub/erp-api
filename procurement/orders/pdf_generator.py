@@ -7,6 +7,7 @@ from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+from finance.utils import _get_logo_image, _build_company_details_section, _build_client_details_section, _build_document_details_section, BoxedSection
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
 from datetime import datetime
@@ -65,23 +66,46 @@ def generate_lpo_pdf(purchase_order, company_info=None):
             fontName='Helvetica-Bold'
         )
         
-        # Company Header
-        if company_info and company_info.get('logo_path'):
-            try:
-                logo = Image(company_info['logo_path'], width=1.5*inch, height=0.8*inch)
-                elements.append(logo)
-                elements.append(Spacer(1, 0.15*inch))
-            except:
-                pass
-        
-        # Company details
-        if company_info:
-            company_text = f"<b>{company_info.get('name', 'Company Name')}</b><br/>"
-            company_text += f"{company_info.get('address', '')}<br/>"
-            company_text += f"Email: {company_info.get('email', '')}<br/>"
-            company_text += f"Phone: {company_info.get('phone', '')}"
-            elements.append(Paragraph(company_text, header_style))
-            elements.append(Spacer(1, 0.2*inch))
+        # Header: title left, logo right
+        title_text = 'PURCHASE ORDER (LPO)'
+        # Resolve company info from provided info or purchase_order
+        company_info = company_info or {'name': 'Your Company Name', 'address': 'Company Address', 'email': 'OuH4P@example.com', 'phone': '123-456-7890', 'pin': '123456789', 'logo': None}
+        logo = _get_logo_image(company_info)
+        header_row = [Paragraph(title_text, title_style), logo if logo else '']
+        header_table = Table([header_row], colWidths=[4.5*inch, 2*inch])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT')
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 0.15*inch))
+
+        # Company box on left
+        comp_details = _build_company_details_section(company_info)
+        company_box = BoxedSection(comp_details, width=4.5*inch)
+        # Supplier/Client box
+        supplier_info = {
+            'name': get_supplier_name(purchase_order),
+            'email': get_supplier_email(purchase_order),
+            'phone': get_supplier_phone(purchase_order)
+        }
+        supplier_section = _build_client_details_section(supplier_info, 'lpo')
+        supplier_box = BoxedSection(supplier_section, width=4.5*inch)
+
+        doc_info = {
+            'type': 'LPO',
+            'number': getattr(purchase_order, 'order_number', ''),
+            'date': getattr(purchase_order, 'order_date', None).strftime('%d/%m/%Y') if getattr(purchase_order, 'order_date', None) else '',
+            'expected_delivery': getattr(purchase_order, 'expected_delivery', None).strftime('%d/%m/%Y') if getattr(purchase_order, 'expected_delivery', None) else ''
+        }
+        doc_details = _build_document_details_section(doc_info, 'lpo')
+        doc_box = BoxedSection(doc_details, width=2*inch)
+
+        left_col = [company_box, Spacer(1, 0.15*inch), supplier_box]
+        left_table = Table([[left_col, doc_box]], colWidths=[4.5*inch, 2*inch])
+        left_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
+        elements.append(left_table)
+        elements.append(Spacer(1, 0.2*inch))
         
         # PO Title
         elements.append(Paragraph("PURCHASE ORDER (LPO)", title_style))
@@ -178,9 +202,22 @@ def generate_lpo_pdf(purchase_order, company_info=None):
         elements.append(Spacer(1, 0.3*inch))
         
         # Totals Section (Right-aligned)
+        # Tax label should reflect whether tax is applied per-line or on the subtotal
+        try:
+            if getattr(purchase_order, 'tax_mode', None) == 'on_total':
+                rate = getattr(purchase_order, 'tax_rate', None)
+                if rate is not None and str(rate) != '':
+                    tax_label = f"Tax ({rate}% on subtotal):"
+                else:
+                    tax_label = "Tax (on subtotal):"
+            else:
+                tax_label = 'Tax (if any):'
+        except Exception:
+            tax_label = 'Tax (if any):'
+
         totals_data = [
             ['Subtotal:', f"KES {total_amount:,.2f}"],
-            ['Tax (if any):', f"KES {getattr(purchase_order, 'tax_amount', Decimal('0.00')):,.2f}"],
+            [tax_label, f"KES {getattr(purchase_order, 'tax_amount', Decimal('0.00')):,.2f}"],
         ]
         
         if hasattr(purchase_order, 'discount') and purchase_order.discount and Decimal(purchase_order.discount) > 0:

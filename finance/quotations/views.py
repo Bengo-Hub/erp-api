@@ -13,7 +13,7 @@ from .serializers import (
     QuotationSerializer, QuotationCreateSerializer, QuotationSendSerializer,
     QuotationConvertSerializer, QuotationEmailLogSerializer
 )
-from finance.invoicing.pdf_generator import generate_quotation_pdf
+from ..pdf_generator import generate_quotation_pdf
 
 
 class QuotationViewSet(BaseModelViewSet):
@@ -62,98 +62,30 @@ class QuotationViewSet(BaseModelViewSet):
 
     def _resolve_company_info(self, quotation):
         """Return company info dict using branch (preferred) or business HQ branch."""
-        company = None
-        name = 'Company'
-        email = ''
-        phone = ''
-        address = ''
-
         try:
+            from business.models import Bussiness
+            from finance.utils import resolve_company_info
+
+            # Try to determine business and branch tied to the quotation
             if getattr(quotation, 'branch', None):
                 branch = quotation.branch
-                company = getattr(branch, 'business', None)
+                biz = getattr(branch, 'business', None)
             else:
-                # Fallback to business first available
-                company = getattr(quotation, 'branch', None) or None
-
-            # If no branch on quote, try to find the main HQ branch for the business attached to the quotation
-            if not getattr(quotation, 'branch', None) and getattr(quotation, 'branch', None) is None:
-                # Try to get related business from quotation.customer.business or from Bussiness
-                from business.models import Bussiness
                 biz = None
-                if getattr(quotation, 'branch', None) and getattr(quotation.branch, 'business', None):
-                    biz = quotation.branch.business
-                else:
-                    # Try to locate a business via quotation.branch.business if any
+                branch = None
+                # fallback: if customer has a business, use that
+                cust = getattr(quotation, 'customer', None)
+                if cust and getattr(cust, 'business', None):
+                    biz = cust.business
+                if not biz:
                     try:
                         biz = Bussiness.objects.first()
                     except Exception:
                         biz = None
 
-                branch = None
-                if biz:
-                    try:
-                        branch = biz.branches.filter(is_main_branch=True, is_active=True).first()
-                    except Exception:
-                        branch = None
-                if branch:
-                    company = branch.business
-            # At this point, prefer branch contact & location
-            branch = getattr(quotation, 'branch', None)
-            if not branch and company:
-                try:
-                    branch = company.branches.filter(is_main_branch=True, is_active=True).first()
-                except Exception:
-                    branch = None
-
-            if company:
-                name = getattr(company, 'name', name)
-
-            if branch:
-                email = getattr(branch, 'email', '') or getattr(company, 'email', '') if company else ''
-                phone = getattr(branch, 'contact_number', '') or getattr(company, 'contact_number', '') if company else ''
-                loc = getattr(branch, 'location', None)
-                if loc:
-                    def _part_val(x):
-                        if x is None:
-                            return ''
-                        if not isinstance(x, str):
-                            try:
-                                return str(x)
-                            except Exception:
-                                return getattr(x, 'name', '') or ''
-                        return x
-
-                    raw_parts = [getattr(loc, 'building_name', None), getattr(loc, 'street_name', None), getattr(loc, 'city', None), getattr(loc, 'county', None), getattr(loc, 'state', None), getattr(loc, 'country', None)]
-                    parts = [_part_val(p).strip() for p in raw_parts if _part_val(p).strip()]
-                    address = ', '.join(parts)
-            else:
-                # fallback: use company-level location
-                loc = getattr(company, 'location', None) if company else None
-                if loc:
-                    def _part_val(x):
-                        if x is None:
-                            return ''
-                        if not isinstance(x, str):
-                            try:
-                                return str(x)
-                            except Exception:
-                                return getattr(x, 'name', '') or ''
-                        return x
-
-                    raw_parts = [getattr(loc, 'building_name', None), getattr(loc, 'street_name', None), getattr(loc, 'city', None), getattr(loc, 'county', None), getattr(loc, 'state', None), getattr(loc, 'country', None)]
-                    parts = [_part_val(p).strip() for p in raw_parts if _part_val(p).strip()]
-                    address = ', '.join(parts)
-
+            return resolve_company_info(biz, branch)
         except Exception:
-            pass
-
-        return {
-            'name': name,
-            'address': address,
-            'email': email or '',
-            'phone': phone or ''
-        }
+            return {'name': 'Company', 'address': '', 'email': '', 'phone': '', 'pin': ''}
     
     @action(detail=True, methods=['post'], url_path='send')
     def send_quotation(self, request, pk=None):
@@ -196,7 +128,7 @@ class QuotationViewSet(BaseModelViewSet):
                 'introduction': custom_message or quotation.introduction,
                 'customer_notes': quotation.customer_notes,
                 'quotation_url': f"{request.build_absolute_uri('/')[:-1]}/finance/quotations/{quotation.id}",
-                'company_name': company.name if company else 'Company',
+                'company_name': company.name if company else 'N/A',
                 'year': timezone.now().year
             }
             
@@ -472,8 +404,12 @@ class QuotationViewSet(BaseModelViewSet):
                 'address': company_address,
                 'email': company_email,
                 'phone': company_phone,
+                'pin': getattr(company, 'kra_number', '') if company else ''
             }
-            
+            try:
+                quotation.refresh_from_db()
+            except Exception:
+                pass
             # Generate PDF
             pdf_bytes = generate_quotation_pdf(quotation, company_info)
             
@@ -503,6 +439,7 @@ class QuotationViewSet(BaseModelViewSet):
 
             # Resolve company info (prefer branch/HQ branch)
             company_info = self._resolve_company_info(quotation)
+            print(company_info)
             pdf_bytes = generate_quotation_pdf(quotation, company_info)
 
             # Determine if download or inline

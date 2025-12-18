@@ -81,6 +81,14 @@ class BaseOrder(models.Model):
     # Financial Details
     subtotal = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     tax_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    # Tax mode controls whether taxes are applied per-line (default) or on the final/subtotal amount
+    TAX_MODE_CHOICES = [
+        ('line_items', 'Per Line Items'),
+        ('on_total', 'On Final Amount')
+    ]
+    tax_mode = models.CharField(max_length=20, choices=TAX_MODE_CHOICES, default='line_items')
+    # Percentage applied when tax_mode == 'on_total'
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text='Tax percentage applied to subtotal when tax_mode is on_total')
     discount_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     shipping_cost = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     total = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))

@@ -12,7 +12,7 @@ from .serializers import (
     InvoiceSerializer, InvoiceCreateSerializer, InvoiceSendSerializer,
     InvoiceScheduleSerializer, InvoicePaymentSerializer, InvoiceEmailLogSerializer
 )
-from .pdf_generator import generate_invoice_pdf
+from ..pdf_generator import generate_invoice_pdf
 
 
 class InvoiceViewSet(BaseModelViewSet):
@@ -37,101 +37,35 @@ class InvoiceViewSet(BaseModelViewSet):
         return InvoiceSerializer
 
     def _resolve_company_info(self, invoice):
-        """Return company info dict including logo_path (filesystem path if possible)"""
+        """Return company info dict including logo_path (filesystem path if possible) and PIN"""
         import os
         from django.contrib.staticfiles import finders
         from django.conf import settings
+        from finance.utils import resolve_company_info
 
-        company_info = None
-        if invoice.branch and getattr(invoice.branch, 'business', None):
-            biz = invoice.branch.business
-            logo_path = None
-            try:
-                if getattr(biz, 'logo') and hasattr(biz.logo, 'path'):
-                    logo_path = biz.logo.path
-            except Exception:
-                logo_path = None
-
-            # Try staticfiles finders for default logo if not set
-            if not logo_path:
-                try:
-                    default_logo = finders.find('logo/logo.png') or finders.find('static/logo/logo.png')
-                    if default_logo:
-                        logo_path = default_logo
-                    else:
-                        possible = os.path.join(getattr(settings, 'BASE_DIR', ''), 'static', 'logo', 'logo.png')
-                        logo_path = possible if os.path.exists(possible) else None
-                except Exception:
-                    possible = os.path.join(getattr(settings, 'BASE_DIR', ''), 'static', 'logo', 'logo.png')
-                    logo_path = possible if os.path.exists(possible) else None
-
-            # Prefer contact details from the branch (if available) falling back to business-level fields
-            branch = getattr(invoice, 'branch', None)
-            # If branch is not set on the invoice, try to find the main HQ branch for the business
-            if not branch:
-                try:
-                    branch = biz.branches.filter(is_main_branch=True, is_active=True).first()
-                except Exception:
-                    branch = None
-
-            email = ''
-            phone = ''
-            address = ''
-            if branch:
-                email = getattr(branch, 'email', '') or getattr(biz, 'email', '') or ''
-                phone = getattr(branch, 'contact_number', '') or getattr(biz, 'contact_number', '') or ''
-                loc = getattr(branch, 'location', None)
-                if loc:
-                    from finance.utils import format_location_address
-                    address = format_location_address(loc)
-
-            # If still no address from branch, fall back to business.location
-            if not address:
-                loc = getattr(biz, 'location', None)
-                if loc:
-                    from finance.utils import format_location_address
-                    address = format_location_address(loc)
-
-                    raw_parts = [getattr(loc, 'building_name', None), getattr(loc, 'street_name', None), getattr(loc, 'city', None), getattr(loc, 'county', None), getattr(loc, 'state', None), getattr(loc, 'country', None)]
-                    seen = set()
-                    cleaned = []
-                    for p in raw_parts:
-                        v = _part_val(p).strip()
-                        if not v:
-                            continue
-                        key = v.lower()
-                        if key in seen:
-                            continue
-                        seen.add(key)
-                        cleaned.append(v)
-                    address = ', '.join(cleaned)
-
-            # If branch has no contact info, try business-level attributes (older schemas)
-            if not email:
-                email = getattr(biz, 'email', '') if hasattr(biz, 'email') else ''
-            if not phone:
-                phone = getattr(biz, 'contact_number', '') if hasattr(biz, 'contact_number') else ''
-
-            company_info = {
-                'name': getattr(biz, 'name', 'Company Name'),
-                'address': address or (getattr(biz, 'address', '') if hasattr(biz, 'address') else ''),
-                'email': email,
-                'phone': phone,
-                'logo_path': logo_path
-            }
-
-        # If still no company_info, try to resolve default static logo
-        if not company_info:
-            company_info = {}
+        # Get business and branch from invoice
+        biz = None
+        branch = getattr(invoice, 'branch', None)
+        if branch and getattr(branch, 'business', None):
+            biz = branch.business
+        
+        # Use resolve_company_info to get all fields including PIN
+        company_info = resolve_company_info(biz, branch)
+        
+        # If logo_path not resolved, try staticfiles finders for default logo
+        if not company_info.get('logo_path'):
             try:
                 default_logo = finders.find('logo/logo.png') or finders.find('static/logo/logo.png')
                 if default_logo:
                     company_info['logo_path'] = default_logo
+                else:
+                    possible = os.path.join(getattr(settings, 'BASE_DIR', ''), 'static', 'logo', 'logo.png')
+                    if os.path.exists(possible):
+                        company_info['logo_path'] = possible
             except Exception:
-                # best effort fallback
-                candidate = os.path.join(getattr(settings, 'BASE_DIR', ''), 'static', 'logo', 'logo.png')
-                if os.path.exists(candidate):
-                    company_info['logo_path'] = candidate
+                possible = os.path.join(getattr(settings, 'BASE_DIR', ''), 'static', 'logo', 'logo.png')
+                if os.path.exists(possible):
+                    company_info['logo_path'] = possible
 
         return company_info
 
@@ -150,6 +84,7 @@ class InvoiceViewSet(BaseModelViewSet):
 
             # Generate PDF (support alternate document types via ?type=packing_slip|delivery_note)
             doc_type = request.query_params.get('type', 'invoice')
+            print(company_info)
             pdf_bytes = generate_invoice_pdf(invoice, company_info, document_type=doc_type)
 
             # Decide whether to stream PDF back directly or return JSON with a download url
@@ -261,20 +196,11 @@ class InvoiceViewSet(BaseModelViewSet):
             
             # Generate PDF attachment
             from .pdf_generator import generate_invoice_pdf
-            company_info = {
-                'name': company.name if company else 'Company',
-                'address': getattr(company, 'address', '') if company else '',
-                'email': getattr(company, 'email', '') if company else '',
-                'phone': getattr(company, 'contact_number', '') if company else '',
-            } if company else None
-
-            # Prefer branch-level contact details (branch stores email/contact_number)
-            if getattr(invoice, 'branch', None):
-                branch = invoice.branch
-                if branch.email:
-                    company_info['email'] = branch.email
-                if getattr(branch, 'contact_number', None):
-                    company_info['phone'] = branch.contact_number
+            # Resolve company info using shared helper so it includes logo and branding
+            from finance.utils import resolve_company_info
+            branch = getattr(invoice, 'branch', None)
+            biz = getattr(branch, 'business', None) if branch else (company if company else None)
+            company_info = resolve_company_info(biz, branch)
             
             doc_type = request.query_params.get('type', 'invoice')
             pdf_bytes = generate_invoice_pdf(invoice, company_info, document_type=doc_type)
@@ -838,12 +764,9 @@ class InvoiceViewSet(BaseModelViewSet):
                     
                     # Generate PDF
                     from .pdf_generator import generate_invoice_pdf
-                    company_info = {
-                        'name': company.name if company else 'Company',
-                        'address': company.address if company else '',
-                        'email': company.email if company else '',
-                        'phone': company.contact_number if company else '',
-                    } if company else None
+                    from finance.utils import resolve_company_info
+                    branch = getattr(invoice, 'branch', None)
+                    company_info = resolve_company_info(company, branch)
                     
                     pdf_bytes = generate_invoice_pdf(invoice, company_info)
                     

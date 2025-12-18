@@ -382,14 +382,11 @@ class PurchaseOrderViewSet(BaseModelViewSet):
             correlation_id = get_correlation_id(request)
             purchase_order = self.get_object()
             
-            # Prepare company info (customize as needed)
-            company_info = {
-                'name': 'Your Company Name',
-                'address': 'Company Address, City, Country',
-                'email': 'contact@company.com',
-                'phone': '+1234567890',
-                'logo_path': None  # Set path to logo if available
-            }
+            # Resolve company info using business/branch so PDFs use real branding
+            from finance.utils import resolve_company_info
+            branch = getattr(purchase_order, 'branch', None)
+            biz = getattr(branch, 'business', None) if branch else None
+            company_info = resolve_company_info(biz, branch)
             
             # Generate PDF
             pdf_bytes = generate_lpo_pdf(purchase_order, company_info)
