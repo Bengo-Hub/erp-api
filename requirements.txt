@@ -1,4 +1,5 @@
 africastalking
+apns2
 cssselect2
 dataclasses-json
 decorator
