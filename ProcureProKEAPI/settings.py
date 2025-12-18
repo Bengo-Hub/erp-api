@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'django_prometheus',
 
     #third pirty
     'channels',  # Django Channels for WebSocket support
@@ -225,6 +226,7 @@ SPECTACULAR_SETTINGS = {'TITLE': 'BengoBox ERP API', 'VERSION': '1.0.0'}
 
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -235,6 +237,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
     'core.performance.PerformanceMiddleware',  # Performance monitoring middleware
     'core.security.SecurityMiddleware',  # Enhanced security middleware
     'authmanagement.middleware.SiteWideConfigs',
@@ -500,16 +503,16 @@ SPECTACULAR_SETTINGS = {
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
+STATIC_URL = "/static/"
 if CDN_CONFIG['ENABLED'] and CDN_CONFIG['DOMAIN']:
-    # When using CDN, use compressed static files but serve admin files locally
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
     STATIC_URL = f"https://{CDN_CONFIG['DOMAIN']}/static/"
     MEDIA_URL = f"https://{CDN_CONFIG['DOMAIN']}/media/"
 else:
-    # In development/local, use manifest storage for caching
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-    STATIC_URL = "/static/"
     MEDIA_URL = '/media/'
+
+# Use WhiteNoise for static files
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+WHITENOISE_MANIFEST_STRICT = False  # Don't crash if a file is missing from manifest
 
 STATIC_ROOT = os.getenv('STATIC_ROOT', os.path.join(BASE_DIR, "staticfiles"))
 
