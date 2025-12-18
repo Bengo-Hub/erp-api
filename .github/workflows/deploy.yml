@@ -136,15 +136,16 @@ jobs:
         echo "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
 
         # Ensure deployment is rolled out (deployment name is erp-api-app from Helm chart)
-        kubectl rollout status deployment/erp-api-app -n ${NS} --timeout=300s
+        # Increased timeout to 20 minutes (1200s) as requested for heavy migrations
+        kubectl rollout status deployment/erp-api-app -n ${NS} --timeout=1200s
 
         # Try ingress health endpoint(s)
         HOSTS=$(kubectl get ingress -n ${NS} -o jsonpath='{.items[*].spec.rules[*].host}' | tr ' ' '\n' | grep -E '^erpapi(\.|$)' || true)
         if [ -n "$HOSTS" ]; then
           STATUS=1
           for H in $HOSTS; do
-            echo "Checking https://$H/api/v1/health/ ..."
-            if curl -sk --max-time 10 "https://$H/api/v1/health/" | grep -Ei "ok|healthy" >/dev/null; then
+            echo "Checking https://$H/api/v1/core/health/ ..."
+            if curl -sk --max-time 10 "https://$H/api/v1/core/health/" | grep -Ei "ok|healthy" >/dev/null; then
               echo "✅ Health OK for $H"
               STATUS=0
               break

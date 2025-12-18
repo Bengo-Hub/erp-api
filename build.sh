@@ -404,10 +404,10 @@ if [[ "$DEPLOY" == "true" ]]; then
 
             # Wait for databases to be ready (managed by devops-k8s in infra namespace)
             log_info "Waiting for PostgreSQL to be ready in infra namespace..."
-            kubectl -n infra rollout status statefulset/postgresql --timeout=180s || log_warning "PostgreSQL not fully ready"
+            kubectl -n infra rollout status statefulset/postgresql --timeout=600s || log_warning "PostgreSQL not fully ready"
             
             log_info "Waiting for Redis to be ready in infra namespace..."
-            kubectl -n infra rollout status statefulset/redis-master --timeout=120s || log_warning "Redis not fully ready"
+            kubectl -n infra rollout status statefulset/redis-master --timeout=600s || log_warning "Redis not fully ready"
             
             # Grace period after readiness before connections (minimum 5 seconds)
             log_info "Waiting 5 seconds to allow database services to stabilize before connecting..."
@@ -498,7 +498,8 @@ if [[ "$DEPLOY" == "true" ]]; then
             else
                 # Wait for ingress to be ready and get URLs (API hosts only)
                 SERVICE_URLS=""
-                MAX_WAIT=300  # 5 minutes
+                # Increased timeout to 20 minutes (1200s) as requested
+                MAX_WAIT=1200
                 WAIT_INTERVAL=15  # Increased interval since ArgoCD sync takes time
 
                 for i in $(seq 1 $((MAX_WAIT / WAIT_INTERVAL))); do
