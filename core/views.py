@@ -195,14 +195,18 @@ class HealthCheckView(APIView):
             db_status = str(e)
         
         # Basic health check data
+        is_healthy = db_status == "ok"
         health_data = {
-            "status": "healthy",
+            "status": "healthy" if is_healthy else "unhealthy",
             "timestamp": datetime.now().isoformat(),
             "database": db_status,
             "version": "1.0.0"
         }
         
-        return Response(health_data)
+        return Response(
+            health_data, 
+            status=status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+        )
 
 class PerformanceMetricsView(APIView):
     """API endpoint for performance monitoring and metrics"""
