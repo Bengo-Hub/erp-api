@@ -119,6 +119,7 @@ class BaseOrderSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'order_number', 'order_type', 'customer', 'supplier', 
             'branch', 'created_by', 'subtotal', 'tax_amount', 'discount_amount', 
+            'tax_mode', 'tax_rate',
             'shipping_cost', 'total', 'status', 'payment_status', 
             'fulfillment_status', 'shipping_address', 'billing_address',
             'tracking_number', 'shipping_provider', 'estimated_delivery_date',

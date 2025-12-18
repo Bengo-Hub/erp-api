@@ -125,6 +125,7 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
             'customer', 'branch', 'invoice_date', 'payment_terms', 'custom_terms_days',
             'template_name', 'customer_notes', 'terms_and_conditions',
             'subtotal', 'tax_amount', 'discount_amount', 'shipping_cost', 'total',
+            'tax_mode', 'tax_rate',
             'items', 'shipping_address', 'billing_address',
         ]
     
@@ -190,6 +191,29 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
             OrderItem.objects.create(**order_item_kwargs)
         
         return invoice
+
+    def to_internal_value(self, data):
+        """Quantize money-like and tax_rate fields"""
+        from decimal import Decimal, ROUND_HALF_UP
+
+        def quantize_val(v):
+            try:
+                d = Decimal(str(v))
+                return str(d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            except Exception:
+                return v
+
+        data = data.copy() if isinstance(data, dict) else data
+
+        money_fields = ['subtotal', 'tax_amount', 'discount_amount', 'shipping_cost', 'total']
+        for f in money_fields:
+            if f in data and data[f] is not None:
+                data[f] = quantize_val(data[f])
+
+        if 'tax_rate' in data and data['tax_rate'] is not None:
+            data['tax_rate'] = quantize_val(data['tax_rate'])
+
+        return super().to_internal_value(data)
 
 
 class InvoiceSendSerializer(serializers.Serializer):

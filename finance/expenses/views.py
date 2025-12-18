@@ -347,11 +347,17 @@ class ExpenseViewSet(BaseModelViewSet):
         try:
             expense = self.get_object()
             
-            # Use the invoice PDF generator for now (can be customized for expenses)
+            # Use the invoice PDF generator for expenses with company info
             from finance.invoicing.pdf_generator import generate_invoice_pdf
+            from finance.utils import resolve_company_info
+            
+            # Resolve company info for the expense
+            branch = getattr(expense, 'branch', None)
+            biz = getattr(branch, 'business', None) if branch else None
+            company_info = resolve_company_info(biz, branch)
             
             # Generate PDF
-            pdf_buffer = generate_invoice_pdf(expense, document_type='expense')
+            pdf_buffer = generate_invoice_pdf(expense, company_info, document_type='expense')
             
             # Return PDF response
             response = Response(

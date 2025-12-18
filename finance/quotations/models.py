@@ -43,6 +43,10 @@ class Quotation(BaseOrder):
     quotation_date = models.DateField(default=timezone.now)
     valid_until = models.DateField(help_text="Quotation expiry date")
     
+    # RFQ and Tender reference fields
+    rfq_number = models.CharField(max_length=100, blank=True, null=True, help_text="RFQ (Request for Quotation) reference number")
+    tender_quotation_ref = models.CharField(max_length=100, blank=True, null=True, help_text="Tender/Quotation reference number")
+    
     # Note: status field inherited from BaseOrder, but we use quotation-specific STATUS_CHOICES
     
     # Validity

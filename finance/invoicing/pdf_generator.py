@@ -13,6 +13,25 @@ from datetime import datetime
 from decimal import Decimal
 import logging
 import os
+from ..utils import (
+    get_customer_name, get_customer_email, get_customer_phone,
+    _sanitize_text_for_pdf, _get_logo_image, _build_company_details_section,
+    _build_client_details_section, _build_document_details_section, BoxedSection
+)
+
+
+def _format_date_safe(d):
+    try:
+        if not d:
+            return ''
+        if hasattr(d, 'strftime'):
+            return d.strftime('%d/%m/%Y')
+        return str(d)
+    except Exception:
+        try:
+            return str(d)
+        except Exception:
+            return ''
 logger = logging.getLogger(__name__)
 from django.conf import settings
 import re
@@ -22,36 +41,109 @@ try:
 except Exception:
     finders = None
 
+# BoxedSection is provided by finance.utils; imported above for reuse.
 
-def _sanitize_text_for_pdf(text):
-    """
-    Sanitize HTML-ish text for PDF output.
-    Returns plain text with newlines preserved.
-    """
+
+def _resolve_company_from_document(doc):
+    """Attempt to construct a company_info dict from a document (invoice/quotation)
+    Falls back to provided branch.business if available."""
+    # now implemented in finance.utils as _resolve_company_from_document
+    from ..utils import _resolve_company_from_document as _impl
+    return _impl(doc)
+
+
+def _user_initials(user):
     try:
-        if not text:
+        if not user:
             return ''
-
-        # Convert bytes to str if necessary
-        if isinstance(text, bytes):
-            text = text.decode('utf-8', errors='ignore')
-
-        # Normalize common block separators to newlines
-        text = re.sub(r'</p\s*>', '\n\n', text, flags=re.IGNORECASE)
-        text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
-
-        # Strip remaining tags
-        text = re.sub(r'<[^>]+>', '', text)
-
-        # Unescape HTML entities (e.g., &nbsp;, &amp;)
-        text = html.unescape(text)
-
-        # Replace multiple newlines with at most two
-        text = re.sub(r'\n{3,}', '\n\n', text)
-
-        return text.strip()
+        fn = getattr(user, 'first_name', '') or ''
+        ln = getattr(user, 'last_name', '') or ''
+        parts = [p for p in [fn, ln] if p]
+        if parts:
+            return ''.join([p[0].upper() for p in parts])
+        return getattr(user, 'username', '')[:2].upper()
     except Exception:
-        return str(text)
+        return ''
+
+
+def _build_signature_table(prepared_by, approved_by, header_style, prepared_date=None, approved_date=None):
+    """Return a signature Table flowable for prepared/approved details.
+
+    prepared_date and approved_date can be provided as strings (formatted) or datetime objects.
+    """
+    prepared_name = f"{getattr(prepared_by, 'first_name', '') or ''} {getattr(prepared_by, 'last_name', '') or ''}".strip() if prepared_by else ''
+    approved_name = f"{getattr(approved_by, 'first_name', '') or ''} {getattr(approved_by, 'last_name', '') or ''}".strip() if approved_by else ''
+
+    if prepared_date and hasattr(prepared_date, 'strftime'):
+        prepared_date_str = prepared_date.strftime('%d/%m/%Y')
+    else:
+        prepared_date_str = prepared_date or ''
+
+    if approved_date and hasattr(approved_date, 'strftime'):
+        approved_date_str = approved_date.strftime('%d/%m/%Y')
+    else:
+        approved_date_str = approved_date or ''
+
+    sig_table = Table([
+        [Paragraph('<b>Prepared by</b>', header_style), Paragraph('<b>Approved by</b>', header_style)],
+        [Paragraph(prepared_name, header_style), Paragraph(approved_name, header_style)],
+        [Paragraph(prepared_date_str, header_style), Paragraph(approved_date_str, header_style)],
+        [Paragraph(f"Sign: { _user_initials(prepared_by) }", header_style), Paragraph(f"Sign: { _user_initials(approved_by) }", header_style)]
+    ], colWidths=[3.5*inch, 3.5*inch])
+    return sig_table
+
+
+def _build_totals_table(document, document_type, label_style, label_bold_style):
+    """Construct and return a totals Table for invoice/quotation with tax label handling."""
+    # Determine a friendly tax label depending on tax_mode and tax_rate
+    tax_label = getattr(document, 'tax_type', None) or 'Tax'
+    try:
+        if getattr(document, 'tax_mode', None) == 'on_total':
+            rate = getattr(document, 'tax_rate', None)
+            if rate is not None and str(rate) != '':
+                # show percentage and indicate tax is on subtotal/total
+                tax_label = f"Tax ({rate}% on subtotal)"
+            else:
+                tax_label = "Tax (on subtotal)"
+    except Exception:
+        # keep default tax_label on any error
+        pass
+    subtotal = getattr(document, 'subtotal', 0)
+    tax_amount = getattr(document, 'tax_amount', 0)
+    discount = getattr(document, 'discount_amount', 0)
+    shipping = getattr(document, 'shipping_cost', 0)
+    total = getattr(document, 'total', 0)
+    amount_paid = getattr(document, 'amount_paid', 0)
+    balance_due = getattr(document, 'balance_due', 0)
+
+    rows = [
+        [Paragraph('Subtotal:', label_style), Paragraph(f"KES {subtotal:,.2f}", label_style)],
+        [Paragraph(f"{tax_label}:", label_style), Paragraph(f"KES {tax_amount:,.2f}", label_style)],
+    ]
+
+    if discount and discount > 0:
+        rows.append([Paragraph('Discount:', label_style), Paragraph(f"-KES {discount:,.2f}", label_style)])
+    if shipping and shipping > 0:
+        rows.append([Paragraph('Shipping:', label_style), Paragraph(f"KES {shipping:,.2f}", label_style)])
+
+    rows.append([Paragraph('TOTAL:', label_bold_style), Paragraph(f"KES {total:,.2f}", label_bold_style)])
+    # only include amount paid/balance if on the document
+    if hasattr(document, 'amount_paid'):
+        rows.append([Paragraph('Amount Paid:', label_bold_style), Paragraph(f"KES {amount_paid:,.2f}", label_bold_style)])
+    if hasattr(document, 'balance_due'):
+        rows.append([Paragraph('Balance Due:', label_bold_style), Paragraph(f"KES {balance_due:,.2f}", label_bold_style)])
+
+    tbl = Table(rows, colWidths=[4.5*inch, 2.5*inch])
+    tbl.setStyle(TableStyle([
+        ('FONT', (0, 0), (-1, -2), 'Helvetica', 10),
+        ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 11),
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#2563eb')),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#fef3c7')),
+    ]))
+    return tbl
 
 
 def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
@@ -95,67 +187,67 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             textColor=colors.HexColor('#374151'),
         )
         
-        # Company Header: attempt to resolve logo path (business logo or default static)
-        logo_path = None
-        if company_info and company_info.get('logo_path'):
-            candidate = company_info.get('logo_path')
-            # If candidate is a filesystem path and exists, use it
-            if isinstance(candidate, str) and os.path.exists(candidate):
-                logo_path = candidate
-            else:
-                # Try staticfiles finders to resolve relative/static paths
-                if finders:
-                    found = finders.find(candidate.lstrip('/')) or finders.find('logo/logo.png')
-                    logo_path = found
-                else:
-                    # Fallback to trying BASE_DIR + candidate
-                    try:
-                        potential = os.path.join(settings.BASE_DIR, candidate.lstrip('/'))
-                        if os.path.exists(potential):
-                            logo_path = potential
-                    except Exception:
-                        logo_path = None
-
-        # If still not found, try to locate default logo in static
-        if not logo_path:
-            try:
-                if finders:
-                    logo_path = finders.find('logo/logo.png') or finders.find('static/logo/logo.png')
-                else:
-                    candidate = os.path.join(settings.BASE_DIR, 'static', 'logo', 'logo.png')
-                    if os.path.exists(candidate):
-                        logo_path = candidate
-            except Exception:
-                logo_path = None
-
-        if logo_path:
-            try:
-                # Position logo to the right of company details
-                logo = Image(logo_path, width=2*inch, height=1*inch)
-            except Exception:
-                logo = None
-            except Exception:
-                pass
+        # Company Header: use imported helper function for logo
+        logo = _get_logo_image(company_info)
         
-        # Company details
-        # Layout company details and logo side-by-side
-        if company_info or logo:
-            company_text = ''
-            if company_info:
-                company_text = f"<b>{company_info.get('name', 'Company Name')}</b><br/>"
-                company_text += f"{company_info.get('address', '')}<br/>"
-                company_text += f"Email: {company_info.get('email', '')}<br/>"
-                company_text += f"Phone: {company_info.get('phone', '')}"
+        # Document title (left) and logo (right)
+        title_text = 'INVOICE'
+        if document_type == 'packing_slip':
+            title_text = 'PACKING SLIP'
+        elif document_type == 'delivery_note':
+            title_text = 'DELIVERY NOTE'
 
-            # Two-column table: details (left), logo (right)
-            row = [Paragraph(company_text, header_style) if company_text else '', logo if logo else '']
-            header_table = Table([row], colWidths=[4.5*inch, 2*inch])
-            header_table.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('ALIGN', (1, 0), (1, 0), 'RIGHT')
-            ]))
-            elements.append(header_table)
-            elements.append(Spacer(1, 0.3*inch))
+        # Resolve logo and company info (prefer passed company_info)
+        company_info = company_info or _resolve_company_from_document(invoice)
+        logo = _get_logo_image(company_info)
+
+        header_row = [Paragraph(title_text, title_style), logo if logo else '']
+        header_table = Table([header_row], colWidths=[4.5*inch, 2*inch])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT')
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 0.2*inch))
+
+        # Build boxed company (left) and document details (right)
+        comp_details = _build_company_details_section(company_info)
+        company_box = BoxedSection(comp_details, width=4.5*inch)
+
+        # Client details
+        client_addr = getattr(invoice, 'billing_address', None) or getattr(invoice, 'shipping_address', None)
+        client_info = {
+            'name': get_customer_name(invoice),
+            'email': get_customer_email(invoice),
+            'phone': get_customer_phone(invoice)
+        }
+        if client_addr:
+            client_info.update({
+                'floor_number': getattr(client_addr, 'floor_number', ''),
+                'building_name': getattr(client_addr, 'building_name', ''),
+                'street_name': getattr(client_addr, 'street_name', ''),
+                'city': getattr(client_addr, 'city', '')
+            })
+        client_section = _build_client_details_section(client_info, 'invoice')
+        client_box = BoxedSection(client_section, width=4.5*inch)
+
+        # Document details (right)
+        doc_info = {
+            'type': 'Invoice',
+            'number': getattr(invoice, 'invoice_number', ''),
+            'date': getattr(invoice, 'invoice_date', None).strftime('%d/%m/%Y') if getattr(invoice, 'invoice_date', None) else '',
+            'due_date': getattr(invoice, 'due_date', None).strftime('%d/%m/%Y') if getattr(invoice, 'due_date', None) else ''
+        }
+        doc_details = _build_document_details_section(doc_info, 'invoice')
+        doc_box = BoxedSection(doc_details, width=2*inch)
+
+        # Layout company/client (left stacked) and document details (right)
+        left_col = [company_box, Spacer(1, 0.15*inch), client_box]
+        left_table = Table([[left_col, doc_box]], colWidths=[4.5*inch, 2*inch])
+        # Note: left_col is a list of flowables; wrap in Table cell as-is
+        left_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
+        elements.append(left_table)
+        elements.append(Spacer(1, 0.25*inch))
         
         # Invoice Title (supports packing_slip/delivery_note)
         title_text = 'INVOICE'
@@ -206,8 +298,8 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
 
         details_data = [
             [Paragraph('Invoice Number:', label_bold_style), Paragraph(str(invoice.invoice_number), label_style), Paragraph('Bill To:', label_bold_style), Paragraph(get_customer_name(invoice), label_style)],
-            [Paragraph('Invoice Date:', label_bold_style), Paragraph(invoice.invoice_date.strftime('%d/%m/%Y'), label_style), Paragraph('Email:', label_bold_style), Paragraph(get_customer_email(invoice), label_style)],
-            [Paragraph('Due Date:', label_bold_style), Paragraph(invoice.due_date.strftime('%d/%m/%Y'), label_style), Paragraph('Phone:', label_bold_style), Paragraph(get_customer_phone(invoice), label_style)],
+            [Paragraph('Invoice Date:', label_bold_style), Paragraph(_format_date_safe(getattr(invoice, 'invoice_date', None)), label_style), Paragraph('Email:', label_bold_style), Paragraph(get_customer_email(invoice), label_style)],
+            [Paragraph('Due Date:', label_bold_style), Paragraph(_format_date_safe(getattr(invoice, 'due_date', None)), label_style), Paragraph('Phone:', label_bold_style), Paragraph(get_customer_phone(invoice), label_style)],
             [Paragraph('Payment Terms:', label_bold_style), Paragraph(invoice.get_payment_terms_display(), label_style), '', ''],
         ]
         
@@ -223,7 +315,14 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
         elements.append(Spacer(1, 0.4*inch))
         
         # Line Items Table
-        items_data = [['#', 'Description', 'Qty', 'Unit Price', 'Tax', 'Amount']]
+        items_data = [[
+            Paragraph('#', header_style),
+            Paragraph('Description', header_style),
+            Paragraph('Qty', header_style),
+            Paragraph('Unit Price', header_style),
+            Paragraph('Tax', header_style),
+            Paragraph('Amount', header_style)
+        ]]
         
         for idx, item in enumerate(invoice.items.all(), 1):
             # sanitize name/description to remove embedded HTML
@@ -239,12 +338,12 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             total_amount = getattr(item, 'total_price', None) or getattr(item, 'total', 0) or (qty * unit_price)
 
             items_data.append([
-                str(idx),
+                Paragraph(str(idx), header_style),
                 Paragraph(desc, header_style),
-                str(qty),
-                f"KES {unit_price:,.2f}",
-                f"KES {tax_amount:,.2f}",
-                f"KES {total_amount:,.2f}"
+                Paragraph(str(qty), header_style),
+                Paragraph(f"KES {unit_price:,.2f}", header_style),
+                Paragraph(f"KES {tax_amount:,.2f}", header_style),
+                Paragraph(f"KES {total_amount:,.2f}", header_style)
             ])
         
         items_table = Table(items_data, colWidths=[0.4*inch, 3*inch, 0.7*inch, 1.2*inch, 0.7*inch, 1.2*inch])
@@ -266,9 +365,10 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
         elements.append(Spacer(1, 0.3*inch))
         
         # Totals Section (Right-aligned)
+        tax_label = getattr(invoice, 'tax_type', None) or 'Tax'
         totals_data = [
             [Paragraph('Subtotal:', label_style), Paragraph(f"KES {invoice.subtotal:,.2f}", label_style)],
-            [Paragraph('Tax:', label_style), Paragraph(f"KES {invoice.tax_amount:,.2f}", label_style)],
+            [Paragraph(f"{tax_label}:", label_style), Paragraph(f"KES {invoice.tax_amount:,.2f}", label_style)],
         ]
         
         if invoice.discount_amount > 0:
@@ -281,16 +381,7 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
         totals_data.append([Paragraph('Amount Paid:', label_bold_style), Paragraph(f"KES {invoice.amount_paid:,.2f}", label_bold_style)])
         totals_data.append([Paragraph('Balance Due:', label_bold_style), Paragraph(f"KES {invoice.balance_due:,.2f}", label_bold_style)])
         
-        totals_table = Table(totals_data, colWidths=[4.5*inch, 2.5*inch])
-        totals_table.setStyle(TableStyle([
-            ('FONT', (0, 0), (-1, -2), 'Helvetica', 10),
-            ('FONT', (0, -3), (-1, -1), 'Helvetica-Bold', 11),
-            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ('LINEABOVE', (0, -3), (-1, -3), 2, colors.HexColor('#2563eb')),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#fef3c7')),
-        ]))
+        totals_table = _build_totals_table(invoice, 'invoice', label_style, label_bold_style)
         elements.append(totals_table)
         
         # Notes
@@ -322,6 +413,13 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             )
             sanitized_tc = _sanitize_text_for_pdf(invoice.terms_and_conditions)
             elements.append(Paragraph(sanitized_tc.replace('\n', '<br/>'), tc_style))
+
+        # Prepared / Approved signature block
+        elements.append(Spacer(1, 0.2*inch))
+        prepared_by = getattr(invoice, 'created_by', None)
+        approved_by = getattr(invoice, 'approved_by', None)
+        sig = _build_signature_table(prepared_by, approved_by, header_style, prepared_date=getattr(invoice, 'created_at', None), approved_date=getattr(invoice, 'approved_at', None))
+        elements.append(sig)
         
         # Footer
         elements.append(Spacer(1, 0.4*inch))
@@ -409,52 +507,56 @@ def generate_quotation_pdf(quotation, company_info=None):
         elements.append(Paragraph("QUOTATION", title_style))
         elements.append(Spacer(1, 0.2*inch))
 
-        # Use the same two-column company header as invoices (company details + logo)
-        # Attempt to resolve logo path if provided in company_info
-        logo = None
-        logo_path = None
-        if company_info and company_info.get('logo_path'):
-            candidate = company_info.get('logo_path')
-            if isinstance(candidate, str) and os.path.exists(candidate):
-                logo_path = candidate
-            else:
-                try:
-                    if finders:
-                        logo_path = finders.find(candidate.lstrip('/')) or finders.find('logo/logo.png')
-                except Exception:
-                    logo_path = None
-
-        if not logo_path:
-            try:
-                if finders:
-                    logo_path = finders.find('logo/logo.png') or finders.find('static/logo/logo.png')
-                else:
-                    candidate = os.path.join(settings.BASE_DIR, 'static', 'logo', 'logo.png')
-                    if os.path.exists(candidate):
-                        logo_path = candidate
-            except Exception:
-                logo_path = None
-
-        if logo_path:
-            try:
-                logo = Image(logo_path, width=2*inch, height=1*inch)
-            except Exception:
-                logo = None
-
-        company_text = ''
-        if company_info:
-            company_text = f"<b>{company_info.get('name', 'Company Name')}</b><br/>{company_info.get('address', '')}<br/>Email: {company_info.get('email', '')}<br/>Phone: {company_info.get('phone', '')}"
-
-        header_row = [Paragraph(company_text, header_style) if company_text else '', logo if logo else '']
+        # Header: title (left) and logo (right)
+        title_style.textColor = colors.HexColor('#2563eb')
+        title_text = 'QUOTATION'
+        logo = _get_logo_image(company_info)
+        header_row = [Paragraph(title_text, title_style), logo if logo else '']
         header_table = Table([header_row], colWidths=[4.5*inch, 2*inch])
         header_table.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ALIGN', (1, 0), (1, 0), 'RIGHT')
         ]))
-        if company_text or logo:
-            elements.insert(0, Spacer(1, 0.1*inch))
-            elements.insert(0, header_table)
-            elements.insert(1, Spacer(1, 0.3*inch))
+        elements.append(header_table)
+        elements.append(Spacer(1, 0.2*inch))
+
+        # Company box (left) and document details box (right)
+        company_info = company_info or _resolve_company_from_document(quotation)
+        comp_details = _build_company_details_section(company_info)
+        company_box = BoxedSection(comp_details, width=4.5*inch)
+
+        client_addr = getattr(quotation, 'billing_address', None) or getattr(quotation, 'shipping_address', None)
+        client_info = {
+            'name': get_customer_name(quotation),
+            'email': get_customer_email(quotation),
+            'phone': get_customer_phone(quotation)
+        }
+        if client_addr:
+            client_info.update({
+                'floor_number': getattr(client_addr, 'floor_number', ''),
+                'building_name': getattr(client_addr, 'building_name', ''),
+                'street_name': getattr(client_addr, 'street_name', ''),
+                'city': getattr(client_addr, 'city', '')
+            })
+        client_section = _build_client_details_section(client_info, 'quotation')
+        client_box = BoxedSection(client_section, width=4.5*inch)
+
+        doc_info = {
+            'type': 'Quotation',
+            'number': getattr(quotation, 'quotation_number', ''),
+            'date': getattr(quotation, 'quotation_date', None).strftime('%d/%m/%Y') if getattr(quotation, 'quotation_date', None) else '',
+            'valid_until': getattr(quotation, 'valid_until', None).strftime('%d/%m/%Y') if getattr(quotation, 'valid_until', None) else '',
+            'rfq_number': getattr(quotation, 'rfq_number', ''),
+            'tender_quotation_ref': getattr(quotation, 'tender_quotation_ref', '')
+        }
+        doc_details = _build_document_details_section(doc_info, 'quotation')
+        doc_box = BoxedSection(doc_details, width=2*inch)
+
+        left_col = [company_box, Spacer(1, 0.15*inch), client_box]
+        left_table = Table([[left_col, doc_box]], colWidths=[4.5*inch, 2*inch])
+        left_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
+        elements.append(left_table)
+        elements.append(Spacer(1, 0.25*inch))
 
         # Quotation & Customer Details - reuse label styles
         label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))
@@ -501,7 +603,14 @@ def generate_quotation_pdf(quotation, company_info=None):
             elements.append(Spacer(1, 0.2*inch))
         
         # Line Items Table
-        items_data = [['#', 'Description', 'Qty', 'Unit Price', 'Tax', 'Amount']]
+        items_data = [[
+            Paragraph('#', header_style),
+            Paragraph('Description', header_style),
+            Paragraph('Qty', header_style),
+            Paragraph('Unit Price', header_style),
+            Paragraph('Tax', header_style),
+            Paragraph('Amount', header_style)
+        ]]
         
         for idx, item in enumerate(quotation.items.all(), 1):
             # Build description and numeric fields defensively. OrderItem model does not
@@ -535,12 +644,12 @@ def generate_quotation_pdf(quotation, company_info=None):
                 total_amount = float(total_price_field)
 
             items_data.append([
-                str(idx),
+                Paragraph(str(idx), header_style),
                 Paragraph(desc, header_style),
-                str(qty),
-                f"KES {float(unit_price):,.2f}",
-                f"KES {tax_amount:,.2f}",
-                f"KES {total_amount:,.2f}"
+                Paragraph(str(qty), header_style),
+                Paragraph(f"KES {float(unit_price):,.2f}", header_style),
+                Paragraph(f"KES {tax_amount:,.2f}", header_style),
+                Paragraph(f"KES {total_amount:,.2f}", header_style)
             ])
         items_table = Table(items_data, colWidths=[0.4*inch, 3.3*inch, 0.7*inch, 1.0*inch, 0.6*inch, 1.2*inch], repeatRows=1)
         items_table.setStyle(TableStyle([
@@ -563,29 +672,7 @@ def generate_quotation_pdf(quotation, company_info=None):
         elements.append(Spacer(1, 0.3*inch))
         
         # Totals Section
-        totals_data = [
-            ['Subtotal:', f"KES {quotation.subtotal:,.2f}"],
-            ['Tax:', f"KES {quotation.tax_amount:,.2f}"],
-        ]
-        
-        if quotation.discount_amount > 0:
-            totals_data.append(['Discount:', f"-KES {quotation.discount_amount:,.2f}"])
-        
-        if quotation.shipping_cost > 0:
-            totals_data.append(['Shipping:', f"KES {quotation.shipping_cost:,.2f}"])
-        
-        totals_data.append(['TOTAL:', f"KES {quotation.total:,.2f}"])
-
-        totals_table = Table(totals_data, colWidths=[4.5*inch, 2.5*inch])
-        totals_table.setStyle(TableStyle([
-            ('FONT', (0, 0), (-1, -2), 'Helvetica', 10),
-            ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 11),
-            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#2563eb')),
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#fef3c7')),
-        ]))
+        totals_table = _build_totals_table(quotation, 'quotation', label_style, label_bold_style)
         elements.append(totals_table)
         
         # Notes
@@ -616,6 +703,13 @@ def generate_quotation_pdf(quotation, company_info=None):
             )
             elements.append(Paragraph(quotation.terms_and_conditions, tc_style))
         
+        # Prepared / Approved signature block for quotation
+        elements.append(Spacer(1, 0.2*inch))
+        prepared_by = getattr(quotation, 'created_by', None)
+        approved_by = getattr(quotation, 'approved_by', None)
+        sig = _build_signature_table(prepared_by, approved_by, header_style, prepared_date=getattr(quotation, 'created_at', None), approved_date=getattr(quotation, 'approved_at', None))
+        elements.append(sig)
+
         # Footer
         elements.append(Spacer(1, 0.4*inch))
         footer_style = ParagraphStyle(
@@ -642,60 +736,4 @@ def generate_quotation_pdf(quotation, company_info=None):
     except Exception as e:
         logger.error(f"Error generating quotation PDF: {str(e)}", exc_info=True)
         raise
-
-
-def get_customer_name(doc):
-    """Get customer name from document"""
-    try:
-        customer = getattr(doc, 'customer', None)
-        # Prefer customer business name, then customer user name
-        if customer:
-            bname = getattr(customer, 'business_name', None)
-            if bname:
-                return bname
-            user = getattr(customer, 'user', None)
-            if user and (user.first_name or user.last_name):
-                return f"{user.first_name or ''} {user.last_name or ''}".strip()
-        # Fallback: if doc has an associated created_by user, use that
-        created_by = getattr(doc, 'created_by', None)
-        if created_by:
-            return f"{created_by.first_name or ''} {created_by.last_name or ''}".strip() or created_by.username
-        return 'N/A'
-    except:
-        return "N/A"
-
-
-def get_customer_email(doc):
-    """Get customer email from document"""
-    try:
-        customer = getattr(doc, 'customer', None)
-        if customer and getattr(customer, 'user', None):
-            return getattr(customer.user, 'email', 'N/A')
-        created_by = getattr(doc, 'created_by', None)
-        if created_by:
-            return getattr(created_by, 'email', 'N/A')
-        return 'N/A'
-    except:
-        return "N/A"
-
-
-def get_customer_phone(doc):
-    """Get customer phone from document"""
-    try:
-        customer = getattr(doc, 'customer', None)
-        if customer:
-            # contact may have phone directly or via user
-            phone = getattr(customer, 'phone', None)
-            if phone:
-                return phone
-            user = getattr(customer, 'user', None)
-            if user and getattr(user, 'phone', None):
-                return user.phone
-        # fallback to created_by phone or N/A
-        created_by = getattr(doc, 'created_by', None)
-        if created_by and getattr(created_by, 'phone', None):
-            return created_by.phone
-        return "N/A"
-    except:
-        return "N/A"
 
