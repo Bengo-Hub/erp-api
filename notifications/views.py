@@ -267,13 +267,23 @@ class InAppNotificationListView(APIView):
         try:
             notification_service = NotificationService()
             
+            # Parse is_read query parameter from string to boolean
+            # Frontend may send: ?is_read=true, ?is_read=false, ?is_read=1, ?is_read=0
+            is_read_param = request.GET.get('is_read', '').lower().strip()
+            is_read = None
+            if is_read_param in ['true', '1', 'yes', 'on']:
+                is_read = True
+            elif is_read_param in ['false', '0', 'no', 'off']:
+                is_read = False
+            # else: is_read remains None (no filter)
+            
             # Get notifications
             result = notification_service.get_user_notifications(
                 user=request.user,
                 limit=request.GET.get('limit', 50),
                 offset=request.GET.get('offset', 0),
                 notification_type=request.GET.get('notification_type'),
-                is_read=request.GET.get('is_read')
+                is_read=is_read
             )
             
             return Response(result, status=status.HTTP_200_OK)

@@ -57,10 +57,17 @@ ENV DJANGO_SETTINGS_MODULE=ProcureProKEAPI.settings \
     PORT=4000 \
     DJANGO_ENV=production
 
-# Create static and media directories
+# Create static and media directories with proper permissions
 # Static files are baked into image via collectstatic at runtime (whitenoise serves them)
 # Media files should be persisted via PersistentVolume in production
-RUN mkdir -p /app/staticfiles /app/media && chown -R appuser:appgroup /app
+RUN mkdir -p /app/staticfiles \
+    && mkdir -p /app/media/business/logo \
+    && mkdir -p /app/media/invoices \
+    && mkdir -p /app/media/receipts \
+    && mkdir -p /app/media/reports \
+    && mkdir -p /app/media/uploads \
+    && chown -R appuser:appgroup /app/staticfiles /app/media \
+    && chmod -R 755 /app/media
 
 USER appuser
 

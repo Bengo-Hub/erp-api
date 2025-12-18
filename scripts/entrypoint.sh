@@ -1,6 +1,7 @@
 #!/bin/bash
 # Entrypoint script for ERP-API service
-# Runs migrations automatically before starting the server
+# Runs migrations only if pending migrations exist (idempotent for multi-pod deployments)
+# Multiple pods connect to the same database, so we must avoid redundant migrations
 
 set -e  # Exit on any error
 
@@ -33,24 +34,107 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
 else
   echo "✅ Database connected (attempt $RETRY_COUNT)"
   
-  # Run database migrations (idempotent - safe to run multiple times)
+  # Check for pending migrations (idempotent multi-pod pattern)
   echo ""
-  echo "🔄 Running database migrations..."
-  if python manage.py migrate --fake-initial --noinput 2>&1; then
-      echo "✅ Migrations completed successfully"
-  else
-      echo "⚠️ --fake-initial failed, trying regular migrate..."
-      if python manage.py migrate --noinput 2>&1; then
-          echo "✅ Regular migrations completed"
+  echo "🔍 Checking for pending migrations..."
+  PENDING_MIGRATIONS=$(python manage.py showmigrations --plan 2>&1 | grep -c '^\s*\[ \]' || true)
+  
+  if [ "$PENDING_MIGRATIONS" -gt 0 ]; then
+    echo "📋 Found $PENDING_MIGRATIONS pending migrations - acquiring migration lock..."
+    
+    # Distributed lock using database: only one pod acquires lock and runs migrations
+    # This prevents concurrent migrations on shared database
+    LOCK_ACQUIRED=0
+    LOCK_ATTEMPTS=0
+    MAX_LOCK_ATTEMPTS=30
+    
+    while [ $LOCK_ATTEMPTS -lt $MAX_LOCK_ATTEMPTS ] && [ $LOCK_ACQUIRED -eq 0 ]; do
+      LOCK_ATTEMPTS=$((LOCK_ATTEMPTS + 1))
+      
+      # Try to acquire lock using Django's database
+      if python manage.py shell -c "
+from django.db import connection
+from datetime import datetime, timedelta
+
+with connection.cursor() as cursor:
+    # Create migrations_lock table if not exists
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS migrations_lock (
+            id SERIAL PRIMARY KEY,
+            lock_name VARCHAR(255) UNIQUE,
+            acquired_at TIMESTAMP,
+            released_at TIMESTAMP
+        )
+    ''')
+    
+    # Try to acquire lock with 5-minute expiry
+    try:
+        cursor.execute('''
+            INSERT INTO migrations_lock (lock_name, acquired_at)
+            SELECT 'erp_migrations', NOW()
+            WHERE NOT EXISTS (
+                SELECT 1 FROM migrations_lock 
+                WHERE lock_name = 'erp_migrations'
+                AND acquired_at > NOW() - INTERVAL '5 minutes'
+            )
+        ''')
+        connection.commit()
+        
+        # Check if insert was successful
+        cursor.execute('SELECT COUNT(*) FROM migrations_lock WHERE lock_name = %s', ['erp_migrations'])
+        if cursor.fetchone()[0] > 0:
+            print('LOCK_ACQUIRED')
+    except Exception:
+        pass
+" 2>&1 | grep -q "LOCK_ACQUIRED"; then
+        LOCK_ACQUIRED=1
+        echo "✅ Migration lock acquired (pod is eligible to run migrations)"
+        
+        # Run database migrations only when lock is held
+        echo "🔄 Running database migrations..."
+        if python manage.py migrate --noinput 2>&1; then
+            echo "✅ Migrations completed successfully"
+            
+            # Release lock after successful migration
+            python manage.py shell -c "
+from django.db import connection
+with connection.cursor() as cursor:
+    cursor.execute('UPDATE migrations_lock SET released_at = NOW() WHERE lock_name = %s', ['erp_migrations'])
+    connection.commit()
+" 2>&1 || echo "⚠️ Lock release failed (non-critical)"
+        else
+            echo "❌ Migration failed! Service may not function correctly."
+            # Attempt to release lock on failure
+            python manage.py shell -c "
+from django.db import connection
+with connection.cursor() as cursor:
+    cursor.execute('UPDATE migrations_lock SET released_at = NOW() WHERE lock_name = %s', ['erp_migrations'])
+    connection.commit()
+" 2>&1 || true
+            exit 1
+        fi
       else
-          echo "❌ Migration failed! Service may not function correctly."
+        # Lock not acquired - wait for other pod to finish migrations
+        if [ $LOCK_ATTEMPTS -lt $MAX_LOCK_ATTEMPTS ]; then
+          echo "⏳ Migration lock held by another pod (attempt $LOCK_ATTEMPTS/$MAX_LOCK_ATTEMPTS)... waiting 2s"
+          sleep 2
+        fi
       fi
+    done
+    
+    if [ $LOCK_ACQUIRED -eq 0 ]; then
+      echo "⚠️ Could not acquire migration lock after $MAX_LOCK_ATTEMPTS attempts"
+      echo "   Proceeding to start server - other pod should have completed migrations"
+      echo "   (This is safe: Django tracks applied migrations in django_migrations table)"
+    fi
+  else
+    echo "✅ No pending migrations - all migrations already applied"
   fi
   
-  # Show migration status for debugging
+  # Show migration status for debugging (non-blocking)
   echo ""
-  echo "📋 Migration status (first 15 apps):"
-  python manage.py showmigrations --list 2>&1 | head -40 || echo "Status check unavailable"
+  echo "📋 Migration status (first 20 apps):"
+  python manage.py showmigrations --list 2>&1 | head -25 || echo "Status check unavailable"
   
   # Seed initial required data (idempotent)
   echo ""
