@@ -170,6 +170,13 @@ if python manage.py collectstatic --noinput --clear > "$COLLECTSTATIC_LOG" 2>&1;
         echo "   Admin panel styling may be missing in production"
     fi
     rm -f "$COLLECTSTATIC_LOG"
+    
+    # Create logo directory and placeholder files for admin panel
+    echo "🎨 Creating logo files for admin panel..."
+    mkdir -p /app/staticfiles/logo
+    # Create a simple 1x1 transparent PNG as placeholder
+    echo -n "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" | base64 -d > /app/staticfiles/logo/logo.png 2>/dev/null || echo "⚠️ Could not create logo.png placeholder"
+    echo "✅ Logo placeholder created"
 else
     echo "❌ ERROR: Static files collection FAILED!"
     echo "   Admin panel styling will be broken - see errors below:"

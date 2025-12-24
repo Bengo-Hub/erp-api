@@ -13,27 +13,13 @@ node_modules
 .coverage
 .pytest_cache
 .DS_Store
-media
-staticfiles
 .github
 .vscode
 docs
-*.md
-*.png
-*.jpg
-*.jpeg
-*.gif
 *.pdf
-*.bat
-*.sh
-build.sh
-Dockerfile*
 .dockerignore
 *.log
 .env*
 credentials.json
-cbs_reports.png
-kra_reports_*.png
-p9_reports.png
 
 
