@@ -39,13 +39,32 @@ class RegionalSettingsSerializer(serializers.ModelSerializer):
 
 
 class BrandingSettingsSerializer(serializers.ModelSerializer):
+    logo_full_url = serializers.SerializerMethodField()
+    watermark_full_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = BrandingSettings
         fields = ['id', 'app_name', 'tagline', 'footer_text', 'primary_color', 'secondary_color',
-                  'text_color', 'background_color', 'logo_url', 'logo', 'favicon_url', 
-                  'watermark_url', 'watermark', 'enable_dark_mode', 'theme_preset', 'menu_mode',
+                  'text_color', 'background_color', 'logo_url', 'logo', 'logo_full_url', 'favicon_url', 
+                  'watermark_url', 'watermark', 'watermark_full_url', 'enable_dark_mode', 'theme_preset', 'menu_mode',
                   'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_logo_full_url(self, obj):
+        if obj.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            return obj.logo.url
+        return None
+    
+    def get_watermark_full_url(self, obj):
+        if obj.watermark:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.watermark.url)
+            return obj.watermark.url
+        return None
 
 # Legacy alias for backward compatibility
 BanksSerializer = BankInstitutionSerializer

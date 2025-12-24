@@ -2,7 +2,6 @@
 from rest_framework import serializers
 from .models import Contact,CustomerGroup,ContactAccount
 from business.models import Bussiness
-from business.serializers import BusinessLocationSerializer
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -14,11 +13,6 @@ class ContactUserSerializer(serializers.ModelSerializer):
         model=User
         fields=['id','username','first_name','last_name','email','phone']
 
-class BussinessSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Bussiness
-        fields =('name',)
-
 class ContactCustomerGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerGroup
@@ -28,18 +22,25 @@ class ContactAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContactAccount
         fields = ('account_balance','advance_balance')
-        
+
+class ContactLocationSerializer(serializers.Serializer):
+    """Minimal location/branch information"""
+    id = serializers.IntegerField(read_only=True)
+    city = serializers.CharField(read_only=True, allow_null=True)
+    country = serializers.CharField(read_only=True, allow_null=True)
+    county = serializers.CharField(read_only=True, allow_null=True)
+
 class ContactSerializer(serializers.ModelSerializer):
     user=ContactUserSerializer()
-    created_by=ContactUserSerializer(required=False,read_only=True)
     customer_group=ContactCustomerGroupSerializer(required=False, allow_null=True)
     accounts=ContactAccountSerializer(many=True, read_only=True)
-    # Provide serialized location (branch location) for API responses
-    location = BusinessLocationSerializer(read_only=True, allow_null=True)
+    added_on = serializers.DateTimeField(read_only=True)
+    
     class Meta:
         model = Contact
-        fields = ['id', 'contact_id', 'contact_type', 'user', 'location', 'designation', 'customer_group', 'account_type',
-                  'tax_number', 'business_name', 'business_address', 'alternative_contact', 'phone', 'landline', 'credit_limit', 'added_on','accounts', 'created_by']
+        fields = ['id', 'contact_id', 'contact_type', 'user', 'designation', 'customer_group', 'account_type',
+                  'tax_number', 'business_name', 'business_address', 'director_first_name', 'director_last_name', 
+                  'alternative_contact', 'phone', 'landline', 'credit_limit', 'added_on', 'accounts']
 
 class CustomerGroupSerializer(serializers.ModelSerializer):
     class Meta:
