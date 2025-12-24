@@ -15,7 +15,6 @@ node_modules
 .DS_Store
 media
 staticfiles
-static
 .github
 .vscode
 docs
