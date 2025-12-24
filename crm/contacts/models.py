@@ -4,6 +4,7 @@ from business.models import Bussiness, Branch
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from decimal import Decimal
+from datetime import datetime
 
 User = get_user_model()
     
@@ -36,11 +37,13 @@ class Contact(models.Model):
     tax_number=models.CharField(max_length=100,blank=True,null=True,help_text='Tax Number if a business')
     business_name=models.CharField(max_length=100,blank=True,null=True,help_text='Business Name if a business')
     business_address=models.CharField(max_length=100,blank=True,null=True, help_text='Business Address if a business')
+    director_first_name=models.CharField(max_length=100,blank=True,null=True,help_text='First name of managing director or founder for business accounts')
+    director_last_name=models.CharField(max_length=100,blank=True,null=True,help_text='Last name of managing director or founder for business accounts')
     alternative_contact=models.CharField(max_length=15,blank=True,null=True)
     phone=models.CharField(max_length=15,blank=True,null=True)
     landline=models.CharField(max_length=15,blank=True,null=True,help_text='Landline phone number')
     credit_limit=models.DecimalField(max_digits=14,decimal_places=2,default=None,blank=True,null=True)
-    added_on=models.DateField(default=timezone.now)
+    added_on=models.DateTimeField(default=timezone.now)
     is_deleted=models.BooleanField(default=False)
     created_by=models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_contacts')
     

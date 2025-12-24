@@ -163,10 +163,21 @@ class ContactsViewSet(BaseModelViewSet):
             first_name = clean_input_value(query_params.get('first_name',''), 'string') or ''
             last_name = clean_input_value(query_params.get('last_name',''), 'string') or ''
             email = clean_input_value(query_params.get('email',None), 'string')
+            director_first_name = clean_input_value(query_params.get('director_first_name',''), 'string')
+            director_last_name = clean_input_value(query_params.get('director_last_name',''), 'string')
             _contact_id = contact_id
             
-            first_name = first_name if 'Customers' in account_type else (str(business).split(' ')[0] if business else 'Business')
-            username = str(first_name).lower().strip().replace(" ", "_") if 'Customers' in account_type else (str(business).split(' ')[0].lower() if business else 'business')
+            # For Business accounts, use business name or business fields; for Individual use first/last name
+            if account_type == 'Business':
+                # Business account: use first_name and last_name as director info if provided
+                actual_first_name = director_first_name or first_name or (str(business).split(' ')[0] if business else 'Business')
+                actual_last_name = director_last_name or last_name or ''
+                username = str(business).lower().strip().replace(" ", "_") if business else 'business'
+            else:
+                # Individual account: use first_name and last_name directly
+                actual_first_name = first_name
+                actual_last_name = last_name
+                username = str(first_name).lower().strip().replace(" ", "_") if first_name else 'user'
             
             if contact_id is None or contact_id == '':
                 _contact_id = generate_contact_id("C")
@@ -174,10 +185,10 @@ class ContactsViewSet(BaseModelViewSet):
             user, created = User.objects.update_or_create(
                 username=username,
                 defaults={
-                    "first_name": first_name if 'Customers' in account_type else (str(business).split(' ')[0].lower() if business else 'Business'),
+                    "first_name": actual_first_name,
                     "phone": phone,
-                    "last_name": last_name,
-                    "email": email if email else f'{str(first_name)}.{last_name}@gmail.com',
+                    "last_name": actual_last_name,
+                    "email": email if email else f'{str(actual_first_name)}.{actual_last_name}@gmail.com',
                     "password": make_password("@User123"),
                     "is_active": True
                 }
@@ -192,12 +203,15 @@ class ContactsViewSet(BaseModelViewSet):
                 "contact_id": _contact_id,
                 "customer_group": CustomerGroup.objects.filter(id=customer_group).first() if customer_group else None,
                 "business": biz,
+                "business_name": business if account_type == 'Business' else None,
                 "branch": branch,
                 "designation": designation,
                 "tax_number": tax_number,
                 "credit_limit": credit_limit,
                 "alternative_contact": alternative_contact,
                 "landline": landline,
+                "director_first_name": director_first_name if account_type == 'Business' else None,
+                "director_last_name": director_last_name if account_type == 'Business' else None,
             }
             
             contact, created = Contact.objects.update_or_create(
@@ -219,7 +233,7 @@ class ContactsViewSet(BaseModelViewSet):
             logger.error(f'Error creating contact: {str(e)}', exc_info=True)
             return APIResponse.server_error(message='Error creating contact', error_id=str(e), correlation_id=get_correlation_id(request))
 
-    def update(self, request, pk=None):
+    def update(self, request, pk=None, *args, **kwargs):
         try:
             query_params = request.data
             contact = self.get_object(pk)
@@ -238,12 +252,24 @@ class ContactsViewSet(BaseModelViewSet):
             first_name = clean_input_value(query_params.get('first_name', contact.user.first_name), 'string') or contact.user.first_name
             last_name = clean_input_value(query_params.get('last_name', contact.user.last_name), 'string') or contact.user.last_name
             email = clean_input_value(query_params.get('email', contact.user.email), 'string')
+            director_first_name = clean_input_value(query_params.get('director_first_name', contact.director_first_name), 'string')
+            director_last_name = clean_input_value(query_params.get('director_last_name', contact.director_last_name), 'string')
+
+            # For Business accounts, use business name or business fields; for Individual use first/last name
+            if account_type == 'Business':
+                # Business account: use director info if provided
+                actual_first_name = director_first_name or first_name
+                actual_last_name = director_last_name or last_name
+            else:
+                # Individual account: use first_name and last_name directly
+                actual_first_name = first_name
+                actual_last_name = last_name
 
             # Update user details if necessary
-            contact.user.username = str(first_name).lower().strip().replace(" ", "_")
-            contact.user.first_name = first_name
-            contact.user.last_name = last_name
-            contact.user.email = email if email else f'{str(first_name)}.{last_name}@gmail.com'
+            contact.user.username = str(actual_first_name).lower().strip().replace(" ", "_")
+            contact.user.first_name = actual_first_name
+            contact.user.last_name = actual_last_name
+            contact.user.email = email if email else f'{str(actual_first_name)}.{actual_last_name}@gmail.com'
             contact.user.save()
 
             # Update or create related objects
@@ -256,14 +282,18 @@ class ContactsViewSet(BaseModelViewSet):
                 "account_type": account_type,
                 "customer_group": CustomerGroup.objects.filter(id=customer_group_id).first() if customer_group_id else None,
                 "business": biz,
+                "business_name": business if account_type == 'Business' else None,
                 "designation": designation,
                 "tax_number": tax_number,
                 "credit_limit": credit_limit,
                 "alternative_contact": alternative_contact,
                 "landline": landline,
+                "director_first_name": director_first_name if account_type == 'Business' else None,
+                "director_last_name": director_last_name if account_type == 'Business' else None,
             }
             contact.contact_type = contact_type
-            contact.contact_id = contact_id
+            # NEVER overwrite contact_id during updates—keep existing value
+            # contact_id is immutable once created
             for key, value in contact_defaults.items():
                 setattr(contact, key, value)
             contact.save()

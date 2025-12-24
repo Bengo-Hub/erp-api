@@ -239,7 +239,23 @@ def _get_logo_image(company_info, max_width=2*inch, max_height=1*inch):
                     if os.path.exists(candidate_path):
                         data_source = candidate_path
             except Exception:
-                data_source = None
+                pass
+
+            # Additional fallback: try staticfiles directory directly
+            if not data_source:
+                try:
+                    staticfiles_path = os.path.join(settings.BASE_DIR, 'staticfiles', 'logo', 'logo.png')
+                    if os.path.exists(staticfiles_path):
+                        data_source = staticfiles_path
+                    else:
+                        # Try with hashed filename pattern
+                        import glob
+                        pattern = os.path.join(settings.BASE_DIR, 'staticfiles', 'logo', 'logo.*.png')
+                        matches = glob.glob(pattern)
+                        if matches:
+                            data_source = matches[0]
+                except Exception:
+                    pass
 
         if not data_source:
             return None
