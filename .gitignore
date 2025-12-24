@@ -8,6 +8,8 @@ __pycache__
 node_modules/
 staticfiles
 staticfiles/*
+media
+media/*
 *.log*
 .nuxt
 .nitro
