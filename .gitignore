@@ -6,9 +6,7 @@ venv/
 __pycache__/
 __pycache__
 node_modules/
-staticfiles
 staticfiles/*
-media
 media/*
 *.log*
 .nuxt
