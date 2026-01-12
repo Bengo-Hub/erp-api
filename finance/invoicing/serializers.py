@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Invoice, InvoicePayment, InvoiceEmailLog, CreditNote, DebitNote
+from .models import Invoice, InvoicePayment, InvoiceEmailLog, CreditNote, DebitNote, DeliveryNote, ProformaInvoice
 from core_orders.serializers import BaseOrderSerializer, OrderItemSerializer
 from crm.contacts.serializers import ContactSerializer
 
@@ -259,7 +259,7 @@ class DebitNoteSerializer(BaseOrderSerializer):
     customer_details = ContactSerializer(source='customer', read_only=True)
     items = OrderItemSerializer(many=True, read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    
+
     class Meta(BaseOrderSerializer.Meta):
         model = DebitNote
         fields = BaseOrderSerializer.Meta.fields + [
@@ -268,4 +268,178 @@ class DebitNoteSerializer(BaseOrderSerializer):
             'customer_details', 'items'
         ]
         read_only_fields = ['debit_note_number', 'order_number']
+
+
+class DeliveryNoteSerializer(BaseOrderSerializer):
+    """Delivery Note Serializer"""
+    invoice_number = serializers.CharField(source='source_invoice.invoice_number', read_only=True, allow_null=True)
+    purchase_order_number = serializers.CharField(source='source_purchase_order.order_number', read_only=True, allow_null=True)
+    customer_details = ContactSerializer(source='customer', read_only=True)
+    supplier_details = ContactSerializer(source='supplier', read_only=True)
+    items = OrderItemSerializer(many=True, read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta(BaseOrderSerializer.Meta):
+        model = DeliveryNote
+        fields = BaseOrderSerializer.Meta.fields + [
+            'delivery_note_number', 'delivery_date', 'source_invoice', 'invoice_number',
+            'source_purchase_order', 'purchase_order_number',
+            'delivery_address', 'driver_name', 'driver_phone', 'vehicle_number',
+            'received_by', 'received_at', 'receiver_signature', 'special_instructions',
+            'status', 'status_display',
+            'customer_details', 'supplier_details', 'items'
+        ]
+        read_only_fields = ['delivery_note_number', 'order_number']
+
+
+class DeliveryNoteCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating delivery notes from existing documents"""
+    source_invoice_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
+    source_purchase_order_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
+    delivery_address = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = DeliveryNote
+        fields = [
+            'source_invoice_id', 'source_purchase_order_id', 'delivery_address',
+            'driver_name', 'driver_phone', 'vehicle_number', 'special_instructions'
+        ]
+
+    def create(self, validated_data):
+        source_invoice_id = validated_data.pop('source_invoice_id', None)
+        source_purchase_order_id = validated_data.pop('source_purchase_order_id', None)
+        user = self.context.get('request').user if self.context.get('request') else None
+
+        if source_invoice_id:
+            from .models import Invoice
+            invoice = Invoice.objects.get(pk=source_invoice_id)
+            delivery_note = DeliveryNote.create_from_invoice(
+                invoice,
+                created_by=user,
+                delivery_address=validated_data.get('delivery_address')
+            )
+        elif source_purchase_order_id:
+            from procurement.orders.models import PurchaseOrder
+            po = PurchaseOrder.objects.get(pk=source_purchase_order_id)
+            delivery_note = DeliveryNote.create_from_purchase_order(
+                po,
+                created_by=user,
+                delivery_address=validated_data.get('delivery_address')
+            )
+        else:
+            # Create standalone delivery note
+            delivery_note = DeliveryNote.objects.create(**validated_data)
+
+        # Update additional fields
+        for field in ['driver_name', 'driver_phone', 'vehicle_number', 'special_instructions']:
+            if field in validated_data:
+                setattr(delivery_note, field, validated_data[field])
+        delivery_note.save()
+
+        return delivery_note
+
+
+class ProformaInvoiceSerializer(BaseOrderSerializer):
+    """Proforma Invoice Serializer"""
+    quotation_number = serializers.CharField(source='source_quotation.quotation_number', read_only=True, allow_null=True)
+    converted_invoice_number = serializers.CharField(source='converted_invoice.invoice_number', read_only=True, allow_null=True)
+    customer_details = ContactSerializer(source='customer', read_only=True)
+    items = OrderItemSerializer(many=True, read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    is_expired = serializers.SerializerMethodField()
+    days_until_expiry = serializers.SerializerMethodField()
+
+    class Meta(BaseOrderSerializer.Meta):
+        model = ProformaInvoice
+        fields = BaseOrderSerializer.Meta.fields + [
+            'proforma_number', 'proforma_date', 'valid_until',
+            'source_quotation', 'quotation_number',
+            'converted_invoice', 'converted_invoice_number',
+            'customer_notes', 'terms_and_conditions',
+            'status', 'status_display', 'is_expired', 'days_until_expiry',
+            'customer_details', 'items'
+        ]
+        read_only_fields = ['proforma_number', 'order_number', 'converted_invoice']
+
+    def get_is_expired(self, obj):
+        from django.utils import timezone
+        if obj.valid_until and obj.valid_until < timezone.now().date() and obj.status not in ['converted', 'cancelled']:
+            return True
+        return False
+
+    def get_days_until_expiry(self, obj):
+        from django.utils import timezone
+        if obj.valid_until:
+            delta = obj.valid_until - timezone.now().date()
+            return delta.days
+        return None
+
+
+class ProformaInvoiceCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating proforma invoices from quotations"""
+    source_quotation_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
+
+    class Meta:
+        model = ProformaInvoice
+        fields = [
+            'source_quotation_id', 'customer', 'branch', 'valid_until',
+            'customer_notes', 'terms_and_conditions',
+            'subtotal', 'tax_amount', 'discount_amount', 'shipping_cost', 'total',
+            'tax_mode', 'tax_rate'
+        ]
+
+    def create(self, validated_data):
+        source_quotation_id = validated_data.pop('source_quotation_id', None)
+        user = self.context.get('request').user if self.context.get('request') else None
+
+        if source_quotation_id:
+            from finance.quotations.models import Quotation
+            quotation = Quotation.objects.get(pk=source_quotation_id)
+            proforma = ProformaInvoice.create_from_quotation(quotation, created_by=user)
+        else:
+            # Create standalone proforma
+            validated_data['created_by'] = user
+            proforma = ProformaInvoice.objects.create(**validated_data)
+
+        return proforma
+
+
+class CreditNoteCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating credit notes from invoices"""
+    source_invoice_id = serializers.IntegerField(required=True, write_only=True)
+    reason = serializers.CharField(required=True)
+
+    class Meta:
+        model = CreditNote
+        fields = ['source_invoice_id', 'reason']
+
+    def create(self, validated_data):
+        source_invoice_id = validated_data.pop('source_invoice_id')
+        reason = validated_data.pop('reason')
+        user = self.context.get('request').user if self.context.get('request') else None
+
+        from .models import Invoice
+        invoice = Invoice.objects.get(pk=source_invoice_id)
+        credit_note = CreditNote.create_from_invoice(invoice, reason=reason, created_by=user)
+        return credit_note
+
+
+class DebitNoteCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating debit notes from invoices"""
+    source_invoice_id = serializers.IntegerField(required=True, write_only=True)
+    reason = serializers.CharField(required=True)
+
+    class Meta:
+        model = DebitNote
+        fields = ['source_invoice_id', 'reason']
+
+    def create(self, validated_data):
+        source_invoice_id = validated_data.pop('source_invoice_id')
+        reason = validated_data.pop('reason')
+        user = self.context.get('request').user if self.context.get('request') else None
+
+        from .models import Invoice
+        invoice = Invoice.objects.get(pk=source_invoice_id)
+        debit_note = DebitNote.create_from_invoice(invoice, reason=reason, created_by=user)
+        return debit_note
 

@@ -7,10 +7,13 @@ from django.utils import timezone
 from django.db.models import Q, Sum
 from core.base_viewsets import BaseModelViewSet
 from core.response import APIResponse
-from .models import Invoice, InvoicePayment, InvoiceEmailLog
+from .models import Invoice, InvoicePayment, InvoiceEmailLog, CreditNote, DebitNote, DeliveryNote, ProformaInvoice
 from .serializers import (
     InvoiceSerializer, InvoiceCreateSerializer, InvoiceSendSerializer,
-    InvoiceScheduleSerializer, InvoicePaymentSerializer, InvoiceEmailLogSerializer
+    InvoiceScheduleSerializer, InvoicePaymentSerializer, InvoiceEmailLogSerializer,
+    CreditNoteSerializer, DebitNoteSerializer, DeliveryNoteSerializer,
+    ProformaInvoiceSerializer, DeliveryNoteCreateSerializer, ProformaInvoiceCreateSerializer,
+    CreditNoteCreateSerializer, DebitNoteCreateSerializer
 )
 from ..pdf_generator import generate_invoice_pdf
 
@@ -851,15 +854,15 @@ class PublicInvoiceView(APIView):
     Allows unauthenticated access to shared invoices
     """
     permission_classes = [AllowAny]
-    
+
     def get(self, request, invoice_id, token):
         """Retrieve invoice by ID and share token"""
         try:
             invoice = Invoice.objects.get(id=invoice_id, share_token=token, is_shared=True)
-            
+
             # Mark as viewed if customer is viewing
             invoice.mark_as_viewed()
-            
+
             # Return invoice data
             serializer = InvoiceSerializer(invoice)
             return APIResponse.success(
@@ -878,4 +881,307 @@ class PublicInvoiceView(APIView):
                 message=f'Error accessing invoice: {str(e)}',
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class CreditNoteViewSet(BaseModelViewSet):
+    """Credit Note ViewSet with create-from-invoice functionality"""
+    queryset = CreditNote.objects.all()
+    serializer_class = CreditNoteSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['status', 'customer', 'source_invoice', 'credit_note_date']
+    search_fields = ['credit_note_number', 'customer__user__first_name', 'customer__business_name']
+    ordering_fields = ['credit_note_date', 'total', 'created_at']
+    ordering = ['-credit_note_date']
+
+    def get_serializer_class(self):
+        if self.action == 'create' or self.action == 'create_from_invoice':
+            return CreditNoteCreateSerializer
+        return CreditNoteSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if not user.is_superuser:
+            queryset = queryset.filter(
+                Q(branch__business__owner=user) |
+                Q(branch__business__employees__user=user) |
+                Q(created_by=user)
+            ).distinct()
+        return queryset
+
+    @action(detail=False, methods=['post'], url_path='create-from-invoice')
+    def create_from_invoice(self, request):
+        """Create a credit note from an existing invoice"""
+        serializer = CreditNoteCreateSerializer(data=request.data, context={'request': request})
+        if not serializer.is_valid():
+            return APIResponse.validation_error(message='Validation failed', errors=serializer.errors)
+
+        credit_note = serializer.save()
+        return APIResponse.created(
+            data=CreditNoteSerializer(credit_note).data,
+            message=f'Credit note {credit_note.credit_note_number} created successfully'
+        )
+
+    @action(detail=True, methods=['get'], url_path='pdf')
+    def pdf_stream(self, request, pk=None):
+        """Stream credit note as PDF"""
+        try:
+            credit_note = self.get_object()
+            from finance.utils import resolve_company_info
+            branch = getattr(credit_note, 'branch', None)
+            biz = getattr(branch, 'business', None) if branch else None
+            company_info = resolve_company_info(biz, branch)
+
+            pdf_bytes = generate_invoice_pdf(credit_note, company_info, document_type='credit_note')
+
+            download = request.query_params.get('download', 'false').lower() == 'true'
+            disposition = 'attachment' if download else 'inline'
+
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'{disposition}; filename="CreditNote_{credit_note.credit_note_number}.pdf"'
+            return response
+        except Exception as e:
+            return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
+
+
+class DebitNoteViewSet(BaseModelViewSet):
+    """Debit Note ViewSet with create-from-invoice functionality"""
+    queryset = DebitNote.objects.all()
+    serializer_class = DebitNoteSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['status', 'customer', 'source_invoice', 'debit_note_date']
+    search_fields = ['debit_note_number', 'customer__user__first_name', 'customer__business_name']
+    ordering_fields = ['debit_note_date', 'total', 'created_at']
+    ordering = ['-debit_note_date']
+
+    def get_serializer_class(self):
+        if self.action == 'create' or self.action == 'create_from_invoice':
+            return DebitNoteCreateSerializer
+        return DebitNoteSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if not user.is_superuser:
+            queryset = queryset.filter(
+                Q(branch__business__owner=user) |
+                Q(branch__business__employees__user=user) |
+                Q(created_by=user)
+            ).distinct()
+        return queryset
+
+    @action(detail=False, methods=['post'], url_path='create-from-invoice')
+    def create_from_invoice(self, request):
+        """Create a debit note from an existing invoice"""
+        serializer = DebitNoteCreateSerializer(data=request.data, context={'request': request})
+        if not serializer.is_valid():
+            return APIResponse.validation_error(message='Validation failed', errors=serializer.errors)
+
+        debit_note = serializer.save()
+        return APIResponse.created(
+            data=DebitNoteSerializer(debit_note).data,
+            message=f'Debit note {debit_note.debit_note_number} created successfully'
+        )
+
+    @action(detail=True, methods=['get'], url_path='pdf')
+    def pdf_stream(self, request, pk=None):
+        """Stream debit note as PDF"""
+        try:
+            debit_note = self.get_object()
+            from finance.utils import resolve_company_info
+            branch = getattr(debit_note, 'branch', None)
+            biz = getattr(branch, 'business', None) if branch else None
+            company_info = resolve_company_info(biz, branch)
+
+            pdf_bytes = generate_invoice_pdf(debit_note, company_info, document_type='debit_note')
+
+            download = request.query_params.get('download', 'false').lower() == 'true'
+            disposition = 'attachment' if download else 'inline'
+
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'{disposition}; filename="DebitNote_{debit_note.debit_note_number}.pdf"'
+            return response
+        except Exception as e:
+            return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
+
+
+class DeliveryNoteViewSet(BaseModelViewSet):
+    """Delivery Note ViewSet with create-from-invoice/PO functionality"""
+    queryset = DeliveryNote.objects.all()
+    serializer_class = DeliveryNoteSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['status', 'customer', 'supplier', 'source_invoice', 'source_purchase_order', 'delivery_date']
+    search_fields = ['delivery_note_number', 'customer__user__first_name', 'customer__business_name', 'driver_name']
+    ordering_fields = ['delivery_date', 'total', 'created_at']
+    ordering = ['-delivery_date']
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'create_from_invoice', 'create_from_purchase_order']:
+            return DeliveryNoteCreateSerializer
+        return DeliveryNoteSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if not user.is_superuser:
+            queryset = queryset.filter(
+                Q(branch__business__owner=user) |
+                Q(branch__business__employees__user=user) |
+                Q(created_by=user)
+            ).distinct()
+        return queryset
+
+    @action(detail=False, methods=['post'], url_path='create-from-invoice')
+    def create_from_invoice(self, request):
+        """Create a delivery note from an existing invoice"""
+        data = request.data.copy()
+        data['source_invoice_id'] = data.get('source_invoice_id') or data.get('invoice_id')
+        serializer = DeliveryNoteCreateSerializer(data=data, context={'request': request})
+        if not serializer.is_valid():
+            return APIResponse.validation_error(message='Validation failed', errors=serializer.errors)
+
+        delivery_note = serializer.save()
+        return APIResponse.created(
+            data=DeliveryNoteSerializer(delivery_note).data,
+            message=f'Delivery note {delivery_note.delivery_note_number} created successfully'
+        )
+
+    @action(detail=False, methods=['post'], url_path='create-from-purchase-order')
+    def create_from_purchase_order(self, request):
+        """Create a delivery note from an existing purchase order"""
+        data = request.data.copy()
+        data['source_purchase_order_id'] = data.get('source_purchase_order_id') or data.get('purchase_order_id')
+        serializer = DeliveryNoteCreateSerializer(data=data, context={'request': request})
+        if not serializer.is_valid():
+            return APIResponse.validation_error(message='Validation failed', errors=serializer.errors)
+
+        delivery_note = serializer.save()
+        return APIResponse.created(
+            data=DeliveryNoteSerializer(delivery_note).data,
+            message=f'Delivery note {delivery_note.delivery_note_number} created successfully'
+        )
+
+    @action(detail=True, methods=['post'], url_path='mark-delivered')
+    def mark_delivered(self, request, pk=None):
+        """Mark delivery note as delivered"""
+        delivery_note = self.get_object()
+        received_by = request.data.get('received_by', '')
+        notes = request.data.get('notes', '')
+
+        delivery_note.mark_delivered(received_by=received_by, notes=notes)
+
+        return APIResponse.success(
+            data=DeliveryNoteSerializer(delivery_note).data,
+            message='Delivery note marked as delivered'
+        )
+
+    @action(detail=True, methods=['get'], url_path='pdf')
+    def pdf_stream(self, request, pk=None):
+        """Stream delivery note as PDF"""
+        try:
+            delivery_note = self.get_object()
+            from finance.utils import resolve_company_info
+            branch = getattr(delivery_note, 'branch', None)
+            biz = getattr(branch, 'business', None) if branch else None
+            company_info = resolve_company_info(biz, branch)
+
+            pdf_bytes = generate_invoice_pdf(delivery_note, company_info, document_type='delivery_note')
+
+            download = request.query_params.get('download', 'false').lower() == 'true'
+            disposition = 'attachment' if download else 'inline'
+
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'{disposition}; filename="DeliveryNote_{delivery_note.delivery_note_number}.pdf"'
+            return response
+        except Exception as e:
+            return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
+
+
+class ProformaInvoiceViewSet(BaseModelViewSet):
+    """Proforma Invoice ViewSet with create-from-quotation and convert-to-invoice functionality"""
+    queryset = ProformaInvoice.objects.all()
+    serializer_class = ProformaInvoiceSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['status', 'customer', 'source_quotation', 'proforma_date', 'valid_until']
+    search_fields = ['proforma_number', 'customer__user__first_name', 'customer__business_name']
+    ordering_fields = ['proforma_date', 'valid_until', 'total', 'created_at']
+    ordering = ['-proforma_date']
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'create_from_quotation']:
+            return ProformaInvoiceCreateSerializer
+        return ProformaInvoiceSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if not user.is_superuser:
+            queryset = queryset.filter(
+                Q(branch__business__owner=user) |
+                Q(branch__business__employees__user=user) |
+                Q(created_by=user)
+            ).distinct()
+        return queryset
+
+    @action(detail=False, methods=['post'], url_path='create-from-quotation')
+    def create_from_quotation(self, request):
+        """Create a proforma invoice from an existing quotation"""
+        data = request.data.copy()
+        data['source_quotation_id'] = data.get('source_quotation_id') or data.get('quotation_id')
+        serializer = ProformaInvoiceCreateSerializer(data=data, context={'request': request})
+        if not serializer.is_valid():
+            return APIResponse.validation_error(message='Validation failed', errors=serializer.errors)
+
+        proforma = serializer.save()
+        return APIResponse.created(
+            data=ProformaInvoiceSerializer(proforma).data,
+            message=f'Proforma invoice {proforma.proforma_number} created successfully'
+        )
+
+    @action(detail=True, methods=['post'], url_path='convert-to-invoice')
+    def convert_to_invoice(self, request, pk=None):
+        """Convert proforma invoice to a real invoice"""
+        proforma = self.get_object()
+
+        if proforma.status == 'converted':
+            return APIResponse.bad_request(
+                message=f'Proforma already converted to invoice {proforma.converted_invoice.invoice_number}'
+            )
+
+        try:
+            invoice = proforma.convert_to_invoice(created_by=request.user)
+            return APIResponse.success(
+                data={
+                    'proforma': ProformaInvoiceSerializer(proforma).data,
+                    'invoice': InvoiceSerializer(invoice).data
+                },
+                message=f'Proforma converted to invoice {invoice.invoice_number}'
+            )
+        except Exception as e:
+            return APIResponse.error(
+                error_code='CONVERSION_FAILED',
+                message=f'Failed to convert proforma: {str(e)}',
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'], url_path='pdf')
+    def pdf_stream(self, request, pk=None):
+        """Stream proforma invoice as PDF"""
+        try:
+            proforma = self.get_object()
+            from finance.utils import resolve_company_info
+            branch = getattr(proforma, 'branch', None)
+            biz = getattr(branch, 'business', None) if branch else None
+            company_info = resolve_company_info(biz, branch)
+
+            pdf_bytes = generate_invoice_pdf(proforma, company_info, document_type='proforma')
+
+            download = request.query_params.get('download', 'false').lower() == 'true'
+            disposition = 'attachment' if download else 'inline'
+
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'{disposition}; filename="Proforma_{proforma.proforma_number}.pdf"'
+            return response
+        except Exception as e:
+            return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
 
