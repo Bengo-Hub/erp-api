@@ -12,6 +12,7 @@ router.register(r'branches', BranchesViewSet)
 router.register(r'product-settings', ProductSettingsViewSet)
 router.register(r'sale-settings', SaleSettingsViewSet)
 router.register(r'prefix-settings', PrefixSettingsViewSet)
+router.register(r'document-sequences', DocumentSequenceViewSet)
 # Tax rates moved to finance.taxes module - use /api/v1/finance/taxes/rates/
 router.register(r'service-types', ServiceTypesViewSet)
 
