@@ -115,26 +115,40 @@ class ContactsViewSet(BaseModelViewSet):
         query=self.request.query_params.get('query',None)
         contact_type=self.request.query_params.get('contact_type',None)
         account_type=self.request.query_params.get('account_type',None)
+        
         # Resolve branch context (query param or authenticated header)
         branch_id = self.request.query_params.get('branch_id', None) or get_branch_id_from_request(self.request)
-        # check if user user is linked to business organisation or is a business owner
+        
+        # Check if user is linked to business organisation or is a business owner
         user_org=None
         owner=None
         if hasattr(self.request.user,'employee') and hasattr(self.request.user.employee,'organisation'):
             user_org=self.request.user.employee.organisation
             queryset=queryset.filter(branch__business=user_org)
-        if hasattr(self.request.user,'owner'):
+        elif hasattr(self.request.user,'owner'):
+            # User owns a business - show contacts for that business
             owner=self.request.user.owner
             queryset=queryset.filter(branch__business__owner=owner)
+        elif self.request.user.is_superuser:
+            # Superuser: show all contacts (unless filtered by branch_id)
+            # No additional filtering needed
+            pass
+        else:
+            # Regular user with no org/owner: show nothing (not authorized)
+            queryset = queryset.none()
+        
+        # Apply branch filter if provided (narrows further)
         if branch_id is not None:
-            # Branch field is a foreign key; use branch__id or branch_id
             queryset = queryset.filter(branch__id=branch_id)
+        
+        # Apply search/type filters
         if query:
-            queryset=queryset.filter(Q(user__username__icontains=query)|Q(user__first_name__icontains=query)|Q(user__first_name__icontains=query))
+            queryset=queryset.filter(Q(user__username__icontains=query)|Q(user__first_name__icontains=query)|Q(user__last_name__icontains=query))
         if contact_type:
            queryset = queryset.filter(Q(contact_type=contact_type)) 
         if account_type:
-           queryset = queryset.filter(Q(account_type=account_type))    
+           queryset = queryset.filter(Q(account_type=account_type))
+        
         return queryset 
 
     def create(self, request, *args, **kwargs):
