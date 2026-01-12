@@ -40,14 +40,7 @@ class InvoiceViewSet(BaseModelViewSet):
         return InvoiceSerializer
 
     def _resolve_company_info(self, invoice):
-        """Return company info dict including logo_path (filesystem path if possible) and PIN.
-        
-        Resolves logo in this order:
-        1. Business-specific logo from database (if stored as FileField)
-        2. staticfiles/logo/logo.png (from collectstatic during build)
-        3. static/logo/logo.png (development source)
-        4. None if not found (PDF generation will handle gracefully)
-        """
+        """Return company info dict including logo_path (filesystem path if possible) and PIN"""
         import os
         from django.contrib.staticfiles import finders
         from django.conf import settings
@@ -59,45 +52,32 @@ class InvoiceViewSet(BaseModelViewSet):
         if branch and getattr(branch, 'business', None):
             biz = branch.business
         
-        # Use resolve_company_info to get all fields including PIN and branding
+        # Use resolve_company_info to get all fields including PIN
         company_info = resolve_company_info(biz, branch)
         
-        # If logo_path still not resolved, find and set the default/fallback logo
+        # If logo_path not resolved, try staticfiles finders for default logo
         if not company_info.get('logo_path'):
-            logo_found = False
-            
-            # Priority 1: Try staticfiles finders (development & production with collectstatic)
             try:
-                default_logo = finders.find('logo/logo.png')
-                if default_logo and os.path.exists(default_logo):
+                # Try finders first (works in development)
+                default_logo = finders.find('logo/logo.png') or finders.find('static/logo/logo.png')
+                if default_logo:
                     company_info['logo_path'] = default_logo
-                    logo_found = True
-            except Exception:
-                pass
-            
-            # Priority 2: Check STATIC_ROOT/logo/logo.png (production with WhiteNoise)
-            if not logo_found:
-                static_root = getattr(settings, 'STATIC_ROOT', '')
-                if static_root:
-                    staticfiles_logo = os.path.join(static_root, 'logo', 'logo.png')
+                else:
+                    # Production fallback: check staticfiles directory directly
+                    # This is where collectstatic puts files (WhiteNoise serves from here)
+                    staticfiles_logo = os.path.join(getattr(settings, 'STATIC_ROOT', ''), 'logo', 'logo.png')
                     if os.path.exists(staticfiles_logo):
                         company_info['logo_path'] = staticfiles_logo
-                        logo_found = True
-            
-            # Priority 3: Check BASE_DIR/static/logo/logo.png (development source)
-            if not logo_found:
-                base_dir = getattr(settings, 'BASE_DIR', '')
-                if base_dir:
-                    source_logo = os.path.join(base_dir, 'static', 'logo', 'logo.png')
-                    if os.path.exists(source_logo):
-                        company_info['logo_path'] = source_logo
-                        logo_found = True
-            
-            # If no logo found, log warning but don't fail (PDF generator handles this)
-            if not logo_found:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Logo not found for invoice {invoice.id}. PDF will be generated without logo.")
+                    else:
+                        # Development fallback: check static source directory
+                        possible = os.path.join(getattr(settings, 'BASE_DIR', ''), 'static', 'logo', 'logo.png')
+                        if os.path.exists(possible):
+                            company_info['logo_path'] = possible
+            except Exception:
+                # Final fallback: try static directory
+                possible = os.path.join(getattr(settings, 'BASE_DIR', ''), 'static', 'logo', 'logo.png')
+                if os.path.exists(possible):
+                    company_info['logo_path'] = possible
 
         return company_info
 
