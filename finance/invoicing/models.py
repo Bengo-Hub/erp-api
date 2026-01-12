@@ -532,6 +532,56 @@ class CreditNote(BaseOrder):
     def __str__(self):
         return f"{self.credit_note_number} - {self.source_invoice.invoice_number} - {self.get_status_display()}"
 
+    @classmethod
+    def create_from_invoice(cls, invoice, reason, items=None, created_by=None):
+        """Create a credit note from an existing invoice.
+
+        Args:
+            invoice: The source Invoice instance
+            reason: Reason for creating the credit note
+            items: Optional list of items to include (defaults to all invoice items)
+            created_by: User creating the credit note
+
+        Returns:
+            CreditNote: The newly created credit note
+        """
+        credit_note = cls(
+            source_invoice=invoice,
+            customer=invoice.customer,
+            branch=invoice.branch,
+            reason=reason,
+            created_by=created_by,
+            subtotal=invoice.subtotal,
+            tax_amount=invoice.tax_amount,
+            discount_amount=invoice.discount_amount,
+            shipping_cost=invoice.shipping_cost,
+            total=invoice.total,
+            tax_mode=invoice.tax_mode,
+            tax_rate=invoice.tax_rate,
+            notes=invoice.notes,
+            status='draft'
+        )
+        credit_note.save()
+
+        # Clone items from invoice
+        from core_orders.models import OrderItem
+        source_items = items if items else invoice.items.all()
+        for item in source_items:
+            OrderItem.objects.create(
+                order=credit_note,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                name=item.name,
+                description=item.description,
+                sku=item.sku,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.total_price,
+                notes=item.notes
+            )
+
+        return credit_note
+
 
 class DebitNote(BaseOrder):
     """
@@ -544,19 +594,19 @@ class DebitNote(BaseOrder):
         ('applied', 'Applied'),
         ('void', 'Void'),
     ]
-    
+
     # Debit Note identifiers
     debit_note_number = models.CharField(max_length=100, unique=True, blank=True)
     debit_note_date = models.DateField(default=timezone.now)
-    
+
     # Link to original invoice
     source_invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name='debit_notes')
-    
+
     # Note: customer, status, and notes fields inherited from BaseOrder
-    
+
     # Reason for debit note
     reason = models.TextField(help_text="Reason for issuing debit note")
-    
+
     class Meta:
         verbose_name = 'Debit Note'
         verbose_name_plural = 'Debit Notes'
@@ -566,22 +616,22 @@ class DebitNote(BaseOrder):
             models.Index(fields=['source_invoice'], name='idx_debit_note_invoice'),
             models.Index(fields=['debit_note_date'], name='idx_debit_note_date'),
         ]
-    
+
     def save(self, *args, **kwargs):
         # Set order_type
         if not self.order_type:
             self.order_type = 'debit_note'
-        
+
         # Auto-generate debit note number
         if not self.debit_note_number:
             self.debit_note_number = self.generate_debit_note_number()
-        
+
         # Auto-generate order_number if not set
         if not self.order_number:
             self.order_number = self.debit_note_number
-        
+
         super().save(*args, **kwargs)
-    
+
     def generate_debit_note_number(self):
         """Generate unique debit note number using centralized DocumentNumberService.
 
@@ -608,6 +658,464 @@ class DebitNote(BaseOrder):
         count = DebitNote.objects.filter(created_at__year=year).count() + 1
         date_str = timezone.now().strftime('%d%m%y')
         return f"DBN{count:04d}-{date_str}"
-    
+
     def __str__(self):
         return f"{self.debit_note_number} - {self.source_invoice.invoice_number} - {self.get_status_display()}"
+
+    @classmethod
+    def create_from_invoice(cls, invoice, reason, items=None, created_by=None):
+        """Create a debit note from an existing invoice.
+
+        Args:
+            invoice: The source Invoice instance
+            reason: Reason for creating the debit note
+            items: Optional list of items to include (defaults to all invoice items)
+            created_by: User creating the debit note
+
+        Returns:
+            DebitNote: The newly created debit note
+        """
+        debit_note = cls(
+            source_invoice=invoice,
+            customer=invoice.customer,
+            branch=invoice.branch,
+            reason=reason,
+            created_by=created_by,
+            subtotal=invoice.subtotal,
+            tax_amount=invoice.tax_amount,
+            discount_amount=invoice.discount_amount,
+            shipping_cost=invoice.shipping_cost,
+            total=invoice.total,
+            tax_mode=invoice.tax_mode,
+            tax_rate=invoice.tax_rate,
+            notes=invoice.notes,
+            status='draft'
+        )
+        debit_note.save()
+
+        # Clone items from invoice
+        from core_orders.models import OrderItem
+        source_items = items if items else invoice.items.all()
+        for item in source_items:
+            OrderItem.objects.create(
+                order=debit_note,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                name=item.name,
+                description=item.description,
+                sku=item.sku,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.total_price,
+                notes=item.notes
+            )
+
+        return debit_note
+
+
+class DeliveryNote(BaseOrder):
+    """
+    Delivery Note - Document confirming delivery of goods to customer.
+    Can be created from Invoice or independently.
+    Reuses PDF generation with document_type='delivery_note'.
+    """
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending', 'Pending Delivery'),
+        ('in_transit', 'In Transit'),
+        ('delivered', 'Delivered'),
+        ('partially_delivered', 'Partially Delivered'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    # Delivery Note identifiers
+    delivery_note_number = models.CharField(max_length=100, unique=True, blank=True)
+    delivery_date = models.DateField(default=timezone.now)
+
+    # Link to source document (Invoice or Purchase Order)
+    source_invoice = models.ForeignKey(
+        Invoice, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='dn_from_invoice',
+        help_text="Source invoice for this delivery note"
+    )
+    source_purchase_order = models.ForeignKey(
+        'orders.PurchaseOrder', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='dn_from_po',
+        help_text="Source purchase order for this delivery note"
+    )
+
+    # Delivery details
+    delivery_address = models.TextField(blank=True, help_text="Delivery address")
+    driver_name = models.CharField(max_length=100, blank=True, help_text="Driver/courier name")
+    driver_phone = models.CharField(max_length=20, blank=True, help_text="Driver contact number")
+    vehicle_number = models.CharField(max_length=50, blank=True, help_text="Vehicle registration number")
+
+    # Recipient details
+    received_by = models.CharField(max_length=100, blank=True, help_text="Name of person who received goods")
+    received_at = models.DateTimeField(null=True, blank=True, help_text="When goods were received")
+    receiver_signature = models.ImageField(upload_to='delivery_signatures/', null=True, blank=True)
+
+    # Special instructions
+    special_instructions = models.TextField(blank=True, help_text="Special delivery instructions")
+
+    class Meta:
+        verbose_name = 'Delivery Note'
+        verbose_name_plural = 'Delivery Notes'
+        ordering = ['-delivery_date', '-created_at']
+        indexes = [
+            models.Index(fields=['delivery_note_number'], name='idx_delivery_note_number'),
+            models.Index(fields=['source_invoice'], name='idx_dn_src_invoice'),
+            models.Index(fields=['delivery_date'], name='idx_delivery_note_date'),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Set order_type
+        if not self.order_type:
+            self.order_type = 'delivery_note'
+
+        # Auto-generate delivery note number
+        if not self.delivery_note_number:
+            self.delivery_note_number = self.generate_delivery_note_number()
+
+        # Auto-generate order_number if not set
+        if not self.order_number:
+            self.order_number = self.delivery_note_number
+
+        super().save(*args, **kwargs)
+
+    def generate_delivery_note_number(self):
+        """Generate unique delivery note number using centralized DocumentNumberService.
+
+        Format: PREFIX0000-DDMMYY (e.g., POD0001-150126)
+        """
+        business = None
+        if self.branch:
+            business = self.branch.business
+        elif self.source_invoice and self.source_invoice.branch:
+            business = self.source_invoice.branch.business
+
+        if business:
+            try:
+                return DocumentNumberService.generate_number(
+                    business=business,
+                    document_type=DocumentType.DELIVERY_NOTE,
+                    document_date=self.delivery_date or timezone.now()
+                )
+            except Exception as e:
+                logger.warning(f"Failed to generate delivery note number via service: {e}")
+
+        # Fallback
+        year = timezone.now().year
+        count = DeliveryNote.objects.filter(created_at__year=year).count() + 1
+        date_str = timezone.now().strftime('%d%m%y')
+        return f"POD{count:04d}-{date_str}"
+
+    def mark_delivered(self, received_by=None, notes=None):
+        """Mark delivery note as delivered."""
+        self.status = 'delivered'
+        self.received_at = timezone.now()
+        if received_by:
+            self.received_by = received_by
+        if notes:
+            self.notes = f"{self.notes}\n\nDelivery notes: {notes}" if self.notes else f"Delivery notes: {notes}"
+        self.save(update_fields=['status', 'received_at', 'received_by', 'notes'])
+
+    @classmethod
+    def create_from_invoice(cls, invoice, created_by=None, delivery_address=None):
+        """Create a delivery note from an existing invoice.
+
+        Args:
+            invoice: The source Invoice instance
+            created_by: User creating the delivery note
+            delivery_address: Optional delivery address (defaults to invoice shipping_address)
+
+        Returns:
+            DeliveryNote: The newly created delivery note
+        """
+        delivery_note = cls(
+            source_invoice=invoice,
+            customer=invoice.customer,
+            branch=invoice.branch,
+            created_by=created_by,
+            delivery_address=delivery_address or invoice.shipping_address or '',
+            subtotal=invoice.subtotal,
+            tax_amount=invoice.tax_amount,
+            discount_amount=invoice.discount_amount,
+            shipping_cost=invoice.shipping_cost,
+            total=invoice.total,
+            tax_mode=invoice.tax_mode,
+            tax_rate=invoice.tax_rate,
+            notes=invoice.notes,
+            status='draft'
+        )
+        delivery_note.save()
+
+        # Clone items from invoice
+        from core_orders.models import OrderItem
+        for item in invoice.items.all():
+            OrderItem.objects.create(
+                order=delivery_note,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                name=item.name,
+                description=item.description,
+                sku=item.sku,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.total_price,
+                notes=item.notes
+            )
+
+        return delivery_note
+
+    @classmethod
+    def create_from_purchase_order(cls, purchase_order, created_by=None, delivery_address=None):
+        """Create a delivery note from an existing purchase order.
+
+        Args:
+            purchase_order: The source PurchaseOrder instance
+            created_by: User creating the delivery note
+            delivery_address: Optional delivery address
+
+        Returns:
+            DeliveryNote: The newly created delivery note
+        """
+        delivery_note = cls(
+            source_purchase_order=purchase_order,
+            supplier=purchase_order.supplier,
+            branch=purchase_order.branch,
+            created_by=created_by,
+            delivery_address=delivery_address or getattr(purchase_order, 'delivery_address', '') or '',
+            subtotal=purchase_order.subtotal,
+            tax_amount=purchase_order.tax_amount,
+            discount_amount=purchase_order.discount_amount,
+            shipping_cost=purchase_order.shipping_cost,
+            total=purchase_order.total,
+            tax_mode=getattr(purchase_order, 'tax_mode', 'per_item'),
+            tax_rate=getattr(purchase_order, 'tax_rate', Decimal('0')),
+            notes=purchase_order.notes,
+            status='draft'
+        )
+        delivery_note.save()
+
+        # Clone items from purchase order
+        from core_orders.models import OrderItem
+        for item in purchase_order.items.all():
+            OrderItem.objects.create(
+                order=delivery_note,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                name=item.name,
+                description=item.description,
+                sku=item.sku,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.total_price,
+                notes=item.notes
+            )
+
+        return delivery_note
+
+    def __str__(self):
+        source = ""
+        if self.source_invoice:
+            source = f" (from {self.source_invoice.invoice_number})"
+        elif self.source_purchase_order:
+            source = f" (from {self.source_purchase_order.order_number})"
+        return f"{self.delivery_note_number}{source} - {self.get_status_display()}"
+
+class ProformaInvoice(BaseOrder):
+    """
+    Proforma Invoice - Preliminary invoice sent before goods/services are delivered.
+    Used for quotations that need to look like invoices, customs, or advance payment requests.
+    """
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('accepted', 'Accepted'),
+        ('converted', 'Converted to Invoice'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    # Proforma Invoice identifiers
+    proforma_number = models.CharField(max_length=100, unique=True, blank=True)
+    proforma_date = models.DateField(default=timezone.now)
+    valid_until = models.DateField(null=True, blank=True, help_text="Proforma validity date")
+
+    # Link to source quotation
+    source_quotation = models.ForeignKey(
+        'quotations.Quotation', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='proforma_invoices',
+        help_text="Source quotation for this proforma"
+    )
+
+    # Converted invoice link
+    converted_invoice = models.ForeignKey(
+        Invoice, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='source_proformas',
+        help_text="Invoice created from this proforma"
+    )
+
+    # Notes specific to proforma
+    customer_notes = models.TextField(blank=True, default="This is a proforma invoice and not a demand for payment.")
+    terms_and_conditions = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'Proforma Invoice'
+        verbose_name_plural = 'Proforma Invoices'
+        ordering = ['-proforma_date', '-created_at']
+        indexes = [
+            models.Index(fields=['proforma_number'], name='idx_proforma_number'),
+            models.Index(fields=['proforma_date'], name='idx_proforma_date'),
+            models.Index(fields=['valid_until'], name='idx_proforma_valid_until'),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Set order_type
+        if not self.order_type:
+            self.order_type = 'proforma'
+
+        # Auto-generate proforma number
+        if not self.proforma_number:
+            self.proforma_number = self.generate_proforma_number()
+
+        # Auto-generate order_number if not set
+        if not self.order_number:
+            self.order_number = self.proforma_number
+
+        super().save(*args, **kwargs)
+
+    def generate_proforma_number(self):
+        """Generate unique proforma invoice number.
+
+        Format: PREFIX0000-DDMMYY (e.g., PFI0001-150126)
+        """
+        business = None
+        if self.branch:
+            business = self.branch.business
+        elif self.source_quotation and self.source_quotation.branch:
+            business = self.source_quotation.branch.business
+
+        if business:
+            try:
+                # Use quotation type since proforma is similar
+                return DocumentNumberService.generate_number(
+                    business=business,
+                    document_type=DocumentType.QUOTATION,
+                    document_date=self.proforma_date or timezone.now()
+                ).replace('QOT', 'PFI')
+            except Exception as e:
+                logger.warning(f"Failed to generate proforma number via service: {e}")
+
+        # Fallback
+        year = timezone.now().year
+        count = ProformaInvoice.objects.filter(created_at__year=year).count() + 1
+        date_str = timezone.now().strftime('%d%m%y')
+        return f"PFI{count:04d}-{date_str}"
+
+    def convert_to_invoice(self, created_by=None):
+        """Convert this proforma invoice to a real invoice.
+
+        Returns:
+            Invoice: The newly created invoice
+        """
+        if self.converted_invoice:
+            return self.converted_invoice
+
+        invoice = Invoice(
+            customer=self.customer,
+            branch=self.branch,
+            created_by=created_by or self.created_by,
+            subtotal=self.subtotal,
+            tax_amount=self.tax_amount,
+            discount_amount=self.discount_amount,
+            shipping_cost=self.shipping_cost,
+            total=self.total,
+            tax_mode=self.tax_mode,
+            tax_rate=self.tax_rate,
+            customer_notes=self.customer_notes,
+            terms_and_conditions=self.terms_and_conditions,
+            notes=f"Converted from Proforma {self.proforma_number}",
+            status='draft',
+            shipping_address=self.shipping_address,
+            billing_address=self.billing_address,
+        )
+        invoice.save()
+
+        # Clone items
+        from core_orders.models import OrderItem
+        for item in self.items.all():
+            OrderItem.objects.create(
+                order=invoice,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                name=item.name,
+                description=item.description,
+                sku=item.sku,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.total_price,
+                notes=item.notes
+            )
+
+        # Update proforma status
+        self.status = 'converted'
+        self.converted_invoice = invoice
+        self.save(update_fields=['status', 'converted_invoice'])
+
+        return invoice
+
+    @classmethod
+    def create_from_quotation(cls, quotation, created_by=None):
+        """Create a proforma invoice from an existing quotation.
+
+        Args:
+            quotation: The source Quotation instance
+            created_by: User creating the proforma
+
+        Returns:
+            ProformaInvoice: The newly created proforma invoice
+        """
+        proforma = cls(
+            source_quotation=quotation,
+            customer=quotation.customer,
+            branch=quotation.branch,
+            created_by=created_by or quotation.created_by,
+            valid_until=quotation.valid_until,
+            subtotal=quotation.subtotal,
+            tax_amount=quotation.tax_amount,
+            discount_amount=quotation.discount_amount,
+            shipping_cost=quotation.shipping_cost,
+            total=quotation.total,
+            tax_mode=quotation.tax_mode,
+            tax_rate=quotation.tax_rate,
+            customer_notes=getattr(quotation, 'customer_notes', ''),
+            terms_and_conditions=getattr(quotation, 'terms_and_conditions', ''),
+            notes=f"Created from Quotation {quotation.quotation_number}",
+            shipping_address=quotation.shipping_address,
+            billing_address=quotation.billing_address,
+            status='draft'
+        )
+        proforma.save()
+
+        # Clone items from quotation
+        from core_orders.models import OrderItem
+        for item in quotation.items.all():
+            OrderItem.objects.create(
+                order=proforma,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                name=item.name,
+                description=item.description,
+                sku=item.sku,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.total_price,
+                notes=item.notes
+            )
+
+        return proforma
+
+    def __str__(self):
+        return f"{self.proforma_number} - {self.customer} - {self.get_status_display()}"

@@ -453,8 +453,9 @@ def _build_client_details_section(client_info, document_type):
     client_details = []
 
     if client_info:
-        # Client/Supplier header
-        header_text = "CLIENT" if document_type in ['invoice', 'quotation', 'delivery_note'] else "SUPPLIER/VENDOR"
+        # Client/Supplier header based on document type
+        client_types = ['invoice', 'quotation', 'delivery_note', 'proforma', 'credit_note', 'debit_note']
+        header_text = "CLIENT" if document_type in client_types else "SUPPLIER/VENDOR"
         client_details.append(Paragraph(f"<b>{header_text}</b>", ParagraphStyle('ClientHeader', parent=getSampleStyleSheet()['Normal'], fontSize=10, textColor=colors.HexColor('#1f2937'))))
 
         # Name
@@ -488,9 +489,19 @@ def _build_document_details_section(document_info, document_type):
     doc_details = []
 
     if document_info:
-        # Document Number
+        # Document Number - support various document types
         if document_info.get('number'):
-            label = "Invoice #:" if document_type == 'invoice' else "Quotation #:" if document_type == 'quotation' else "LPO #:" if document_type == 'lpo' else "#:"
+            label_map = {
+                'invoice': 'Invoice #:',
+                'quotation': 'Quotation #:',
+                'lpo': 'LPO #:',
+                'delivery_note': 'Delivery Note #:',
+                'packing_slip': 'Packing Slip #:',
+                'credit_note': 'Credit Note #:',
+                'debit_note': 'Debit Note #:',
+                'proforma': 'Proforma #:',
+            }
+            label = label_map.get(document_type, '#:')
             doc_details.append(Paragraph(f"<b>{label}</b> {document_info['number']}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))
 
         # RFQ for quotations
@@ -501,22 +512,40 @@ def _build_document_details_section(document_info, document_type):
         if document_type == 'quotation' and document_info.get('tender_quotation_ref'):
             doc_details.append(Paragraph(f"<b>Tender/Quotation Ref:</b> {document_info['tender_quotation_ref']}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))
 
-        # Date
+        # Source invoice for credit/debit notes
+        if document_type in ['credit_note', 'debit_note'] and document_info.get('source_invoice_number'):
+            doc_details.append(Paragraph(f"<b>Source Invoice:</b> {document_info['source_invoice_number']}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))
+
+        # Date - support various document types
         if document_info.get('date'):
-            date_label = "Invoice Date:" if document_type == 'invoice' else "Quotation Date:" if document_type == 'quotation' else "Order Date:" if document_type == 'lpo' else "Date:"
+            date_label_map = {
+                'invoice': 'Invoice Date:',
+                'quotation': 'Quotation Date:',
+                'lpo': 'Order Date:',
+                'delivery_note': 'Delivery Date:',
+                'packing_slip': 'Packing Date:',
+                'credit_note': 'Credit Note Date:',
+                'debit_note': 'Debit Note Date:',
+                'proforma': 'Proforma Date:',
+            }
+            date_label = date_label_map.get(document_type, 'Date:')
             doc_details.append(Paragraph(f"<b>{date_label}</b> {document_info['date']}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))
 
         # Due Date for invoices
         if document_type == 'invoice' and document_info.get('due_date'):
             doc_details.append(Paragraph(f"<b>Due Date:</b> {document_info['due_date']}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))
 
-        # Valid Until for quotations
-        if document_type == 'quotation' and document_info.get('valid_until'):
+        # Valid Until for quotations and proformas
+        if document_type in ['quotation', 'proforma'] and document_info.get('valid_until'):
             doc_details.append(Paragraph(f"<b>Valid Until:</b> {document_info['valid_until']}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))
 
-        # Expected Delivery for LPO
-        if document_type == 'lpo' and document_info.get('expected_delivery'):
+        # Expected Delivery for LPO and delivery notes
+        if document_type in ['lpo', 'delivery_note'] and document_info.get('expected_delivery'):
             doc_details.append(Paragraph(f"<b>Expected Delivery:</b> {document_info['expected_delivery']}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))
+
+        # Reason for credit/debit notes
+        if document_type in ['credit_note', 'debit_note'] and document_info.get('reason'):
+            doc_details.append(Paragraph(f"<b>Reason:</b> {document_info['reason'][:50]}{'...' if len(document_info.get('reason', '')) > 50 else ''}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))
 
     return doc_details
 
