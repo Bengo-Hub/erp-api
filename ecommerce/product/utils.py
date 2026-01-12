@@ -26,6 +26,7 @@ from core.base_viewsets import BaseModelViewSet
 from core.response import APIResponse, get_correlation_id
 from core.audit import AuditTrail
 import logging
+from decimal import Decimal, InvalidOperation
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,9 @@ class ProductCRUDViewSet(BaseModelViewSet):
         'images',
         'category',
         'brand',
-        'model'
+        'model',
+        'stock',
+        'stock__branch'
     ).order_by('-created_at')
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -52,44 +55,85 @@ class ProductCRUDViewSet(BaseModelViewSet):
             data = request.data.copy()
             images_data = request.FILES.getlist('images')
 
-            # Resolve branch for stock creation
-            from core.utils import get_branch_id_from_request
-            from business.models import Branch
+            # Resolve business and branch for multi-tenant context
+            from core.utils import get_business_context
 
-            branch_id = get_branch_id_from_request(request)
-            if not branch_id and 'branch' in data:
-                branch_id = data.get('branch')
+            # Get complete business context (business and branch objects)
+            context = get_business_context(request)
+            business = context['business']
+            branch = context['branch']
+
+            # If business not provided in data, set it from user context
+            if not data.get('business') and business:
+                data['business'] = business.id
+                logger.info(f'Auto-set business={business.id} for product creation by user {request.user.id}')
+
+            # Fallback: if still no business but we have a branch, use branch's business
+            if not data.get('business') and branch:
+                data['business'] = branch.business_id
+                logger.info(f'Auto-set business={branch.business_id} from branch for product creation')
 
             serializer = self.get_serializer(data=data)
             if not serializer.is_valid():
                 return APIResponse.validation_error(message='Product validation failed', errors=serializer.errors, correlation_id=correlation_id)
-            
+
             product = serializer.save()
 
             # Handle image uploads
             for image_data in images_data:
                 ProductImages.objects.create(product=product, image=image_data)
 
-            # Create default stock inventory unless sourced from purchase order
+            # Create default stock inventory for goods (not services) unless sourced from purchase order
             from_purchase_order = request.data.get('from_purchase_order', False)
-            if not from_purchase_order and branch_id:
+            product_type = product.product_type if hasattr(product, 'product_type') else 'goods'
+            if product_type == 'goods' and not from_purchase_order and branch:
                 try:
-                    branch = Branch.objects.get(id=branch_id)
-                    StockInventory.objects.create(
-                        product=product,
-                        product_type='single',
-                        branch=branch,
-                        stock_level=1,
-                        availability='In Stock'
-                    )
-                    logger.info(f'Created default StockInventory for product {product.id} with stock_level=1')
-                except Branch.DoesNotExist:
-                    logger.warning(f'Branch {branch_id} not found when creating StockInventory for product {product.id}')
+                    # Check if stock already exists for this product at this branch
+                    existing_stock = StockInventory.objects.filter(product=product, branch=branch).first()
+                    if not existing_stock:
+                        # Get stock-related fields from form data
+                        stock_level = int(data.get('stock_level', 1) or 1)
+                        buying_price = data.get('buying_price')
+                        selling_price = data.get('selling_price')
+                        reorder_level = data.get('reorder_level')
+
+                        # Parse numeric values safely using Decimal for price fields
+                        try:
+                            buying_price = Decimal(str(buying_price)) if buying_price not in [None, '', 'null'] else Decimal('0')
+                        except (ValueError, TypeError, InvalidOperation):
+                            buying_price = Decimal('0')
+
+                        try:
+                            selling_price = Decimal(str(selling_price)) if selling_price not in [None, '', 'null'] else Decimal(str(product.default_price or 0))
+                        except (ValueError, TypeError, InvalidOperation):
+                            selling_price = Decimal(str(product.default_price or 0))
+
+                        try:
+                            reorder_level = int(reorder_level) if reorder_level not in [None, '', 'null'] else 2
+                        except (ValueError, TypeError):
+                            reorder_level = 2
+
+                        StockInventory.objects.create(
+                            product=product,
+                            product_type='single',
+                            branch=branch,
+                            stock_level=stock_level,
+                            buying_price=buying_price,
+                            selling_price=selling_price,
+                            reorder_level=reorder_level,
+                            availability='In Stock' if stock_level > 0 else 'Out of Stock'
+                        )
+                        logger.info(f'Created StockInventory for product {product.id} at branch {branch.id}: stock_level={stock_level}, buying_price={buying_price}, selling_price={selling_price}, reorder_level={reorder_level}')
                 except Exception as e:
                     logger.error(f'Error creating StockInventory for product {product.id}: {str(e)}', exc_info=True)
 
             AuditTrail.log(operation=AuditTrail.CREATE, module='ecommerce', entity_type='Product', entity_id=product.id, user=request.user, reason='Created product', request=request)
-            
+
+            # Re-fetch with prefetch to ensure all related data is available
+            product = Products.objects.prefetch_related(
+                'images', 'category', 'brand', 'model', 'stock', 'stock__branch'
+            ).get(pk=product.pk)
+
             return APIResponse.created(
                 data=ProductsSerializer(product, context=self.get_serializer_context()).data,
                 message='Product created successfully',
@@ -111,7 +155,7 @@ class ProductCRUDViewSet(BaseModelViewSet):
             serializer = self.get_serializer(instance, data=data, partial=partial)
             if not serializer.is_valid():
                 return APIResponse.validation_error(message='Product validation failed', errors=serializer.errors, correlation_id=correlation_id)
-            
+
             product = serializer.save()
 
             # Handle new image uploads
@@ -121,8 +165,55 @@ class ProductCRUDViewSet(BaseModelViewSet):
                         continue
                     ProductImages.objects.create(product=product, image=image_data)
 
+            # Update stock inventory if stock fields are provided (for goods only)
+            if product.product_type == 'goods':
+                stock_level = data.get('stock_level')
+                buying_price = data.get('buying_price')
+                selling_price = data.get('selling_price')
+                reorder_level = data.get('reorder_level')
+
+                # Check if any stock field was provided
+                if any([
+                    stock_level not in [None, '', 'null'],
+                    buying_price not in [None, '', 'null'],
+                    selling_price not in [None, '', 'null'],
+                    reorder_level not in [None, '', 'null']
+                ]):
+                    stock = product.stock.first()
+                    if stock:
+                        # Update existing stock
+                        if stock_level not in [None, '', 'null']:
+                            try:
+                                stock.stock_level = int(stock_level)
+                            except (ValueError, TypeError):
+                                pass
+                        if buying_price not in [None, '', 'null']:
+                            try:
+                                stock.buying_price = Decimal(str(buying_price))
+                            except (ValueError, TypeError, InvalidOperation):
+                                pass
+                        if selling_price not in [None, '', 'null']:
+                            try:
+                                stock.selling_price = Decimal(str(selling_price))
+                            except (ValueError, TypeError, InvalidOperation):
+                                pass
+                        if reorder_level not in [None, '', 'null']:
+                            try:
+                                stock.reorder_level = int(reorder_level)
+                            except (ValueError, TypeError):
+                                pass
+                        stock.save()
+                        logger.info(f'Updated StockInventory for product {product.id}')
+
             AuditTrail.log(operation=AuditTrail.UPDATE, module='ecommerce', entity_type='Product', entity_id=product.id, user=request.user, reason='Updated product', request=request)
-            
+
+            # Refresh product from database to get updated related objects
+            product.refresh_from_db()
+            # Re-fetch with prefetch to ensure all related data is available
+            product = Products.objects.prefetch_related(
+                'images', 'category', 'brand', 'model', 'stock', 'stock__branch'
+            ).get(pk=product.pk)
+
             return APIResponse.success(
                 data=ProductsSerializer(product, context=self.get_serializer_context()).data,
                 message='Product updated successfully',
@@ -157,13 +248,80 @@ class CategoryViewSet(BaseModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     pagination_class = LimitOffsetPagination
 
+    def get_serializer_class(self):
+        """Use write serializer for create/update operations"""
+        if self.action in ['create', 'update', 'partial_update']:
+            return CategoryWriteSerializer
+        return CategoriesSerializer
+
     def get_queryset(self):
         """Get categories with their children prefetched"""
         return Category.objects.prefetch_related(
-            'children', 
+            'children',
             'children__children',
             'children__children__children'
         ).all()
+
+    def create(self, request, *args, **kwargs):
+        """Create a new category with proper parent handling"""
+        try:
+            correlation_id = get_correlation_id(request)
+            serializer = self.get_serializer(data=request.data)
+            if not serializer.is_valid():
+                return APIResponse.validation_error(
+                    message='Category validation failed',
+                    errors=serializer.errors,
+                    correlation_id=correlation_id
+                )
+
+            category = serializer.save()
+            logger.info(f'Created category: {category.name} (id={category.id}, parent={category.parent_id}, level={category.level})')
+
+            # Return the full category data using read serializer
+            return APIResponse.created(
+                data=CategoriesSerializer(category).data,
+                message='Category created successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error creating category: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error creating category',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
+
+    def update(self, request, *args, **kwargs):
+        """Update a category with proper parent handling"""
+        try:
+            correlation_id = get_correlation_id(request)
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()
+
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            if not serializer.is_valid():
+                return APIResponse.validation_error(
+                    message='Category validation failed',
+                    errors=serializer.errors,
+                    correlation_id=correlation_id
+                )
+
+            category = serializer.save()
+            logger.info(f'Updated category: {category.name} (id={category.id}, parent={category.parent_id}, level={category.level})')
+
+            # Return the full category data using read serializer
+            return APIResponse.success(
+                data=CategoriesSerializer(category).data,
+                message='Category updated successfully',
+                correlation_id=correlation_id
+            )
+        except Exception as e:
+            logger.error(f'Error updating category: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error updating category',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
 
     @action(detail=False, methods=['get'])
     def main_categories(self, request):
