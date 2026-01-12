@@ -125,15 +125,45 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
         }
         client_section = _build_client_details_section(client_info, document_type)
 
-        # Build a document info dict expected by utils
+        # Build a document info dict expected by utils - support all document types
+        # Determine the document number based on document type
+        doc_number = (
+            getattr(order, 'invoice_number', None) or
+            getattr(order, 'quotation_number', None) or
+            getattr(order, 'delivery_note_number', None) or
+            getattr(order, 'credit_note_number', None) or
+            getattr(order, 'debit_note_number', None) or
+            getattr(order, 'proforma_number', None) or
+            getattr(order, 'order_number', None)
+        )
+
+        # Determine the document date based on document type
+        doc_date = (
+            getattr(order, 'invoice_date', None) or
+            getattr(order, 'quotation_date', None) or
+            getattr(order, 'delivery_date', None) or
+            getattr(order, 'credit_note_date', None) or
+            getattr(order, 'debit_note_date', None) or
+            getattr(order, 'proforma_date', None) or
+            getattr(order, 'created_at', None)
+        )
+
+        # Get source invoice number for credit/debit notes
+        source_invoice_number = None
+        source_invoice = getattr(order, 'source_invoice', None)
+        if source_invoice:
+            source_invoice_number = getattr(source_invoice, 'invoice_number', None)
+
         document_info = {
-            'number': getattr(order, 'invoice_number', None) or getattr(order, 'quotation_number', None) or getattr(order, 'order_number', None),
-            'date': _format_date(getattr(order, 'invoice_date', None) or getattr(order, 'quotation_date', None) or getattr(order, 'created_at', None)),
+            'number': doc_number,
+            'date': _format_date(doc_date),
             'due_date': _format_date(getattr(order, 'due_date', None)),
             'valid_until': _format_date(getattr(order, 'valid_until', None)),
             'rfq_number': getattr(order, 'rfq_number', None),
             'tender_quotation_ref': getattr(order, 'tender_quotation_ref', None),
-            'expected_delivery': _format_date(getattr(order, 'expected_delivery', None)),
+            'expected_delivery': _format_date(getattr(order, 'expected_delivery', None) or getattr(order, 'estimated_delivery_date', None)),
+            'source_invoice_number': source_invoice_number,
+            'reason': getattr(order, 'reason', None),
         }
 
         # Determine brand color and text color for styling
