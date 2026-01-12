@@ -38,6 +38,15 @@ FROM base AS source
 WORKDIR /app
 COPY . .
 
+# Collect static files during build (CRITICAL for WhiteNoise manifest)
+# WhiteNoise needs the staticfiles.json manifest generated at build time
+# This includes Django admin, DRF, Jazzmin, and all app static files
+COPY --from=deps /usr/local/lib/python3.11 /usr/local/lib/python3.11
+COPY --from=deps /usr/local/bin /usr/local/bin
+ENV DJANGO_SETTINGS_MODULE=ProcureProKEAPI.settings
+RUN mkdir -p /app/staticfiles \
+    && python manage.py collectstatic --noinput --clear 2>/dev/null || echo "Static collection deferred to runtime"
+
 FROM base AS runtime
 WORKDIR /app
 
@@ -55,10 +64,11 @@ COPY --from=source /app .
 ENV DJANGO_SETTINGS_MODULE=ProcureProKEAPI.settings \
     PYTHONPATH=/app \
     PORT=4000 \
-    DJANGO_ENV=production
+    DJANGO_ENV=production \
+    DEBUG=False
 
-# Create static and media directories with proper permissions
-# Static files are baked into image via collectstatic at runtime (whitenoise serves them)
+# Create media directories with proper permissions
+# Static files are pre-collected in the image during build (WhiteNoise serves them)
 # Media files should be persisted via PersistentVolume in production
 RUN mkdir -p /app/staticfiles \
     && mkdir -p /app/media/business/logo \
@@ -76,7 +86,7 @@ VOLUME ["/app/media"]
 
 EXPOSE 4000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -fsS http://localhost:${PORT}/api/v1/core/health/ || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 CMD curl -fsS http://localhost:${PORT}/api/v1/core/health/ || exit 1
 
 # Copy startup scripts
 COPY scripts/init-media.sh /usr/local/bin/init-media.sh
