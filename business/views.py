@@ -6,7 +6,7 @@ from rest_framework import filters
 from rest_framework.pagination import LimitOffsetPagination
 from .models import (BusinessLocation, Bussiness, ProductSettings, SaleSettings,
                      PrefixSettings, ServiceTypes, PickupStations,
-                     BrandingSettings, Branch)
+                     BrandingSettings, Branch, DocumentSequence)
 from addresses.models import AddressBook
 from .serializers import *
 from addresses.models import DeliveryRegion
@@ -302,3 +302,62 @@ class PickupStationsViewSet(viewsets.ModelViewSet):
 # from addresses.views import AddressBookViewSet
 
 
+class DocumentSequenceViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for viewing and managing document sequences.
+    Read-only by default - sequences should be managed via DocumentNumberService.
+    """
+    queryset = DocumentSequence.objects.all()
+    serializer_class = DocumentSequenceSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'head', 'options']  # Read-only
+
+    def get_queryset(self):
+        """Filter document sequences to user's business."""
+        user = self.request.user
+        if user.is_superuser:
+            return DocumentSequence.objects.all()
+
+        business = get_user_business(user)
+        if business:
+            return DocumentSequence.objects.filter(business=business)
+        return DocumentSequence.objects.none()
+
+    @action(detail=False, methods=['get'], url_path='summary')
+    def summary(self, request):
+        """
+        Get a summary of all document sequences with their current values and next numbers.
+        """
+        from .document_service import DocumentNumberService
+
+        business = get_user_business(request.user)
+        if not business:
+            return Response({'error': 'No business found'}, status=status.HTTP_404_NOT_FOUND)
+
+        sequences = DocumentSequence.objects.filter(business=business)
+        summary = []
+
+        for seq in sequences:
+            preview = DocumentNumberService.get_next_sequence_preview(business, seq.document_type)
+            summary.append({
+                'document_type': seq.document_type,
+                'document_type_display': seq.get_document_type_display(),
+                'current_sequence': seq.current_sequence,
+                'next_number': preview['next_number'],
+                'prefix': preview['prefix'],
+            })
+
+        # Add document types that don't have sequences yet
+        existing_types = set(s.document_type for s in sequences)
+        for doc_type, display in DocumentSequence.DOCUMENT_TYPE_CHOICES:
+            if doc_type not in existing_types:
+                preview = DocumentNumberService.get_next_sequence_preview(business, doc_type)
+                summary.append({
+                    'document_type': doc_type,
+                    'document_type_display': display,
+                    'current_sequence': 0,
+                    'next_number': preview['next_number'],
+                    'prefix': preview['prefix'],
+                })
+
+        return Response(summary)
