@@ -58,14 +58,23 @@ class InvoiceViewSet(BaseModelViewSet):
         # If logo_path not resolved, try staticfiles finders for default logo
         if not company_info.get('logo_path'):
             try:
+                # Try finders first (works in development)
                 default_logo = finders.find('logo/logo.png') or finders.find('static/logo/logo.png')
                 if default_logo:
                     company_info['logo_path'] = default_logo
                 else:
-                    possible = os.path.join(getattr(settings, 'BASE_DIR', ''), 'static', 'logo', 'logo.png')
-                    if os.path.exists(possible):
-                        company_info['logo_path'] = possible
+                    # Production fallback: check staticfiles directory directly
+                    # This is where collectstatic puts files (WhiteNoise serves from here)
+                    staticfiles_logo = os.path.join(getattr(settings, 'STATIC_ROOT', ''), 'logo', 'logo.png')
+                    if os.path.exists(staticfiles_logo):
+                        company_info['logo_path'] = staticfiles_logo
+                    else:
+                        # Development fallback: check static source directory
+                        possible = os.path.join(getattr(settings, 'BASE_DIR', ''), 'static', 'logo', 'logo.png')
+                        if os.path.exists(possible):
+                            company_info['logo_path'] = possible
             except Exception:
+                # Final fallback: try static directory
                 possible = os.path.join(getattr(settings, 'BASE_DIR', ''), 'static', 'logo', 'logo.png')
                 if os.path.exists(possible):
                     company_info['logo_path'] = possible

@@ -152,36 +152,42 @@ with connection.cursor() as cursor:
   fi
 fi
 
-# Collect static files (for production) - with proper error checking
+# Verify/collect static files (for production)
+# Static files should already be collected during Docker build, this is a safety net
 echo ""
-echo "📦 Collecting static files..."
-COLLECTSTATIC_LOG=$(mktemp)
-if python manage.py collectstatic --noinput --clear > "$COLLECTSTATIC_LOG" 2>&1; then
-    # Parse collectstatic output for success message
-    COLLECTED=$(grep -E "^[0-9]+ static" "$COLLECTSTATIC_LOG" 2>/dev/null | tail -1 || echo "completed")
-    echo "✅ Static files collected: $COLLECTED"
-    
-    # Verify collection succeeded by checking directory
-    FILE_COUNT=$(find /app/staticfiles -type f 2>/dev/null | wc -l || echo 0)
-    if [ "$FILE_COUNT" -gt 100 ]; then
-        echo "✅ Verified: $FILE_COUNT files in /app/staticfiles/"
-    else
-        echo "⚠️ WARNING: Only $FILE_COUNT static files collected (expected 1000+)"
-        echo "   Admin panel styling may be missing in production"
-    fi
-    rm -f "$COLLECTSTATIC_LOG"
-    
-    # Create logo directory and placeholder files for admin panel
-    echo "🎨 Creating logo files for admin panel..."
-    mkdir -p /app/staticfiles/logo
-    # Create a simple 1x1 transparent PNG as placeholder
-    echo -n "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" | base64 -d > /app/staticfiles/logo/logo.png 2>/dev/null || echo "⚠️ Could not create logo.png placeholder"
-    echo "✅ Logo placeholder created"
+echo "📦 Verifying static files..."
+FILE_COUNT=$(find /app/staticfiles -type f 2>/dev/null | wc -l || echo 0)
+if [ "$FILE_COUNT" -gt 500 ]; then
+    echo "✅ Static files already collected: $FILE_COUNT files in /app/staticfiles/"
+    echo "   Skipping collectstatic (files baked into Docker image)"
 else
-    echo "❌ ERROR: Static files collection FAILED!"
-    echo "   Admin panel styling will be broken - see errors below:"
-    tail -30 "$COLLECTSTATIC_LOG"
-    rm -f "$COLLECTSTATIC_LOG"
+    echo "⚠️ Static files not found in image ($FILE_COUNT files), collecting now..."
+    COLLECTSTATIC_LOG=$(mktemp)
+    if python manage.py collectstatic --noinput --clear > "$COLLECTSTATIC_LOG" 2>&1; then
+        COLLECTED=$(grep -E "^[0-9]+ static" "$COLLECTSTATIC_LOG" 2>/dev/null | tail -1 || echo "completed")
+        echo "✅ Static files collected: $COLLECTED"
+
+        FILE_COUNT=$(find /app/staticfiles -type f 2>/dev/null | wc -l || echo 0)
+        if [ "$FILE_COUNT" -gt 100 ]; then
+            echo "✅ Verified: $FILE_COUNT files in /app/staticfiles/"
+        else
+            echo "⚠️ WARNING: Only $FILE_COUNT static files collected (expected 1000+)"
+            echo "   Admin panel styling may be missing in production"
+        fi
+        rm -f "$COLLECTSTATIC_LOG"
+    else
+        echo "❌ ERROR: Static files collection FAILED!"
+        echo "   Admin panel styling will be broken - see errors below:"
+        tail -30 "$COLLECTSTATIC_LOG"
+        rm -f "$COLLECTSTATIC_LOG"
+    fi
+fi
+
+# Create logo placeholder for admin panel if missing
+if [ ! -f /app/staticfiles/logo/logo.png ]; then
+    echo "🎨 Creating logo placeholder for admin panel..."
+    mkdir -p /app/staticfiles/logo
+    echo -n "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" | base64 -d > /app/staticfiles/logo/logo.png 2>/dev/null || echo "⚠️ Could not create logo.png placeholder"
 fi
 
 echo ""

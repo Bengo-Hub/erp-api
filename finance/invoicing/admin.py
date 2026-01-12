@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Invoice, InvoicePayment, InvoiceEmailLog
+from .models import Invoice, InvoicePayment, InvoiceEmailLog, DeliveryNote, CreditNote, DebitNote, ProformaInvoice
 
 
 @admin.register(Invoice)
@@ -53,3 +53,39 @@ class InvoiceEmailLogAdmin(admin.ModelAdmin):
     search_fields = ['invoice__invoice_number', 'recipient_email']
     readonly_fields = ['invoice', 'email_type', 'recipient_email', 'sent_at', 'opened_at', 'clicked_at', 'status']
     date_hierarchy = 'sent_at'
+
+
+@admin.register(DeliveryNote)
+class DeliveryNoteAdmin(admin.ModelAdmin):  
+    list_display = ['delivery_note_number', 'customer', 'delivery_date', 'source_invoice', 'source_purchase_order']
+    list_filter = ['delivery_date']
+    search_fields = ['delivery_note_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
+    readonly_fields = ['delivery_note_number', 'created_at', 'updated_at']
+    date_hierarchy = 'delivery_date'
+
+
+@admin.register(CreditNote)
+class CreditNoteAdmin(admin.ModelAdmin):
+    list_display = ['credit_note_number', 'customer', 'credit_date', 'related_invoice']
+    list_filter = ['credit_date']
+    search_fields = ['credit_note_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
+    readonly_fields = ['credit_note_number', 'created_at', 'updated_at']
+    date_hierarchy = 'credit_date'
+
+
+@admin.register(DebitNote)
+class DebitNoteAdmin(admin.ModelAdmin):
+    list_display = ['debit_note_number', 'customer', 'debit_date', 'related_invoice']
+    list_filter = ['debit_date']
+    search_fields = ['debit_note_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
+    readonly_fields = ['debit_note_number', 'created_at', 'updated_at']
+    date_hierarchy = 'debit_date'
+
+
+@admin.register(ProformaInvoice)
+class ProformaInvoiceAdmin(admin.ModelAdmin):
+    list_display = ['proforma_invoice_number', 'customer', 'issue_date', 'valid_until']
+    list_filter = ['issue_date', 'valid_until']
+    search_fields = ['proforma_invoice_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
+    readonly_fields = ['proforma_invoice_number', 'created_at', 'updated_at']
+    date_hierarchy = 'issue_date'
