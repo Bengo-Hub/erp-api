@@ -12,7 +12,7 @@ User = get_user_model()
 class ImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImages
-        fields = ('image',)
+        fields = ('id', 'image')
 
 class StockProductSerializer(serializers.ModelSerializer):
     """A compact product representation used when returning stock inventory
@@ -20,6 +20,24 @@ class StockProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Products
         fields = ('id', 'title', 'sku', 'serial', 'product_type', 'default_price', 'category', 'brand')
+
+
+class StockInfoSerializer(serializers.Serializer):
+    """Serializer for stock information to be embedded in product response"""
+    id = serializers.IntegerField(read_only=True)
+    stock_level = serializers.IntegerField()
+    buying_price = serializers.DecimalField(max_digits=14, decimal_places=4)
+    selling_price = serializers.DecimalField(max_digits=14, decimal_places=4)
+    reorder_level = serializers.IntegerField()
+    availability = serializers.CharField()
+    branch_id = serializers.SerializerMethodField()
+    branch_name = serializers.SerializerMethodField()
+
+    def get_branch_id(self, obj):
+        return obj.branch.id if obj.branch else None
+
+    def get_branch_name(self, obj):
+        return obj.branch.name if obj.branch else None
 
 
 class ProductsSerializer(serializers.ModelSerializer):
@@ -30,6 +48,13 @@ class ProductsSerializer(serializers.ModelSerializer):
     # Use a minimal business serializer to avoid large nested payloads when
     # products are embedded inside inventory responses.
     business = BussinessMinimalSerializer(read_only=True)
+    # Stock information for edit mode
+    stock = serializers.SerializerMethodField()
+    # Convenience fields for frontend (from first stock entry)
+    stock_level = serializers.SerializerMethodField()
+    buying_price = serializers.SerializerMethodField()
+    selling_price = serializers.SerializerMethodField()
+    reorder_level = serializers.SerializerMethodField()
 
     class Meta:
         model = Products
@@ -45,6 +70,46 @@ class ProductsSerializer(serializers.ModelSerializer):
         except Exception:
             return []
 
+    def get_stock(self, obj):
+        """Return all stock entries for this product"""
+        try:
+            stocks = obj.stock.all()
+            return StockInfoSerializer(stocks, many=True).data
+        except Exception:
+            return []
+
+    def get_stock_level(self, obj):
+        """Return stock level from first stock entry (for convenience)"""
+        try:
+            first_stock = obj.stock.first()
+            return first_stock.stock_level if first_stock else None
+        except Exception:
+            return None
+
+    def get_buying_price(self, obj):
+        """Return buying price from first stock entry (for convenience)"""
+        try:
+            first_stock = obj.stock.first()
+            return float(first_stock.buying_price) if first_stock else None
+        except Exception:
+            return None
+
+    def get_selling_price(self, obj):
+        """Return selling price from first stock entry (for convenience)"""
+        try:
+            first_stock = obj.stock.first()
+            return float(first_stock.selling_price) if first_stock else None
+        except Exception:
+            return None
+
+    def get_reorder_level(self, obj):
+        """Return reorder level from first stock entry (for convenience)"""
+        try:
+            first_stock = obj.stock.first()
+            return first_stock.reorder_level if first_stock else None
+        except Exception:
+            return None
+
 class ProductWriteSerializer(serializers.ModelSerializer):    
     class Meta:
         model = Products
@@ -55,15 +120,28 @@ class ProductWriteSerializer(serializers.ModelSerializer):
             'model': {'required': False},
         }
 
+class CategoryWriteSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating categories with parent field support"""
+    class Meta:
+        model = Category
+        fields = ('id', 'name', 'parent', 'display_image', 'status', 'order')
+        extra_kwargs = {
+            'parent': {'required': False, 'allow_null': True},
+            'display_image': {'required': False},
+            'order': {'required': False},
+        }
+
+
 class CategoriesSerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
+    parent_name = serializers.CharField(source='parent.name', read_only=True, allow_null=True)
 
     def get_children(self, obj):
         return CategoriesSerializer(obj.children.all(), many=True).data
 
     class Meta:
         model = Category
-        fields = ('id', 'name', 'display_image', 'children', 'status', 'level', 'order')
+        fields = ('id', 'name', 'parent', 'parent_name', 'display_image', 'children', 'status', 'level', 'order')
 
 class MainCategoriesSerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()

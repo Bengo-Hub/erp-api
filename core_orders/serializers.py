@@ -57,25 +57,33 @@ class PaymentSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     product_title = serializers.SerializerMethodField()
     product_type = serializers.SerializerMethodField()
+    # Expose product_id for frontend compatibility (maps to object_id for products)
+    product_id = serializers.SerializerMethodField()
     # Accept tax and discount in incoming payloads for compatibility with frontend
     tax_amount = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, write_only=True)
     discount_amount = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, write_only=True)
-    
+
     class Meta:
         model = OrderItem
         # Align serializer fields with the current OrderItem model
         fields = [
-            'id', 'order', 'content_type', 'object_id', 'product_title',
+            'id', 'order', 'content_type', 'object_id', 'product_id', 'product_title',
             'product_type', 'name', 'description', 'sku', 'quantity',
             'unit_price', 'total_price', 'tax_amount', 'discount_amount', 'notes', 'created_at', 'updated_at'
         ]
         read_only_fields = ['total_price', 'created_at', 'updated_at']
-    
+
+    def get_product_id(self, obj):
+        """Return product_id for frontend - maps to object_id when content_type is Product"""
+        if obj.content_type and obj.content_type.model == 'products':
+            return obj.object_id
+        return obj.object_id
+
     def get_product_title(self, obj):
         if obj.content_object:
             return str(obj.content_object)
         return "Unknown Product"
-    
+
     def get_product_type(self, obj):
         if obj.content_type:
             return obj.content_type.model
