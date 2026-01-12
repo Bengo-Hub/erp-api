@@ -34,14 +34,7 @@ class ContactSerializer(serializers.ModelSerializer):
     user=ContactUserSerializer()
     customer_group=ContactCustomerGroupSerializer(required=False, allow_null=True)
     accounts=ContactAccountSerializer(many=True, read_only=True)
-    # Use DateTimeField to match the model's DateTimeField, not DateField
-    added_on = serializers.SerializerMethodField(read_only=True)
-    
-    def get_added_on(self, obj):
-        """Return added_on as ISO datetime string."""
-        if obj.added_on:
-            return obj.added_on.isoformat()
-        return None
+    added_on = serializers.DateTimeField(read_only=True)
     
     class Meta:
         model = Contact
