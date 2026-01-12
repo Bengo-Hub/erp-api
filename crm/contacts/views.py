@@ -142,7 +142,8 @@ class ContactsViewSet(BaseModelViewSet):
             query_params=request.data
             contact_type = query_params.get('contact_type','Individual')
             account_type=query_params.get('account_type','Customers')
-            branch_id = self.request.query_params.get('branch_id',None)
+            # Resolve branch by query param first, then fall back to headers
+            branch_id = self.request.query_params.get('branch_id', None) or get_branch_id_from_request(self.request)
             # Resolve branch by ID or user's business; prefer explicit query param/header
             branch = Branch.objects.filter(Q(id=branch_id) | Q(business__owner=request.user)).first()
             if hasattr(request.user, 'employee') and request.user.employee.organisation:
@@ -196,8 +197,13 @@ class ContactsViewSet(BaseModelViewSet):
             Token.objects.update_or_create(user=user)
             
             biz = None
-            if business is not None:
-                biz, created = Bussiness.objects.update_or_create(owner=user, name=business)
+            # Prefer explicit business id from headers/query params if provided
+            biz_id_from_header = get_business_id_from_request(request)
+            if biz_id_from_header:
+                biz = Bussiness.objects.filter(id=biz_id_from_header).first()
+            else:
+                if business is not None:
+                    biz, created = Bussiness.objects.update_or_create(owner=user, name=business)
             
             contact_defaults = {
                 "contact_id": _contact_id,
@@ -237,6 +243,18 @@ class ContactsViewSet(BaseModelViewSet):
         try:
             query_params = request.data
             contact = self.get_object(pk)
+            # Respect branch/business from headers or query params when updating
+            branch_id = self.request.query_params.get('branch_id', None) or get_branch_id_from_request(self.request)
+            if branch_id:
+                branch_obj = Branch.objects.filter(id=branch_id).first()
+                if branch_obj:
+                    contact.branch = branch_obj
+
+            biz_id_from_header = get_business_id_from_request(request)
+            if biz_id_from_header:
+                biz_obj = Bussiness.objects.filter(id=biz_id_from_header).first()
+                if biz_obj:
+                    contact.business = biz_obj
             # Update contact details based on query parameters - clean all values
             contact_type = query_params.get('contact_type', contact.contact_type)
             address = clean_input_value(query_params.get('address', None), 'int')
