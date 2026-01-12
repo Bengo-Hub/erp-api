@@ -6,7 +6,8 @@ from crm.contacts.models import Contact
 from django.contrib.auth import get_user_model
 from datetime import datetime, timedelta
 from django.db import transaction
-from business.models import Branch,TaxRates
+from business.models import Branch
+from finance.taxes.models import Tax
 from .functions import generate_ref_no
 from django.db.models import F,Sum
 from django.utils.translation import gettext_lazy as _
@@ -140,7 +141,7 @@ class StockInventory(models.Model):
     variation=models.ForeignKey(Variations,on_delete=models.CASCADE,related_name='stock',blank=True,null=True)
     warranty=models.ForeignKey(Warranties,on_delete=models.SET_NULL,related_name='stock',null=True,blank=True)
     discount=models.ForeignKey("Discounts",on_delete=models.SET_NULL,related_name="stock",null=True,blank=True)
-    applicable_tax=models.ForeignKey(TaxRates,on_delete=models.SET_NULL,null=True,blank=True,default=None)
+    applicable_tax=models.ForeignKey(Tax,on_delete=models.SET_NULL,null=True,blank=True,default=None,related_name='stock_items')
     buying_price=models.DecimalField(max_digits=14,decimal_places=4,default=Decimal('0.00'))
     selling_price=models.DecimalField(max_digits=14,decimal_places=4,default=Decimal('0.00'))#view_discounts
     profit_margin=models.DecimalField(max_digits=14,decimal_places=4,default=Decimal('0.00'))

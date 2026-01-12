@@ -79,7 +79,7 @@ class InventoryViewSet(BaseModelViewSet):
         return queryset
 
     def create(self, request, *args, **kwargs):
-        """Prevent creating stock entries for service products."""
+        """Create stock entry with automatic branch assignment for multi-tenant context."""
         correlation_id = get_correlation_id(request)
         product_id = request.data.get('product')
         if not product_id:
@@ -92,6 +92,18 @@ class InventoryViewSet(BaseModelViewSet):
 
         if getattr(product_obj, 'product_type', None) == 'service':
             return APIResponse.validation_error(message='Stock cannot be created for service items.', errors={'product': 'Stock cannot be created for service items.'}, correlation_id=correlation_id)
+
+        # Auto-set branch if not provided using consolidated utility
+        from core.utils import get_business_context
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        if not data.get('branch'):
+            context = get_business_context(request)
+            if context['branch']:
+                data['branch'] = context['branch_id']
+                logger.info(f'Auto-set branch={context["branch_id"]} for stock creation by user {request.user.id}')
+
+        # Replace request data with modified data
+        request._full_data = data
 
         return super().create(request, *args, **kwargs)
     

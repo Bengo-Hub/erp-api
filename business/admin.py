@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
-    BusinessLocation, Bussiness, Branch, TaxRates, ProductSettings, SaleSettings, 
-    ServiceTypes, PrefixSettings, PickupStations, BrandingSettings
+    BusinessLocation, Bussiness, Branch, TaxRates, ProductSettings, SaleSettings,
+    ServiceTypes, PrefixSettings, PickupStations, BrandingSettings, DocumentSequence
 )
 
 class LocationInline(admin.StackedInline):
@@ -200,23 +200,37 @@ class SaleSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(PrefixSettings)
 class PrefixSettingsAdmin(admin.ModelAdmin):
-    list_display = ['id','business','purchase', 'purchase_order', 'purchase_return', 'purchase_requisition', 'stock_transfer', 'sale_return', 'expense', 'business_location']
-    search_fields = ['purchase', 'purchase_order', 'purchase_return', 'purchase_requisition', 'stock_transfer', 'sale_return', 'expense', 'business_location']
-    list_filter = ['purchase', 'purchase_order', 'purchase_return', 'purchase_requisition', 'stock_transfer', 'sale_return', 'expense', 'business_location']
-    list_editable=['purchase', 'purchase_order', 'purchase_return', 'purchase_requisition', 'stock_transfer', 'sale_return', 'expense', 'business_location']
-    list_display_links=['id']
+    list_display = ['id', 'business', 'invoice', 'quotation', 'credit_note', 'purchase_order', 'expense']
+    search_fields = ['business__name']
+    list_filter = ['business']
+    list_display_links = ['id']
+    fieldsets = (
+        ('Business', {
+            'fields': ('business',)
+        }),
+        ('Finance Document Prefixes', {
+            'fields': ('invoice', 'quotation', 'credit_note', 'debit_note', 'delivery_note', 'expense'),
+            'description': 'Prefixes for finance documents. Format: PREFIX0000-DDMMYY'
+        }),
+        ('Procurement Prefixes', {
+            'fields': ('purchase', 'purchase_order', 'purchase_return', 'purchase_requisition'),
+        }),
+        ('Stock Prefixes', {
+            'fields': ('stock_transfer', 'stock_adjustment'),
+        }),
+        ('Other Prefixes', {
+            'fields': ('sale_return', 'business_location'),
+        }),
+    )
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
         else:
-            # Get the businesses where the user is either the owner or an employee
             owned = qs.filter(business__owner=request.user)
-            employees = qs.filter(branches__business__employees__user=request.user)
-            # Combine the two sets using OR operator
-            settings = owned | employees
-        return settings
+            employees = qs.filter(business__employees__user=request.user)
+            return owned | employees
 
 @admin.register(ServiceTypes)
 class ServiceTypesAdmin(admin.ModelAdmin):
@@ -265,4 +279,23 @@ class PickupStationsAdmin(admin.ModelAdmin):
             # Combine the two sets using OR operator
             stations = owned | employees
         return stations
+
+
+@admin.register(DocumentSequence)
+class DocumentSequenceAdmin(admin.ModelAdmin):
+    """Admin for document number sequences."""
+    list_display = ['business', 'document_type', 'current_sequence', 'updated_at']
+    list_filter = ['document_type', 'business']
+    search_fields = ['business__name', 'document_type']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['business', 'document_type']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        else:
+            owned = qs.filter(business__owner=request.user)
+            employees = qs.filter(business__employees__user=request.user)
+            return owned | employees
 

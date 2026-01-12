@@ -5,7 +5,7 @@ from decimal import Decimal
 from ecommerce.product.models import *
 from crm.contacts.models import Contact
 from ecommerce.stockinventory.models import StockInventory
-from business.models import Branch, Bussiness, TaxRates
+from business.models import Branch, Bussiness
 from addresses.models import AddressBook
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model

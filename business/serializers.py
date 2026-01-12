@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import (
-    Bussiness, BusinessLocation, TaxRates, PickupStations, 
-    ProductSettings, SaleSettings, PrefixSettings, ServiceTypes, BrandingSettings, Branch
+    Bussiness, BusinessLocation, PickupStations,
+    ProductSettings, SaleSettings, PrefixSettings, ServiceTypes, BrandingSettings, Branch,
+    DocumentSequence
 )
 from addresses.models import AddressBook, DeliveryRegion
 from addresses.serializers import AddressBookSerializer as CentralizedAddressBookSerializer
@@ -23,11 +24,6 @@ class BusinessLocationSerializer(serializers.ModelSerializer):
     def get_country(self, obj):
         return str(obj.country) if obj.country else None
 
-class TaxRatesSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TaxRates
-        fields = '__all__'
-        
 class PickupStationSerializer(serializers.ModelSerializer):
     class Meta:
         model = PickupStations
@@ -123,11 +119,66 @@ class BrandingSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = BrandingSettings
         exclude = ('business',)
-        
+
+
+class DocumentSequenceSerializer(serializers.ModelSerializer):
+    """Serializer for document sequences (read-only view of sequence state)."""
+    document_type_display = serializers.CharField(source='get_document_type_display', read_only=True)
+    business_name = serializers.CharField(source='business.name', read_only=True)
+
+    class Meta:
+        model = DocumentSequence
+        fields = ['id', 'business', 'business_name', 'document_type', 'document_type_display',
+                  'current_sequence', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'current_sequence', 'created_at', 'updated_at']
+
+
+class BusinessSettingsSerializer(serializers.ModelSerializer):
+    """
+    Lean serializer for business settings page - returns only essential fields.
+    Does NOT include nested relations like branches, tax_rates, pickup_stations etc.
+    Use dedicated endpoints for those resources.
+    """
+    timezone = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Bussiness
+        fields = [
+            'id',
+            'name',
+            'start_date',
+            'stock_accounting_method',
+            'currency',
+            'transaction_edit_days',
+            'default_profit_margin',
+            'timezone',
+            # Contact/registration fields
+            'kra_number',
+            'business_registration_number',
+            'business_license_number',
+            'business_license_expiry',
+            'business_type',
+            'county',
+            'postal_code',
+            # Logo fields
+            'logo',
+            'watermarklogo',
+        ]
+
+    def get_timezone(self, obj):
+        tz = getattr(obj, 'timezone', None)
+        if tz is None:
+            return None
+        if hasattr(tz, 'key') and tz.key:
+            return tz.key
+        if hasattr(tz, 'zone') and tz.zone:
+            return tz.zone
+        return str(tz)
+
 
 class BussinessSerializer(serializers.ModelSerializer):
     branches = serializers.SerializerMethodField()
-    tax_rates = TaxRatesSerializer(many=True, read_only=True)
+    # tax_rates moved to finance.taxes module - use /api/v1/finance/taxes/rates/
     prefix_settings = PrefixSettingsSerializer(many=True, read_only=True)
     product_settings = ProductSettingsSerializer(many=True, read_only=True)
     sale_settings = SaleSettingsSerializer(many=True, read_only=True)
