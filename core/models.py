@@ -309,47 +309,6 @@ class RegionalSettings(models.Model):
         return 'Regional Settings'
 
 
-class BrandingSettings(models.Model):
-    """
-    Singleton model for application branding settings
-    """
-    app_name = models.CharField(max_length=100, default='BengoERP')
-    tagline = models.CharField(max_length=200, blank=True, null=True)
-    footer_text = models.TextField(blank=True, null=True)
-    primary_color = models.CharField(max_length=7, default='#3B82F6')
-    secondary_color = models.CharField(max_length=7, default='#10B981')
-    text_color = models.CharField(max_length=7, default='#1F2937')
-    background_color = models.CharField(max_length=7, default='#FFFFFF')
-    logo_url = models.URLField(blank=True, null=True)
-    logo = models.ImageField(upload_to='branding/logos/', blank=True, null=True)
-    favicon_url = models.URLField(blank=True, null=True)
-    watermark_url = models.URLField(blank=True, null=True)
-    watermark = models.ImageField(upload_to='branding/watermarks/', blank=True, null=True)
-    enable_dark_mode = models.BooleanField(default=True)
-    theme_preset = models.CharField(max_length=50, default='Lara')
-    menu_mode = models.CharField(max_length=20, default='static')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        verbose_name = 'Branding Settings'
-        verbose_name_plural = 'Branding Settings'
-    
-    @classmethod
-    def load(cls):
-        """Load or create the singleton settings instance"""
-        obj, created = cls.objects.get_or_create(pk=1)
-        return obj
-    
-    def save(self, *args, **kwargs):
-        """Ensure only one instance exists (Singleton pattern)"""
-        self.pk = 1
-        super().save(*args, **kwargs)
-    
-    def __str__(self):
-        return 'Branding Settings'
-
-
 class Location(models.Model):
     """
     Legacy Location model - Use business.Branch instead for multi-branch support.

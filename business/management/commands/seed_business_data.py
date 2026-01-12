@@ -2,11 +2,12 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from business.models import (
-    BusinessLocation, Branch, TaxRates, 
+    BusinessLocation, Branch, TaxRates,
     ProductSettings, SaleSettings, PrefixSettings, ServiceTypes
 )
 from authmanagement.models import CustomUser
 from business.models import BusinessLocation, Branch, Bussiness
+from finance.taxes.models import Tax, TaxCategory
 User = get_user_model()
 
 class Command(BaseCommand):
@@ -63,6 +64,8 @@ class Command(BaseCommand):
         """Clear existing data."""
         Branch.objects.all().delete()
         TaxRates.objects.all().delete()
+        Tax.objects.all().delete()
+        TaxCategory.objects.all().delete()
         ProductSettings.objects.all().delete()
         SaleSettings.objects.all().delete()
         PrefixSettings.objects.all().delete()
@@ -156,19 +159,29 @@ class Command(BaseCommand):
         return business, location, main_branch
 
     def create_tax_rates(self, business):
-        """Create tax rates for the business."""
+        """Create tax rates for the business (both TaxRates and Tax models)."""
         tax_rates_data = [
-            {'tax_name': 'VAT', 'percentage': 16.0, 'tax_number': 'T001'},
-            {'tax_name': 'Withholding Tax', 'percentage': 5.0, 'tax_number': 'T002'},
-            {'tax_name': 'Corporate Tax', 'percentage': 30.0, 'tax_number': 'T003'},
-            {'tax_name': 'PAYE', 'percentage': 30.0, 'tax_number': 'T004'},
-            {'tax_name': 'NHIF', 'percentage': 1.5, 'tax_number': 'T005'},
-            {'tax_name': 'NSSF', 'percentage': 6.0, 'tax_number': 'T006'}
+            {'tax_name': 'VAT', 'percentage': 16.0, 'tax_number': 'T001', 'is_vat': True, 'is_withholding': False},
+            {'tax_name': 'Withholding Tax', 'percentage': 5.0, 'tax_number': 'T002', 'is_vat': False, 'is_withholding': True},
+            {'tax_name': 'Corporate Tax', 'percentage': 30.0, 'tax_number': 'T003', 'is_vat': False, 'is_withholding': False},
+            {'tax_name': 'PAYE', 'percentage': 30.0, 'tax_number': 'T004', 'is_vat': False, 'is_withholding': False},
+            {'tax_name': 'NHIF', 'percentage': 1.5, 'tax_number': 'T005', 'is_vat': False, 'is_withholding': False},
+            {'tax_name': 'NSSF', 'percentage': 6.0, 'tax_number': 'T006', 'is_vat': False, 'is_withholding': False}
         ]
-        
+
+        # Create or get default tax category for finance.taxes.Tax model
+        tax_category, cat_created = TaxCategory.objects.get_or_create(
+            name='Sales Tax',
+            business=business,
+            defaults={'description': 'Default tax category for sales taxes', 'is_active': True}
+        )
+        if cat_created:
+            self.stdout.write(self.style.SUCCESS('Created tax category: Sales Tax'))
+
         tax_rates = []
+        taxes = []  # For finance.taxes.Tax model
         for tax_data in tax_rates_data:
-            # TaxRates.tax_number is globally unique; reuse by tax_number to avoid unique constraint errors
+            # Create TaxRates (business.models) - legacy model
             tax_rate = TaxRates.objects.filter(tax_number=tax_data['tax_number']).first()
             created = False
             if not tax_rate:
@@ -180,7 +193,6 @@ class Command(BaseCommand):
                 )
                 created = True
             else:
-                # Ensure it points to current business and has correct name/percentage
                 update_fields = []
                 if tax_rate.business_id != business.id:
                     tax_rate.business = business
@@ -196,7 +208,28 @@ class Command(BaseCommand):
             tax_rates.append(tax_rate)
             if created:
                 self.stdout.write(f'Created tax rate: {tax_rate.tax_name} ({tax_rate.percentage}%)')
-        
+
+            # Create Tax (finance.taxes.models) - new centralized model
+            tax, tax_created = Tax.objects.get_or_create(
+                name=tax_data['tax_name'],
+                business=business,
+                defaults={
+                    'category': tax_category,
+                    'calculation_type': 'percentage',
+                    'rate': tax_data['percentage'],
+                    'tax_number': tax_data['tax_number'],
+                    'is_vat': tax_data.get('is_vat', False),
+                    'is_withholding': tax_data.get('is_withholding', False),
+                    'is_default': tax_data['tax_name'] == 'VAT',  # Set VAT as default
+                    'is_active': True
+                }
+            )
+            taxes.append(tax)
+            if tax_created:
+                self.stdout.write(f'Created Tax (finance): {tax.name} ({tax.rate}%)')
+
+        # Store taxes in instance for use by create_sale_settings
+        self._taxes = taxes
         return tax_rates
 
     def create_product_settings(self, business):
@@ -219,17 +252,23 @@ class Command(BaseCommand):
 
     def create_sale_settings(self, business, tax_rates):
         """Create sale settings for the business."""
+        # Use Tax model (finance.taxes) for default_tax, not TaxRates
+        default_tax = None
+        if hasattr(self, '_taxes') and self._taxes:
+            # Find VAT tax (marked as default)
+            default_tax = next((t for t in self._taxes if t.is_vat), self._taxes[0] if self._taxes else None)
+
         sale_settings, created = SaleSettings.objects.get_or_create(
             business=business,
             defaults={
                 'default_discount': 0.00,
-                'default_tax': tax_rates[0] if tax_rates else None  # VAT
+                'default_tax': default_tax
             }
         )
-        
+
         if created:
             self.stdout.write('Created sale settings')
-        
+
         return [sale_settings]
 
     def create_prefix_settings(self, business):

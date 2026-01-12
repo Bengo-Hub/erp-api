@@ -10,6 +10,7 @@ from procurement.requisitions.models import ProcurementRequest
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 import logging
+from business.document_service import DocumentNumberService, DocumentType
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -52,11 +53,31 @@ class PurchaseOrder(BaseOrder):
         super().save(*args, **kwargs)
 
     def generate_order_number(self):
-        """Generate unique purchase order number"""
-        # Use a different approach since self.id might not be available during creation
+        """Generate unique purchase order number using centralized DocumentNumberService.
+
+        Format: PREFIX0000-DDMMYY (e.g., LSO0034-150126)
+        """
+        business = None
+        if self.branch:
+            business = self.branch.business
+        elif self.supplier and hasattr(self.supplier, 'business'):
+            business = self.supplier.business
+
+        if business:
+            try:
+                return DocumentNumberService.generate_number(
+                    business=business,
+                    document_type=DocumentType.PURCHASE_ORDER,
+                    document_date=timezone.now()
+                )
+            except Exception as e:
+                logger.warning(f"Failed to generate PO number via service: {e}")
+
+        # Fallback
         import uuid
         unique_id = str(uuid.uuid4().int)[:6]
-        return f"PO-{timezone.now().year}-{unique_id}"
+        date_str = timezone.now().strftime('%d%m%y')
+        return f"LSO{unique_id}-{date_str}"
 
     def __str__(self):
         return f"{self.order_number} ({self.status})"
@@ -124,14 +145,6 @@ class PurchaseOrder(BaseOrder):
             queryset = queryset.filter(order_date__lte=filters['date_to'])
         
         return queryset
-
-
-def generate_order_number():
-    """Generate a unique order number format for purchase orders"""
-    from django.utils import timezone
-    # Get the next ID by counting existing orders
-    next_id = PurchaseOrder.objects.count() + 1
-    return f"PO-{timezone.now().year}-{next_id:06d}"
 
 
 # OrderApproval moved to centralized approvals app - import from there

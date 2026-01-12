@@ -66,6 +66,7 @@ class ProductViewSet(BaseModelViewSet):
                 branch_id = get_branch_id_from_request(request)
             
             # Base queryset with minimal fields
+            # Note: Tax model uses 'name' and 'rate' fields (not 'tax_name' and 'percentage')
             queryset = StockInventory.objects.select_related(
                 'product',
                 'applicable_tax'
@@ -80,8 +81,8 @@ class ProductViewSet(BaseModelViewSet):
                 'product__serial',
                 'product__description',
                 'applicable_tax__id',
-                'applicable_tax__tax_name',
-                'applicable_tax__percentage'
+                'applicable_tax__name',
+                'applicable_tax__rate'
             )
             
             # Filter by branch
@@ -116,8 +117,8 @@ class ProductViewSet(BaseModelViewSet):
                     'availability': stock.availability,
                     'applicable_tax': {
                         'id': stock.applicable_tax.id,
-                        'tax_name': stock.applicable_tax.tax_name,
-                        'percentage': float(stock.applicable_tax.percentage)
+                        'name': stock.applicable_tax.name,
+                        'rate': float(stock.applicable_tax.rate)
                     } if stock.applicable_tax else None,
                     # For autocomplete display
                     'displayName': f"{stock.product.title} ({stock.product.sku})"

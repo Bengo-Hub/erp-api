@@ -8,6 +8,7 @@ from core.models import BaseModel
 from core_orders.models import BaseOrder
 from crm.contacts.models import Contact
 from business.models import Branch, Bussiness
+from business.document_service import DocumentNumberService, DocumentType
 from finance.accounts.models import PaymentAccounts
 from approvals.models import Approval
 import uuid
@@ -15,6 +16,7 @@ from django.db.models import Sum
 from core.audit import AuditTrail
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class Invoice(BaseOrder):
@@ -160,11 +162,31 @@ class Invoice(BaseOrder):
         super().save(*args, **kwargs)
     
     def generate_invoice_number(self):
-        """Generate unique invoice number: INV-YYYY-NNNNNN"""
+        """Generate unique invoice number using centralized DocumentNumberService.
+
+        Format: PREFIX0000-DDMMYY (e.g., INV0033-150126)
+        """
+        business = None
+        if self.branch:
+            business = self.branch.business
+        elif self.customer and hasattr(self.customer, 'business'):
+            business = self.customer.business
+
+        if business:
+            try:
+                return DocumentNumberService.generate_number(
+                    business=business,
+                    document_type=DocumentType.INVOICE,
+                    document_date=self.invoice_date or timezone.now()
+                )
+            except Exception as e:
+                logger.warning(f"Failed to generate invoice number via service: {e}")
+
+        # Fallback for cases where business context is not available
         year = timezone.now().year
-        # Count invoices this year
         count = Invoice.objects.filter(created_at__year=year).count() + 1
-        return f"INV-{year}-{count:06d}"
+        date_str = timezone.now().strftime('%d%m%y')
+        return f"INV{count:04d}-{date_str}"
     
     def calculate_due_date(self):
         """Calculate due date based on payment terms"""
@@ -474,10 +496,31 @@ class CreditNote(BaseOrder):
             self.apply_to_invoice()
     
     def generate_credit_note_number(self):
-        """Generate unique credit note number: CN-YYYY-NNNNNN"""
+        """Generate unique credit note number using centralized DocumentNumberService.
+
+        Format: PREFIX0000-DDMMYY (e.g., CRN0001-150126)
+        """
+        business = None
+        if self.branch:
+            business = self.branch.business
+        elif self.source_invoice and self.source_invoice.branch:
+            business = self.source_invoice.branch.business
+
+        if business:
+            try:
+                return DocumentNumberService.generate_number(
+                    business=business,
+                    document_type=DocumentType.CREDIT_NOTE,
+                    document_date=self.credit_note_date or timezone.now()
+                )
+            except Exception as e:
+                logger.warning(f"Failed to generate credit note number via service: {e}")
+
+        # Fallback
         year = timezone.now().year
         count = CreditNote.objects.filter(created_at__year=year).count() + 1
-        return f"CN-{year}-{count:06d}"
+        date_str = timezone.now().strftime('%d%m%y')
+        return f"CRN{count:04d}-{date_str}"
     
     def apply_to_invoice(self):
         """Apply credit note to reduce invoice balance"""
@@ -540,10 +583,31 @@ class DebitNote(BaseOrder):
         super().save(*args, **kwargs)
     
     def generate_debit_note_number(self):
-        """Generate unique debit note number: DN-YYYY-NNNNNN"""
+        """Generate unique debit note number using centralized DocumentNumberService.
+
+        Format: PREFIX0000-DDMMYY (e.g., DBN0001-150126)
+        """
+        business = None
+        if self.branch:
+            business = self.branch.business
+        elif self.source_invoice and self.source_invoice.branch:
+            business = self.source_invoice.branch.business
+
+        if business:
+            try:
+                return DocumentNumberService.generate_number(
+                    business=business,
+                    document_type=DocumentType.DEBIT_NOTE,
+                    document_date=self.debit_note_date or timezone.now()
+                )
+            except Exception as e:
+                logger.warning(f"Failed to generate debit note number via service: {e}")
+
+        # Fallback
         year = timezone.now().year
         count = DebitNote.objects.filter(created_at__year=year).count() + 1
-        return f"DN-{year}-{count:06d}"
+        date_str = timezone.now().strftime('%d%m%y')
+        return f"DBN{count:04d}-{date_str}"
     
     def __str__(self):
         return f"{self.debit_note_number} - {self.source_invoice.invoice_number} - {self.get_status_display()}"

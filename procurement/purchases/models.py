@@ -6,7 +6,7 @@ from ecommerce.product.models import *
 from ecommerce.pos.models import PayTerm
 from crm.contacts.models import Contact
 from ecommerce.stockinventory.models import StockInventory
-from business.models import Bussiness, Branch, TaxRates
+from business.models import Bussiness, Branch
 from addresses.models import AddressBook
 from django.db.models import Sum, Q
 from django.core.exceptions import ValidationError
