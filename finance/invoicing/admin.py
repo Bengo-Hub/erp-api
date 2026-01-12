@@ -66,26 +66,26 @@ class DeliveryNoteAdmin(admin.ModelAdmin):
 
 @admin.register(CreditNote)
 class CreditNoteAdmin(admin.ModelAdmin):
-    list_display = ['credit_note_number', 'customer', 'credit_date', 'related_invoice']
-    list_filter = ['credit_date']
+    list_display = ['credit_note_number', 'customer', 'credit_note_date', 'source_invoice']
+    list_filter = ['credit_note_date']
     search_fields = ['credit_note_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
     readonly_fields = ['credit_note_number', 'created_at', 'updated_at']
-    date_hierarchy = 'credit_date'
+    date_hierarchy = 'credit_note_date'
 
 
 @admin.register(DebitNote)
 class DebitNoteAdmin(admin.ModelAdmin):
-    list_display = ['debit_note_number', 'customer', 'debit_date', 'related_invoice']
-    list_filter = ['debit_date']
+    list_display = ['debit_note_number', 'customer', 'debit_note_date', 'source_invoice']
+    list_filter = ['debit_note_date']
     search_fields = ['debit_note_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
     readonly_fields = ['debit_note_number', 'created_at', 'updated_at']
-    date_hierarchy = 'debit_date'
+    date_hierarchy = 'debit_note_date'
 
 
 @admin.register(ProformaInvoice)
 class ProformaInvoiceAdmin(admin.ModelAdmin):
-    list_display = ['proforma_invoice_number', 'customer', 'issue_date', 'valid_until']
-    list_filter = ['issue_date', 'valid_until']
-    search_fields = ['proforma_invoice_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
-    readonly_fields = ['proforma_invoice_number', 'created_at', 'updated_at']
-    date_hierarchy = 'issue_date'
+    list_display = ['proforma_number', 'customer', 'proforma_date', 'valid_until']
+    list_filter = ['proforma_date', 'valid_until']
+    search_fields = ['proforma_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
+    readonly_fields = ['proforma_number', 'created_at', 'updated_at']
+    date_hierarchy = 'proforma_date'
