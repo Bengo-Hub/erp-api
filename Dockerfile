@@ -45,7 +45,9 @@ COPY --from=deps /usr/local/lib/python3.11 /usr/local/lib/python3.11
 COPY --from=deps /usr/local/bin /usr/local/bin
 ENV DJANGO_SETTINGS_MODULE=ProcureProKEAPI.settings
 RUN mkdir -p /app/staticfiles \
-    && python manage.py collectstatic --noinput --clear 2>/dev/null || echo "Static collection deferred to runtime"
+    && python manage.py collectstatic --noinput --clear \
+    && echo "✓ Static files collected successfully (Django admin, DRF, Jazzmin, app statics)" \
+    || (echo "✗ Static file collection FAILED - admin styling will be broken in production"; exit 1)
 
 FROM base AS runtime
 WORKDIR /app
