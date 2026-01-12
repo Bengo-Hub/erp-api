@@ -46,77 +46,92 @@ else
   PENDING_MIGRATIONS=$(python manage.py showmigrations --plan 2>&1 | grep -c '^\s*\[ \]' || true)
   
   if [ "$PENDING_MIGRATIONS" -gt 0 ]; then
-    echo "📋 Found $PENDING_MIGRATIONS pending migrations - acquiring migration lock (timeout: 30s)..."
+    echo "📋 Found $PENDING_MIGRATIONS pending migrations - acquiring migration lock..."
     
-    # Fast lock using database with short timeout (30s total wait)
+    # Distributed lock using database: only one pod acquires lock and runs migrations
+    # This prevents concurrent migrations on shared database
     LOCK_ACQUIRED=0
     LOCK_ATTEMPTS=0
-    MAX_LOCK_ATTEMPTS=6  # 6 attempts × 5s = 30s max wait
-
+    MAX_LOCK_ATTEMPTS=30
+    
     while [ $LOCK_ATTEMPTS -lt $MAX_LOCK_ATTEMPTS ] && [ $LOCK_ACQUIRED -eq 0 ]; do
       LOCK_ATTEMPTS=$((LOCK_ATTEMPTS + 1))
       
-      # Try to acquire lock using Django shell
+      # Try to acquire lock using Django's database
       if python manage.py shell -c "
 from django.db import connection
 from datetime import datetime, timedelta
 
 with connection.cursor() as cursor:
-    # Create migrations_lock table if not exists (idempotent)
+    # Create migrations_lock table if not exists
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS migrations_lock (
             id SERIAL PRIMARY KEY,
             lock_name VARCHAR(255) UNIQUE,
-            acquired_at TIMESTAMP DEFAULT NOW()
+            acquired_at TIMESTAMP,
+            released_at TIMESTAMP
         )
     ''')
-    connection.commit()
     
-    # Try to acquire lock with 60-second expiry (only 1 pod runs migrations per 60s window)
+    # Try to acquire lock with 5-minute expiry
     try:
         cursor.execute('''
-            DELETE FROM migrations_lock 
-            WHERE lock_name = 'erp_migrations' 
-            AND acquired_at < NOW() - INTERVAL '60 seconds'
-        ''')
-        
-        cursor.execute('''
             INSERT INTO migrations_lock (lock_name, acquired_at)
-            VALUES ('erp_migrations', NOW())
-            ON CONFLICT (lock_name) DO NOTHING
+            SELECT 'erp_migrations', NOW()
+            WHERE NOT EXISTS (
+                SELECT 1 FROM migrations_lock 
+                WHERE lock_name = 'erp_migrations'
+                AND acquired_at > NOW() - INTERVAL '5 minutes'
+            )
         ''')
         connection.commit()
         
-        # Check if insert succeeded (lock acquired)
+        # Check if insert was successful
         cursor.execute('SELECT COUNT(*) FROM migrations_lock WHERE lock_name = %s', ['erp_migrations'])
-        count = cursor.fetchone()[0]
-        if count > 0:
+        if cursor.fetchone()[0] > 0:
             print('LOCK_ACQUIRED')
-    except Exception as e:
+    except Exception:
         pass
 " 2>&1 | grep -q "LOCK_ACQUIRED"; then
         LOCK_ACQUIRED=1
-        echo "✅ Migration lock acquired - running migrations..."
+        echo "✅ Migration lock acquired (pod is eligible to run migrations)"
         
-        # Run database migrations with timeout
-        if timeout 300 python manage.py migrate --noinput 2>&1; then
+        # Run database migrations only when lock is held
+        echo "🔄 Running database migrations..."
+        if python manage.py migrate --noinput 2>&1; then
             echo "✅ Migrations completed successfully"
+            
+            # Release lock after successful migration
+            python manage.py shell -c "
+from django.db import connection
+with connection.cursor() as cursor:
+    cursor.execute('UPDATE migrations_lock SET released_at = NOW() WHERE lock_name = %s', ['erp_migrations'])
+    connection.commit()
+" 2>&1 || echo "⚠️ Lock release failed (non-critical)"
         else
-            echo "❌ Migrations failed or timed out! Proceeding anyway (Django tracks state)."
+            echo "❌ Migration failed! Service may not function correctly."
+            # Attempt to release lock on failure
+            python manage.py shell -c "
+from django.db import connection
+with connection.cursor() as cursor:
+    cursor.execute('UPDATE migrations_lock SET released_at = NOW() WHERE lock_name = %s', ['erp_migrations'])
+    connection.commit()
+" 2>&1 || true
+            exit 1
         fi
       else
-        # Lock not acquired - other pod is migrating, wait
+        # Lock not acquired - wait for other pod to finish migrations
         if [ $LOCK_ATTEMPTS -lt $MAX_LOCK_ATTEMPTS ]; then
-          echo "⏳ Migration lock held by another pod (attempt $LOCK_ATTEMPTS/$MAX_LOCK_ATTEMPTS, waiting 5s)..."
-          sleep 5
+          echo "⏳ Migration lock held by another pod (attempt $LOCK_ATTEMPTS/$MAX_LOCK_ATTEMPTS)... waiting 2s"
+          sleep 2
         fi
       fi
     done
     
     if [ $LOCK_ACQUIRED -eq 0 ]; then
-      echo "⚠️ Timed out waiting for migration lock after 30s"
-      echo "   Proceeding to start server (other pod should have completed migrations)"
-      echo "   If migrations are still pending, the health check will retry"
+      echo "⚠️ Could not acquire migration lock after $MAX_LOCK_ATTEMPTS attempts"
+      echo "   Proceeding to start server - other pod should have completed migrations"
+      echo "   (This is safe: Django tracks applied migrations in django_migrations table)"
     fi
   else
     echo "✅ No pending migrations - all migrations already applied"

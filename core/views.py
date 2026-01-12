@@ -182,11 +182,7 @@ class BankBranchesViewSet(viewsets.ModelViewSet):
 # Use: /api/v1/campaigns/active_banners/ endpoint
 
 class HealthCheckView(APIView):
-    """API endpoint for system health monitoring used by deployment pipeline.
-    
-    Returns HTTP 200 for liveness probe (is container running?)
-    Returns HTTP 503 for readiness probe (is container ready to serve traffic?)
-    """
+    """API endpoint for system health monitoring used by deployment pipeline"""
     permission_classes = [AllowAny]
     
     def get(self, request, format=None):
@@ -195,25 +191,21 @@ class HealthCheckView(APIView):
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1")
                 db_status = "ok"
-                db_healthy = True
         except Exception as e:
             db_status = str(e)
-            db_healthy = False
         
         # Basic health check data
+        is_healthy = db_status == "ok"
         health_data = {
-            "status": "healthy" if db_healthy else "unhealthy",
+            "status": "healthy" if is_healthy else "unhealthy",
             "timestamp": datetime.now().isoformat(),
             "database": db_status,
             "version": "1.0.0"
         }
         
-        # Kubernetes liveness probe: return 200 if pod is alive (always)
-        # Kubernetes readiness probe: return 503 if not ready (e.g., DB unavailable)
-        # For migrations: this endpoint will be called every 30s, pod becomes ready once DB is accessible
         return Response(
             health_data, 
-            status=status.HTTP_200_OK if db_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+            status=status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
         )
 
 class PerformanceMetricsView(APIView):
