@@ -1,7 +1,8 @@
 from django.db import models
 from django.utils import timezone
 from crm.contacts.models import Contact
-from business.models import Branch,TaxRates,Bussiness
+from business.models import Branch, Bussiness
+from finance.taxes.models import Tax
 from finance.accounts.models import PaymentAccounts
 from ecommerce.pos.models import Register
 
@@ -29,7 +30,7 @@ class Expense(models.Model):
     expense_for_user = models.ForeignKey(User, on_delete=models.CASCADE,related_name='user_expenses',blank=True, null=True)
     expense_for_contact = models.ForeignKey(Contact, on_delete=models.CASCADE,related_name='conatct_expenses',blank=True, null=True)
     attach_document = models.FileField(upload_to='expense/documents/', blank=True, null=True)
-    applicable_tax = models.ForeignKey(TaxRates,on_delete=models.SET_NULL,related_name='expense_taxes',blank=True, null=True)
+    applicable_tax = models.ForeignKey(Tax,on_delete=models.SET_NULL,related_name='expense_taxes',blank=True, null=True)
     total_amount = models.DecimalField(max_digits=14, decimal_places=2)
     expense_note = models.TextField(blank=True, null=True)
     is_refund = models.BooleanField(default=False)

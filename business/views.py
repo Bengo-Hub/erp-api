@@ -6,11 +6,30 @@ from rest_framework import filters
 from rest_framework.pagination import LimitOffsetPagination
 from .models import (BusinessLocation, Bussiness, ProductSettings, SaleSettings,
                      PrefixSettings, ServiceTypes, PickupStations,
-                     BrandingSettings, TaxRates, Branch)
+                     BrandingSettings, Branch)
 from addresses.models import AddressBook
 from .serializers import *
 from addresses.models import DeliveryRegion
 from core.decorators import apply_common_filters
+
+
+def get_user_business(user):
+    """
+    Helper function to get the business associated with a user.
+    Returns the business if user is owner or employee, None otherwise.
+    """
+    # Check if user owns a business
+    business = Bussiness.objects.filter(owner=user).first()
+    if business:
+        return business
+
+    # Check if user is an employee
+    from hrm.employees.models import Employees
+    employee = Employees.objects.filter(user=user).select_related('branch__business').first()
+    if employee and employee.branch:
+        return employee.branch.business
+
+    return None
 
 
 class BusinessLocationViewSet(viewsets.ModelViewSet):
@@ -28,9 +47,40 @@ class BusinessLocationViewSet(viewsets.ModelViewSet):
 
 
 class BussinessViewSet(viewsets.ModelViewSet):
-    queryset = Bussiness.objects.all().prefetch_related('branches__location', 'branding')
-    serializer_class = BussinessSerializer
-    permission_classes=[IsAuthenticated]
+    """
+    Business settings viewset - uses lean serializer by default.
+    Endpoint: /api/v1/business/settings/
+
+    Actions:
+    - list: GET /api/v1/business/settings/ - returns user's business (lean)
+    - retrieve: GET /api/v1/business/settings/{id}/ - returns business by id (lean)
+    - update/partial_update: PATCH /api/v1/business/settings/{id}/ - update business
+    - full: GET /api/v1/business/settings/{id}/full/ - returns full business with all relations
+    """
+    queryset = Bussiness.objects.all()
+    serializer_class = BusinessSettingsSerializer  # Lean serializer by default
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter to user's business - always returns only the user's own business."""
+        user = self.request.user
+        business = get_user_business(user)
+        if business:
+            return Bussiness.objects.filter(id=business.id)
+        return Bussiness.objects.none()
+
+    def get_serializer_class(self):
+        """Use full serializer only for 'full' action."""
+        if self.action == 'full':
+            return BussinessSerializer
+        return BusinessSettingsSerializer
+
+    @action(detail=True, methods=['get'], url_path='full')
+    def full(self, request, pk=None):
+        """Get full business data with all relations (branches, tax rates, etc.)"""
+        business = self.get_object()
+        serializer = BussinessSerializer(business)
+        return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
     def branding(self, request, pk=None):
@@ -136,19 +186,27 @@ class BussinessViewSet(viewsets.ModelViewSet):
 class BranchesViewSet(viewsets.ModelViewSet):
     queryset = Branch.objects.all()
     serializer_class = BranchSerializer
-    permission_classes=[IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        business_name = self.request.query_params.get('business_name')
-        if business_name:
-            queryset = queryset.filter(business__name=business_name)
-        return queryset
+        """Filter branches to user's business."""
+        user = self.request.user
+        if user.is_superuser:
+            return Branch.objects.all()
 
-class TaxRatesViewSet(viewsets.ModelViewSet):
-    queryset = TaxRates.objects.all()
-    serializer_class = TaxRatesSerializer
-    permission_classes=[IsAuthenticated]
+        business = get_user_business(user)
+        if business:
+            return Branch.objects.filter(business=business, is_active=True)
+        return Branch.objects.none()
+
+    def perform_create(self, serializer):
+        """Auto-assign business when creating a branch."""
+        if 'business' not in serializer.validated_data:
+            business = get_user_business(self.request.user)
+            if business:
+                serializer.save(business=business)
+                return
+        serializer.save()
 
 class ProductSettingsViewSet(viewsets.ModelViewSet):
     queryset = ProductSettings.objects.all()
@@ -167,7 +225,27 @@ class SaleSettingsViewSet(viewsets.ModelViewSet):
 class PrefixSettingsViewSet(viewsets.ModelViewSet):
     queryset = PrefixSettings.objects.all()
     serializer_class = PrefixSettingsSerializer
-    permission_classes=[IsAuthenticated]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter prefix settings to user's business."""
+        user = self.request.user
+        if user.is_superuser:
+            return PrefixSettings.objects.all()
+
+        business = get_user_business(user)
+        if business:
+            return PrefixSettings.objects.filter(business=business)
+        return PrefixSettings.objects.none()
+
+    def perform_create(self, serializer):
+        """Auto-assign business when creating prefix settings."""
+        if 'business' not in serializer.validated_data:
+            business = get_user_business(self.request.user)
+            if business:
+                serializer.save(business=business)
+                return
+        serializer.save()
 
 class ServiceTypesViewSet(viewsets.ModelViewSet):
     queryset = ServiceTypes.objects.all()

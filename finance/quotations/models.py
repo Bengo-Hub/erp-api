@@ -3,13 +3,16 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator
 from django.contrib.auth import get_user_model
 from decimal import Decimal
+import logging
 from core.models import BaseModel
 from core_orders.models import BaseOrder
 from crm.contacts.models import Contact
 from business.models import Branch, Bussiness
+from business.document_service import DocumentNumberService, DocumentType
 import uuid
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class Quotation(BaseOrder):
@@ -123,10 +126,31 @@ class Quotation(BaseOrder):
         super().save(*args, **kwargs)
     
     def generate_quotation_number(self):
-        """Generate unique quotation number: QUOT-YYYY-NNNNNN"""
+        """Generate unique quotation number using centralized DocumentNumberService.
+
+        Format: PREFIX0000-DDMMYY (e.g., QOT0001-150126)
+        """
+        business = None
+        if self.branch:
+            business = self.branch.business
+        elif self.customer and hasattr(self.customer, 'business'):
+            business = self.customer.business
+
+        if business:
+            try:
+                return DocumentNumberService.generate_number(
+                    business=business,
+                    document_type=DocumentType.QUOTATION,
+                    document_date=self.quotation_date or timezone.now()
+                )
+            except Exception as e:
+                logger.warning(f"Failed to generate quotation number via service: {e}")
+
+        # Fallback
         year = timezone.now().year
         count = Quotation.objects.filter(created_at__year=year).count() + 1
-        return f"QUOT-{year}-{count:06d}"
+        date_str = timezone.now().strftime('%d%m%y')
+        return f"QOT{count:04d}-{date_str}"
     
     def calculate_valid_until(self):
         """Calculate expiry date based on validity period"""

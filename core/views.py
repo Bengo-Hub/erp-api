@@ -1077,47 +1077,89 @@ class RegionalSettingsViewSet(viewsets.ViewSet):
 
 
 class BrandingSettingsViewSet(viewsets.ViewSet):
+    """
+    ViewSet for branding settings.
+
+    Returns the branding settings for the user's primary business.
+    For multi-tenant support, branding is managed at the business level.
+    """
     permission_classes = [IsAuthenticated]
 
+    def _get_user_business(self, request):
+        """Get the primary business for the authenticated user."""
+        # First try to get business owned by user
+        business = Bussiness.objects.filter(owner=request.user).first()
+        if not business:
+            # Try to get business where user is an employee
+            from hrm.employees.models import Employees
+            employee = Employees.objects.filter(user=request.user).first()
+            if employee and employee.branch:
+                business = employee.branch.business
+        return business
+
     def list(self, request):
-        """Get branding settings (singleton)"""
+        """Get branding settings for user's business"""
         try:
-            settings = BrandingSettings.load()
-            serializer = BrandingSettingsSerializer(settings)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            business = self._get_user_business(request)
+            if not business:
+                return Response(
+                    {'error': 'No business found for user'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            branding_data = business.get_branding_settings()
+            branding_data['business_name'] = business.name
+            branding_data['logo'] = request.build_absolute_uri(business.logo.url) if business.logo else None
+            branding_data['watermark'] = request.build_absolute_uri(business.watermarklogo.url) if business.watermarklogo else None
+
+            return Response(branding_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def retrieve(self, request, pk=None):
-        """Get branding settings by ID (ignores pk, returns singleton)"""
-        return self.list(request)
+        """Get branding settings by business ID"""
+        try:
+            business = Bussiness.objects.get(pk=pk)
+            branding_data = business.get_branding_settings()
+            branding_data['business_name'] = business.name
+            branding_data['logo'] = request.build_absolute_uri(business.logo.url) if business.logo else None
+            branding_data['watermark'] = request.build_absolute_uri(business.watermarklogo.url) if business.watermarklogo else None
+
+            return Response(branding_data, status=status.HTTP_200_OK)
+        except Bussiness.DoesNotExist:
+            return Response({'error': 'Business not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def update(self, request, pk=None):
-        """Update branding settings (PUT - full update)"""
+        """Update branding settings for a business (PUT - full update)"""
         try:
-            settings = BrandingSettings.load()
-            serializer = BrandingSettingsSerializer(settings, data=request.data, partial=False)
-            if serializer.is_valid():
-                serializer.save()
-                return Response({
-                    'message': 'Branding settings updated successfully', 
-                    'data': serializer.data
-                }, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            business = Bussiness.objects.get(pk=pk)
+
+            # Update business-level branding fields
+            for field in ['business_primary_color', 'business_secondary_color', 'business_text_color',
+                         'business_background_color', 'ui_theme_preset', 'ui_menu_mode', 'ui_dark_mode', 'ui_surface_style']:
+                if field in request.data:
+                    setattr(business, field, request.data[field])
+            business.save()
+
+            # Update extended branding settings
+            from business.models import BrandingSettings
+            branding, _ = BrandingSettings.objects.get_or_create(business=business)
+            for field in ['primary_color_name', 'surface_name', 'compact_mode', 'ripple_effect', 'border_radius', 'scale_factor']:
+                if field in request.data:
+                    setattr(branding, field, request.data[field])
+            branding.save()
+
+            return Response({
+                'message': 'Branding settings updated successfully',
+                'data': business.get_branding_settings()
+            }, status=status.HTTP_200_OK)
+        except Bussiness.DoesNotExist:
+            return Response({'error': 'Business not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def partial_update(self, request, pk=None):
-        """Update branding settings (PATCH - partial update)"""
-        try:
-            settings = BrandingSettings.load()
-            serializer = BrandingSettingsSerializer(settings, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response({
-                    'message': 'Branding settings updated successfully', 
-                    'data': serializer.data
-                }, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        """Update branding settings for a business (PATCH - partial update)"""
+        return self.update(request, pk)

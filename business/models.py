@@ -358,7 +358,16 @@ class ProductSettings(models.Model):
 class SaleSettings(models.Model):
     business=models.ForeignKey(Bussiness,on_delete=models.CASCADE,related_name="salesettings")
     default_discount=models.DecimalField(max_digits=10,decimal_places=2,default=Decimal('0.00'))
-    default_tax=models.ForeignKey(TaxRates,on_delete=models.SET_NULL,null=True,default=None)
+    # Updated to use centralized Tax model from finance.taxes
+    default_tax=models.ForeignKey(
+        'taxes.Tax',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name='sale_settings',
+        help_text='Default tax rate for sales'
+    )
 
     def __str__(self):
         return 'Sale Setting'
@@ -372,18 +381,40 @@ class SaleSettings(models.Model):
         ]
 
 class PrefixSettings(models.Model):
-    business=models.ForeignKey(Bussiness,on_delete=models.CASCADE,related_name="prefixsettings")
-    purchase=models.CharField(max_length=5,default="P")
-    purchase_order=models.CharField(max_length=5,default="PO")
-    purchase_return=models.CharField(max_length=5,default="PRT")
-    purchase_requisition=models.CharField(max_length=5,default="PRQ")
-    stock_transfer=models.CharField(max_length=5,default="ST")
-    sale_return=models.CharField(max_length=5,default="SR")
-    expense=models.CharField(max_length=5,default="EP")
-    business_location=models.CharField(max_length=5,default="BL")
+    """
+    Business-level document prefix configuration.
+
+    All document number generation uses these prefixes.
+    Format: PREFIX<AAAA>-<DDMMYY> (e.g., INV0033-150126)
+    """
+    business = models.ForeignKey(Bussiness, on_delete=models.CASCADE, related_name="prefixsettings")
+
+    # Procurement prefixes
+    purchase = models.CharField(max_length=5, default="P", help_text="Purchase prefix")
+    purchase_order = models.CharField(max_length=5, default="LSO", help_text="Purchase Order prefix (Local Sales Order)")
+    purchase_return = models.CharField(max_length=5, default="PRT", help_text="Purchase Return prefix")
+    purchase_requisition = models.CharField(max_length=5, default="PRQ", help_text="Purchase Requisition prefix")
+
+    # Stock prefixes
+    stock_transfer = models.CharField(max_length=5, default="STR", help_text="Stock Transfer prefix")
+    stock_adjustment = models.CharField(max_length=5, default="ADJ", help_text="Stock Adjustment prefix")
+
+    # Sales prefixes
+    sale_return = models.CharField(max_length=5, default="SR", help_text="Sale Return prefix")
+
+    # Finance document prefixes
+    invoice = models.CharField(max_length=5, default="INV", help_text="Invoice prefix")
+    quotation = models.CharField(max_length=5, default="QOT", help_text="Quotation prefix")
+    credit_note = models.CharField(max_length=5, default="CRN", help_text="Credit Note prefix")
+    debit_note = models.CharField(max_length=5, default="DBN", help_text="Debit Note prefix")
+    delivery_note = models.CharField(max_length=5, default="POD", help_text="Delivery Note (Proof of Delivery) prefix")
+    expense = models.CharField(max_length=5, default="EP", help_text="Expense prefix")
+
+    # Other prefixes
+    business_location = models.CharField(max_length=5, default="BL", help_text="Business Location prefix")
 
     def __str__(self):
-        return 'Prefix Setting'
+        return f'Prefix Settings - {self.business.name}'
 
     class Meta:
         db_table = 'prefix_settings'
@@ -392,6 +423,35 @@ class PrefixSettings(models.Model):
         indexes = [
             models.Index(fields=['business'], name='idx_prefix_settings_business'),
         ]
+
+    def get_prefix(self, document_type):
+        """
+        Get the prefix for a specific document type.
+
+        Args:
+            document_type: One of 'invoice', 'quotation', 'credit_note', 'debit_note',
+                          'delivery_note', 'purchase_order', 'expense', etc.
+
+        Returns:
+            str: The configured prefix for the document type
+        """
+        prefix_map = {
+            'invoice': self.invoice,
+            'quotation': self.quotation,
+            'credit_note': self.credit_note,
+            'debit_note': self.debit_note,
+            'delivery_note': self.delivery_note,
+            'purchase_order': self.purchase_order,
+            'purchase': self.purchase,
+            'purchase_return': self.purchase_return,
+            'purchase_requisition': self.purchase_requisition,
+            'stock_transfer': self.stock_transfer,
+            'stock_adjustment': self.stock_adjustment,
+            'sale_return': self.sale_return,
+            'expense': self.expense,
+            'business_location': self.business_location,
+        }
+        return prefix_map.get(document_type, 'DOC')
 
 class ServiceTypes(models.Model):
     business=models.ForeignKey(Bussiness,on_delete=models.CASCADE,related_name="servicetypes")
@@ -482,5 +542,59 @@ class PickupStations(models.Model):
             return 0
         return self.shipping_charge
 
-# AddressBook moved to addresses app - import from there
-# from addresses.models import AddressBook
+
+class DocumentSequence(models.Model):
+    """
+    Stores document sequences per document type and business.
+
+    Uses database-level row locking (SELECT FOR UPDATE) to ensure
+    concurrency-safe sequence generation in horizontally scaled deployments.
+
+    Format: PREFIX<AAAA>-<DDMMYY> (e.g., INV0033-150126)
+    """
+    DOCUMENT_TYPE_CHOICES = [
+        ('invoice', 'Invoice'),
+        ('purchase_order', 'Purchase Order'),
+        ('credit_note', 'Credit Note'),
+        ('debit_note', 'Debit Note'),
+        ('quotation', 'Quotation'),
+        ('delivery_note', 'Delivery Note'),
+        ('expense', 'Expense'),
+        ('stock_transfer', 'Stock Transfer'),
+        ('stock_adjustment', 'Stock Adjustment'),
+        ('purchase_requisition', 'Purchase Requisition'),
+        ('sale_return', 'Sale Return'),
+        ('purchase_return', 'Purchase Return'),
+    ]
+
+    business = models.ForeignKey(
+        Bussiness,
+        on_delete=models.CASCADE,
+        related_name='document_sequences',
+        help_text="Business this sequence belongs to"
+    )
+    document_type = models.CharField(
+        max_length=50,
+        choices=DOCUMENT_TYPE_CHOICES,
+        help_text="Type of document this sequence tracks"
+    )
+    current_sequence = models.PositiveIntegerField(
+        default=0,
+        help_text="Current sequence number (last used)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'document_sequences'
+        verbose_name = 'Document Sequence'
+        verbose_name_plural = 'Document Sequences'
+        unique_together = ['business', 'document_type']
+        indexes = [
+            models.Index(fields=['business', 'document_type'], name='idx_doc_seq_business_type'),
+        ]
+
+    def __str__(self):
+        return f"{self.business.name} - {self.get_document_type_display()} (#{self.current_sequence})"
+
+

@@ -8,6 +8,7 @@ from core.response import APIResponse, get_correlation_id
 from core.audit import AuditTrail
 from core.utils import get_branch_id_from_request, get_business_id_from_request
 from business.models import Branch
+from decimal import Decimal
 import logging
 
 logger = logging.getLogger(__name__)
@@ -72,18 +73,18 @@ class ProcurementRequestViewSet(BaseModelViewSet):
         try:
             correlation_id = get_correlation_id(request)
             procurement_request = self.get_object()
-            
+
             # Create approval record
             procurement_request.approvals.create(
                 approver=request.user,
                 status='approved',
                 notes=request.data.get('notes', 'Approved by ' + request.user.username)
             )
-            
+
             # Update request status
             procurement_request.status = 'approved'
             procurement_request.save()
-            
+
             # Log approval
             AuditTrail.log(
                 operation=AuditTrail.APPROVAL,
@@ -94,10 +95,23 @@ class ProcurementRequestViewSet(BaseModelViewSet):
                 reason='Procurement request approved',
                 request=request
             )
-            
+
+            # Auto-create Purchase Order for external_item requisitions
+            purchase_order = None
+            if procurement_request.request_type == 'external_item':
+                purchase_order = self._create_purchase_order_from_requisition(procurement_request, request.user)
+
+            response_data = self.get_serializer(procurement_request).data
+            if purchase_order:
+                response_data['purchase_order'] = {
+                    'id': purchase_order.id,
+                    'order_number': purchase_order.order_number,
+                    'status': purchase_order.status
+                }
+
             return APIResponse.success(
-                data=self.get_serializer(procurement_request).data,
-                message='Procurement request approved successfully',
+                data=response_data,
+                message='Procurement request approved successfully' + (' and Purchase Order created' if purchase_order else ''),
                 correlation_id=correlation_id
             )
         except Exception as e:
@@ -107,6 +121,90 @@ class ProcurementRequestViewSet(BaseModelViewSet):
                 error_id=str(e),
                 correlation_id=get_correlation_id(request)
             )
+
+    def _create_purchase_order_from_requisition(self, requisition, user):
+        """
+        Auto-create a Purchase Order from an approved external_item requisition.
+        The PO is created with 'pending_approval' status for further review.
+        """
+        try:
+            from procurement.orders.models import PurchaseOrder
+            from core_orders.models import OrderItem
+
+            # Check if a PO already exists for this requisition
+            if hasattr(requisition, 'purchase_order') and requisition.purchase_order:
+                logger.info(f"Purchase Order already exists for requisition {requisition.id}")
+                return requisition.purchase_order
+
+            # Calculate approved budget from requisition items
+            total_budget = Decimal('0.00')
+            for item in requisition.items.all():
+                unit_price = Decimal('0.00')
+                if item.stock_item:
+                    unit_price = item.stock_item.buying_price or Decimal('0.00')
+                elif item.unit_price:
+                    unit_price = Decimal(str(item.unit_price))
+                total_budget += unit_price * item.quantity
+
+            # Get branch from requisition items or user
+            branch = None
+            first_item = requisition.items.first()
+            if first_item and first_item.stock_item:
+                branch = first_item.stock_item.branch
+
+            # Create the Purchase Order
+            purchase_order = PurchaseOrder.objects.create(
+                requisition=requisition,
+                branch=branch,
+                supplier=None,  # To be selected by procurement officer
+                status='pending_approval',  # Requires further approval
+                approved_budget=total_budget,
+                terms='Net 30 days payment terms. Delivery must be completed by specified date.',
+                delivery_instructions=f'Delivery Expected as per requisition {requisition.reference_number}',
+                expected_delivery=requisition.required_by_date,
+                notes=f'Auto-generated from approved requisition {requisition.reference_number}',
+                created_by=user
+            )
+
+            # Copy items from requisition to PO
+            for req_item in requisition.items.all():
+                unit_price = Decimal('0.00')
+                product = None
+
+                if req_item.stock_item:
+                    unit_price = req_item.stock_item.buying_price or Decimal('0.00')
+                    product = req_item.stock_item.product
+                elif req_item.unit_price:
+                    unit_price = Decimal(str(req_item.unit_price))
+
+                OrderItem.objects.create(
+                    order=purchase_order,
+                    product=product,
+                    stock_item=req_item.stock_item,
+                    quantity=req_item.quantity,
+                    unit_price=unit_price,
+                    description=req_item.description or '',
+                    notes=f'From requisition item {req_item.id}'
+                )
+
+            # Log the auto-creation
+            AuditTrail.log(
+                operation=AuditTrail.CREATE,
+                module='procurement',
+                entity_type='PurchaseOrder',
+                entity_id=purchase_order.id,
+                user=user,
+                reason=f'Auto-created from approved requisition {requisition.reference_number}',
+                request=None
+            )
+
+            logger.info(f"Auto-created Purchase Order {purchase_order.order_number} from requisition {requisition.reference_number}")
+            return purchase_order
+
+        except Exception as e:
+            logger.error(f"Error auto-creating Purchase Order from requisition {requisition.id}: {str(e)}", exc_info=True)
+            # Don't fail the approval if PO creation fails
+            return None
     
     @action(detail=True, methods=['post'])
     def publish(self, request, pk=None):

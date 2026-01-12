@@ -201,30 +201,50 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f'   ⚠️  ESS settings: {str(e)}'))
 
     def _create_tax_rates(self):
-        """Create default tax rates"""
+        """Create default tax rates using finance.taxes.Tax model"""
         self.stdout.write('\n4️⃣  Creating Default Tax Rates...')
 
         try:
-            from business.models import TaxRates
-            
+            from finance.taxes.models import Tax, TaxCategory
+            from business.models import Bussiness
+
+            # Get or create a default business for system-wide taxes
+            business = Bussiness.objects.first()
+            if not business:
+                self.stdout.write(self.style.WARNING('   ⚠️  No business found. Skipping tax rates.'))
+                return
+
+            # Get or create a default tax category
+            category, _ = TaxCategory.objects.get_or_create(
+                name='Sales Tax',
+                business=business,
+                defaults={'description': 'Standard sales taxes', 'is_active': True}
+            )
+
             tax_rates_data = [
-                {'tax_name': 'VAT', 'percentage': Decimal('16.0'), 'is_default': True},
-                {'tax_name': 'Zero Rated', 'percentage': Decimal('0.0'), 'is_default': False},
-                {'tax_name': 'Exempt', 'percentage': Decimal('0.0'), 'is_default': False},
+                {'name': 'VAT 16%', 'rate': Decimal('16.0'), 'is_default': True, 'is_vat': True, 'kra_code': 'A'},
+                {'name': 'Zero Rated', 'rate': Decimal('0.0'), 'is_default': False, 'is_vat': True, 'kra_code': 'B'},
+                {'name': 'Exempt', 'rate': Decimal('0.0'), 'is_default': False, 'is_vat': False, 'kra_code': 'E'},
             ]
 
             for tax_data in tax_rates_data:
-                tax, created = TaxRates.objects.get_or_create(
-                    tax_name=tax_data['tax_name'],
+                tax, created = Tax.objects.get_or_create(
+                    name=tax_data['name'],
+                    business=business,
                     defaults={
-                        'percentage': tax_data['percentage'],
-                        'is_default': tax_data['is_default']
+                        'category': category,
+                        'rate': tax_data['rate'],
+                        'is_default': tax_data['is_default'],
+                        'is_vat': tax_data['is_vat'],
+                        'kra_code': tax_data.get('kra_code'),
+                        'calculation_type': 'percentage',
+                        'is_active': True,
                     }
                 )
                 if created:
-                    self.stdout.write(f'   ✅ Created tax rate: {tax.tax_name} ({tax.percentage}%)')
+                    self.stdout.write(f'   ✅ Created tax rate: {tax.name} ({tax.rate}%)')
                 else:
-                    self.stdout.write(f'   ✅ Tax rate exists: {tax.tax_name}')
+                    self.stdout.write(f'   ✅ Tax rate exists: {tax.name}')
 
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'   ⚠️  Tax rates: {str(e)}'))
