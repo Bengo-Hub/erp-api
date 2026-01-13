@@ -18,6 +18,8 @@ class SupplierSerializer(serializers.ModelSerializer):
 
 class PurchasesSerializer(serializers.ModelSerializer):
     branch_id = serializers.SerializerMethodField(read_only=True)
+    currency_display = serializers.SerializerMethodField(read_only=True)
+    formatted_total = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Purchase
@@ -28,6 +30,15 @@ class PurchasesSerializer(serializers.ModelSerializer):
             return obj.branch.id if obj.branch else None
         except Exception:
             return None
+
+    def get_currency_display(self, obj):
+        """Get human-readable currency name."""
+        return obj.get_currency_display() if hasattr(obj, 'get_currency_display') else obj.currency
+
+    def get_formatted_total(self, obj):
+        """Get formatted total with currency symbol."""
+        from core.currency import format_currency
+        return format_currency(obj.grand_total, obj.currency)
 
 class PurchaseStockItemSerializer(serializers.ModelSerializer):
     class Meta:
