@@ -450,6 +450,8 @@ class PermissionView(APIView):
           - ?search=<term> - Filter by name or codename
           - ?content_type=<id> - Filter by content type
           - ?module=<name> - Filter by content type app label (e.g., 'hrm', 'finance')
+          - ?role=<id> - Filter by role (permissions assigned to this role)
+          - ?action=<type> - Filter by action type (add, change, delete, view)
           - ?page=<n> - Pagination page number
           - ?page_size=<n> - Items per page (default 100, max 500)
         """
@@ -479,6 +481,20 @@ class PermissionView(APIView):
         module = request.query_params.get('module', '').strip()
         if module:
             queryset = queryset.filter(content_type__app_label__icontains=module)
+
+        # Role filter - filter permissions assigned to a specific role
+        role_id = request.query_params.get('role', '').strip()
+        if role_id:
+            try:
+                role = Group.objects.get(pk=int(role_id))
+                queryset = queryset.filter(group=role)
+            except (Group.DoesNotExist, ValueError):
+                pass
+
+        # Action type filter (add, change, delete, view)
+        action = request.query_params.get('action', '').strip().lower()
+        if action in ['add', 'change', 'delete', 'view']:
+            queryset = queryset.filter(codename__startswith=f'{action}_')
 
         # Pagination
         page = int(request.query_params.get('page', 1))

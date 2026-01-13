@@ -2,9 +2,9 @@
 Views for the notifications app
 """
 import logging
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import status, viewsets
+from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
@@ -14,9 +14,14 @@ from django.db.models import Q, Count, Sum
 from django.http import JsonResponse
 
 from .models import (
-    NotificationIntegration, EmailTemplate, SMSTemplate, PushTemplate,
+    NotificationIntegration, EmailConfiguration, SMSConfiguration, PushConfiguration,
+    EmailTemplate, SMSTemplate, PushTemplate,
     EmailLog, SMSLog, PushLog, InAppNotification, UserNotificationPreferences
-
+)
+from .serializers import (
+    NotificationIntegrationSerializer, NotificationIntegrationCreateSerializer,
+    EmailConfigurationSerializer, SMSConfigurationSerializer, PushConfigurationSerializer,
+    EmailTemplateSerializer, SMSTemplateSerializer, PushTemplateSerializer
 )
 from .services import (
     EmailService, SMSService, PushNotificationService, NotificationService
@@ -475,7 +480,7 @@ class EmailComplaintWebhookView(APIView):
 
 class SMSDeliveryWebhookView(APIView):
     """Handle SMS delivery webhooks"""
-    
+
     def post(self, request):
         try:
             data = request.data
@@ -484,3 +489,274 @@ class SMSDeliveryWebhookView(APIView):
         except Exception as e:
             logger.error(f"Error processing SMS delivery webhook: {str(e)}")
             return Response({'success': False}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ===== ViewSets for Notification Settings =====
+
+class NotificationIntegrationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing notification integrations (Email, SMS, Push).
+    Provides CRUD operations and test functionality.
+    """
+    queryset = NotificationIntegration.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return NotificationIntegrationCreateSerializer
+        return NotificationIntegrationSerializer
+
+    def get_queryset(self):
+        queryset = NotificationIntegration.objects.all()
+
+        # Filter by integration type
+        integration_type = self.request.query_params.get('type')
+        if integration_type:
+            queryset = queryset.filter(integration_type=integration_type.upper())
+
+        # Filter by active status
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+
+        return queryset.order_by('integration_type', '-is_default', 'name')
+
+    @action(detail=True, methods=['post'])
+    def test(self, request, pk=None):
+        """Test the integration by sending a test notification"""
+        integration = self.get_object()
+        test_recipient = request.data.get('recipient')
+
+        if not test_recipient:
+            return Response({
+                'success': False,
+                'error': 'recipient is required for testing'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if integration.integration_type == 'EMAIL':
+                email_service = EmailService()
+                result = email_service.send_email(
+                    subject='Test Email from BengoBox ERP',
+                    message='This is a test email to verify your email integration is working correctly.',
+                    recipient_list=[test_recipient],
+                    html_message='<h2>Test Email</h2><p>This is a test email to verify your email integration is working correctly.</p><p>If you received this email, your configuration is working!</p>',
+                    async_send=False  # Send synchronously for testing
+                )
+                return Response({
+                    'success': True,
+                    'message': f'Test email sent to {test_recipient}',
+                    'result': result
+                })
+
+            elif integration.integration_type == 'SMS':
+                sms_service = SMSService()
+                result = sms_service.send_sms(
+                    to=test_recipient,
+                    message='Test SMS from BengoBox ERP. If you received this, your SMS integration is working!',
+                    async_send=False  # Send synchronously for testing
+                )
+                return Response({
+                    'success': True,
+                    'message': f'Test SMS sent to {test_recipient}',
+                    'result': result
+                })
+
+            elif integration.integration_type == 'PUSH':
+                push_service = PushNotificationService()
+                # For push, recipient should be user_id
+                try:
+                    user = User.objects.get(pk=int(test_recipient))
+                    result = push_service.send_push_notification(
+                        user=user,
+                        title='Test Push Notification',
+                        body='This is a test push notification from BengoBox ERP.',
+                        async_send=False
+                    )
+                    return Response({
+                        'success': True,
+                        'message': f'Test push notification sent to user {user.username}',
+                        'result': result
+                    })
+                except User.DoesNotExist:
+                    return Response({
+                        'success': False,
+                        'error': f'User with ID {test_recipient} not found'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({
+                    'success': False,
+                    'error': f'Unknown integration type: {integration.integration_type}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            logger.error(f"Error testing integration {integration.name}: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'])
+    def set_default(self, request, pk=None):
+        """Set this integration as the default for its type"""
+        integration = self.get_object()
+        integration.is_default = True
+        integration.save()  # The model's save method handles unsetting other defaults
+
+        return Response({
+            'success': True,
+            'message': f'{integration.name} is now the default {integration.get_integration_type_display()} integration'
+        })
+
+    @action(detail=False, methods=['get'])
+    def status(self, request):
+        """Get status overview of all integrations"""
+        integrations = self.get_queryset()
+
+        status_data = {
+            'EMAIL': {'configured': False, 'active': False, 'default': None},
+            'SMS': {'configured': False, 'active': False, 'default': None},
+            'PUSH': {'configured': False, 'active': False, 'default': None},
+        }
+
+        for integration in integrations:
+            int_type = integration.integration_type
+            if int_type in status_data:
+                status_data[int_type]['configured'] = True
+                if integration.is_active:
+                    status_data[int_type]['active'] = True
+                if integration.is_default:
+                    status_data[int_type]['default'] = {
+                        'id': integration.id,
+                        'name': integration.name
+                    }
+
+        return Response({
+            'success': True,
+            'status': status_data
+        })
+
+
+class EmailConfigurationViewSet(viewsets.ModelViewSet):
+    """ViewSet for Email Configuration"""
+    queryset = EmailConfiguration.objects.all()
+    serializer_class = EmailConfigurationSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=True, methods=['post'])
+    def test(self, request, pk=None):
+        """Test email configuration by sending a test email"""
+        config = self.get_object()
+        test_email = request.data.get('email')
+
+        if not test_email:
+            return Response({
+                'success': False,
+                'error': 'email address is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            email_service = EmailService()
+            result = email_service.send_email(
+                subject='Test Email - Configuration Verification',
+                message='This is a test email to verify your email configuration.',
+                recipient_list=[test_email],
+                html_message='<h2>Email Configuration Test</h2><p>Your email configuration is working correctly!</p>',
+                async_send=False
+            )
+            return Response({
+                'success': True,
+                'message': f'Test email sent to {test_email}',
+                'result': result
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SMSConfigurationViewSet(viewsets.ModelViewSet):
+    """ViewSet for SMS Configuration"""
+    queryset = SMSConfiguration.objects.all()
+    serializer_class = SMSConfigurationSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=True, methods=['post'])
+    def test(self, request, pk=None):
+        """Test SMS configuration by sending a test SMS"""
+        config = self.get_object()
+        test_phone = request.data.get('phone')
+
+        if not test_phone:
+            return Response({
+                'success': False,
+                'error': 'phone number is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            sms_service = SMSService()
+            result = sms_service.send_sms(
+                to=test_phone,
+                message='Test SMS from BengoBox ERP. Your SMS configuration is working!',
+                async_send=False
+            )
+            return Response({
+                'success': True,
+                'message': f'Test SMS sent to {test_phone}',
+                'result': result
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PushConfigurationViewSet(viewsets.ModelViewSet):
+    """ViewSet for Push Configuration"""
+    queryset = PushConfiguration.objects.all()
+    serializer_class = PushConfigurationSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class EmailTemplateViewSet(viewsets.ModelViewSet):
+    """ViewSet for Email Templates"""
+    queryset = EmailTemplate.objects.all()
+    serializer_class = EmailTemplateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = EmailTemplate.objects.all()
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category=category)
+        return queryset.order_by('category', 'name')
+
+
+class SMSTemplateViewSet(viewsets.ModelViewSet):
+    """ViewSet for SMS Templates"""
+    queryset = SMSTemplate.objects.all()
+    serializer_class = SMSTemplateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = SMSTemplate.objects.all()
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category=category)
+        return queryset.order_by('category', 'name')
+
+
+class PushTemplateViewSet(viewsets.ModelViewSet):
+    """ViewSet for Push Templates"""
+    queryset = PushTemplate.objects.all()
+    serializer_class = PushTemplateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = PushTemplate.objects.all()
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category=category)
+        return queryset.order_by('category', 'name')
