@@ -20,21 +20,38 @@ echo "📁 Initializing media directory..."
 /usr/local/bin/init-media.sh || echo "⚠️ Media initialization failed (non-critical)"
 
 # Wait for database to be ready (with timeout)
-echo "🔌 Waiting for database connection..."
-# Increased retries for production stability (60 * 5s = 5 minutes)
-MAX_RETRIES=60
+# Use a simple psql/Python connection test instead of Django check
+# Django check can fail due to admin/model issues unrelated to DB connectivity
+echo "🔌 Checking database connectivity..."
+MAX_RETRIES=10
 RETRY_COUNT=0
 
-until python manage.py check --database default > /dev/null 2>&1 || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+# Simple connectivity test using Django's database connection directly
+until python -c "
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ProcureProKEAPI.settings')
+import django
+django.setup()
+from django.db import connection
+connection.ensure_connection()
+print('DB connected')
+" 2>/dev/null || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
   RETRY_COUNT=$((RETRY_COUNT+1))
   echo "⏳ Database not ready yet... (attempt $RETRY_COUNT/$MAX_RETRIES)"
-  sleep 5
+  sleep 2
 done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
   echo "❌ Database connection timeout after $MAX_RETRIES attempts"
-  echo "📋 Last connection attempt details:"
-  python manage.py check --database default 2>&1 || true
+  echo "📋 Attempting to show connection error:"
+  python -c "
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ProcureProKEAPI.settings')
+import django
+django.setup()
+from django.db import connection
+connection.ensure_connection()
+" 2>&1 || true
   echo ""
   echo "⚠️ Proceeding to start server anyway (will fail if DB is critical)"
 else
