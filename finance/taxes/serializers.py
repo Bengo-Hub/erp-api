@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import TaxCategory, Tax, TaxGroup, TaxGroupItem, TaxPeriod
+from business.models import Bussiness
 
 class TaxCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -10,15 +11,16 @@ class TaxSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source='category.name')
     business_name = serializers.ReadOnlyField(source='business.name')
     # Allow category to be set by name (e.g., "vat") or by ID
-    category_code = serializers.CharField(write_only=True, required=False, allow_null=True)
+    category_code = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    # Override FK fields to allow null during input - we set them in validate()
+    category = serializers.PrimaryKeyRelatedField(queryset=TaxCategory.objects.all(), required=False, allow_null=True)
+    business = serializers.PrimaryKeyRelatedField(queryset=Bussiness.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = Tax
         fields = '__all__'
-        extra_kwargs = {
-            'category': {'required': False},
-            'business': {'required': False},
-        }
+        # Remove auto-generated UniqueTogetherValidator - we handle it manually in validate()
+        validators = []
 
     def validate(self, attrs):
         request = self.context.get('request')
@@ -60,14 +62,25 @@ class TaxSerializer(serializers.ModelSerializer):
                 'business': 'Business is required. Provide business ID or set X-Business-ID header.'
             })
 
+        # Manual unique_together validation (name + business)
+        name = attrs.get('name')
+        business = attrs.get('business')
+        if name and business:
+            existing = Tax.objects.filter(name=name, business=business)
+            # Exclude current instance when updating
+            if self.instance:
+                existing = existing.exclude(pk=self.instance.pk)
+            if existing.exists():
+                raise serializers.ValidationError({
+                    'name': f'A tax with this name already exists for this business.'
+                })
+
         return attrs
 
     def _get_business_from_request(self, request):
         """Extract business from request headers or user context"""
         if not request:
             return None
-
-        from business.models import Bussiness
 
         # Try X-Business-ID header first
         business_id = request.headers.get('X-Business-ID') or request.META.get('HTTP_X_BUSINESS_ID')
