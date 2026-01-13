@@ -36,7 +36,7 @@ class QuotationViewSet(BaseModelViewSet):
     ordering = ['-quotation_date']
     
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action in ['create', 'update', 'partial_update']:
             return QuotationCreateSerializer
         return QuotationSerializer
     
