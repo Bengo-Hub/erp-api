@@ -66,8 +66,8 @@ class DeliveryNoteAdmin(admin.ModelAdmin):
 
 @admin.register(CreditNote)
 class CreditNoteAdmin(admin.ModelAdmin):
-    list_display = ['credit_note_number', 'customer', 'credit_note_date', 'source_invoice']
-    list_filter = ['credit_note_date']
+    list_display = ['credit_note_number', 'customer', 'credit_note_date', 'source_invoice', 'total', 'status']
+    list_filter = ['credit_note_date', 'status']
     search_fields = ['credit_note_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
     readonly_fields = ['credit_note_number', 'created_at', 'updated_at']
     date_hierarchy = 'credit_note_date'
@@ -75,8 +75,8 @@ class CreditNoteAdmin(admin.ModelAdmin):
 
 @admin.register(DebitNote)
 class DebitNoteAdmin(admin.ModelAdmin):
-    list_display = ['debit_note_number', 'customer', 'debit_note_date', 'source_invoice']
-    list_filter = ['debit_note_date']
+    list_display = ['debit_note_number', 'customer', 'debit_note_date', 'source_invoice', 'total', 'status']
+    list_filter = ['debit_note_date', 'status']
     search_fields = ['debit_note_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
     readonly_fields = ['debit_note_number', 'created_at', 'updated_at']
     date_hierarchy = 'debit_note_date'
@@ -84,8 +84,8 @@ class DebitNoteAdmin(admin.ModelAdmin):
 
 @admin.register(ProformaInvoice)
 class ProformaInvoiceAdmin(admin.ModelAdmin):
-    list_display = ['proforma_number', 'customer', 'proforma_date', 'valid_until']
-    list_filter = ['proforma_date', 'valid_until']
+    list_display = ['proforma_number', 'customer', 'proforma_date', 'valid_until', 'total', 'status']
+    list_filter = ['proforma_date', 'valid_until', 'status']
     search_fields = ['proforma_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
     readonly_fields = ['proforma_number', 'created_at', 'updated_at']
     date_hierarchy = 'proforma_date'
