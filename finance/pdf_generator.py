@@ -47,12 +47,38 @@ def generate_quotation_pdf(quotation, company_info=None, document_type='quotatio
     return _generate_order_pdf(quotation, company_info=company_info, document_type=document_type)
 
 
-def _format_currency(value):
+# Currency symbol map for PDF formatting
+CURRENCY_SYMBOLS = {
+    'KES': 'KSh',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'UGX': 'USh',
+    'TZS': 'TSh',
+    'ZAR': 'R',
+    'NGN': '₦',
+    'GHS': 'GH₵',
+    'RWF': 'FRw',
+    'ETB': 'Br',
+    'AED': 'AED',
+    'INR': '₹',
+    'CNY': '¥',
+    'JPY': '¥'
+}
+
+
+def _format_currency(value, currency_code='KES'):
+    """Format amount with currency symbol based on document currency."""
+    symbol = CURRENCY_SYMBOLS.get(currency_code.upper() if currency_code else 'KES', currency_code or 'KES')
     try:
         v = Decimal(value or 0)
     except Exception:
         v = Decimal(0)
-    return f"KES {v.quantize(Decimal('0.01')):,.2f}"
+
+    # Symbol placement: $, £, € before amount; others after with space
+    if currency_code in ['USD', 'GBP', 'EUR']:
+        return f"{symbol}{v.quantize(Decimal('0.01')):,.2f}"
+    return f"{symbol} {v.quantize(Decimal('0.01')):,.2f}"
 
 
 def _format_date(d):
@@ -184,13 +210,13 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
             elements.append(Paragraph('<b>Received the following goods in good condition:</b>', styles['Normal']))
             elements.append(Spacer(1, 0.08 * inch))
 
-        # Items table (separated helper)
-        items_table, subtotal = _render_items_table(order, styles, brand_color, text_color)
+        # Items table (separated helper) - returns currency for totals
+        items_table, subtotal, currency = _render_items_table(order, styles, brand_color, text_color)
         elements.append(items_table)
         elements.append(Spacer(1, 0.2 * inch))
 
-        # Totals (separated helper)
-        totals_table = _render_totals_table(order, subtotal, styles, brand_color)
+        # Totals (separated helper) - uses currency from items
+        totals_table = _render_totals_table(order, subtotal, styles, brand_color, currency)
         elements.append(totals_table)
 
         # Footer / Prepared & Approved (footer helper will include notes & terms)
@@ -213,10 +239,12 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
 def _render_items_table(order, styles, brand_color=None, text_color=None):
     """Build and return the items Table plus subtotal value."""
     items = getattr(order, 'items', None)
-    
+    # Get currency from order (default to KES)
+    currency = getattr(order, 'currency', 'KES') or 'KES'
+
     # Ensure text_color is a valid reportlab color object
     header_text_color = text_color if text_color else colors.HexColor('#FFFEF0')
-    
+
     # Create header style with the branding text color
     header_style = ParagraphStyle(
         'HeaderStyle',
@@ -225,7 +253,7 @@ def _render_items_table(order, styles, brand_color=None, text_color=None):
         fontName='Helvetica-Bold',
         fontSize=10
     )
-    
+
     rows = [[
         Paragraph('#', header_style),
         Paragraph('Description', header_style),
@@ -234,7 +262,7 @@ def _render_items_table(order, styles, brand_color=None, text_color=None):
         Paragraph('Tax', header_style),
         Paragraph('Amount', header_style)
     ]]
-    
+
     subtotal = Decimal(0)
     if items is not None:
         for idx, it in enumerate(items.all(), 1):
@@ -251,22 +279,22 @@ def _render_items_table(order, styles, brand_color=None, text_color=None):
                 Paragraph(str(idx), styles['Normal']),
                 Paragraph(desc, styles['Normal']),
                 Paragraph(str(qty), styles['Normal']),
-                Paragraph(_format_currency(unit), styles['Normal']),
-                Paragraph(f"{tax_type} { _format_currency(tax) if tax else ''}", styles['Normal']),
-                Paragraph(_format_currency(total), styles['Normal']),
+                Paragraph(_format_currency(unit, currency), styles['Normal']),
+                Paragraph(f"{tax_type} { _format_currency(tax, currency) if tax else ''}", styles['Normal']),
+                Paragraph(_format_currency(total, currency), styles['Normal']),
             ])
 
     items_table = Table(rows, colWidths=[0.4 * inch, 3.6 * inch, 0.6 * inch, 1.2 * inch, 1.0 * inch, 1.4 * inch])
     header_bg = brand_color or colors.HexColor('#2563eb')
-    
+
     items_table.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('BACKGROUND', (0, 0), (-1, 0), header_bg),
     ]))
-    return items_table, subtotal
+    return items_table, subtotal, currency
 
 
-def _render_totals_table(order, subtotal, styles, brand_color=None):
+def _render_totals_table(order, subtotal, styles, brand_color=None, currency='KES'):
     """Build and return totals Table (subtotal, tax, discount, shipping, total)."""
     # If tax_mode == 'on_total' use order.tax_rate to compute tax, else sum per-line tax_amount
     tax_total = 0
@@ -280,24 +308,30 @@ def _render_totals_table(order, subtotal, styles, brand_color=None):
         tax_total = getattr(order, 'tax_total', None) or getattr(order, 'total_tax', None) or sum([getattr(it, 'tax_amount', 0) or 0 for it in (items.all() if items is not None else [])])
 
     totals = []
-    totals.append([Paragraph('Subtotal', styles['Normal']), Paragraph(_format_currency(subtotal), styles['Normal'])])
+    totals.append([Paragraph('Subtotal', styles['Normal']), Paragraph(_format_currency(subtotal, currency), styles['Normal'])])
     if tax_total:
         if getattr(order, 'tax_mode', None) == 'on_total':
             label = f"Tax ({getattr(order, 'tax_rate', 0)}%)"
         else:
             label = 'Tax'
-        totals.append([Paragraph(label, styles['Normal']), Paragraph(_format_currency(tax_total), styles['Normal'])])
+        totals.append([Paragraph(label, styles['Normal']), Paragraph(_format_currency(tax_total, currency), styles['Normal'])])
 
     discount = getattr(order, 'discount_total', None) or getattr(order, 'discount_amount', None) or getattr(order, 'discount', 0) or 0
     if discount:
-        totals.append([Paragraph('Discount', styles['Normal']), Paragraph(_format_currency(discount), styles['Normal'])])
+        totals.append([Paragraph('Discount', styles['Normal']), Paragraph(_format_currency(discount, currency), styles['Normal'])])
 
     shipping = getattr(order, 'shipping_cost', 0) or 0
     if shipping:
-        totals.append([Paragraph('Shipping', styles['Normal']), Paragraph(_format_currency(shipping), styles['Normal'])])
+        totals.append([Paragraph('Shipping', styles['Normal']), Paragraph(_format_currency(shipping, currency), styles['Normal'])])
 
     grand = getattr(order, 'grand_total', None) or getattr(order, 'total', None) or (Decimal(subtotal) + Decimal(tax_total) + Decimal(shipping) - Decimal(discount))
-    totals.append([Paragraph('<b>Total</b>', styles['Normal']), Paragraph(f"<b>{_format_currency(grand)}</b>", styles['Normal'])])
+    totals.append([Paragraph('<b>Total</b>', styles['Normal']), Paragraph(f"<b>{_format_currency(grand, currency)}</b>", styles['Normal'])])
+
+    # Show exchange rate if not base currency
+    if currency != 'KES' and hasattr(order, 'exchange_rate') and order.exchange_rate:
+        rate = order.exchange_rate
+        if rate and float(rate) != 1.0:
+            totals.append([Paragraph(f'Exchange Rate ({currency}/KES)', styles['Normal']), Paragraph(f"{float(rate):,.6f}", styles['Normal'])])
 
     totals_table = Table(totals, colWidths=[6.6 * inch, 1.4 * inch])
     line_color = brand_color or colors.black

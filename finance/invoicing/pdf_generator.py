@@ -93,8 +93,45 @@ def _build_signature_table(prepared_by, approved_by, header_style, prepared_date
     return sig_table
 
 
+# Currency symbol map for PDF formatting
+CURRENCY_SYMBOLS = {
+    'KES': 'KSh',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'UGX': 'USh',
+    'TZS': 'TSh',
+    'ZAR': 'R',
+    'NGN': '₦',
+    'GHS': 'GH₵',
+    'RWF': 'FRw',
+    'ETB': 'Br',
+    'AED': 'AED',
+    'INR': '₹',
+    'CNY': '¥',
+    'JPY': '¥'
+}
+
+
+def _format_currency(amount, currency_code='KES'):
+    """Format amount with currency symbol based on document currency."""
+    symbol = CURRENCY_SYMBOLS.get(currency_code.upper() if currency_code else 'KES', currency_code or 'KES')
+    try:
+        value = float(amount) if amount else 0.0
+    except (ValueError, TypeError):
+        value = 0.0
+
+    # Symbol placement: $, £, € before amount; others after with space
+    if currency_code in ['USD', 'GBP', 'EUR']:
+        return f"{symbol}{value:,.2f}"
+    return f"{symbol} {value:,.2f}"
+
+
 def _build_totals_table(document, document_type, label_style, label_bold_style):
     """Construct and return a totals Table for invoice/quotation with tax label handling."""
+    # Get currency from document (default to KES)
+    currency = getattr(document, 'currency', 'KES') or 'KES'
+
     # Determine a friendly tax label depending on tax_mode and tax_rate
     tax_label = getattr(document, 'tax_type', None) or 'Tax'
     try:
@@ -117,21 +154,27 @@ def _build_totals_table(document, document_type, label_style, label_bold_style):
     balance_due = getattr(document, 'balance_due', 0)
 
     rows = [
-        [Paragraph('Subtotal:', label_style), Paragraph(f"KES {subtotal:,.2f}", label_style)],
-        [Paragraph(f"{tax_label}:", label_style), Paragraph(f"KES {tax_amount:,.2f}", label_style)],
+        [Paragraph('Subtotal:', label_style), Paragraph(_format_currency(subtotal, currency), label_style)],
+        [Paragraph(f"{tax_label}:", label_style), Paragraph(_format_currency(tax_amount, currency), label_style)],
     ]
 
     if discount and discount > 0:
-        rows.append([Paragraph('Discount:', label_style), Paragraph(f"-KES {discount:,.2f}", label_style)])
+        rows.append([Paragraph('Discount:', label_style), Paragraph(f"-{_format_currency(discount, currency)}", label_style)])
     if shipping and shipping > 0:
-        rows.append([Paragraph('Shipping:', label_style), Paragraph(f"KES {shipping:,.2f}", label_style)])
+        rows.append([Paragraph('Shipping:', label_style), Paragraph(_format_currency(shipping, currency), label_style)])
 
-    rows.append([Paragraph('TOTAL:', label_bold_style), Paragraph(f"KES {total:,.2f}", label_bold_style)])
+    rows.append([Paragraph('TOTAL:', label_bold_style), Paragraph(_format_currency(total, currency), label_bold_style)])
     # only include amount paid/balance if on the document
     if hasattr(document, 'amount_paid'):
-        rows.append([Paragraph('Amount Paid:', label_bold_style), Paragraph(f"KES {amount_paid:,.2f}", label_bold_style)])
+        rows.append([Paragraph('Amount Paid:', label_bold_style), Paragraph(_format_currency(amount_paid, currency), label_bold_style)])
     if hasattr(document, 'balance_due'):
-        rows.append([Paragraph('Balance Due:', label_bold_style), Paragraph(f"KES {balance_due:,.2f}", label_bold_style)])
+        rows.append([Paragraph('Balance Due:', label_bold_style), Paragraph(_format_currency(balance_due, currency), label_bold_style)])
+
+    # Show exchange rate if not base currency
+    if currency != 'KES' and hasattr(document, 'exchange_rate') and document.exchange_rate:
+        rate = document.exchange_rate
+        if rate and float(rate) != 1.0:
+            rows.append([Paragraph(f'Exchange Rate ({currency}/KES):', label_style), Paragraph(f"{float(rate):,.6f}", label_style)])
 
     tbl = Table(rows, colWidths=[4.5*inch, 2.5*inch])
     tbl.setStyle(TableStyle([
@@ -314,6 +357,9 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
         elements.append(details_table)
         elements.append(Spacer(1, 0.4*inch))
         
+        # Get currency from invoice (default to KES)
+        currency = getattr(invoice, 'currency', 'KES') or 'KES'
+
         # Line Items Table
         items_data = [[
             Paragraph('#', header_style),
@@ -323,7 +369,7 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             Paragraph('Tax', header_style),
             Paragraph('Amount', header_style)
         ]]
-        
+
         for idx, item in enumerate(invoice.items.all(), 1):
             # sanitize name/description to remove embedded HTML
             name = _sanitize_text_for_pdf(getattr(item, 'name', '') or '')
@@ -341,9 +387,9 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
                 Paragraph(str(idx), header_style),
                 Paragraph(desc, header_style),
                 Paragraph(str(qty), header_style),
-                Paragraph(f"KES {unit_price:,.2f}", header_style),
-                Paragraph(f"KES {tax_amount:,.2f}", header_style),
-                Paragraph(f"KES {total_amount:,.2f}", header_style)
+                Paragraph(_format_currency(unit_price, currency), header_style),
+                Paragraph(_format_currency(tax_amount, currency), header_style),
+                Paragraph(_format_currency(total_amount, currency), header_style)
             ])
         
         items_table = Table(items_data, colWidths=[0.4*inch, 3*inch, 0.7*inch, 1.2*inch, 0.7*inch, 1.2*inch])
@@ -363,24 +409,8 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
         ]))
         elements.append(items_table)
         elements.append(Spacer(1, 0.3*inch))
-        
-        # Totals Section (Right-aligned)
-        tax_label = getattr(invoice, 'tax_type', None) or 'Tax'
-        totals_data = [
-            [Paragraph('Subtotal:', label_style), Paragraph(f"KES {invoice.subtotal:,.2f}", label_style)],
-            [Paragraph(f"{tax_label}:", label_style), Paragraph(f"KES {invoice.tax_amount:,.2f}", label_style)],
-        ]
-        
-        if invoice.discount_amount > 0:
-            totals_data.append([Paragraph('Discount:', label_style), Paragraph(f"-KES {invoice.discount_amount:,.2f}", label_style)])
-        
-        if invoice.shipping_cost > 0:
-            totals_data.append([Paragraph('Shipping:', label_style), Paragraph(f"KES {invoice.shipping_cost:,.2f}", label_style)])
-        
-        totals_data.append([Paragraph('TOTAL:', label_bold_style), Paragraph(f"KES {invoice.total:,.2f}", label_bold_style)])
-        totals_data.append([Paragraph('Amount Paid:', label_bold_style), Paragraph(f"KES {invoice.amount_paid:,.2f}", label_bold_style)])
-        totals_data.append([Paragraph('Balance Due:', label_bold_style), Paragraph(f"KES {invoice.balance_due:,.2f}", label_bold_style)])
-        
+
+        # Totals Section (uses document currency)
         totals_table = _build_totals_table(invoice, 'invoice', label_style, label_bold_style)
         elements.append(totals_table)
         
@@ -602,6 +632,9 @@ def generate_quotation_pdf(quotation, company_info=None):
             elements.append(Paragraph(quotation.introduction, intro_style))
             elements.append(Spacer(1, 0.2*inch))
         
+        # Get currency from quotation (default to KES)
+        currency = getattr(quotation, 'currency', 'KES') or 'KES'
+
         # Line Items Table
         items_data = [[
             Paragraph('#', header_style),
@@ -611,7 +644,7 @@ def generate_quotation_pdf(quotation, company_info=None):
             Paragraph('Tax', header_style),
             Paragraph('Amount', header_style)
         ]]
-        
+
         for idx, item in enumerate(quotation.items.all(), 1):
             # Build description and numeric fields defensively. OrderItem model does not
             # necessarily include tax_rate/tax_amount fields, so use getattr with fallbacks
@@ -647,9 +680,9 @@ def generate_quotation_pdf(quotation, company_info=None):
                 Paragraph(str(idx), header_style),
                 Paragraph(desc, header_style),
                 Paragraph(str(qty), header_style),
-                Paragraph(f"KES {float(unit_price):,.2f}", header_style),
-                Paragraph(f"KES {tax_amount:,.2f}", header_style),
-                Paragraph(f"KES {total_amount:,.2f}", header_style)
+                Paragraph(_format_currency(unit_price, currency), header_style),
+                Paragraph(_format_currency(tax_amount, currency), header_style),
+                Paragraph(_format_currency(total_amount, currency), header_style)
             ])
         items_table = Table(items_data, colWidths=[0.4*inch, 3.3*inch, 0.7*inch, 1.0*inch, 0.6*inch, 1.2*inch], repeatRows=1)
         items_table.setStyle(TableStyle([
