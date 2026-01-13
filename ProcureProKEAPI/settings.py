@@ -173,11 +173,22 @@ CELERY_TASK_ROUTES = {
     'caching.tasks.*': {'queue': 'system'},
     'integrations.email.services.*': {'queue': 'emails'},
     'integrations.sms.services.*': {'queue': 'notifications'},
+    'integrations.tasks.*': {'queue': 'integrations'},
     # Centralized notifications
     'notifications.services.email_service.*': {'queue': 'emails'},
     'notifications.services.sms_service.*': {'queue': 'notifications'},
     'notifications.services.push_service.*': {'queue': 'notifications'},
     'notifications.services.notification_service.*': {'queue': 'notifications'},
+}
+
+# Celery Beat schedule - periodic tasks
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    'fetch-exchange-rates-daily': {
+        'task': 'integrations.tasks.fetch_exchange_rates',
+        'schedule': crontab(hour=0, minute=0),  # Run at 00:00 every day
+        'options': {'queue': 'integrations'},
+    },
 }
 
 # Celery task queue configuration

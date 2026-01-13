@@ -118,7 +118,7 @@ class InvoiceEmailLogSerializer(serializers.ModelSerializer):
 class InvoiceCreateSerializer(serializers.ModelSerializer):
     """Simplified serializer for creating invoices"""
     items = InvoiceItemCreateSerializer(many=True, write_only=True)
-    
+
     class Meta:
         model = Invoice
         fields = [
@@ -127,6 +127,8 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
             'subtotal', 'tax_amount', 'discount_amount', 'shipping_cost', 'total',
             'tax_mode', 'tax_rate',
             'items', 'shipping_address', 'billing_address',
+            # Currency support
+            'currency', 'exchange_rate',
         ]
     
     def create(self, validated_data):

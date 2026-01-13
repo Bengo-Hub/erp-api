@@ -35,7 +35,7 @@ from .load_testing import LoadTestManager, create_comprehensive_load_test_config
 import json
 import psutil
 from core.decorators import apply_common_filters
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
@@ -1074,6 +1074,192 @@ class RegionalSettingsViewSet(viewsets.ViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CurrencyViewSet(viewsets.ViewSet):
+    """
+    ViewSet for currency operations.
+
+    Provides:
+    - List of all supported currencies
+    - Currency conversion
+    - Exchange rate management
+    """
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        """Get all supported currencies with priority currencies highlighted."""
+        from .currency import CURRENCY_DEFINITIONS, PRIORITY_CURRENCIES, DEFAULT_CURRENCY, CurrencyService
+
+        # Format all currencies
+        all_currencies = []
+        for code, info in CurrencyService.get_all_currencies().items():
+            all_currencies.append({
+                'code': code,
+                'name': info['name'],
+                'symbol': info['symbol'],
+                'decimal_places': info['decimal_places'],
+                'priority': info['priority']
+            })
+
+        # Format priority currencies
+        priority_list = []
+        for code in PRIORITY_CURRENCIES:
+            info = CURRENCY_DEFINITIONS[code]
+            priority_list.append({
+                'code': code,
+                'name': info['name'],
+                'symbol': info['symbol'],
+                'decimal_places': info['decimal_places'],
+                'priority': info['priority']
+            })
+
+        return Response({
+            'currencies': all_currencies,
+            'priority_currencies': priority_list,
+            'default_currency': DEFAULT_CURRENCY
+        })
+
+    @action(detail=False, methods=['post'])
+    def convert(self, request):
+        """Convert amount between currencies."""
+        from .serializers import CurrencyConversionSerializer
+        from .currency import CurrencyService
+
+        serializer = CurrencyConversionSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        amount = data['amount']
+        from_currency = data['from_currency']
+        to_currency = data['to_currency']
+        rate = data.get('rate')
+
+        converted_amount, rate_used = CurrencyService.convert(
+            amount, from_currency, to_currency, rate
+        )
+
+        result = {
+            'original_amount': amount,
+            'converted_amount': converted_amount,
+            'from_currency': from_currency,
+            'to_currency': to_currency,
+            'rate_used': rate_used,
+            'formatted_original': CurrencyService.format_amount(amount, from_currency),
+            'formatted_converted': CurrencyService.format_amount(converted_amount, to_currency)
+        }
+
+        return Response(result)
+
+    @action(detail=False, methods=['get'])
+    def format(self, request):
+        """Format an amount in a specific currency."""
+        from .currency import CurrencyService
+        from decimal import Decimal
+
+        amount = request.query_params.get('amount')
+        currency = request.query_params.get('currency', 'KES')
+
+        if not amount:
+            return Response(
+                {'error': 'amount parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            amount = Decimal(amount)
+        except Exception:
+            return Response(
+                {'error': 'Invalid amount value'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not CurrencyService.is_valid_currency(currency):
+            return Response(
+                {'error': f'Invalid currency code: {currency}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        formatted = CurrencyService.format_amount(amount, currency)
+        symbol = CurrencyService.get_symbol(currency)
+
+        return Response({
+            'amount': amount,
+            'currency': currency.upper(),
+            'formatted': formatted,
+            'symbol': symbol
+        })
+
+
+class ExchangeRateViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing exchange rates.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = ExchangeRateSerializer
+
+    def get_queryset(self):
+        from .models import ExchangeRate
+        from .utils import get_business_id_from_request
+
+        queryset = ExchangeRate.objects.all()
+
+        # Filter by business if provided
+        business_id = get_business_id_from_request(self.request)
+        if business_id:
+            queryset = queryset.filter(
+                Q(business_id=business_id) | Q(business__isnull=True)
+            )
+
+        # Filter by currency pair
+        from_currency = self.request.query_params.get('from_currency')
+        to_currency = self.request.query_params.get('to_currency')
+        if from_currency:
+            queryset = queryset.filter(from_currency=from_currency.upper())
+        if to_currency:
+            queryset = queryset.filter(to_currency=to_currency.upper())
+
+        # Filter by active status
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+
+        return queryset.order_by('-effective_date')
+
+    @action(detail=False, methods=['get'])
+    def latest(self, request):
+        """Get the latest exchange rate for a currency pair."""
+        from .models import ExchangeRate
+        from .utils import get_business_id_from_request
+
+        from_currency = request.query_params.get('from_currency')
+        to_currency = request.query_params.get('to_currency')
+
+        if not from_currency or not to_currency:
+            return Response(
+                {'error': 'Both from_currency and to_currency are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        business_id = get_business_id_from_request(request)
+        business = None
+        if business_id:
+            business = Bussiness.objects.filter(id=business_id).first()
+
+        rate = ExchangeRate.get_rate(from_currency, to_currency, business)
+
+        if rate is None:
+            return Response(
+                {'error': f'No exchange rate found for {from_currency} to {to_currency}'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response({
+            'from_currency': from_currency.upper(),
+            'to_currency': to_currency.upper(),
+            'rate': rate
+        })
 
 
 class BrandingSettingsViewSet(viewsets.ViewSet):

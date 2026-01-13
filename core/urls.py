@@ -7,7 +7,8 @@ from .views import (
     HealthCheckView, ExecutiveDashboardView, PerformanceDashboardView,
     PerformanceMetricsView, DatabaseOptimizationView, CacheManagementView,
     SystemHealthView, BackgroundJobManagementView, ImageOptimizationView,
-    CDNManagementView, ResponsiveImagesView, LoadTestingView
+    CDNManagementView, ResponsiveImagesView, LoadTestingView,
+    CurrencyViewSet, ExchangeRateViewSet
 )
 
 router = DefaultRouter()
@@ -19,6 +20,8 @@ router.register(r'banks', BankInstitutionViewSet)
 router.register(r'bank-branches', BankBranchesViewSet)
 router.register(r'regional-settings', RegionalSettingsViewSet, basename='regional-settings')
 router.register(r'branding-settings', BrandingSettingsViewSet, basename='branding-settings')
+router.register(r'currencies', CurrencyViewSet, basename='currencies')
+router.register(r'exchange-rates', ExchangeRateViewSet, basename='exchange-rates')
 
 urlpatterns = [
     path('', include(router.urls)),

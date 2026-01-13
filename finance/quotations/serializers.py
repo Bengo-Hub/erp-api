@@ -86,6 +86,8 @@ class QuotationCreateSerializer(serializers.ModelSerializer):
             'subtotal', 'tax_amount', 'discount_amount', 'shipping_cost', 'total',
             'discount_type', 'discount_value',
             'items', 'shipping_address', 'billing_address',
+            # Currency support
+            'currency', 'exchange_rate',
         ]
 
     def create(self, validated_data):

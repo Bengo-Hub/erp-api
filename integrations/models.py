@@ -6,6 +6,8 @@ from decimal import Decimal as _Decimal
 # Integration Type Choices
 INTEGRATION_TYPES = [
     ('PAYMENT', 'Payment Integration'),
+    ('NOTIFICATION', 'Notification Integration'),
+    ('OTHER', 'Other Integration'),
 ]
 AVAILABLE_PAYMENT_INTEGRATIONS = [
     ('MPESA', 'Mpesa'),
@@ -491,17 +493,17 @@ class GovernmentServiceSettings(models.Model):
         ('IPRS', 'Integrated Population Registration System'),
         ('OTHER', 'Other Government Service'),
     ]
-    
+
     # Service identification
     service_provider = models.CharField(max_length=50, choices=SERVICE_PROVIDERS)
     service_name = models.CharField(max_length=255, help_text="Full service name")
     service_code = models.CharField(max_length=50, blank=True, null=True, help_text="Service code if applicable")
-    
+
     # Environment
     is_test_mode = models.BooleanField(default=True, help_text="Use sandbox/test environment")
     base_url = models.URLField(help_text="Service API base URL")
     sandbox_url = models.URLField(blank=True, null=True, help_text="Sandbox API URL")
-    
+
     # API Credentials (encrypted)
     client_id = models.CharField(max_length=1500, blank=True, null=True)
     client_secret = models.CharField(max_length=1500, blank=True, null=True)
@@ -509,32 +511,32 @@ class GovernmentServiceSettings(models.Model):
     api_token = models.CharField(max_length=1500, blank=True, null=True)
     username = models.CharField(max_length=255, blank=True, null=True)
     password = models.CharField(max_length=1500, blank=True, null=True)
-    
+
     # Organization identifiers
     organization_id = models.CharField(max_length=255, blank=True, null=True)
     organization_code = models.CharField(max_length=50, blank=True, null=True)
-    
+
     # Endpoint paths (configurable per service)
     auth_path = models.CharField(max_length=255, default='/oauth/token')
     query_path = models.CharField(max_length=255, default='/query')
     submit_path = models.CharField(max_length=255, default='/submit')
     status_path = models.CharField(max_length=255, default='/status')
-    
+
     # Configuration
     webhook_url = models.URLField(blank=True, null=True)
     callback_url = models.URLField(blank=True, null=True)
-    
+
     # Status
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def save(self, *args, **kwargs):
         """Auto-encrypt sensitive fields before saving"""
         # Update base URL based on test mode
         if self.is_test_mode and self.sandbox_url:
             self.base_url = self.sandbox_url
-        
+
         # Encrypt sensitive fields if not already encrypted
         if self.client_id and "gAAAAA" not in str(self.client_id):
             self.client_id = Crypto(self.client_id, 'encrypt').encrypt()
@@ -546,17 +548,134 @@ class GovernmentServiceSettings(models.Model):
             self.api_token = Crypto(self.api_token, 'encrypt').encrypt()
         if self.password and "gAAAAA" not in str(self.password):
             self.password = Crypto(self.password, 'encrypt').encrypt()
-        
+
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         mode = 'Test' if self.is_test_mode else 'Production'
         return f"{self.service_name} ({mode})"
-    
+
     class Meta:
         verbose_name = "Government Service Settings"
         verbose_name_plural = "Government Service Settings"
         indexes = [
             models.Index(fields=['service_provider'], name='idx_govt_service_provider'),
             models.Index(fields=['is_active'], name='idx_govt_service_active'),
+        ]
+
+
+# ---------------------------
+# Exchange Rate API Integration
+# ---------------------------
+class ExchangeRateAPISettings(models.Model):
+    """
+    Configuration for external exchange rate API integration.
+    Used to fetch live exchange rates from providers like exchangerate.host
+    """
+    PROVIDER_CHOICES = [
+        ('EXCHANGERATE_HOST', 'exchangerate.host'),
+        ('OPEN_EXCHANGE', 'Open Exchange Rates'),
+        ('FIXER', 'Fixer.io'),
+        ('CURRENCY_LAYER', 'Currency Layer'),
+        ('OTHER', 'Other Provider'),
+    ]
+
+    # Provider identification
+    provider = models.CharField(
+        max_length=50,
+        choices=PROVIDER_CHOICES,
+        default='EXCHANGERATE_HOST',
+        help_text="Exchange rate API provider"
+    )
+    provider_name = models.CharField(
+        max_length=255,
+        default='exchangerate.host',
+        help_text="Display name for the provider"
+    )
+
+    # API Configuration
+    api_endpoint = models.URLField(
+        default='https://api.exchangerate.host/live',
+        help_text="API endpoint URL for fetching rates"
+    )
+    access_key = models.CharField(
+        max_length=1500,
+        blank=True,
+        null=True,
+        help_text="API access key (will be encrypted)"
+    )
+
+    # Currency configuration
+    source_currency = models.CharField(
+        max_length=3,
+        default='USD',
+        help_text="Base/source currency for rate queries"
+    )
+    target_currencies = models.JSONField(
+        default=list(['KES', 'USD', 'EUR', 'GBP']),
+        help_text="List of target currencies to fetch rates for (e.g., ['KES', 'EUR', 'GBP'])"
+    )
+
+    # Scheduling configuration
+    fetch_time = models.TimeField(
+        default=_time(0, 0),
+        help_text="Time of day to fetch exchange rates (24hr format)"
+    )
+    last_fetch_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp of last successful rate fetch"
+    )
+    last_fetch_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('success', 'Success'),
+            ('failed', 'Failed'),
+            ('pending', 'Pending'),
+        ],
+        default='pending',
+        help_text="Status of the last fetch operation"
+    )
+    last_fetch_error = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Error message from last failed fetch"
+    )
+
+    # Status
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Enable/disable automatic rate fetching"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        """Auto-encrypt sensitive fields before saving"""
+        # Encrypt access key if not already encrypted
+        if self.access_key and "gAAAAA" not in str(self.access_key):
+            self.access_key = Crypto(self.access_key, 'encrypt').encrypt()
+
+        # Ensure target_currencies is a list
+        if not self.target_currencies:
+            self.target_currencies = ['KES', 'USD', 'EUR', 'GBP']
+
+        super().save(*args, **kwargs)
+
+    def get_decrypted_access_key(self):
+        """Return decrypted access key for API calls"""
+        if self.access_key and "gAAAAA" in str(self.access_key):
+            return Crypto(self.access_key, 'decrypt').decrypt()
+        return self.access_key
+
+    def __str__(self):
+        status = 'Active' if self.is_active else 'Inactive'
+        return f"Exchange Rate API - {self.provider_name} ({status})"
+
+    class Meta:
+        verbose_name = "Exchange Rate API Settings"
+        verbose_name_plural = "Exchange Rate API Settings"
+        indexes = [
+            models.Index(fields=['provider'], name='idx_exchange_rate_provider'),
+            models.Index(fields=['is_active'], name='idx_exchange_rate_active'),
         ]
