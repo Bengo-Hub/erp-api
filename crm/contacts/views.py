@@ -117,24 +117,57 @@ class ContactsViewSet(BaseModelViewSet):
         account_type=self.request.query_params.get('account_type',None)
         # Resolve branch context (query param or authenticated header)
         branch_id = self.request.query_params.get('branch_id', None) or get_branch_id_from_request(self.request)
-        # check if user user is linked to business organisation or is a business owner
-        user_org=None
-        owner=None
-        if hasattr(self.request.user,'employee') and hasattr(self.request.user.employee,'organisation'):
-            user_org=self.request.user.employee.organisation
-            queryset=queryset.filter(branch__business=user_org)
-        if hasattr(self.request.user,'owner'):
-            owner=self.request.user.owner
-            queryset=queryset.filter(branch__business__owner=owner)
+        # Resolve business context from headers
+        business_id = get_business_id_from_request(self.request)
+
+        # check if user is linked to business organisation or is a business owner
+        user_org = None
+        owner = None
+
+        if hasattr(self.request.user, 'employee') and hasattr(self.request.user.employee, 'organisation'):
+            user_org = self.request.user.employee.organisation
+        if hasattr(self.request.user, 'owner'):
+            owner = self.request.user.owner
+
+        # Build business/branch filter that also includes contacts without branch
+        # This ensures contacts created without explicit branch are still returned
+        if business_id:
+            # Explicit business ID from headers takes priority
+            queryset = queryset.filter(
+                Q(branch__business__id=business_id) |
+                Q(business__id=business_id) |
+                Q(branch__isnull=True, business__id=business_id)
+            )
+        elif user_org:
+            # Filter by user's organisation - include contacts with matching business or branch
+            queryset = queryset.filter(
+                Q(branch__business=user_org) |
+                Q(business=user_org) |
+                Q(branch__isnull=True, business=user_org)
+            )
+        elif owner:
+            # Filter by owner - include contacts with matching business owner or branch owner
+            queryset = queryset.filter(
+                Q(branch__business__owner=owner) |
+                Q(business__owner=owner) |
+                Q(branch__isnull=True, business__owner=owner)
+            )
+
         if branch_id is not None:
             # Branch field is a foreign key; use branch__id or branch_id
             queryset = queryset.filter(branch__id=branch_id)
         if query:
-            queryset=queryset.filter(Q(user__username__icontains=query)|Q(user__first_name__icontains=query)|Q(user__first_name__icontains=query))
+            queryset = queryset.filter(
+                Q(user__username__icontains=query) |
+                Q(user__first_name__icontains=query) |
+                Q(user__last_name__icontains=query) |
+                Q(business_name__icontains=query) |
+                Q(contact_id__icontains=query)
+            )
         if contact_type:
-           queryset = queryset.filter(Q(contact_type=contact_type)) 
+           queryset = queryset.filter(Q(contact_type=contact_type))
         if account_type:
-           queryset = queryset.filter(Q(account_type=account_type))    
+           queryset = queryset.filter(Q(account_type=account_type))
         return queryset 
 
     def create(self, request, *args, **kwargs):
@@ -201,9 +234,15 @@ class ContactsViewSet(BaseModelViewSet):
             biz_id_from_header = get_business_id_from_request(request)
             if biz_id_from_header:
                 biz = Bussiness.objects.filter(id=biz_id_from_header).first()
-            else:
-                if business is not None:
-                    biz, created = Bussiness.objects.update_or_create(owner=user, name=business)
+            elif branch and branch.business:
+                # Use the branch's business if available
+                biz = branch.business
+            elif hasattr(request.user, 'employee') and request.user.employee.organisation:
+                # Use the user's organisation
+                biz = request.user.employee.organisation
+            elif hasattr(request.user, 'owner'):
+                # Use the first business owned by the user
+                biz = Bussiness.objects.filter(owner=request.user).first()
             
             contact_defaults = {
                 "contact_id": _contact_id,

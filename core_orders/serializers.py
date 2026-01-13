@@ -121,18 +121,22 @@ class BaseOrderSerializer(serializers.ModelSerializer):
     order_payments = OrderPaymentSerializer(many=True, read_only=True, source='payments')
     total_items = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
-    
+    currency_display = serializers.SerializerMethodField()
+    formatted_total = serializers.SerializerMethodField()
+
     class Meta:
         model = BaseOrder
         fields = [
-            'id', 'order_number', 'order_type', 'customer', 'supplier', 
-            'branch', 'created_by', 'subtotal', 'tax_amount', 'discount_amount', 
+            'id', 'order_number', 'order_type', 'customer', 'supplier',
+            'branch', 'created_by', 'subtotal', 'tax_amount', 'discount_amount',
             'tax_mode', 'tax_rate',
-            'shipping_cost', 'total', 'status', 'payment_status', 
+            'shipping_cost', 'total', 'status', 'payment_status',
             'fulfillment_status', 'shipping_address', 'billing_address',
             'tracking_number', 'shipping_provider', 'estimated_delivery_date',
             'notes', 'kra_compliance', 'order_items', 'order_payments',
-            'total_items', 'status_display', 'created_at', 'updated_at'
+            'total_items', 'status_display', 'created_at', 'updated_at',
+            # Currency fields
+            'currency', 'exchange_rate', 'currency_display', 'formatted_total'
         ]
         read_only_fields = ['order_number', 'total', 'created_at', 'updated_at']
     
@@ -141,9 +145,18 @@ class BaseOrderSerializer(serializers.ModelSerializer):
         return obj.items.aggregate(
             total=models.Sum('quantity')
         )['total'] or 0
-    
+
     def get_status_display(self, obj):
         return obj.get_status_display()
+
+    def get_currency_display(self, obj):
+        """Get human-readable currency name."""
+        return obj.get_currency_display() if hasattr(obj, 'get_currency_display') else obj.currency
+
+    def get_formatted_total(self, obj):
+        """Get formatted total with currency symbol."""
+        from core.currency import format_currency
+        return format_currency(obj.total, obj.currency)
 
 
 class BaseOrderListSerializer(serializers.ModelSerializer):
