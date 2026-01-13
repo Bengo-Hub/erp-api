@@ -511,8 +511,14 @@ else:
     MEDIA_URL = '/media/'
 
 # Use WhiteNoise for static files
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-WHITENOISE_MANIFEST_STRICT = False  # Don't crash if a file is missing from manifest
+# CompressedStaticFilesStorage serves compressed files without URL hashing
+# This allows Jazzmin custom CSS/JS and DRF templates to work correctly
+# (ManifestStaticFilesStorage requires all referenced files to have hashed URLs)
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+
+# WhiteNoise settings
+WHITENOISE_USE_FINDERS = False  # Don't use finders in production
+WHITENOISE_AUTOREFRESH = DEBUG  # Only refresh in debug mode
 
 STATIC_ROOT = os.getenv('STATIC_ROOT', os.path.join(BASE_DIR, "staticfiles"))
 

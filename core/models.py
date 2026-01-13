@@ -269,6 +269,94 @@ class Comments(models.Model):
 # All overtime and partial month logic now centralized in GeneralHRSettings
 
 
+class ExchangeRate(models.Model):
+    """
+    Exchange rate model for multi-currency support.
+    Stores historical exchange rates between currencies.
+    """
+    from_currency = models.CharField(
+        max_length=3,
+        help_text='Source currency code (ISO 4217)'
+    )
+    to_currency = models.CharField(
+        max_length=3,
+        help_text='Target currency code (ISO 4217)'
+    )
+    rate = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        help_text='Exchange rate (1 from_currency = rate to_currency)'
+    )
+    effective_date = models.DateField(
+        help_text='Date from which this rate is effective'
+    )
+    source = models.CharField(
+        max_length=50,
+        default='manual',
+        choices=[
+            ('manual', 'Manual Entry'),
+            ('api', 'Exchange Rate API'),
+            ('bank', 'Bank Rate'),
+        ],
+        help_text='Source of the exchange rate'
+    )
+    is_active = models.BooleanField(default=True)
+    business = models.ForeignKey(
+        'business.Bussiness',
+        on_delete=models.CASCADE,
+        related_name='exchange_rates',
+        null=True,
+        blank=True,
+        help_text='Business-specific rate (null = system-wide)'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        'authmanagement.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_exchange_rates'
+    )
+
+    class Meta:
+        verbose_name = 'Exchange Rate'
+        verbose_name_plural = 'Exchange Rates'
+        ordering = ['-effective_date', '-created_at']
+        indexes = [
+            models.Index(fields=['from_currency', 'to_currency']),
+            models.Index(fields=['effective_date']),
+            models.Index(fields=['is_active']),
+        ]
+        unique_together = [
+            ['from_currency', 'to_currency', 'effective_date', 'business']
+        ]
+
+    def __str__(self):
+        return f"1 {self.from_currency} = {self.rate} {self.to_currency} ({self.effective_date})"
+
+    @classmethod
+    def get_rate(cls, from_currency: str, to_currency: str, business=None):
+        """Get the latest active exchange rate."""
+        from django.utils import timezone
+        today = timezone.now().date()
+
+        query = cls.objects.filter(
+            from_currency=from_currency.upper(),
+            to_currency=to_currency.upper(),
+            is_active=True,
+            effective_date__lte=today
+        )
+
+        if business:
+            query = query.filter(models.Q(business=business) | models.Q(business__isnull=True))
+        else:
+            query = query.filter(business__isnull=True)
+
+        rate_obj = query.order_by('-effective_date').first()
+        return rate_obj.rate if rate_obj else None
+
+
 class RegionalSettings(models.Model):
     """
     Singleton model for regional settings (Currency, Timezone, Date Format)
