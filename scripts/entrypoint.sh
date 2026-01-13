@@ -183,11 +183,27 @@ else
     fi
 fi
 
-# Create logo placeholder for admin panel if missing
-if [ ! -f /app/staticfiles/logo/logo.png ]; then
-    echo "🎨 Creating logo placeholder for admin panel..."
+# Copy logo files from source static directory if available and not already in staticfiles
+if [ ! -d /app/staticfiles/logo ] || [ ! -f /app/staticfiles/logo/logo.png ]; then
+    echo "🎨 Setting up logo files for admin panel..."
     mkdir -p /app/staticfiles/logo
-    echo -n "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" | base64 -d > /app/staticfiles/logo/logo.png 2>/dev/null || echo "⚠️ Could not create logo.png placeholder"
+
+    # Try to copy from source static directory first
+    if [ -d /app/static/logo ] && [ -f /app/static/logo/logo.png ]; then
+        echo "   Copying logos from /app/static/logo/"
+        cp -r /app/static/logo/* /app/staticfiles/logo/ 2>/dev/null && echo "   ✅ Logo files copied" || echo "   ⚠️ Could not copy logo files"
+    else
+        # Create placeholder if source not available
+        echo "   ⚠️ Source logo directory not found, creating placeholder..."
+        echo -n "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" | base64 -d > /app/staticfiles/logo/logo.png 2>/dev/null || echo "   ⚠️ Could not create logo.png placeholder"
+    fi
+fi
+
+# Verify logo files exist
+if [ -f /app/staticfiles/logo/logo.png ]; then
+    echo "   ✅ Logo file verified: /app/staticfiles/logo/logo.png"
+else
+    echo "   ⚠️ Warning: logo.png not available"
 fi
 
 echo ""
