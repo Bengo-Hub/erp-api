@@ -75,12 +75,153 @@ class PurchaseOrderListSerializer(BaseOrderSerializer):
         return None
 
 
+class PurchaseOrderItemCreateSerializer(serializers.Serializer):
+    """Write-only serializer for incoming PO line items"""
+    id = serializers.IntegerField(required=False, allow_null=True)
+    product_id = serializers.IntegerField(required=False, allow_null=True)
+    name = serializers.CharField(required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    quantity = serializers.IntegerField(required=False, default=1)
+    unit_price = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, default=0)
+    unitPrice = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, default=0)
+    subtotal = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, default=0)
+    total = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, default=0)
+
+
+class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating purchase orders with item handling"""
+    items = PurchaseOrderItemCreateSerializer(many=True, write_only=True, required=False)
+    requisition = serializers.PrimaryKeyRelatedField(
+        queryset=ProcurementRequest.objects.all(),
+        required=False,
+        allow_null=True
+    )
+
+    class Meta:
+        model = PurchaseOrder
+        fields = [
+            'supplier', 'branch', 'requisition', 'expected_delivery', 'delivery_instructions',
+            'approved_budget', 'subtotal', 'tax_amount', 'discount_amount', 'shipping_cost', 'total',
+            'tax_mode', 'tax_rate', 'items', 'shipping_address', 'billing_address', 'notes',
+            'currency', 'exchange_rate', 'status'
+        ]
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items', [])
+        po = PurchaseOrder.objects.create(**validated_data)
+
+        # Process items
+        from core_orders.models import OrderItem
+        from django.contrib.contenttypes.models import ContentType
+        from ecommerce.product.models import Products as Product
+        from decimal import Decimal
+
+        for item_data in items_data:
+            item_data.pop('id', None)
+            quantity = int(item_data.get('quantity', 1) or 1)
+            unit_price = Decimal(str(item_data.get('unit_price') or item_data.get('unitPrice') or 0))
+
+            total_price = item_data.get('total') or item_data.get('subtotal')
+            if total_price is None:
+                total_price = unit_price * quantity
+            total_price = Decimal(str(total_price))
+
+            order_item_kwargs = {
+                'order': po,
+                'name': item_data.get('name') or item_data.get('description') or 'Item',
+                'description': item_data.get('description', ''),
+                'quantity': quantity,
+                'unit_price': unit_price,
+                'total_price': total_price,
+            }
+
+            product_id = item_data.get('product_id') or item_data.get('product')
+            if product_id:
+                try:
+                    product = Product.objects.get(pk=product_id)
+                    order_item_kwargs['content_type'] = ContentType.objects.get_for_model(product)
+                    order_item_kwargs['object_id'] = product.id
+                    if not item_data.get('name'):
+                        order_item_kwargs['name'] = product.title
+                except Product.DoesNotExist:
+                    pass
+
+            OrderItem.objects.create(**order_item_kwargs)
+
+        return po
+
+    def update(self, instance, validated_data):
+        """Update PO and handle item deletion/creation"""
+        items_data = validated_data.pop('items', [])
+
+        # Update PO fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Process items - delete removed items, create/update remaining
+        from core_orders.models import OrderItem
+        from django.contrib.contenttypes.models import ContentType
+        from ecommerce.product.models import Products as Product
+        from decimal import Decimal
+
+        # Get IDs of items in the incoming payload (for existing items being kept)
+        incoming_item_ids = set()
+        for item in items_data:
+            item_id = item.get('id')
+            if item_id:
+                incoming_item_ids.add(item_id)
+
+        # Delete items that are no longer in the payload
+        instance.items.exclude(id__in=incoming_item_ids).delete()
+
+        # Create/update order items
+        for item_data in items_data:
+            item_id = item_data.pop('id', None)
+            quantity = int(item_data.get('quantity', 1) or 1)
+            unit_price = Decimal(str(item_data.get('unit_price') or item_data.get('unitPrice') or 0))
+
+            total_price = item_data.get('total') or item_data.get('subtotal')
+            if total_price is None:
+                total_price = unit_price * quantity
+            total_price = Decimal(str(total_price))
+
+            order_item_kwargs = {
+                'order': instance,
+                'name': item_data.get('name') or item_data.get('description') or 'Item',
+                'description': item_data.get('description', ''),
+                'quantity': quantity,
+                'unit_price': unit_price,
+                'total_price': total_price,
+            }
+
+            product_id = item_data.get('product_id') or item_data.get('product')
+            if product_id:
+                try:
+                    product = Product.objects.get(pk=product_id)
+                    order_item_kwargs['content_type'] = ContentType.objects.get_for_model(product)
+                    order_item_kwargs['object_id'] = product.id
+                    if not item_data.get('name'):
+                        order_item_kwargs['name'] = product.title
+                except Product.DoesNotExist:
+                    pass
+
+            if item_id:
+                # Update existing item
+                OrderItem.objects.filter(id=item_id, order=instance).update(**order_item_kwargs)
+            else:
+                # Create new item
+                OrderItem.objects.create(**order_item_kwargs)
+
+        return instance
+
+
 class PurchaseOrderPaymentSerializer(serializers.ModelSerializer):
     """Serializer for PO payments - Finance integration"""
     po_number = serializers.CharField(source='purchase_order.order_number', read_only=True)
     payment_account_name = serializers.CharField(source='payment_account.account_name', read_only=True)
     payment_reference = serializers.CharField(source='payment.reference_number', read_only=True)
-    
+
     class Meta:
         model = PurchaseOrderPayment
         fields = '__all__'
