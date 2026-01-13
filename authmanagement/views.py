@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate,login,logout
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from django.db import models
 
 from business.models import BusinessLocation, Bussiness
 from addresses.models import AddressBook
@@ -436,20 +437,78 @@ class RoleView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class PermissionView(APIView):
+    """
+    Permission management view with pagination and filtering support.
+    Optimized for large permission sets (1000+) with efficient queryset handling.
+    """
     permission_classes = [permissions.IsAuthenticated]
-    
-    def get(self, request):
-        permissions = Permission.objects.all()
-        serializer = PermissionSerializer(permissions, many=True)
-        return Response(serializer.data)
-    
+
+    def get(self, request, pk=None):
+        """
+        List permissions with pagination and filtering.
+        Supports:
+          - ?search=<term> - Filter by name or codename
+          - ?content_type=<id> - Filter by content type
+          - ?module=<name> - Filter by content type app label (e.g., 'hrm', 'finance')
+          - ?page=<n> - Pagination page number
+          - ?page_size=<n> - Items per page (default 100, max 500)
+        """
+        if pk:
+            # Detail view
+            permission = get_object_or_404(Permission, pk=pk)
+            serializer = PermissionSerializer(permission)
+            return Response(serializer.data)
+
+        # List view with filtering
+        queryset = Permission.objects.select_related('content_type').order_by('content_type__app_label', 'codename')
+
+        # Search filter
+        search = request.query_params.get('search', '').strip()
+        if search:
+            queryset = queryset.filter(
+                models.Q(name__icontains=search) |
+                models.Q(codename__icontains=search)
+            )
+
+        # Content type filter
+        content_type_id = request.query_params.get('content_type')
+        if content_type_id:
+            queryset = queryset.filter(content_type_id=content_type_id)
+
+        # Module/app label filter
+        module = request.query_params.get('module', '').strip()
+        if module:
+            queryset = queryset.filter(content_type__app_label__icontains=module)
+
+        # Pagination
+        page = int(request.query_params.get('page', 1))
+        page_size = min(int(request.query_params.get('page_size', 100)), 500)
+        total_count = queryset.count()
+        total_pages = (total_count + page_size - 1) // page_size
+
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        permissions_page = queryset[start_idx:end_idx]
+
+        serializer = PermissionSerializer(permissions_page, many=True)
+
+        return Response({
+            'count': total_count,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': total_pages,
+            'next': page < total_pages,
+            'previous': page > 1,
+            'results': serializer.data
+        })
+
     def post(self, request):
         serializer = PermissionSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     def put(self, request, pk):
         permission = get_object_or_404(Permission, pk=pk)
         serializer = PermissionSerializer(permission, data=request.data)
@@ -457,7 +516,7 @@ class PermissionView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     def delete(self, request, pk):
         permission = get_object_or_404(Permission, pk=pk)
         permission.delete()

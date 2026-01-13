@@ -45,7 +45,26 @@ User = get_user_model()
 
 
 class ProcessPayrollViewSet(viewsets.ModelViewSet):
-    queryset = Payslip.objects.all()
+    # Optimized queryset with prefetch to prevent N+1 queries
+    queryset = Payslip.objects.select_related(
+        'employee__user',
+        'approver',
+        'created_by',
+        'payment_period'
+    ).prefetch_related(
+        'employee__hr_details__department',
+        'employee__hr_details__region',
+        'employee__hr_details__project',
+        'employee__hr_details__job_title',
+        'employee__salary_details',
+        'employee__benefits__benefit',
+        'employee__deductions__deduction',
+        'employee__earnings__earning',
+        'employee__advances',
+        'employee__employeeloans__loan',
+        'employee__loss_damages',
+        'employee__expense_claims',
+    )
     serializer_class = PayslipSerializer
     permission_classes=[IsAuthenticated]
     pagination_class = PageNumberPagination  # Enable pagination
@@ -68,7 +87,8 @@ class ProcessPayrollViewSet(viewsets.ModelViewSet):
         project_ids = filter_params.get('project_ids')
         employee_ids = filter_params.get('employee_ids')
 
-        payslips = Payslip.objects.filter(delete_status=False).order_by('payment_period__year', 'payment_period__month')
+        # Use optimized base queryset
+        payslips = self.get_queryset().filter(delete_status=False).order_by('payment_period__year', 'payment_period__month')
 
         if department_ids:
             payslips = payslips.filter(employee__hr_details__department_id__in=department_ids)
