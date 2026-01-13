@@ -44,8 +44,20 @@ COPY . .
 COPY --from=deps /usr/local/lib/python3.11 /usr/local/lib/python3.11
 COPY --from=deps /usr/local/bin /usr/local/bin
 ENV DJANGO_SETTINGS_MODULE=ProcureProKEAPI.settings
-RUN mkdir -p /app/staticfiles \
-    && python manage.py collectstatic --noinput --clear 2>/dev/null || echo "Static collection deferred to runtime"
+
+# Verify static directory exists and collect static files
+# Use SQLite file database to bypass real database connection during collectstatic
+# Also set DEBUG=False to use production static storage (WhiteNoise CompressedManifest)
+RUN echo "=== Static Files Collection ===" \
+    && echo "Static source directories:" && ls -la /app/static/ 2>/dev/null || echo "No /app/static/ directory" \
+    && mkdir -p /app/staticfiles \
+    && DATABASE_URL="sqlite:///tmp/build.sqlite3" DEBUG=False python manage.py collectstatic --noinput --clear 2>&1 \
+    && rm -f /tmp/build.sqlite3 \
+    && echo "=== Static files collected ===" \
+    && ls -la /app/staticfiles/ \
+    && echo "=== Logo files ===" && ls -la /app/staticfiles/logo/ 2>/dev/null || echo "Warning: No logo directory in staticfiles" \
+    && echo "=== Manifest file ===" && ls -la /app/staticfiles/staticfiles.json 2>/dev/null || echo "Warning: No manifest file" \
+    && echo "=== File count ===" && find /app/staticfiles -type f | wc -l
 
 FROM base AS runtime
 WORKDIR /app
