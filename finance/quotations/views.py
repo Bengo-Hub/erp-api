@@ -19,8 +19,15 @@ from ..pdf_generator import generate_quotation_pdf
 class QuotationViewSet(BaseModelViewSet):
     """
     Comprehensive Quotation ViewSet - Quote to Invoice workflow
+    Optimized with select_related and prefetch_related to prevent N+1 queries
     """
-    queryset = Quotation.objects.all()
+    queryset = Quotation.objects.select_related(
+        'customer__user',
+        'branch',
+        'converted_to',
+    ).prefetch_related(
+        'items__content_type',
+    )
     serializer_class = QuotationSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ['status', 'customer', 'quotation_date', 'valid_until', 'is_converted']

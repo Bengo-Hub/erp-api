@@ -1,6 +1,7 @@
 """
 Professional LPO (Local Purchase Order) PDF Generation using ReportLab
 Generates print-ready purchase orders with company branding and supplier details
+Supports multiple currencies with proper formatting
 """
 from io import BytesIO
 from reportlab.lib.pagesizes import letter, A4
@@ -15,6 +16,49 @@ from decimal import Decimal
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Currency symbol map for PDF formatting
+CURRENCY_SYMBOLS = {
+    'KES': 'KSh',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'UGX': 'USh',
+    'TZS': 'TSh',
+    'ZAR': 'R',
+    'NGN': '₦',
+    'GHS': 'GH₵',
+    'RWF': 'FRw',
+    'ETB': 'Br',
+    'AED': 'AED',
+    'INR': '₹',
+    'CNY': '¥',
+    'JPY': '¥'
+}
+
+
+def format_currency_amount(amount, currency_code='KES'):
+    """
+    Format amount with currency symbol.
+
+    Args:
+        amount: Decimal or number to format
+        currency_code: ISO currency code (default: KES)
+
+    Returns:
+        str: Formatted currency string
+    """
+    symbol = CURRENCY_SYMBOLS.get(currency_code.upper() if currency_code else 'KES', currency_code or 'KES')
+    try:
+        value = Decimal(str(amount)) if amount else Decimal('0.00')
+    except:
+        value = Decimal('0.00')
+
+    # Position symbol before or after based on convention
+    if currency_code in ['USD', 'GBP', 'EUR']:
+        return f"{symbol}{value:,.2f}"
+    else:
+        return f"{symbol} {value:,.2f}"
 
 
 def generate_lpo_pdf(purchase_order, company_info=None):
@@ -147,15 +191,18 @@ def generate_lpo_pdf(purchase_order, company_info=None):
             elements.append(terms_table)
             elements.append(Spacer(1, 0.2*inch))
         
+        # Get currency from purchase order (default to KES)
+        currency = getattr(purchase_order, 'currency', 'KES') or 'KES'
+
         # Line Items Table
         items_data = [['#', 'Description', 'Qty', 'Unit Price', 'Amount']]
-        
+
         # Get items from the PurchaseOrder's related model (e.g., line items table)
         try:
             items = purchase_order.items.all() if hasattr(purchase_order, 'items') else []
         except:
             items = []
-        
+
         total_amount = Decimal('0.00')
         for idx, item in enumerate(items, 1):
             # Get description from item or product
@@ -164,23 +211,23 @@ def generate_lpo_pdf(purchase_order, company_info=None):
                 desc = item.product.name or item.product.title or ''
             elif hasattr(item, 'description'):
                 desc = item.description or ''
-            
+
             # Limit description to first 50 chars
             if len(desc) > 50:
                 desc = desc[:47] + '...'
-            
+
             # Get quantity and price
             qty = getattr(item, 'quantity', 1)
             unit_price = getattr(item, 'unit_price', Decimal('0.00'))
             amount = Decimal(qty) * Decimal(unit_price)
             total_amount += amount
-            
+
             items_data.append([
                 str(idx),
                 Paragraph(desc, header_style),
                 str(qty),
-                f"KES {unit_price:,.2f}",
-                f"KES {amount:,.2f}"
+                format_currency_amount(unit_price, currency),
+                format_currency_amount(amount, currency)
             ])
         
         items_table = Table(items_data, colWidths=[0.4*inch, 3.2*inch, 0.6*inch, 1.1*inch, 1.1*inch])
@@ -216,18 +263,31 @@ def generate_lpo_pdf(purchase_order, company_info=None):
             tax_label = 'Tax (if any):'
 
         totals_data = [
-            ['Subtotal:', f"KES {total_amount:,.2f}"],
-            [tax_label, f"KES {getattr(purchase_order, 'tax_amount', Decimal('0.00')):,.2f}"],
+            ['Subtotal:', format_currency_amount(total_amount, currency)],
+            [tax_label, format_currency_amount(getattr(purchase_order, 'tax_amount', Decimal('0.00')), currency)],
         ]
-        
-        if hasattr(purchase_order, 'discount') and purchase_order.discount and Decimal(purchase_order.discount) > 0:
-            totals_data.append(['Discount:', f"-KES {purchase_order.discount:,.2f}"])
-        
-        final_total = total_amount + Decimal(getattr(purchase_order, 'tax_amount', Decimal('0.00'))) - Decimal(getattr(purchase_order, 'discount', Decimal('0.00')))
-        totals_data.append(['<b>TOTAL:</b>', f"<b>KES {final_total:,.2f}</b>"])
-        
+
+        # Handle discount - check both discount and discount_amount fields
+        discount_value = Decimal('0.00')
+        if hasattr(purchase_order, 'discount_amount') and purchase_order.discount_amount:
+            discount_value = Decimal(str(purchase_order.discount_amount))
+        elif hasattr(purchase_order, 'discount') and purchase_order.discount:
+            discount_value = Decimal(str(purchase_order.discount))
+
+        if discount_value > 0:
+            totals_data.append(['Discount:', f"-{format_currency_amount(discount_value, currency)}"])
+
+        final_total = total_amount + Decimal(getattr(purchase_order, 'tax_amount', Decimal('0.00'))) - discount_value
+        totals_data.append(['<b>TOTAL:</b>', f"<b>{format_currency_amount(final_total, currency)}</b>"])
+
         if hasattr(purchase_order, 'approved_budget') and purchase_order.approved_budget:
-            totals_data.append(['Approved Budget:', f"KES {purchase_order.approved_budget:,.2f}"])
+            totals_data.append(['Approved Budget:', format_currency_amount(purchase_order.approved_budget, currency)])
+
+        # Show exchange rate if not base currency
+        if currency != 'KES' and hasattr(purchase_order, 'exchange_rate') and purchase_order.exchange_rate:
+            rate = Decimal(str(purchase_order.exchange_rate))
+            if rate != Decimal('1'):
+                totals_data.append([f'Exchange Rate ({currency}/KES):', f"{rate:,.6f}"])
         
         totals_table = Table(totals_data, colWidths=[4.5*inch, 2*inch])
         totals_table.setStyle(TableStyle([

@@ -612,7 +612,7 @@ class ExchangeRateAPISettings(models.Model):
         help_text="Base/source currency for rate queries"
     )
     target_currencies = models.JSONField(
-        default=list(['KES', 'USD', 'EUR', 'GBP']),
+        default=list,
         help_text="List of target currencies to fetch rates for (e.g., ['KES', 'EUR', 'GBP'])"
     )
 

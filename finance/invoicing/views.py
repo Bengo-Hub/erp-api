@@ -21,8 +21,17 @@ from ..pdf_generator import generate_invoice_pdf
 class InvoiceViewSet(BaseModelViewSet):
     """
     Comprehensive Invoice ViewSet with Zoho-like functionality
+    Optimized with select_related and prefetch_related to prevent N+1 queries
     """
-    queryset = Invoice.objects.all()
+    queryset = Invoice.objects.select_related(
+        'customer__user',
+        'branch',
+        'approved_by',
+        'source_quotation',
+    ).prefetch_related(
+        'items__content_type',
+        'payments',
+    )
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ['status', 'customer', 'invoice_date', 'due_date', 'payment_status']

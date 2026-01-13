@@ -26,7 +26,14 @@ class PurchaseOrder(BaseOrder):
     Extends the base order concept for procurement-specific functionality
     """
     # Procurement specific fields only (remove duplicates from BaseOrder)
-    requisition = models.OneToOneField('requisitions.ProcurementRequest', on_delete=models.PROTECT, related_name='purchase_order')
+    # Requisition is optional - POs can be created directly without a requisition
+    requisition = models.OneToOneField(
+        'requisitions.ProcurementRequest',
+        on_delete=models.PROTECT,
+        related_name='purchase_order',
+        null=True,
+        blank=True
+    )
     
     # Procurement specific financial fields
     approved_budget = models.DecimalField(max_digits=15, decimal_places=2, help_text="Approved budget for this purchase")
