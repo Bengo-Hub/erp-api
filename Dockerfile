@@ -109,5 +109,3 @@ USER appuser
 
 # Use entrypoint script that runs migrations automatically on every container start
 CMD ["/usr/local/bin/entrypoint.sh"]
-
-
