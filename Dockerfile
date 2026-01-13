@@ -47,7 +47,7 @@ ENV DJANGO_SETTINGS_MODULE=ProcureProKEAPI.settings
 
 # Verify static directory exists and collect static files
 # Use SQLite file database to bypass real database connection during collectstatic
-# Also set DEBUG=False to use production static storage (WhiteNoise CompressedManifest)
+# DEBUG=False ensures production settings are used (WhiteNoise CompressedStaticFilesStorage)
 RUN echo "=== Static Files Collection ===" \
     && echo "Static source directories:" && ls -la /app/static/ 2>/dev/null || echo "No /app/static/ directory" \
     && mkdir -p /app/staticfiles \
