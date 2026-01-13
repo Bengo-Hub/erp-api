@@ -122,7 +122,7 @@ class BrandingSettingsSerializer(serializers.ModelSerializer):
 
 
 class DocumentSequenceSerializer(serializers.ModelSerializer):
-    """Serializer for document sequences (read-only view of sequence state)."""
+    """Serializer for document sequences - allows editing current_sequence value."""
     document_type_display = serializers.CharField(source='get_document_type_display', read_only=True)
     business_name = serializers.CharField(source='business.name', read_only=True)
 
@@ -130,7 +130,13 @@ class DocumentSequenceSerializer(serializers.ModelSerializer):
         model = DocumentSequence
         fields = ['id', 'business', 'business_name', 'document_type', 'document_type_display',
                   'current_sequence', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'current_sequence', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'business', 'document_type', 'created_at', 'updated_at']
+
+    def validate_current_sequence(self, value):
+        """Validate that sequence value is non-negative."""
+        if value < 0:
+            raise serializers.ValidationError("Sequence value cannot be negative.")
+        return value
 
 
 class BusinessSettingsSerializer(serializers.ModelSerializer):

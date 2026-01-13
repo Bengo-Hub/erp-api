@@ -305,12 +305,12 @@ class PickupStationsViewSet(viewsets.ModelViewSet):
 class DocumentSequenceViewSet(viewsets.ModelViewSet):
     """
     ViewSet for viewing and managing document sequences.
-    Read-only by default - sequences should be managed via DocumentNumberService.
+    Allows GET for viewing, PATCH for updating, and POST for custom actions.
     """
     queryset = DocumentSequence.objects.all()
     serializer_class = DocumentSequenceSerializer
     permission_classes = [IsAuthenticated]
-    http_method_names = ['get', 'head', 'options']  # Read-only
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def get_queryset(self):
         """Filter document sequences to user's business."""
@@ -322,6 +322,53 @@ class DocumentSequenceViewSet(viewsets.ModelViewSet):
         if business:
             return DocumentSequence.objects.filter(business=business)
         return DocumentSequence.objects.none()
+
+    @action(detail=False, methods=['post'], url_path='update-sequence')
+    def update_sequence(self, request):
+        """
+        Update or create a document sequence for a specific document type.
+        Useful for setting initial sequence values or resetting sequences.
+        """
+        from .document_service import DocumentNumberService
+
+        document_type = request.data.get('document_type')
+        current_sequence = request.data.get('current_sequence')
+
+        if not document_type:
+            return Response({'error': 'document_type is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if current_sequence is None:
+            return Response({'error': 'current_sequence is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            current_sequence = int(current_sequence)
+            if current_sequence < 0:
+                return Response({'error': 'current_sequence cannot be negative'}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError):
+            return Response({'error': 'current_sequence must be a valid integer'}, status=status.HTTP_400_BAD_REQUEST)
+
+        business = get_user_business(request.user)
+        if not business:
+            return Response({'error': 'No business found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validate document type
+        valid_types = [choice[0] for choice in DocumentSequence.DOCUMENT_TYPE_CHOICES]
+        if document_type not in valid_types:
+            return Response({'error': f'Invalid document_type. Must be one of: {valid_types}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            sequence = DocumentNumberService.set_sequence(business, document_type, current_sequence)
+            preview = DocumentNumberService.get_next_sequence_preview(business, document_type)
+            return Response({
+                'message': f'Sequence updated successfully',
+                'document_type': document_type,
+                'document_type_display': sequence.get_document_type_display(),
+                'current_sequence': sequence.current_sequence,
+                'next_number': preview['next_number'],
+                'prefix': preview['prefix']
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['get'], url_path='summary')
     def summary(self, request):
