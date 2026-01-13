@@ -47,6 +47,30 @@ class Purchase(models.Model):
     workflow_status = models.CharField(max_length=20, choices=[('pending', 'Pending'),('received', 'Received'),('quality_check', 'Quality Check'),('completed', 'Completed')],default='pending')
     approvals = models.ManyToManyField(Approval, related_name='purchases', blank=True)
 
+    # Currency support (consistent with BaseOrder fields)
+    CURRENCY_CHOICES = [
+        ('KES', 'Kenya Shilling (KES)'),
+        ('USD', 'US Dollar (USD)'),
+        ('EUR', 'Euro (EUR)'),
+        ('GBP', 'British Pound (GBP)'),
+        ('UGX', 'Uganda Shilling (UGX)'),
+        ('TZS', 'Tanzania Shilling (TZS)'),
+        ('ZAR', 'South African Rand (ZAR)'),
+        ('NGN', 'Nigerian Naira (NGN)'),
+    ]
+    currency = models.CharField(
+        max_length=3,
+        choices=CURRENCY_CHOICES,
+        default='KES',
+        help_text='Currency for this purchase (ISO 4217 code)'
+    )
+    exchange_rate = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal('1.000000'),
+        help_text='Exchange rate to base currency (KES) at time of purchase'
+    )
+
     def save(self, *args, **kwargs):
         is_new = not self.pk
         self.balance_due = max(Decimal(self.grand_total) - Decimal(self.purchase_ammount), Decimal(0))

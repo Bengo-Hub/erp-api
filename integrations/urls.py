@@ -2,7 +2,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    KRASettingsViewSet, WebhookEndpointViewSet, WebhookEventViewSet, MpesaSettingsViewSet
+    KRASettingsViewSet, WebhookEndpointViewSet, WebhookEventViewSet,
+    MpesaSettingsViewSet, ExchangeRateAPISettingsViewSet
 )
 from .health_views import (
     integration_health_check, mpesa_health_check, kra_health_check,
@@ -17,6 +18,7 @@ router.register(r'kra-settings', KRASettingsViewSet, basename='kra-settings')
 router.register(r'mpesa-settings', MpesaSettingsViewSet, basename='mpesa-settings')
 router.register(r'webhook-endpoints', WebhookEndpointViewSet, basename='webhook-endpoints')
 router.register(r'webhook-events', WebhookEventViewSet, basename='webhook-events')
+router.register(r'exchange-rate-api', ExchangeRateAPISettingsViewSet, basename='exchange-rate-api')
 
 urlpatterns = [
     # Include router URLs
