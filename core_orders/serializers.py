@@ -164,16 +164,22 @@ class BaseOrderListSerializer(serializers.ModelSerializer):
     customer = ContactSerializer(read_only=True)
     supplier = ContactSerializer(read_only=True)
     total_items = serializers.SerializerMethodField()
-    
+    formatted_total = serializers.SerializerMethodField()
+
     class Meta:
         model = BaseOrder
         fields = [
             'id', 'order_number', 'order_type', 'customer', 'supplier',
             'branch', 'total', 'status', 'payment_status', 'fulfillment_status',
-            'total_items', 'created_at'
+            'total_items', 'created_at', 'currency', 'exchange_rate', 'formatted_total'
         ]
-    
+
     def get_total_items(self, obj):
         return obj.items.aggregate(
             total=models.Sum('quantity')
         )['total'] or 0
+
+    def get_formatted_total(self, obj):
+        """Get formatted total with currency symbol."""
+        from core.currency import format_currency
+        return format_currency(obj.total, obj.currency)
