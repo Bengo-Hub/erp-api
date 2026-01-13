@@ -31,7 +31,17 @@ logger = logging.getLogger(__name__)
 
 
 class PurchaseOrderViewSet(BaseModelViewSet):
-    queryset = PurchaseOrder.objects.all().select_related('created_by')
+    # Optimized queryset with select_related and prefetch_related to prevent N+1 queries
+    queryset = PurchaseOrder.objects.select_related(
+        'created_by',
+        'supplier__user',
+        'requisition',
+        'branch',
+    ).prefetch_related(
+        'approvals__approver',
+        'items__content_type',
+        'po_payments',
+    )
     serializer_class = PurchaseOrderSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = LimitOffsetPagination
@@ -41,7 +51,7 @@ class PurchaseOrderViewSet(BaseModelViewSet):
 
     def get_queryset(self):
         """Optimize queries with select_related for related objects."""
-        queryset = super().get_queryset().prefetch_related('approvals')
+        queryset = super().get_queryset()
         
         # Filter by params
         approver = self.request.query_params.get('approver', None)
