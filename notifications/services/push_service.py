@@ -38,9 +38,10 @@ try:
     from apns2.client import APNsClient
     from apns2.payload import Payload
     APNS_AVAILABLE = True
-except ImportError:
+except (ImportError, AttributeError) as e:
+    # AttributeError: hyper package uses deprecated collections.MutableMapping on Python 3.10+
     APNS_AVAILABLE = False
-    logger.warning("apns2 package not installed. Install with 'pip install apns2'")
+    logger.warning(f"apns2 package not available: {e}. Install with 'pip install apns2'")
 
 User = get_user_model()
 
