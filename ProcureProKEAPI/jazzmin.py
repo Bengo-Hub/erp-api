@@ -218,9 +218,10 @@ JAZZMIN_SETTINGS = {
     #############
     # UI Tweaks #
     #############
-    # Relative paths to custom CSS/JS scripts (must be present in static files)
-    "custom_css": "/css/admin-custom.css",
-    "custom_js": "/js/admin-custom.js",
+    # Custom CSS/JS paths - must NOT have leading slash for WhiteNoise manifest
+    # These paths are relative to STATIC_URL (/static/)
+    "custom_css": "css/admin-custom.css",
+    "custom_js": "js/admin-custom.js",
     # Whether to show the UI customizer on the sidebar
     "show_ui_builder": True,
 

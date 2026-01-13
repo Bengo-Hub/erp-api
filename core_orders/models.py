@@ -63,11 +63,37 @@ class BaseOrder(models.Model):
         ("self_pickup", "Self Pickup"),
     ]
     
+    # Currency choices (priority: KES, USD, EUR)
+    CURRENCY_CHOICES = [
+        ('KES', 'Kenya Shilling (KES)'),
+        ('USD', 'US Dollar (USD)'),
+        ('EUR', 'Euro (EUR)'),
+        ('GBP', 'British Pound (GBP)'),
+        ('UGX', 'Uganda Shilling (UGX)'),
+        ('TZS', 'Tanzania Shilling (TZS)'),
+        ('ZAR', 'South African Rand (ZAR)'),
+        ('NGN', 'Nigerian Naira (NGN)'),
+    ]
+
     # Core Order Information
     order_number = models.CharField(max_length=50, unique=True, blank=True)
     reference_id = models.CharField(max_length=100, blank=True, null=True)
     order_type = models.CharField(max_length=50, help_text="Type of order (ecommerce, procurement, etc.)")
-    
+
+    # Currency Support - all financial amounts are in this currency
+    currency = models.CharField(
+        max_length=3,
+        choices=CURRENCY_CHOICES,
+        default='KES',
+        help_text='Currency for this order (ISO 4217 code)'
+    )
+    exchange_rate = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        default=Decimal('1.000000'),
+        help_text='Exchange rate to base currency (KES) at time of order'
+    )
+
     # Parties
     customer = models.ForeignKey(Contact, on_delete=models.CASCADE, related_name='orders', null=True, blank=True)
     supplier = models.ForeignKey(Contact, on_delete=models.CASCADE, related_name='supplier_orders', null=True, blank=True)
