@@ -1,7 +1,7 @@
 #views 
 from rest_framework import viewsets
 from .models import PurchaseOrder, PurchaseOrderPayment
-from .serializers import PurchaseOrderSerializer, PurchaseOrderListSerializer, PurchaseOrderPaymentSerializer
+from .serializers import PurchaseOrderSerializer, PurchaseOrderListSerializer, PurchaseOrderPaymentSerializer, PurchaseOrderCreateSerializer
 from rest_framework import permissions
 from rest_framework import filters
 from rest_framework.response import Response
@@ -80,6 +80,13 @@ class PurchaseOrderViewSet(BaseModelViewSet):
             
         return queryset 
 
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return PurchaseOrderCreateSerializer
+        if self.action == 'list':
+            return PurchaseOrderListSerializer
+        return PurchaseOrderSerializer
+
     def get_serializer_context(self):
         """
         Add extra context to the serializer. The context added is
@@ -94,7 +101,7 @@ class PurchaseOrderViewSet(BaseModelViewSet):
         return context
 
     def perform_create(self, serializer):
-        serializer.save()
+        serializer.save(created_by=self.request.user)
 
     @action(detail=True, methods=['post'], url_path='approve', name='approve')
     def approve(self, request, pk=None):

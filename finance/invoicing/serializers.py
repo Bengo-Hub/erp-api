@@ -80,6 +80,7 @@ class InvoiceFrontendSerializer(serializers.ModelSerializer):
 
 class InvoiceItemCreateSerializer(serializers.Serializer):
     """Write-only serializer for incoming invoice line items"""
+    id = serializers.IntegerField(required=False, allow_null=True)
     product_id = serializers.IntegerField(required=False, allow_null=True)
     name = serializers.CharField(required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
@@ -191,8 +192,87 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
                     pass
 
             OrderItem.objects.create(**order_item_kwargs)
-        
+
         return invoice
+
+    def update(self, instance, validated_data):
+        """Update invoice and handle item deletion/creation"""
+        items_data = validated_data.pop('items', [])
+
+        # Update invoice fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Process items - delete removed items, create/update remaining
+        from core_orders.utils import process_custom_items
+        from core_orders.models import OrderItem
+        from django.contrib.contenttypes.models import ContentType
+        from ecommerce.product.models import Products as Product
+        from decimal import Decimal
+
+        # Get IDs of items in the incoming payload (for existing items being kept)
+        incoming_item_ids = set()
+        for item in items_data:
+            item_id = item.get('id')
+            if item_id:
+                incoming_item_ids.add(item_id)
+
+        # Delete items that are no longer in the payload
+        instance.items.exclude(id__in=incoming_item_ids).delete()
+
+        # Process custom items
+        processed_items = process_custom_items(
+            items=items_data,
+            branch=instance.branch,
+            order_type='invoice',
+            category_name=None,
+            created_by=instance.created_by
+        )
+
+        # Create/update order items
+        for item_data in processed_items:
+            item_id = item_data.pop('id', None)
+            item_data.pop('tax_amount', None)
+            item_data.pop('discount_amount', None)
+
+            quantity = int(item_data.get('quantity', 1) or 1)
+            unit_price = Decimal(str(item_data.get('unit_price', 0) or 0))
+
+            total_price = item_data.get('total') or item_data.get('total_price') or item_data.get('subtotal')
+            if total_price is None:
+                total_price = unit_price * quantity
+            total_price = Decimal(str(total_price))
+
+            order_item_kwargs = {
+                'order': instance,
+                'name': item_data.get('name') or item_data.get('description') or 'Item',
+                'description': item_data.get('description', ''),
+                'quantity': quantity,
+                'unit_price': unit_price,
+                'total_price': total_price,
+                'notes': item_data.get('notes', '')
+            }
+
+            product_id = item_data.get('product_id') or item_data.get('product')
+            if product_id:
+                try:
+                    product = Product.objects.get(pk=product_id)
+                    order_item_kwargs['content_type'] = ContentType.objects.get_for_model(product)
+                    order_item_kwargs['object_id'] = product.id
+                    if not item_data.get('name'):
+                        order_item_kwargs['name'] = product.title
+                except Product.DoesNotExist:
+                    pass
+
+            if item_id:
+                # Update existing item
+                OrderItem.objects.filter(id=item_id, order=instance).update(**order_item_kwargs)
+            else:
+                # Create new item
+                OrderItem.objects.create(**order_item_kwargs)
+
+        return instance
 
     def to_internal_value(self, data):
         """Quantize money-like and tax_rate fields"""

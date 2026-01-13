@@ -40,7 +40,7 @@ class InvoiceViewSet(BaseModelViewSet):
     ordering = ['-invoice_date']
     
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action in ['create', 'update', 'partial_update']:
             return InvoiceCreateSerializer
         # Use a compact serializer for list/retrieve used by frontend
         if self.action in ['list', 'retrieve']:
