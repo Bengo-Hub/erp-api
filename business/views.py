@@ -24,8 +24,8 @@ def get_user_business(user):
         return business
 
     # Check if user is an employee
-    from hrm.employees.models import Employees
-    employee = Employees.objects.filter(user=user).select_related('branch__business').first()
+    from hrm.employees.models import Employee
+    employee = Employee.objects.filter(user=user).select_related('branch__business').first()
     if employee and employee.branch:
         return employee.branch.business
 
@@ -216,11 +216,11 @@ class ProductSettingsViewSet(viewsets.ModelViewSet):
 class SaleSettingsViewSet(viewsets.ModelViewSet):
     queryset = SaleSettings.objects.all()
     serializer_class = SaleSettingsSerializer
-    permission_classes=[IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self,request):
-        queryset=super().get_queryset()
-        return queryset.filter(location__owner=request.user)
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(location__owner=self.request.user)
 
 class PrefixSettingsViewSet(viewsets.ModelViewSet):
     queryset = PrefixSettings.objects.all()
