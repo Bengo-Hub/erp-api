@@ -16,7 +16,8 @@ import os
 from ..utils import (
     get_customer_name, get_customer_email, get_customer_phone,
     _sanitize_text_for_pdf, _get_logo_image, _build_company_details_section,
-    _build_client_details_section, _build_document_details_section, BoxedSection
+    _build_client_details_section, _build_document_details_section, BoxedSection,
+    get_brand_color
 )
 
 
@@ -452,22 +453,74 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
         elements.append(sig)
         
         # Footer
-        elements.append(Spacer(1, 0.4*inch))
-        footer_style = ParagraphStyle(
-            'Footer',
-            parent=styles['Normal'],
-            fontSize=8,
-            textColor=colors.grey,
-            alignment=TA_CENTER
-        )
-        elements.append(Paragraph("Thank you for your business!", footer_style))
-        elements.append(Paragraph(f"Generated: {datetime.now().strftime('%d/%m/%Y %H:%M')}", footer_style))
-        
-        # Build PDF
-        doc.build(elements)
+        # Create page footer function matching Masterspace format
+        def _create_page_footer(canvas, doc_obj, company_info=company_info):
+            """Draw footer on each page in Masterspace format."""
+            canvas.saveState()
+
+            def _ci(key, default=''):
+                if company_info:
+                    try:
+                        return company_info.get(key, default)
+                    except Exception:
+                        return getattr(company_info, key, default)
+                return default
+
+            branch_name = _ci('branch_name') or _ci('address') or '2nd Floor, Ramis Center, Mombasa Road'
+            postal_code = _ci('postal_code') or '57935 - 00100'
+            city = _ci('city') or 'Nairobi'
+            country = _ci('country') or 'Kenya'
+            phone1 = _ci('contact_number') or _ci('phone') or '+254 715 857 832'
+            phone2 = _ci('alternate_contact_number') or '+254 720 995 917'
+            email = _ci('email') or 'info@masterspace.co.ke'
+            website = _ci('website') or 'www.masterspace.co.ke'
+
+            def format_phone(p):
+                if not p:
+                    return ''
+                p = str(p).replace('+254', '+254 ')
+                if len(p) == 13 and p.startswith('+254 '):
+                    return p[:5] + p[5:8] + ' ' + p[8:11] + ' ' + p[11:]
+                return p
+
+            phone1_fmt = format_phone(phone1)
+            phone2_fmt = format_phone(phone2)
+            phone_str = f"T : {phone1_fmt}"
+            if phone2_fmt and phone2_fmt != phone1_fmt:
+                phone_str += f" / {phone2_fmt}"
+
+            postal_line = f"P.O Box {postal_code}, {city}-{country}."
+            brand_color = get_brand_color(company_info or {})
+
+            footer_y = 0.45 * inch
+            left_margin = 0.5 * inch
+            right_margin = A4[0] - 0.5 * inch
+            bar_width = 8
+
+            canvas.setFillColor(brand_color)
+            canvas.rect(left_margin, footer_y - 5, bar_width, 45, fill=1, stroke=0)
+
+            text_start = left_margin + bar_width + 8
+            canvas.setFillColor(colors.HexColor('#374151'))
+            canvas.setFont('Helvetica', 8)
+
+            canvas.drawString(text_start, footer_y + 28, branch_name)
+            canvas.drawString(text_start, footer_y + 16, postal_line)
+            canvas.drawString(text_start, footer_y + 4, phone_str)
+
+            canvas.setFillColor(brand_color)
+            canvas.setFont('Helvetica', 8)
+            canvas.drawRightString(right_margin, footer_y + 20, email)
+            canvas.setFont('Helvetica-Bold', 8)
+            canvas.drawRightString(right_margin, footer_y + 8, website)
+
+            canvas.restoreState()
+
+        # Build PDF with page footer
+        doc.build(elements, onFirstPage=_create_page_footer, onLaterPages=_create_page_footer)
         pdf_bytes = buffer.getvalue()
         buffer.close()
-        
+
         logger.info(f"Generated invoice PDF for {invoice.invoice_number}")
         return pdf_bytes
         
@@ -744,7 +797,8 @@ def generate_quotation_pdf(quotation, company_info=None):
         elements.append(sig)
 
         # Footer
-        elements.append(Spacer(1, 0.4*inch))
+        # Validity note in content
+        elements.append(Spacer(1, 0.3*inch))
         footer_style = ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
@@ -754,15 +808,75 @@ def generate_quotation_pdf(quotation, company_info=None):
         )
         validity_text = f"This quotation is valid until {quotation.valid_until.strftime('%d/%m/%Y')}"
         elements.append(Paragraph(validity_text, footer_style))
-        elements.append(Spacer(1, 0.1*inch))
-        elements.append(Paragraph("Thank you for your interest in our services!", footer_style))
-        elements.append(Paragraph(f"Generated: {datetime.now().strftime('%d/%m/%Y %H:%M')}", footer_style))
-        
-        # Build PDF
-        doc.build(elements)
+
+        # Create page footer function matching Masterspace format
+        def _create_page_footer(canvas, doc_obj, company_info=company_info):
+            """Draw footer on each page in Masterspace format."""
+            canvas.saveState()
+
+            def _ci(key, default=''):
+                if company_info:
+                    try:
+                        return company_info.get(key, default)
+                    except Exception:
+                        return getattr(company_info, key, default)
+                return default
+
+            branch_name = _ci('branch_name') or _ci('address') or '2nd Floor, Ramis Center, Mombasa Road'
+            postal_code = _ci('postal_code') or '57935 - 00100'
+            city = _ci('city') or 'Nairobi'
+            country = _ci('country') or 'Kenya'
+            phone1 = _ci('contact_number') or _ci('phone') or '+254 715 857 832'
+            phone2 = _ci('alternate_contact_number') or '+254 720 995 917'
+            email = _ci('email') or 'info@masterspace.co.ke'
+            website = _ci('website') or 'www.masterspace.co.ke'
+
+            def format_phone(p):
+                if not p:
+                    return ''
+                p = str(p).replace('+254', '+254 ')
+                if len(p) == 13 and p.startswith('+254 '):
+                    return p[:5] + p[5:8] + ' ' + p[8:11] + ' ' + p[11:]
+                return p
+
+            phone1_fmt = format_phone(phone1)
+            phone2_fmt = format_phone(phone2)
+            phone_str = f"T : {phone1_fmt}"
+            if phone2_fmt and phone2_fmt != phone1_fmt:
+                phone_str += f" / {phone2_fmt}"
+
+            postal_line = f"P.O Box {postal_code}, {city}-{country}."
+            brand_color = get_brand_color(company_info or {})
+
+            footer_y = 0.45 * inch
+            left_margin = 0.5 * inch
+            right_margin = A4[0] - 0.5 * inch
+            bar_width = 8
+
+            canvas.setFillColor(brand_color)
+            canvas.rect(left_margin, footer_y - 5, bar_width, 45, fill=1, stroke=0)
+
+            text_start = left_margin + bar_width + 8
+            canvas.setFillColor(colors.HexColor('#374151'))
+            canvas.setFont('Helvetica', 8)
+
+            canvas.drawString(text_start, footer_y + 28, branch_name)
+            canvas.drawString(text_start, footer_y + 16, postal_line)
+            canvas.drawString(text_start, footer_y + 4, phone_str)
+
+            canvas.setFillColor(brand_color)
+            canvas.setFont('Helvetica', 8)
+            canvas.drawRightString(right_margin, footer_y + 20, email)
+            canvas.setFont('Helvetica-Bold', 8)
+            canvas.drawRightString(right_margin, footer_y + 8, website)
+
+            canvas.restoreState()
+
+        # Build PDF with page footer
+        doc.build(elements, onFirstPage=_create_page_footer, onLaterPages=_create_page_footer)
         pdf_bytes = buffer.getvalue()
         buffer.close()
-        
+
         logger.info(f"Generated quotation PDF for {quotation.quotation_number}")
         return pdf_bytes
         
