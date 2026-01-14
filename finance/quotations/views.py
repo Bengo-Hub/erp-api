@@ -638,16 +638,16 @@ class PublicQuotationView(APIView):
     Allows unauthenticated access to shared quotations
     """
     permission_classes = [AllowAny]
-    
+
     def get(self, request, quotation_id, token):
         """Retrieve quotation by ID and share token"""
         try:
             quotation = Quotation.objects.get(id=quotation_id, share_token=token, is_shared=True)
-            
+
             # Mark as viewed if customer is viewing
             if hasattr(quotation, 'mark_as_viewed'):
                 quotation.mark_as_viewed()
-            
+
             serializer = QuotationSerializer(quotation)
             return APIResponse.success(
                 data=serializer.data,
@@ -665,4 +665,44 @@ class PublicQuotationView(APIView):
                 message=f'Error retrieving quotation: {str(e)}',
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class PublicQuotationPDFView(APIView):
+    """
+    Public API endpoint for streaming quotation PDF via share token.
+    Allows unauthenticated access to download/preview shared quotation PDFs.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, quotation_id, token):
+        """Stream quotation PDF by ID and share token"""
+        try:
+            quotation = Quotation.objects.get(id=quotation_id, share_token=token, is_shared=True)
+
+            # Resolve company info for PDF
+            from finance.utils import resolve_company_info
+            branch = getattr(quotation, 'branch', None)
+            biz = getattr(branch, 'business', None) if branch else None
+            company_info = resolve_company_info(biz, branch)
+
+            # Generate PDF
+            pdf_bytes = generate_quotation_pdf(quotation, company_info)
+
+            # Determine if download or inline preview
+            download = request.query_params.get('download', 'false').lower() == 'true'
+            disposition = 'attachment' if download else 'inline'
+
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'{disposition}; filename="Quotation_{quotation.quotation_number}.pdf"'
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            # Allow cross-origin access for frontend
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+
+        except Quotation.DoesNotExist:
+            return HttpResponse('Quotation not found or access denied', status=404, content_type='text/plain')
+        except Exception as e:
+            return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
 

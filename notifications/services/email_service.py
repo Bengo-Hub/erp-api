@@ -218,24 +218,85 @@ class EmailService:
         )
         
         if async_send:
-            # Encode attachments for Celery serialization (JSON-safe)
-            encoded_attachments = _encode_attachments_for_celery(attachments)
-            
-            # Send using Celery task asynchronously
-            task = send_email_task.delay(
-                subject=subject,
-                message=message,
-                recipient_list=recipient_list,
-                html_message=html_message,
-                from_email=from_email,
-                cc=cc,
-                bcc=bcc,
-                reply_to=reply_to,
-                attachments=encoded_attachments,
-                email_log_id=email_log.id,
-                integration_id=self.integration.id if self.integration else None
-            )
-            return task.id
+            # Try to send asynchronously via Celery, with automatic fallback to sync
+            try:
+                # Check if Celery is available and broker is reachable
+                from django.conf import settings
+                celery_available = not getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False)
+
+                if celery_available:
+                    # Try to ping Celery to verify it's working
+                    try:
+                        from celery import current_app
+                        # Quick check - if broker connection fails, this will raise
+                        inspect = current_app.control.inspect(timeout=1.0)
+                        # If we can't get stats, Celery might not be running
+                        if inspect.ping() is None:
+                            raise Exception("No Celery workers responding")
+                    except Exception as celery_check_error:
+                        logger.warning(f"Celery not available, falling back to sync: {celery_check_error}")
+                        celery_available = False
+
+                if celery_available:
+                    # Encode attachments for Celery serialization (JSON-safe)
+                    encoded_attachments = _encode_attachments_for_celery(attachments)
+
+                    # Send using Celery task asynchronously
+                    task = send_email_task.delay(
+                        subject=subject,
+                        message=message,
+                        recipient_list=recipient_list,
+                        html_message=html_message,
+                        from_email=from_email,
+                        cc=cc,
+                        bcc=bcc,
+                        reply_to=reply_to,
+                        attachments=encoded_attachments,
+                        email_log_id=email_log.id,
+                        integration_id=self.integration.id if self.integration else None
+                    )
+                    return task.id
+                else:
+                    # Celery not available, fall back to synchronous sending
+                    logger.info("Falling back to synchronous email sending")
+                    return self._send_email_internal(
+                        subject=subject,
+                        message=message,
+                        recipient_list=recipient_list,
+                        html_message=html_message,
+                        from_email=from_email,
+                        cc=cc,
+                        bcc=bcc,
+                        reply_to=reply_to,
+                        attachments=attachments,
+                        email_log_id=email_log.id
+                    )
+            except Exception as e:
+                # Any error in async path, fall back to sync
+                logger.warning(f"Async email failed, trying sync: {str(e)}")
+                try:
+                    return self._send_email_internal(
+                        subject=subject,
+                        message=message,
+                        recipient_list=recipient_list,
+                        html_message=html_message,
+                        from_email=from_email,
+                        cc=cc,
+                        bcc=bcc,
+                        reply_to=reply_to,
+                        attachments=attachments,
+                        email_log_id=email_log.id
+                    )
+                except Exception as sync_error:
+                    logger.error(f"Both async and sync email sending failed: {str(sync_error)}")
+                    email_log.status = 'FAILED'
+                    email_log.error_message = f"Async: {str(e)}, Sync: {str(sync_error)}"
+                    email_log.save()
+                    return {
+                        'success': False,
+                        'error': str(sync_error),
+                        'email_log_id': email_log.id
+                    }
         else:
             # Send synchronously
             try:
