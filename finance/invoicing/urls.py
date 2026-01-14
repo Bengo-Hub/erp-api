@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     InvoiceViewSet, InvoicePaymentViewSet, InvoiceEmailLogViewSet,
-    PublicInvoiceView, CreditNoteViewSet, DebitNoteViewSet,
+    PublicInvoiceView, PublicInvoicePDFView, CreditNoteViewSet, DebitNoteViewSet,
     DeliveryNoteViewSet, ProformaInvoiceViewSet
 )
 
@@ -17,8 +17,9 @@ router.register(r'proforma-invoices', ProformaInvoiceViewSet, basename='proforma
 
 urlpatterns = [
     path('', include(router.urls)),
-    # Public API endpoint for accessing invoices via share token
+    # Public API endpoints for accessing invoices via share token
     path('public/invoice/<int:invoice_id>/<str:token>/', PublicInvoiceView.as_view(), name='public-invoice-api'),
+    path('public/invoice/<int:invoice_id>/<str:token>/pdf/', PublicInvoicePDFView.as_view(), name='public-invoice-pdf'),
 ]
 
 
