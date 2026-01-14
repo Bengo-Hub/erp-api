@@ -224,18 +224,17 @@ class Invoice(BaseOrder):
         return self.share_token
     
     def get_public_share_url(self, request=None):
-        """Get the public share URL for this invoice"""
+        """
+        Get the public share URL for this invoice.
+
+        Always returns frontend URL with HTTPS in production.
+        The request parameter is ignored as we now use centralized URL config.
+        """
         if not self.share_token:
             self.generate_share_token()
-        
-        from django.urls import reverse
-        if request:
-            base_url = request.build_absolute_uri('/')
-        else:
-            from django.conf import settings
-            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        
-        return f"{base_url}public/invoice/{self.id}/{self.share_token}"
+
+        from integrations.services.url_config_service import URLConfigService
+        return URLConfigService.get_public_share_url('invoice', self.id, self.share_token)
     
     def record_payment(self, amount, payment_method, reference=None, payment_date=None, payment_account=None):
         """Record a payment against this invoice"""

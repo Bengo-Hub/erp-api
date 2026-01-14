@@ -216,3 +216,60 @@ def integration_summary(request):
             'error': str(e),
         }, status=http_status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_integration_urls(request):
+    """
+    Get auto-configured integration URLs.
+
+    Returns all webhook and callback URLs based on current server configuration.
+    Useful for displaying in admin/configuration forms.
+    """
+    try:
+        from .services.url_config_service import URLConfigService
+
+        urls = URLConfigService.get_all_integration_urls()
+
+        return Response({
+            'success': True,
+            'urls': urls,
+            'generated_at': timezone.now().isoformat(),
+        }, status=http_status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error getting integration URLs: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e),
+        }, status=http_status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def sync_integration_urls(request):
+    """
+    Sync/update all integration settings with auto-configured URLs.
+
+    This updates database settings with the correct URLs based on current
+    server configuration. Safe to call multiple times (idempotent).
+    """
+    try:
+        from .services.url_config_service import URLConfigService
+
+        results = URLConfigService.update_all_integration_urls()
+
+        return Response({
+            'success': True,
+            'updated': results,
+            'message': 'Integration URLs synchronized',
+            'synced_at': timezone.now().isoformat(),
+        }, status=http_status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error syncing integration URLs: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e),
+        }, status=http_status.HTTP_500_INTERNAL_SERVER_ERROR)
+

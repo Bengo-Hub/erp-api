@@ -294,18 +294,17 @@ class Quotation(BaseOrder):
         return self.share_token
     
     def get_public_share_url(self, request=None):
-        """Get the public share URL for this quotation"""
+        """
+        Get the public share URL for this quotation.
+
+        Always returns frontend URL with HTTPS in production.
+        The request parameter is ignored as we now use centralized URL config.
+        """
         if not self.share_token:
             self.generate_share_token()
-        
-        from django.urls import reverse
-        if request:
-            base_url = request.build_absolute_uri('/')
-        else:
-            from django.conf import settings
-            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        
-        return f"{base_url}public/quotation/{self.id}/{self.share_token}"
+
+        from integrations.services.url_config_service import URLConfigService
+        return URLConfigService.get_public_share_url('quotation', self.id, self.share_token)
     
     def __str__(self):
         return f"{self.quotation_number} - {self.customer} - {self.get_status_display()}"

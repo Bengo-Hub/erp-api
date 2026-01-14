@@ -3,12 +3,12 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     KRASettingsViewSet, WebhookEndpointViewSet, WebhookEventViewSet,
-    MpesaSettingsViewSet, ExchangeRateAPISettingsViewSet
+    MpesaSettingsViewSet, ExchangeRateAPISettingsViewSet, PaystackSettingsViewSet
 )
 from .health_views import (
     integration_health_check, mpesa_health_check, kra_health_check,
     sms_health_check, email_health_check, clear_integration_cache,
-    integration_summary
+    integration_summary, get_integration_urls, sync_integration_urls
 )
 # Notification-related views moved to centralized notifications app
 
@@ -19,6 +19,7 @@ router.register(r'mpesa-settings', MpesaSettingsViewSet, basename='mpesa-setting
 router.register(r'webhook-endpoints', WebhookEndpointViewSet, basename='webhook-endpoints')
 router.register(r'webhook-events', WebhookEventViewSet, basename='webhook-events')
 router.register(r'exchange-rate-api', ExchangeRateAPISettingsViewSet, basename='exchange-rate-api')
+router.register(r'paystack-settings', PaystackSettingsViewSet, basename='paystack-settings')
 
 urlpatterns = [
     # Include router URLs
@@ -32,4 +33,7 @@ urlpatterns = [
     path('health/email/', email_health_check, name='email-health'),
     path('cache/clear/', clear_integration_cache, name='clear-integration-cache'),
     path('summary/', integration_summary, name='integration-summary'),
+    # URL configuration endpoints
+    path('urls/', get_integration_urls, name='integration-urls'),
+    path('urls/sync/', sync_integration_urls, name='sync-integration-urls'),
 ]

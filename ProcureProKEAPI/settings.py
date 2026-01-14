@@ -669,3 +669,33 @@ CHANNEL_LAYERS = {
         **({'CONFIG': { 'hosts': [os.getenv('CHANNEL_URL')] }} if os.getenv('CHANNEL_URL') else {})
     }
 }
+
+# ============================================================
+# URL Configuration for Integrations & Public Links
+# ============================================================
+# These URLs are used for webhooks, callbacks, and public share links.
+# They auto-detect from request when possible but can be overridden via environment.
+
+# Frontend URL (for public share links, customer-facing pages)
+# Example: https://erp.masterspace.co.ke
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+
+# Backend API URL (for webhooks that need to hit API endpoints)
+# Example: https://erpapi.masterspace.co.ke
+BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000').rstrip('/')
+
+# Force HTTPS for all generated URLs in production
+FORCE_HTTPS = env_bool('FORCE_HTTPS', default=not DEBUG)
+
+# Integration-specific URL overrides (optional - auto-configured if not set)
+# M-Pesa callback URLs
+MPESA_CALLBACK_URL = os.getenv('MPESA_CALLBACK_URL', '')  # Auto-configured if empty
+MPESA_TIMEOUT_URL = os.getenv('MPESA_TIMEOUT_URL', '')  # Auto-configured if empty
+
+# Paystack callback/webhook URLs
+PAYSTACK_CALLBACK_URL = os.getenv('PAYSTACK_CALLBACK_URL', '')  # Auto-configured if empty
+PAYSTACK_WEBHOOK_URL = os.getenv('PAYSTACK_WEBHOOK_URL', '')  # Auto-configured if empty
+
+# PayPal return/cancel URLs
+PAYPAL_RETURN_URL = os.getenv('PAYPAL_RETURN_URL', '')  # Auto-configured if empty
+PAYPAL_CANCEL_URL = os.getenv('PAYPAL_CANCEL_URL', '')  # Auto-configured if empty
