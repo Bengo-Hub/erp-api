@@ -104,35 +104,89 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
     """
     buffer = BytesIO()
     try:
-        # Create page footer function
+        # Create page footer function matching Masterspace format
         def _create_page_footer(canvas, doc, order=order, company_info=company_info):
-            """Draw footer on each page."""
+            """Draw footer on each page in Masterspace format.
+
+            Format:
+            [Blue bar] Address | P.O Box info | Phone numbers | email | website
+            """
             canvas.saveState()
-            # Get company website
-            website = company_info.get('website', '') if company_info else ''
-            if not website:
-                website = 'www.masterspace.co.ke'
-            
-            footer_text = 'Thank you for your business!'
-            gen_text = f"Generated: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-            
-            # Footer line on top
-            footer_y = 0.5 * inch
-            canvas.setLineWidth(0.5)
-            canvas.line(36, footer_y + 0.15 * inch, A4[0] - 36, footer_y + 0.15 * inch)
-            
-            # Left: Thank you text
-            canvas.setFont('Helvetica', 9)
-            canvas.drawString(36, footer_y, footer_text)
-            
-            # Right: Generated date
-            canvas.drawRightString(A4[0] - 36, footer_y, gen_text)
-            
-            # Middle: Website
-            website_width = canvas.stringWidth(website, 'Helvetica', 9)
-            mid_x = (A4[0] - 36 + 36) / 2 - (website_width / 2)
-            canvas.drawString(mid_x, footer_y, website)
-            
+
+            # Extract company info with fallbacks
+            def _ci(key, default=''):
+                if company_info:
+                    try:
+                        return company_info.get(key, default)
+                    except Exception:
+                        return getattr(company_info, key, default)
+                return default
+
+            # Get details for footer - use branch name as physical address
+            branch_name = _ci('branch_name') or _ci('address') or '2nd Floor, Ramis Center, Mombasa Road'
+            postal_code = _ci('postal_code') or '57935 - 00100'
+            city = _ci('city') or 'Nairobi'
+            country = _ci('country') or 'Kenya'
+            phone1 = _ci('contact_number') or _ci('phone') or '+254 715 857 832'
+            phone2 = _ci('alternate_contact_number') or '+254 720 995 917'
+            email = _ci('email') or 'info@masterspace.co.ke'
+            website = _ci('website') or 'www.masterspace.co.ke'
+
+            # Format phone numbers for display
+            def format_phone(p):
+                if not p:
+                    return ''
+                p = str(p).replace('+254', '+254 ')
+                # Add spacing: +254 XXX XXX XXX
+                if len(p) == 13 and p.startswith('+254 '):
+                    return p[:5] + p[5:8] + ' ' + p[8:11] + ' ' + p[11:]
+                return p
+
+            phone1_fmt = format_phone(phone1)
+            phone2_fmt = format_phone(phone2)
+            phone_str = f"T : {phone1_fmt}"
+            if phone2_fmt and phone2_fmt != phone1_fmt:
+                phone_str += f" / {phone2_fmt}"
+
+            # Build postal address line
+            postal_line = f"P.O Box {postal_code}, {city}-{country}."
+
+            # Brand color for the left bar
+            brand_color = get_brand_color(company_info or {})
+
+            # Footer positioning
+            footer_y = 0.45 * inch
+            left_margin = 36
+            right_margin = A4[0] - 36
+            bar_width = 8
+
+            # Draw blue vertical bar on left
+            canvas.setFillColor(brand_color)
+            canvas.rect(left_margin, footer_y - 5, bar_width, 45, fill=1, stroke=0)
+
+            # Text starts after the bar
+            text_start = left_margin + bar_width + 8
+
+            # Set font for footer text
+            canvas.setFillColor(colors.HexColor('#374151'))
+            canvas.setFont('Helvetica', 8)
+
+            # Line 1: Physical address
+            canvas.drawString(text_start, footer_y + 28, branch_name)
+
+            # Line 2: Postal address
+            canvas.drawString(text_start, footer_y + 16, postal_line)
+
+            # Line 3: Phone numbers
+            canvas.drawString(text_start, footer_y + 4, phone_str)
+
+            # Right side: email and website
+            canvas.setFillColor(brand_color)
+            canvas.setFont('Helvetica', 8)
+            canvas.drawRightString(right_margin, footer_y + 20, email)
+            canvas.setFont('Helvetica-Bold', 8)
+            canvas.drawRightString(right_margin, footer_y + 8, website)
+
             canvas.restoreState()
         
         doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
