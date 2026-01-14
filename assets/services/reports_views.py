@@ -20,6 +20,7 @@ from core.modules.report_export import (
     export_report_to_csv, export_report_to_pdf, export_report_to_xlsx,
     get_company_details_from_request
 )
+from core.utils import get_business_id_from_request
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ def inventory_report(request):
     - Depreciation schedule
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         report_data = AssetsReportFormatter.generate_inventory_report(business_id)
         
         if 'error' in report_data:
@@ -104,7 +105,7 @@ def depreciation_report(request):
     - Remaining useful life
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         report_data = AssetsReportFormatter.generate_depreciation_report(business_id)
         
         if 'error' in report_data:

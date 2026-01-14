@@ -21,6 +21,7 @@ from core.modules.report_export import (
     export_report_to_csv, export_report_to_pdf, export_report_to_xlsx,
     get_company_details_from_request
 )
+from core.utils import get_business_id_from_request
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ def profit_and_loss_report(request):
                 status=http_status.HTTP_400_BAD_REQUEST
             )
         
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         report_data = FinanceReportFormatter.generate_p_and_l(start_date, end_date, business_id)
         
         if 'error' in report_data:
@@ -132,7 +133,7 @@ def balance_sheet_report(request):
             default_offset_days=-365
         )
         
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         report_data = FinanceReportFormatter.generate_balance_sheet(as_of_date, business_id, comparison_date)
         
         if 'error' in report_data:
@@ -173,7 +174,7 @@ def cash_flow_report(request):
                 status=http_status.HTTP_400_BAD_REQUEST
             )
         
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         report_data = FinanceReportFormatter.generate_cash_flow(start_date, end_date, business_id)
         
         if 'error' in report_data:
@@ -213,7 +214,7 @@ def financial_statements_suite(request):
                 status=http_status.HTTP_400_BAD_REQUEST
             )
         
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         statements = FinanceReportFormatter.generate_all_statements(start_date, end_date, business_id)
         
         for stmt_key, stmt_data in statements.items():

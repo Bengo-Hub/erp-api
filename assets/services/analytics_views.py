@@ -14,6 +14,8 @@ from rest_framework import status as http_status
 from datetime import datetime
 import logging
 
+from core.utils import get_business_id_from_request
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +34,7 @@ def assets_analytics(request):
     - Asset status breakdown
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         # TODO: Implement assets analytics
         
@@ -69,7 +71,7 @@ def assets_dashboard(request):
     - Disposal schedule
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         # TODO: Implement assets dashboard
         

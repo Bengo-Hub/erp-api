@@ -22,6 +22,7 @@ from core.modules.report_export import (
     export_report_to_csv, export_report_to_pdf, export_report_to_xlsx,
     get_company_details_from_request
 )
+from core.utils import get_business_id_from_request
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +98,7 @@ def sales_dashboard(request):
             )
         
         period_type = request.query_params.get('period_type', 'daily').lower()
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         report_data = EcommerceReportFormatter.generate_sales_dashboard(start_date, end_date, period_type, business_id)
         
@@ -141,7 +142,7 @@ def product_performance(request):
             )
         
         top_n = int(request.query_params.get('top_n', 50))
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         report_data = EcommerceReportFormatter.generate_product_performance(start_date, end_date, top_n, business_id)
         
@@ -185,7 +186,7 @@ def customer_analysis(request):
             )
         
         min_orders = int(request.query_params.get('min_orders', 1))
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         report_data = EcommerceReportFormatter.generate_customer_analysis(start_date, end_date, min_orders, business_id)
         
@@ -217,7 +218,7 @@ def inventory_management(request):
     - Current stock levels, reorder status, inventory value
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         report_data = EcommerceReportFormatter.generate_inventory_report(business_id)
         
@@ -258,7 +259,7 @@ def ecommerce_reports_suite(request):
                 status=http_status.HTTP_400_BAD_REQUEST
             )
         
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         reports = EcommerceReportFormatter.generate_all_reports(start_date, end_date, business_id)
         
         for report_key, report_data in reports.items():

@@ -14,6 +14,8 @@ from rest_framework import status as http_status
 from datetime import datetime
 import logging
 
+from core.utils import get_business_id_from_request
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +34,7 @@ def manufacturing_analytics(request):
     - Efficiency indicators
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         # TODO: Implement manufacturing analytics
         
@@ -69,7 +71,7 @@ def manufacturing_dashboard(request):
     - Equipment status
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         # TODO: Implement manufacturing dashboard
         

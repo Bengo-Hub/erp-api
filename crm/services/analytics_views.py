@@ -14,6 +14,8 @@ from rest_framework import status as http_status
 from datetime import datetime, date
 import logging
 
+from core.utils import get_business_id_from_request
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +34,7 @@ def crm_analytics(request):
     - Customer metrics
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         # TODO: Implement CRM analytics calculation
         
@@ -70,7 +72,7 @@ def crm_dashboard(request):
     - Recent activities
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         # TODO: Implement CRM dashboard data
         
