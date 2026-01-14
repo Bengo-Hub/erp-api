@@ -48,7 +48,7 @@ class InvoiceViewSet(BaseModelViewSet):
             return InvoiceFrontendSerializer
         return InvoiceSerializer
 
-    def _resolve_company_info(self, invoice):
+    def _resolve_company_info(self, invoice, request=None):
         """Return company info dict including logo_path (filesystem path if possible) and PIN"""
         import os
         from django.contrib.staticfiles import finders
@@ -60,10 +60,11 @@ class InvoiceViewSet(BaseModelViewSet):
         branch = getattr(invoice, 'branch', None)
         if branch and getattr(branch, 'business', None):
             biz = branch.business
-        
+
         # Use resolve_company_info to get all fields including PIN
-        company_info = resolve_company_info(biz, branch)
-        
+        # Pass request to allow fallback to request context if no business/branch
+        company_info = resolve_company_info(biz, branch, request=request)
+
         # If logo_path not resolved, try staticfiles finders for default logo
         if not company_info.get('logo_path'):
             try:
@@ -101,7 +102,7 @@ class InvoiceViewSet(BaseModelViewSet):
             invoice = serializer.save(created_by=request.user)
 
             # Resolve company info and logo path (if available)
-            company_info = self._resolve_company_info(invoice)
+            company_info = self._resolve_company_info(invoice, request=request)
 
             # Generate PDF (support alternate document types via ?type=packing_slip|delivery_note)
             doc_type = request.query_params.get('type', 'invoice')
@@ -636,7 +637,7 @@ class InvoiceViewSet(BaseModelViewSet):
                 pass
             
             # Resolve company info (including logo) for PDF
-            company_info = self._resolve_company_info(invoice)
+            company_info = self._resolve_company_info(invoice, request=request)
             
             # Generate PDF
             doc_type = request.query_params.get('type', 'invoice')
@@ -673,7 +674,7 @@ class InvoiceViewSet(BaseModelViewSet):
                 pass
             
             # Resolve company info (including logo) for PDF
-            company_info = self._resolve_company_info(invoice)
+            company_info = self._resolve_company_info(invoice, request=request)
             
             # Generate PDF
             pdf_bytes = generate_invoice_pdf(invoice, company_info)

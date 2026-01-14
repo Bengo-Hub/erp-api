@@ -723,22 +723,38 @@ class EnhancedLoginView(APIView):
                         main_branch = Branch.objects.filter(business=business_obj).first()
                     
                     if main_branch:
+                        # Build address from location
+                        address_parts = []
+                        if main_branch.location:
+                            loc = main_branch.location
+                            if getattr(loc, 'building_name', None):
+                                address_parts.append(loc.building_name)
+                            if getattr(loc, 'street_name', None):
+                                address_parts.append(loc.street_name)
+                            if getattr(loc, 'city', None):
+                                address_parts.append(loc.city)
+                        address = ', '.join(address_parts) if address_parts else ''
+
                         business = {
                             'id': business_obj.id,
                             'business__name': business_obj.name,
                             'name': main_branch.name,
+                            'branch_name': main_branch.name,
                             'branch_code': main_branch.branch_code,
+                            'branch_id': main_branch.id,
                             'country': str(main_branch.location.country) if main_branch.location and main_branch.location.country else 'KE',
                             'city': main_branch.location.city if main_branch.location else 'Kisumu',
                             'postal_code': main_branch.location.postal_code if main_branch.location else '567',
                             'zip_code': main_branch.location.zip_code if main_branch.location else '40100',
                             'contact_number': main_branch.contact_number,
                             'alternate_contact_number': main_branch.alternate_contact_number,
+                            'address': address,
                             'email': main_branch.email,
                             'website': main_branch.location.website if main_branch.location else 'codevertexitsolutions.com',
                             'business__logo': business_obj.logo.url if business_obj.logo else None,
                             'business__watermarklogo': business_obj.watermarklogo.url if business_obj.watermarklogo else None,
-                            'branding_settings': business_obj.get_branding_settings()
+                            'branding_settings': business_obj.get_branding_settings(),
+                            'kra_number': getattr(business_obj, 'kra_number', '') or ''
                         }
                     else:
                         business = None
@@ -755,24 +771,40 @@ class EnhancedLoginView(APIView):
                             main_branch = Branch.objects.filter(business=business_obj, is_main_branch=True).first()
                             if not main_branch:
                                 main_branch = Branch.objects.filter(business=business_obj).first()
-                        
+
                         if main_branch:
+                            # Build address from location
+                            address_parts = []
+                            if main_branch.location:
+                                loc = main_branch.location
+                                if getattr(loc, 'building_name', None):
+                                    address_parts.append(loc.building_name)
+                                if getattr(loc, 'street_name', None):
+                                    address_parts.append(loc.street_name)
+                                if getattr(loc, 'city', None):
+                                    address_parts.append(loc.city)
+                            address = ', '.join(address_parts) if address_parts else ''
+
                             business = {
                                 'id': business_obj.id,
                                 'business__name': business_obj.name,
                                 'name': main_branch.name,
+                                'branch_name': main_branch.name,
                                 'branch_code': main_branch.branch_code,
+                                'branch_id': main_branch.id,
                                 'country': str(main_branch.location.country) if main_branch.location and main_branch.location.country else 'KE',
                                 'city': main_branch.location.city if main_branch.location else 'Kisumu',
                                 'postal_code': main_branch.location.postal_code if main_branch.location else '567',
                                 'zip_code': main_branch.location.zip_code if main_branch.location else '40100',
                                 'contact_number': main_branch.contact_number,
                                 'alternate_contact_number': main_branch.alternate_contact_number,
+                                'address': address,
                                 'email': main_branch.email,
                                 'website': main_branch.location.website if main_branch.location else 'codevertexitsolutions.com',
                                 'business__logo': business_obj.logo.url if business_obj.logo else None,
                                 'business__watermarklogo': business_obj.watermarklogo.url if business_obj.watermarklogo else None,
-                                'branding_settings': business_obj.get_branding_settings()
+                                'branding_settings': business_obj.get_branding_settings(),
+                                'kra_number': getattr(business_obj, 'kra_number', '') or ''
                             }
                         else:
                             business = None
