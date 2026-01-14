@@ -141,11 +141,28 @@ class DocumentSequenceSerializer(serializers.ModelSerializer):
 
 class BusinessSettingsSerializer(serializers.ModelSerializer):
     """
-    Lean serializer for business settings page - returns only essential fields.
+    Serializer for business settings page - returns all fields needed by frontend forms.
     Does NOT include nested relations like branches, tax_rates, pickup_stations etc.
     Use dedicated endpoints for those resources.
     """
     timezone = serializers.SerializerMethodField()
+    # Accept multiple date formats from frontend
+    start_date = serializers.DateField(
+        input_formats=['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', 'iso-8601'],
+        required=False
+    )
+    business_license_expiry = serializers.DateField(
+        input_formats=['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', 'iso-8601'],
+        required=False,
+        allow_null=True
+    )
+    # Location-based fields (read from related models, write handled separately)
+    phone = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
+    website = serializers.SerializerMethodField()
+    address = serializers.SerializerMethodField()
+    # tax_id maps to kra_number for frontend compatibility
+    tax_id = serializers.CharField(source='kra_number', required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Bussiness
@@ -158,8 +175,14 @@ class BusinessSettingsSerializer(serializers.ModelSerializer):
             'transaction_edit_days',
             'default_profit_margin',
             'timezone',
-            # Contact/registration fields
-            'kra_number',
+            'finacial_year_start_month',
+            # Contact fields (read-only from branches/location)
+            'phone',
+            'email',
+            'website',
+            'address',
+            # Registration/compliance fields
+            'tax_id',
             'business_registration_number',
             'business_license_number',
             'business_license_expiry',
@@ -170,6 +193,7 @@ class BusinessSettingsSerializer(serializers.ModelSerializer):
             'logo',
             'watermarklogo',
         ]
+        read_only_fields = ['phone', 'email', 'website', 'address']
 
     def get_timezone(self, obj):
         tz = getattr(obj, 'timezone', None)
@@ -180,6 +204,50 @@ class BusinessSettingsSerializer(serializers.ModelSerializer):
         if hasattr(tz, 'zone') and tz.zone:
             return tz.zone
         return str(tz)
+
+    def get_phone(self, obj):
+        """Get phone from main branch or first branch."""
+        try:
+            branch = obj.branches.filter(is_main_branch=True).first() or obj.branches.first()
+            return branch.contact_number if branch else None
+        except Exception:
+            return None
+
+    def get_email(self, obj):
+        """Get email from main branch or first branch."""
+        try:
+            branch = obj.branches.filter(is_main_branch=True).first() or obj.branches.first()
+            return branch.email if branch else None
+        except Exception:
+            return None
+
+    def get_website(self, obj):
+        """Get website from location."""
+        try:
+            return obj.location.website if obj.location else None
+        except Exception:
+            return None
+
+    def get_address(self, obj):
+        """Get formatted address from location."""
+        try:
+            loc = obj.location
+            if not loc:
+                return None
+            parts = []
+            if loc.building_name:
+                parts.append(loc.building_name)
+            if loc.street_name:
+                parts.append(loc.street_name)
+            if loc.city:
+                parts.append(loc.city)
+            if loc.county:
+                parts.append(loc.county)
+            if loc.postal_code:
+                parts.append(f"P.O. Box {loc.postal_code}")
+            return ', '.join(parts) if parts else loc.city
+        except Exception:
+            return None
 
 
 class BussinessSerializer(serializers.ModelSerializer):
