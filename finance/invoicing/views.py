@@ -206,6 +206,9 @@ class InvoiceViewSet(BaseModelViewSet):
             else:
                 company = Bussiness.objects.first()
             
+            # Generate public share URL for the email (not internal URL)
+            public_url = invoice.get_public_share_url()
+
             context = {
                 'customer_name': invoice.customer.business_name or f"{invoice.customer.user.first_name} {invoice.customer.user.last_name}".strip(),
                 'invoice_number': invoice.invoice_number,
@@ -214,7 +217,7 @@ class InvoiceViewSet(BaseModelViewSet):
                 'payment_terms': invoice.get_payment_terms_display(),
                 'total_amount': f"{invoice.total:,.2f}",
                 'customer_notes': custom_message or invoice.customer_notes,
-                'invoice_url': f"{request.build_absolute_uri('/')[:-1]}/finance/invoices/{invoice.id}",
+                'invoice_url': public_url,
                 'company_name': company.name if company else 'Company',
                 'year': timezone.now().year
             }
