@@ -14,6 +14,8 @@ from rest_framework import status as http_status
 from datetime import datetime
 import logging
 
+from core.utils import get_business_id_from_request
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +35,7 @@ def procurement_analytics(request):
     - Cost savings
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         # TODO: Implement procurement analytics
         
@@ -70,7 +72,7 @@ def procurement_dashboard(request):
     - Supplier performance
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         
         # TODO: Implement procurement dashboard data
         

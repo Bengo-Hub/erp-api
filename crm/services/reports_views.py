@@ -21,6 +21,7 @@ from core.modules.report_export import (
     export_report_to_csv, export_report_to_pdf, export_report_to_xlsx,
     get_company_details_from_request
 )
+from core.utils import get_business_id_from_request
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ def pipeline_analysis(request):
     - Opportunity values and forecasts
     """
     try:
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         report_data = CRMReportFormatter.generate_pipeline_analysis(business_id)
         
         if 'error' in report_data:
@@ -128,7 +129,7 @@ def leads_analytics(request):
                 status=http_status.HTTP_400_BAD_REQUEST
             )
         
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         report_data = CRMReportFormatter.generate_leads_analytics(start_date, end_date, business_id)
         
         if 'error' in report_data:
@@ -171,7 +172,7 @@ def campaign_performance(request):
                 status=http_status.HTTP_400_BAD_REQUEST
             )
         
-        business_id = request.query_params.get('business_id')
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         report_data = CRMReportFormatter.generate_campaign_performance(start_date, end_date, business_id)
         
         if 'error' in report_data:

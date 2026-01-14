@@ -24,9 +24,10 @@ class QuotationViewSet(BaseModelViewSet):
     queryset = Quotation.objects.select_related(
         'customer__user',
         'branch',
-        'converted_to',
+        'converted_by',
     ).prefetch_related(
         'items__content_type',
+        'converted_invoices',
     )
     serializer_class = QuotationSerializer
     permission_classes = [IsAuthenticated]

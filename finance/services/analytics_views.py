@@ -16,7 +16,7 @@ from rest_framework import status as http_status
 from datetime import datetime, date, timedelta
 import logging
 
-from core.utils import get_branch_id_from_request
+from core.utils import get_branch_id_from_request, get_business_id_from_request
 from finance.analytics.finance_analytics import FinanceAnalyticsService
 
 logger = logging.getLogger(__name__)
@@ -42,10 +42,11 @@ def finance_analytics(request):
     """
     try:
         period = request.query_params.get('period', 'month').lower()
-        business_id = request.query_params.get('business_id')
-        
+        # Get business_id from query params OR headers
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
+
         service = FinanceAnalyticsService()
-        
+
         # Get financial summary for the period
         from datetime import timedelta
         from django.utils import timezone
@@ -93,9 +94,10 @@ def finance_dashboard(request):
     - Cash position
     """
     try:
-        business_id = request.query_params.get('business_id')
+        # Get business_id from query params OR headers
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
         period = request.query_params.get('period', 'month').lower()
-        
+
         service = FinanceAnalyticsService()
         dashboard_data = service.get_finance_dashboard_data(
             business_id=business_id,
@@ -131,8 +133,9 @@ def tax_summary(request):
     """
     try:
         year = request.query_params.get('year', str(date.today().year))
-        business_id = request.query_params.get('business_id')
-        
+        # Get business_id from query params OR headers
+        business_id = request.query_params.get('business_id') or get_business_id_from_request(request)
+
         # TODO: Implement tax summary calculation
         
         tax_data = {
