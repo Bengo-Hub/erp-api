@@ -103,24 +103,37 @@ class Command(BaseCommand):
         return admin_user
 
     def _create_single_business_setup(self, admin_user):
-        """Create or reuse business 'Codevertex IT Solutions' with one main branch only."""
-        name = 'Codevertex IT Solutions'
+        """Create or reuse business 'Masterspace' with one main branch only.
+
+        Company Details (from footer template):
+        - Address: 2nd Floor, Ramis Center, Mombasa Road
+        - P.O Box 57935 - 00100, Nairobi-Kenya
+        - Phone: +254 715 857 832 / +254 720 995 917
+        - Email: info@masterspace.co.ke
+        - Website: www.masterspace.co.ke
+        """
+        name = 'Masterspace'
         business = Bussiness.objects.filter(name__iexact=name).first()
         if not business:
             business = Bussiness.objects.create(
                 name=name,
                 start_date='2024-01-01',
                 currency='KES',
-                kra_number='A123456789X',
+                kra_number='P051234567A',
                 business_type='limited_company',
                 county='Nairobi',
+                postal_code='00100',
                 owner=admin_user
             )
             self.stdout.write(self.style.SUCCESS(f'Created business: {business.name}'))
         else:
+            # Update existing business with correct postal code
+            if not business.postal_code:
+                business.postal_code = '00100'
+                business.save(update_fields=['postal_code'])
             self.stdout.write(self.style.SUCCESS(f'Reusing existing business: {business.name}'))
 
-        # Ensure a single main location exists
+        # Ensure a single main location exists with Masterspace address details
         location = BusinessLocation.objects.filter(default=True).first()
         if not location:
             location = BusinessLocation.objects.create(
@@ -129,33 +142,50 @@ class Command(BaseCommand):
                 state='KE',
                 country='KE',
                 zip_code='00100',
-                postal_code='00100',
-                website='https://www.codevertexafrica.com',
+                postal_code='57935-00100',
+                website='www.masterspace.co.ke',
                 default=True,
                 is_active=True
             )
-
-        # Ensure a single main branch exists (idempotent; reuse by unique branch_code)
-        existing_by_code = Branch.objects.filter(branch_code='HQ-001').first()
-        if existing_by_code and existing_by_code.business_id != business.id:
-            main_branch = existing_by_code  # Reuse existing to avoid unique conflicts
+            self.stdout.write(self.style.SUCCESS(f'Created location: {location.city}'))
         else:
-            main_branch, _ = Branch.objects.get_or_create(
-                branch_code='HQ-001',
+            # Update existing location with correct details
+            location.postal_code = '57935-00100'
+            location.website = 'www.masterspace.co.ke'
+            location.save(update_fields=['postal_code', 'website'])
+
+        # Ensure a single main branch exists with Masterspace contact details
+        existing_by_code = Branch.objects.filter(branch_code='MS-HQ-001').first()
+        if existing_by_code and existing_by_code.business_id != business.id:
+            main_branch = existing_by_code
+        else:
+            main_branch, created = Branch.objects.get_or_create(
+                branch_code='MS-HQ-001',
                 defaults={
                     'business': business,
                     'location': location,
-                    'name': 'HQ',
+                    'name': '2nd Floor, Ramis Center, Mombasa Road',
+                    'contact_number': '+254715857832',
+                    'alternate_contact_number': '+254720995917',
+                    'email': 'info@masterspace.co.ke',
                     'is_active': True,
-                    'is_main_branch': True
+                    'is_main_branch': True,
+                    'opening_hours': 'Monday-Friday: 8:00 AM - 5:00 PM'
                 }
             )
+            if not created:
+                # Update existing branch with correct contact details
+                main_branch.name = '2nd Floor, Ramis Center, Mombasa Road'
+                main_branch.contact_number = '+254715857832'
+                main_branch.alternate_contact_number = '+254720995917'
+                main_branch.email = 'info@masterspace.co.ke'
+                main_branch.save(update_fields=['name', 'contact_number', 'alternate_contact_number', 'email'])
 
         # Update business location to point to main branch location
         if not business.location_id:
             business.location = location
-            business.save()
-        
+            business.save(update_fields=['location'])
+
         return business, location, main_branch
 
     def create_tax_rates(self, business):
