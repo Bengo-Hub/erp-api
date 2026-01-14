@@ -13,6 +13,7 @@ AVAILABLE_PAYMENT_INTEGRATIONS = [
     ('MPESA', 'Mpesa'),
     ('PAYPAL', 'PayPal'),
     ('CARD', 'Card Payment'),
+    ('PAYSTACK', 'Paystack'),
 ]
 # SMS Provider Choices
 SMS_PROVIDERS = [
@@ -46,9 +47,6 @@ class Integrations(models.Model):
     class Meta:
         verbose_name_plural = "Integrations"
         ordering = ['integration_type', '-is_default', 'name']
-
-# EmailConfig moved to centralized notifications app
-# Use: from notifications.models import EmailConfiguration
 
 # Payment Provider Choices
 PAYMENT_PROVIDERS = [
@@ -203,6 +201,133 @@ class PayPalSettings(models.Model):
     class Meta:
         verbose_name = "PayPal Settings"
         verbose_name_plural = "PayPal Settings"
+
+class PaystackSettings(models.Model):
+    """
+    Settings for Paystack payment processing.
+    Paystack is a popular African payment gateway supporting cards, bank transfers,
+    mobile money, USSD, and QR payments.
+
+    Documentation: https://paystack.com/docs/
+    """
+    integration = models.ForeignKey(
+        Integrations,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name='paystack_settings',
+        limit_choices_to={'integration_type': 'PAYMENT'}
+    )
+
+    # Environment
+    is_test_mode = models.BooleanField(
+        default=True,
+        help_text="Use Paystack test environment. Toggle off for production."
+    )
+
+    # API credentials (encrypted)
+    public_key = models.CharField(
+        max_length=1500,
+        default='pk_test_your_paystack_public_key',
+        help_text="Paystack public key (starts with pk_test_ or pk_live_)"
+    )
+    secret_key = models.CharField(
+        max_length=1500,
+        default='sk_test_your_paystack_secret_key',
+        help_text="Paystack secret key (starts with sk_test_ or sk_live_)"
+    )
+    webhook_secret = models.CharField(
+        max_length=1500,
+        blank=True,
+        null=True,
+        help_text="Webhook signature verification secret"
+    )
+
+    # Configuration
+    base_url = models.URLField(
+        default='https://api.paystack.co',
+        help_text="Paystack API base URL"
+    )
+    webhook_url = models.URLField(
+        default='https://yourdomain.com/api/payments/paystack/webhook',
+        help_text="URL for Paystack webhooks"
+    )
+    callback_url = models.URLField(
+        default='https://yourdomain.com/payment/callback',
+        help_text="URL to redirect customers after payment"
+    )
+
+    # Payment channels configuration
+    enabled_channels = models.JSONField(
+        default=list,
+        help_text="Enabled payment channels: card, bank, bank_transfer, ussd, qr, mobile_money"
+    )
+
+    # Currency and business settings
+    default_currency = models.CharField(
+        max_length=3,
+        default='KES',
+        help_text="Default currency (NGN, GHS, ZAR, KES, USD)"
+    )
+    business_name = models.CharField(
+        max_length=255,
+        default='BengoERP',
+        help_text="Business name shown on payment pages"
+    )
+    support_email = models.EmailField(
+        max_length=255,
+        default='support@bengoerp.com',
+        help_text="Support email for customer inquiries"
+    )
+
+    # Subaccount for split payments (optional)
+    subaccount_code = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Subaccount code for split payments"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        # Encrypt sensitive values if not already encrypted
+        if self.secret_key and "gAAAAA" not in str(self.secret_key):
+            self.secret_key = Crypto(self.secret_key, 'encrypt').encrypt()
+        if self.webhook_secret and "gAAAAA" not in str(self.webhook_secret):
+            self.webhook_secret = Crypto(self.webhook_secret, 'encrypt').encrypt()
+
+        # Set default enabled channels if empty
+        if not self.enabled_channels:
+            self.enabled_channels = ['card', 'bank_transfer', 'mobile_money']
+
+        super().save(*args, **kwargs)
+
+    def get_decrypted_secret_key(self):
+        """Return decrypted secret key for API calls"""
+        if self.secret_key and "gAAAAA" in str(self.secret_key):
+            return Crypto(self.secret_key, 'decrypt').decrypt()
+        return self.secret_key
+
+    def get_decrypted_webhook_secret(self):
+        """Return decrypted webhook secret for signature verification"""
+        if self.webhook_secret and "gAAAAA" in str(self.webhook_secret):
+            return Crypto(self.webhook_secret, 'decrypt').decrypt()
+        return self.webhook_secret
+
+    def __str__(self):
+        mode = 'Test' if self.is_test_mode else 'Live'
+        return f"Paystack Settings ({mode})"
+
+    class Meta:
+        verbose_name = "Paystack Settings"
+        verbose_name_plural = "Paystack Settings"
+        indexes = [
+            models.Index(fields=['is_test_mode'], name='idx_paystack_test_mode'),
+        ]
+
 
 # ---------------------------
 # KRA / eTIMS Integration

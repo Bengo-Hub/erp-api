@@ -1,6 +1,7 @@
 import logging
 from .card_payment import CardPaymentService
 from .paypal_payment import PayPalPaymentService
+from .paystack_payment import PaystackPaymentService
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +51,19 @@ class PaymentIntegrationManager:
                 return_url=order_data.get('return_url'),
                 cancel_url=order_data.get('cancel_url')
             )
-            
-        # Add other payment methods as needed
-        
+
+        elif payment_method == 'paystack':
+            # For Paystack, initialize transaction and redirect to payment page
+            return PaystackPaymentService.initialize_transaction(
+                email=payment_details.get('email') or order_data.get('customer', {}).get('email'),
+                amount=amount,
+                currency=currency,
+                reference=payment_details.get('reference'),
+                callback_url=order_data.get('callback_url'),
+                channels=payment_details.get('channels'),
+                metadata=order_data,
+            )
+
         return {
             'success': False,
             'error': f'Unsupported payment method: {payment_method}'
@@ -74,15 +85,18 @@ class PaymentIntegrationManager:
         
         if payment_method == 'card':
             return CardPaymentService.verify_payment(transaction_id)
-            
+
         elif payment_method == 'paypal':
             return PayPalPaymentService.verify_payment(transaction_id)
-            
+
+        elif payment_method == 'paystack':
+            return PaystackPaymentService.verify_transaction(transaction_id)
+
         return {
             'success': False,
             'error': f'Unsupported payment method: {payment_method}'
         }
-    
+
     @staticmethod
     def process_refund(payment_method, transaction_id, amount=None, reason=None):
         """
@@ -112,12 +126,19 @@ class PaymentIntegrationManager:
                 amount=amount,
                 reason=reason
             )
-            
+
+        elif payment_method == 'paystack':
+            return PaystackPaymentService.process_refund(
+                transaction_reference=transaction_id,
+                amount=amount,
+                reason=reason
+            )
+
         return {
             'success': False,
             'error': f'Unsupported payment method: {payment_method}'
         }
-        
+
     @staticmethod
     def capture_paypal_payment(order_id):
         """

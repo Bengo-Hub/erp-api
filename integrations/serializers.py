@@ -4,7 +4,7 @@ Notification-related serializers moved to centralized notifications app
 """
 from rest_framework import serializers
 from .models import (
-    KRASettings, MpesaSettings, CardPaymentSettings, PayPalSettings,
+    KRASettings, MpesaSettings, CardPaymentSettings, PayPalSettings, PaystackSettings,
     WebhookEndpoint, WebhookEvent, ExchangeRateAPISettings
 )
 
@@ -135,6 +135,41 @@ class PayPalSettingsSerializer(serializers.ModelSerializer):
 
     def get_webhook_id_preview(self, obj):
         return self._last4(obj.webhook_id)
+
+
+class PaystackSettingsSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Paystack payment gateway settings.
+    Handles write-only secrets with masked previews for security.
+    """
+    secret_key_preview = serializers.SerializerMethodField(read_only=True)
+    webhook_secret_preview = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = PaystackSettings
+        fields = [
+            'id', 'integration', 'is_test_mode',
+            'public_key', 'secret_key', 'webhook_secret',
+            'base_url', 'webhook_url', 'callback_url',
+            'enabled_channels', 'default_currency',
+            'business_name', 'support_email', 'subaccount_code',
+            'created_at', 'updated_at',
+            'secret_key_preview', 'webhook_secret_preview'
+        ]
+        extra_kwargs = {
+            'secret_key': {'write_only': True, 'required': False},
+            'webhook_secret': {'write_only': True, 'required': False, 'allow_null': True, 'allow_blank': True},
+        }
+
+    def _last4(self, v):
+        v = v or ''
+        return '••••' + (v[-4:] if len(v) >= 4 else '')
+
+    def get_secret_key_preview(self, obj):
+        return self._last4(obj.secret_key)
+
+    def get_webhook_secret_preview(self, obj):
+        return self._last4(obj.webhook_secret)
 
 
 class WebhookEndpointSerializer(serializers.ModelSerializer):
