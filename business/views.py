@@ -25,9 +25,9 @@ def get_user_business(user):
 
     # Check if user is an employee
     from hrm.employees.models import Employee
-    employee = Employee.objects.filter(user=user).select_related('branch__business').first()
-    if employee and employee.branch:
-        return employee.branch.business
+    employee = Employee.objects.filter(user=user).select_related('organisation').first()
+    if employee and employee.organisation:
+        return employee.organisation
 
     return None
 
@@ -219,8 +219,24 @@ class SaleSettingsViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.filter(location__owner=self.request.user)
+        """Filter sale settings to user's business."""
+        user = self.request.user
+        if user.is_superuser:
+            return SaleSettings.objects.all()
+
+        business = get_user_business(user)
+        if business:
+            return SaleSettings.objects.filter(business=business)
+        return SaleSettings.objects.none()
+
+    def perform_create(self, serializer):
+        """Auto-assign business when creating sale settings."""
+        if 'business' not in serializer.validated_data:
+            business = get_user_business(self.request.user)
+            if business:
+                serializer.save(business=business)
+                return
+        serializer.save()
 
 class PrefixSettingsViewSet(viewsets.ModelViewSet):
     queryset = PrefixSettings.objects.all()
