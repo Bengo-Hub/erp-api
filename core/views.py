@@ -1294,9 +1294,17 @@ class BrandingSettingsViewSet(viewsets.ViewSet):
                 )
 
             branding_data = business.get_branding_settings()
+            branding_data['id'] = business.id
+            branding_data['business_id'] = business.id
             branding_data['business_name'] = business.name
+            branding_data['app_name'] = business.name
             branding_data['logo'] = request.build_absolute_uri(business.logo.url) if business.logo else None
+            branding_data['logo_url'] = branding_data['logo']
+            branding_data['logo_full_url'] = branding_data['logo']
             branding_data['watermark'] = request.build_absolute_uri(business.watermarklogo.url) if business.watermarklogo else None
+            branding_data['watermark_url'] = branding_data['watermark']
+            branding_data['watermark_full_url'] = branding_data['watermark']
+            branding_data['enable_dark_mode'] = branding_data.get('dark_mode', False)
 
             return Response(branding_data, status=status.HTTP_200_OK)
         except Exception as e:
@@ -1321,20 +1329,54 @@ class BrandingSettingsViewSet(viewsets.ViewSet):
         """Update branding settings for a business (PUT - full update)"""
         try:
             business = Bussiness.objects.get(pk=pk)
+            data = request.data
 
-            # Update business-level branding fields
-            for field in ['business_primary_color', 'business_secondary_color', 'business_text_color',
-                         'business_background_color', 'ui_theme_preset', 'ui_menu_mode', 'ui_dark_mode', 'ui_surface_style']:
-                if field in request.data:
-                    setattr(business, field, request.data[field])
+            # Map frontend-friendly field names to database field names
+            field_mapping = {
+                'primary_color': 'business_primary_color',
+                'secondary_color': 'business_secondary_color',
+                'text_color': 'business_text_color',
+                'background_color': 'business_background_color',
+                'theme_preset': 'ui_theme_preset',
+                'menu_mode': 'ui_menu_mode',
+                'dark_mode': 'ui_dark_mode',
+                'enable_dark_mode': 'ui_dark_mode',
+                'surface_style': 'ui_surface_style',
+            }
+
+            # Update business-level branding fields (accept both frontend and db field names)
+            for frontend_field, db_field in field_mapping.items():
+                if frontend_field in data:
+                    setattr(business, db_field, data[frontend_field])
+                elif db_field in data:
+                    setattr(business, db_field, data[db_field])
+
+            # Handle logo upload if provided as base64
+            if 'logo_url' in data and data['logo_url'] and data['logo_url'].startswith('data:'):
+                import base64
+                from django.core.files.base import ContentFile
+                format, imgstr = data['logo_url'].split(';base64,')
+                ext = format.split('/')[-1]
+                logo_data = ContentFile(base64.b64decode(imgstr), name=f'logo.{ext}')
+                business.logo = logo_data
+
+            # Handle watermark upload if provided as base64
+            if 'watermark_url' in data and data['watermark_url'] and data['watermark_url'].startswith('data:'):
+                import base64
+                from django.core.files.base import ContentFile
+                format, imgstr = data['watermark_url'].split(';base64,')
+                ext = format.split('/')[-1]
+                watermark_data = ContentFile(base64.b64decode(imgstr), name=f'watermark.{ext}')
+                business.watermarklogo = watermark_data
+
             business.save()
 
             # Update extended branding settings
             from business.models import BrandingSettings
             branding, _ = BrandingSettings.objects.get_or_create(business=business)
             for field in ['primary_color_name', 'surface_name', 'compact_mode', 'ripple_effect', 'border_radius', 'scale_factor']:
-                if field in request.data:
-                    setattr(branding, field, request.data[field])
+                if field in data:
+                    setattr(branding, field, data[field])
             branding.save()
 
             return Response({

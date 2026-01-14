@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Q, Sum
+from django_filters.rest_framework import DjangoFilterBackend
 from core.base_viewsets import BaseModelViewSet
 from core.response import APIResponse
 from .models import Invoice, InvoicePayment, InvoiceEmailLog, CreditNote, DebitNote, DeliveryNote, ProformaInvoice
@@ -15,6 +16,7 @@ from .serializers import (
     ProformaInvoiceSerializer, DeliveryNoteCreateSerializer, ProformaInvoiceCreateSerializer,
     CreditNoteCreateSerializer, DebitNoteCreateSerializer
 )
+from .filters import InvoiceFilter, CreditNoteFilter, DebitNoteFilter, DeliveryNoteFilter, ProformaInvoiceFilter
 from ..pdf_generator import generate_invoice_pdf
 
 
@@ -34,7 +36,8 @@ class InvoiceViewSet(BaseModelViewSet):
     )
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ['status', 'customer', 'invoice_date', 'due_date', 'payment_status']
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = InvoiceFilter
     search_fields = ['invoice_number', 'customer__user__first_name', 'customer__user__last_name', 'customer__business_name']
     ordering_fields = ['invoice_date', 'due_date', 'total', 'created_at']
     ordering = ['-invoice_date']
@@ -907,7 +910,8 @@ class CreditNoteViewSet(BaseModelViewSet):
     queryset = CreditNote.objects.all()
     serializer_class = CreditNoteSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ['status', 'customer', 'source_invoice', 'credit_note_date']
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = CreditNoteFilter
     search_fields = ['credit_note_number', 'customer__user__first_name', 'customer__business_name']
     ordering_fields = ['credit_note_date', 'total', 'created_at']
     ordering = ['-credit_note_date']
@@ -968,7 +972,8 @@ class DebitNoteViewSet(BaseModelViewSet):
     queryset = DebitNote.objects.all()
     serializer_class = DebitNoteSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ['status', 'customer', 'source_invoice', 'debit_note_date']
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DebitNoteFilter
     search_fields = ['debit_note_number', 'customer__user__first_name', 'customer__business_name']
     ordering_fields = ['debit_note_date', 'total', 'created_at']
     ordering = ['-debit_note_date']
@@ -1029,7 +1034,8 @@ class DeliveryNoteViewSet(BaseModelViewSet):
     queryset = DeliveryNote.objects.all()
     serializer_class = DeliveryNoteSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ['status', 'customer', 'supplier', 'source_invoice', 'source_purchase_order', 'delivery_date']
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DeliveryNoteFilter
     search_fields = ['delivery_note_number', 'customer__user__first_name', 'customer__business_name', 'driver_name']
     ordering_fields = ['delivery_date', 'total', 'created_at']
     ordering = ['-delivery_date']
@@ -1121,7 +1127,8 @@ class ProformaInvoiceViewSet(BaseModelViewSet):
     queryset = ProformaInvoice.objects.all()
     serializer_class = ProformaInvoiceSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ['status', 'customer', 'source_quotation', 'proforma_date', 'valid_until']
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ProformaInvoiceFilter
     search_fields = ['proforma_number', 'customer__user__first_name', 'customer__business_name']
     ordering_fields = ['proforma_date', 'valid_until', 'total', 'created_at']
     ordering = ['-proforma_date']
