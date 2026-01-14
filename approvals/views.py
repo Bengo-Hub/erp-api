@@ -22,12 +22,12 @@ from django.db import models
 class ApprovalWorkflowFilter(filters.FilterSet):
     """Filter for ApprovalWorkflow"""
     name = filters.CharFilter(lookup_expr='icontains')
-    content_type = filters.ModelChoiceFilter(queryset=ContentType.objects.all())
+    workflow_type = filters.CharFilter(lookup_expr='exact')
     is_active = filters.BooleanFilter()
-    
+
     class Meta:
         model = ApprovalWorkflow
-        fields = ['name', 'content_type', 'is_active']
+        fields = ['name', 'workflow_type', 'is_active']
 
 
 class ApprovalWorkflowViewSet(viewsets.ModelViewSet):
@@ -45,7 +45,7 @@ class ApprovalWorkflowViewSet(viewsets.ModelViewSet):
         return ApprovalWorkflowSerializer
     
     def get_queryset(self):
-        return super().get_queryset().select_related('content_type').prefetch_related('steps')
+        return super().get_queryset().prefetch_related('steps')
     
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
@@ -78,16 +78,34 @@ class ApprovalWorkflowViewSet(viewsets.ModelViewSet):
         return Response(data)
 
 
+class ApprovalStepFilter(filters.FilterSet):
+    """Filter for ApprovalStep"""
+    workflow = filters.ModelChoiceFilter(queryset=ApprovalWorkflow.objects.all())
+    approver_type = filters.CharFilter(lookup_expr='icontains')
+    is_required = filters.BooleanFilter()
+
+    class Meta:
+        model = ApprovalStep
+        fields = ['workflow', 'approver_type', 'is_required']
+
+
 class ApprovalStepViewSet(viewsets.ModelViewSet):
     """ViewSet for ApprovalStep model"""
     queryset = ApprovalStep.objects.all()
     serializer_class = ApprovalStepSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = LimitOffsetPagination
-    
+    filter_backends = [filters.DjangoFilterBackend]
+    filterset_class = ApprovalStepFilter
+
     def get_queryset(self):
-        return super().get_queryset().select_related('workflow', 'approver')
-    
+        queryset = super().get_queryset().select_related('workflow', 'approver_user')
+        # Allow filtering by workflow via query param
+        workflow_id = self.request.query_params.get('workflow')
+        if workflow_id:
+            queryset = queryset.filter(workflow_id=workflow_id)
+        return queryset.order_by('step_number')
+
     def perform_create(self, serializer):
         # Ensure step numbers are sequential
         workflow = serializer.validated_data['workflow']
@@ -129,50 +147,72 @@ class ApprovalViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         """Approve an approval request"""
+        from django.utils import timezone
         approval = self.get_object()
-        
+
         if approval.status != 'pending':
             return Response(
                 {'error': 'Approval is not in pending status'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         approval.status = 'approved'
         approval.notes = request.data.get('notes', '')
+        approval.comments = request.data.get('comments', '')
+        approval.approved_at = timezone.now()
         approval.save()
-        
-        # Check if all approvals in the request are complete
-        request_obj = approval.approval_request
-        if request_obj:
-            pending_approvals = request_obj.approvals.filter(status='pending').count()
+
+        # Check if all approvals for this content object are complete
+        try:
+            approval_request = ApprovalRequest.objects.get(
+                content_type=approval.content_type,
+                object_id=approval.object_id
+            )
+            pending_approvals = Approval.objects.filter(
+                content_type=approval.content_type,
+                object_id=approval.object_id,
+                status='pending'
+            ).count()
             if pending_approvals == 0:
-                request_obj.status = 'approved'
-                request_obj.save()
-        
-        return Response({'status': 'Approval granted'})
-    
+                approval_request.status = 'approved'
+                approval_request.approved_at = timezone.now()
+                approval_request.save()
+        except ApprovalRequest.DoesNotExist:
+            pass
+
+        return Response({'status': 'Approval granted', 'approval_id': approval.id})
+
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
         """Reject an approval request"""
+        from django.utils import timezone
         approval = self.get_object()
-        
+
         if approval.status != 'pending':
             return Response(
                 {'error': 'Approval is not in pending status'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         approval.status = 'rejected'
         approval.notes = request.data.get('notes', '')
+        approval.comments = request.data.get('comments', '')
+        approval.rejected_at = timezone.now()
         approval.save()
-        
+
         # Mark the entire request as rejected
-        request_obj = approval.approval_request
-        if request_obj:
-            request_obj.status = 'rejected'
-            request_obj.save()
-        
-        return Response({'status': 'Approval rejected'})
+        try:
+            approval_request = ApprovalRequest.objects.get(
+                content_type=approval.content_type,
+                object_id=approval.object_id
+            )
+            approval_request.status = 'rejected'
+            approval_request.rejected_at = timezone.now()
+            approval_request.save()
+        except ApprovalRequest.DoesNotExist:
+            pass
+
+        return Response({'status': 'Approval rejected', 'approval_id': approval.id})
 
 
 class ApprovalRequestFilter(filters.FilterSet):

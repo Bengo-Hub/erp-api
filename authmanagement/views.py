@@ -74,8 +74,7 @@ class GroupViewSet(BaseModelViewSet):
 
 
 class HODUserViewSet(BaseModelViewSet):
-    queryset = User.objects.all().select_related('profile')
-    #queryset = queryset.filter(employee__hr_details__head_of__isnull=False)
+    queryset = User.objects.all().select_related('employee')
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
