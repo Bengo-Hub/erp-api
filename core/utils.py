@@ -127,8 +127,8 @@ def get_user_business(user):
             return business
 
         # Check if user is an employee
-        from hrm.employees.models import Employees
-        employee = Employees.objects.filter(user=user).select_related('branch__business').first()
+        from hrm.employees.models import Employee
+        employee = Employee.objects.filter(user=user).select_related('branch__business').first()
         if employee and employee.branch:
             return employee.branch.business
 
@@ -167,8 +167,8 @@ def get_user_branch(user, request=None):
                     return branch
 
         # Check if user is an employee with assigned branch
-        from hrm.employees.models import Employees
-        employee = Employees.objects.filter(user=user).select_related('branch').first()
+        from hrm.employees.models import Employee
+        employee = Employee.objects.filter(user=user).select_related('branch').first()
         if employee and employee.branch:
             return employee.branch
 
