@@ -184,19 +184,20 @@ class PublicInvoicePaymentView(APIView):
 
         from integrations.payments.mpesa_payment import MpesaPaymentService
 
-        result = MpesaPaymentService.initiate_stk_push(
+        # MpesaPaymentService.initiate_stk_push returns tuple: (success, message, data)
+        success, message, data = MpesaPaymentService.initiate_stk_push(
             phone=phone,
             amount=int(amount),
             account_reference=invoice.invoice_number,
             description=f"Payment for Invoice {invoice.invoice_number}"
         )
 
-        if result.get('success'):
+        if success and data:
             return APIResponse.success(
                 data={
                     'payment_method': 'mpesa',
-                    'checkout_request_id': result.get('checkout_request_id'),
-                    'merchant_request_id': result.get('merchant_request_id'),
+                    'checkout_request_id': data.get('checkout_id'),
+                    'merchant_request_id': data.get('merchant_request_id'),
                     'reference': reference,
                 },
                 message='M-Pesa prompt sent. Enter your PIN to complete payment.'
@@ -204,7 +205,7 @@ class PublicInvoicePaymentView(APIView):
         else:
             return APIResponse.error(
                 error_code='MPESA_ERROR',
-                message=result.get('error', 'Failed to initiate M-Pesa payment'),
+                message=message or 'Failed to initiate M-Pesa payment',
                 status_code=status.HTTP_400_BAD_REQUEST
             )
 

@@ -425,8 +425,8 @@ LOCALE_PATHS = [
 # CORS configuration - comprehensive setup for development
 CORS_ALLOW_CREDENTIALS = True
 _raw_cors = env_list('CORS_ALLOWED_ORIGINS', default=[
-    'http://127.0.0.1:5173',
-    'http://localhost:5173',
+    'http://127.0.0.1:5217',
+    'http://localhost:5217',
     'http://127.0.0.1:3000',
     'http://localhost:3000',
     'http://127.0.0.1:8080',
@@ -451,8 +451,8 @@ for o in _raw_cors:
 # CSRF trusted origins for frontend
 CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', default=[
     'https://erp.masterspace.co.ke',
-    'http://127.0.0.1:5173',
-    'http://localhost:5173',
+    'http://127.0.0.1:5217',
+    'http://localhost:5217',
     'http://127.0.0.1:3000',
     'http://localhost:3000',
 ])
@@ -678,7 +678,7 @@ CHANNEL_LAYERS = {
 
 # Frontend URL (for public share links, customer-facing pages)
 # Example: https://erp.masterspace.co.ke
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5217').rstrip('/')
 
 # Backend API URL (for webhooks that need to hit API endpoints)
 # Example: https://erpapi.masterspace.co.ke

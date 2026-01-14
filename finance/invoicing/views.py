@@ -908,6 +908,53 @@ class PublicInvoiceView(APIView):
             )
 
 
+class PublicInvoicePDFView(APIView):
+    """
+    Public API endpoint for streaming invoice PDF via share token.
+    Allows unauthenticated access to download/preview shared invoice PDFs.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, invoice_id, token):
+        """Stream invoice PDF by ID and share token"""
+        try:
+            invoice = Invoice.objects.get(id=invoice_id, share_token=token, is_shared=True)
+
+            # Recalculate payments if needed
+            try:
+                invoice.recalculate_payments()
+                invoice.refresh_from_db()
+            except Exception:
+                pass
+
+            # Resolve company info for PDF
+            from finance.utils import resolve_company_info
+            branch = getattr(invoice, 'branch', None)
+            biz = getattr(branch, 'business', None) if branch else None
+            company_info = resolve_company_info(biz, branch)
+
+            # Generate PDF
+            pdf_bytes = generate_invoice_pdf(invoice, company_info)
+
+            # Determine if download or inline preview
+            download = request.query_params.get('download', 'false').lower() == 'true'
+            disposition = 'attachment' if download else 'inline'
+
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'{disposition}; filename="Invoice_{invoice.invoice_number}.pdf"'
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            # Allow cross-origin access for frontend
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+
+        except Invoice.DoesNotExist:
+            return HttpResponse('Invoice not found or access denied', status=404, content_type='text/plain')
+        except Exception as e:
+            return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
+
+
 class CreditNoteViewSet(BaseModelViewSet):
     """Credit Note ViewSet with create-from-invoice functionality"""
     queryset = CreditNote.objects.all()
