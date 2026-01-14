@@ -89,6 +89,9 @@ class BusinessAdmin(admin.ModelAdmin):
         (None, {
             'fields': ('name', 'owner', 'start_date')
         }),
+        ('Registration & Compliance', {
+            'fields': ('kra_number', 'business_registration_number', 'business_license_number')
+        }),
         ('Financial Details', {
             'fields': ('finacial_year_start_month', 'stock_accounting_method', 'currency')
         }),
