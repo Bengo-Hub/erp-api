@@ -7,6 +7,8 @@ from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from business.models import Bussiness
+
 User=get_user_model()
 # Define the Kenyan phone number regex pattern
 kenyan_phone_regex = r"^(?:\+?254|0)(?:\d{9}|\d{3}\s\d{3}\s\d{3}|\d{2}\s\d{3}\s\d{3})$"
@@ -49,17 +51,21 @@ class PaymentAccounts(models.Model):
         ('suspended', 'Suspended'),
     )
     
+    # Business relationship
+    business = models.ForeignKey(Bussiness, on_delete=models.CASCADE, related_name='payment_accounts', null=True, blank=True)
+
     name = models.CharField(max_length=255)
     account_number = models.CharField(max_length=50, unique=True)
     account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES, default='bank')
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='KES')
     opening_balance = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    balance = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'), help_text='Current account balance')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     description = models.TextField(blank=True, null=True)
-    
+
     # Bank-specific fields
     bank_name = models.CharField(max_length=255, blank=True, null=True)
-    branch = models.CharField(max_length=255, blank=True, null=True)
+    branch = models.CharField(max_length=255, blank=True, null=True, help_text='Bank branch name (e.g., Main St Branch)')
     swift_code = models.CharField(max_length=20, blank=True, null=True)
     iban = models.CharField(max_length=50, blank=True, null=True)
     
@@ -72,15 +78,20 @@ class PaymentAccounts(models.Model):
 
     class Meta:
         db_table = 'payment_accounts'
-        verbose_name = 'Payment Accounts'
+        verbose_name = 'Payment Account'
         verbose_name_plural = 'Payment Accounts'
         indexes = [
+            models.Index(fields=['business'], name='idx_payment_accts_business'),
             models.Index(fields=['name'], name='idx_payment_accounts_name'),
             models.Index(fields=['account_number'], name='idx_payment_accounts_number'),
             models.Index(fields=['account_type'], name='idx_payment_accounts_type'),
             models.Index(fields=['status'], name='idx_payment_accounts_status'),
             models.Index(fields=['currency'], name='idx_payment_accounts_currency'),
         ]
+
+    @property
+    def is_active(self):
+        return self.status == 'active'
 
 class TransactionPayment(models.Model):
     TRANSACTION_TYPES = (
