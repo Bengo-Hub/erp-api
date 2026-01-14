@@ -1277,8 +1277,8 @@ class BrandingSettingsViewSet(viewsets.ViewSet):
         business = Bussiness.objects.filter(owner=request.user).first()
         if not business:
             # Try to get business where user is an employee
-            from hrm.employees.models import Employees
-            employee = Employees.objects.filter(user=request.user).first()
+            from hrm.employees.models import Employee
+            employee = Employee.objects.filter(user=request.user).first()
             if employee and employee.branch:
                 business = employee.branch.business
         return business
