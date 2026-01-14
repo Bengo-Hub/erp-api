@@ -16,11 +16,12 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 
 from .models import (
-    KRASettings, WebhookEndpoint, WebhookEvent, MpesaSettings, ExchangeRateAPISettings
+    KRASettings, WebhookEndpoint, WebhookEvent, MpesaSettings, ExchangeRateAPISettings,
+    PaystackSettings
 )
 from .serializers import (
     KRASettingsSerializer, WebhookEndpointSerializer, WebhookEventSerializer,
-    MpesaSettingsSerializer, ExchangeRateAPISettingsSerializer
+    MpesaSettingsSerializer, ExchangeRateAPISettingsSerializer, PaystackSettingsSerializer
 )
 from core.base_viewsets import BaseModelViewSet
 from core.response import APIResponse, get_correlation_id
@@ -95,6 +96,117 @@ class MpesaSettingsViewSet(viewsets.ModelViewSet):
             from .services.config_service import IntegrationConfigService
             return Response(IntegrationConfigService.DEFAULT_MPESA_CONFIG)
         return Response(self.get_serializer(obj).data)
+
+
+class PaystackSettingsViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet to manage Paystack payment gateway settings.
+    Provides endpoints to configure API credentials and test connectivity.
+    """
+    serializer_class = PaystackSettingsSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = PaystackSettings.objects.all()
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'current', 'status']:
+            return [IsAuthenticated()]
+        return [IsAdminUser()]
+
+    @action(detail=False, methods=['get'])
+    def current(self, request):
+        """Get the currently configured Paystack settings."""
+        obj = PaystackSettings.objects.order_by('-updated_at').first()
+        if not obj:
+            return Response({
+                'is_test_mode': True,
+                'base_url': 'https://api.paystack.co',
+                'default_currency': 'KES',
+                'enabled_channels': ['card', 'bank_transfer', 'mobile_money'],
+                'is_configured': False,
+            })
+        data = self.get_serializer(obj).data
+        data['is_configured'] = True
+        return Response(data)
+
+    @action(detail=False, methods=['get'])
+    def status(self, request):
+        """Check Paystack connection status and fetch totals."""
+        try:
+            from integrations.payments.paystack_payment import PaystackPaymentService
+            result = PaystackPaymentService.get_transaction_totals()
+
+            if result.get('success'):
+                return Response({
+                    'is_configured': True,
+                    'is_connected': True,
+                    'total_transactions': result.get('total_transactions', 0),
+                    'total_volume': float(result.get('total_volume', 0)),
+                    'pending_transfers': float(result.get('pending_transfers', 0)),
+                })
+            else:
+                return Response({
+                    'is_configured': True,
+                    'is_connected': False,
+                    'error': result.get('error', 'Connection failed'),
+                })
+        except Exception as exc:
+            logger.error(f"Error checking Paystack status: {exc}")
+            return Response({
+                'is_configured': False,
+                'is_connected': False,
+                'error': str(exc)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'])
+    def test_connection(self, request):
+        """Test Paystack API connection with current credentials."""
+        try:
+            from integrations.payments.paystack_payment import PaystackPaymentService
+            result = PaystackPaymentService.get_transaction_totals()
+
+            if result.get('success'):
+                return Response({
+                    'success': True,
+                    'message': 'Paystack connection successful',
+                    'total_transactions': result.get('total_transactions', 0),
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'message': 'Connection failed',
+                    'error': result.get('error'),
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            logger.error(f"Error testing Paystack connection: {exc}")
+            return Response({
+                'success': False,
+                'error': str(exc)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'])
+    def banks(self, request):
+        """Get list of supported banks for bank transfers."""
+        try:
+            from integrations.payments.paystack_payment import PaystackPaymentService
+            country = request.query_params.get('country', 'kenya')
+            result = PaystackPaymentService.list_banks(country)
+
+            if result.get('success'):
+                return Response({
+                    'success': True,
+                    'banks': result.get('banks', []),
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'error': result.get('error'),
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            logger.error(f"Error fetching Paystack banks: {exc}")
+            return Response({
+                'success': False,
+                'error': str(exc)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class WebhookEndpointViewSet(viewsets.ModelViewSet):
     serializer_class = WebhookEndpointSerializer

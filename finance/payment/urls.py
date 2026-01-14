@@ -18,6 +18,12 @@ from .views import (
     SplitPaymentView,
     get_payment_accounts,
 )
+from .public_views import (
+    PublicInvoicePaymentView,
+    PaystackWebhookView,
+    PaystackVerifyPaymentView,
+    PublicPaymentMethodsView,
+)
 
 router = DefaultRouter()
 router.register(r'methods', PaymentMethodViewSet, basename='payment-method')
@@ -36,4 +42,10 @@ urlpatterns = [
     # M-Pesa specific endpoints
     path('mpesa/process/', MpesaPaymentView.as_view(), name='finance-mpesa-process'),
     path('mpesa/callback/', MpesaCallbackView.as_view(), name='finance-mpesa-callback'),
+    # Public payment endpoints (no authentication required)
+    path('public/invoice/<int:invoice_id>/<str:token>/pay/', PublicInvoicePaymentView.as_view(), name='public-invoice-payment'),
+    path('public/invoice/<int:invoice_id>/<str:token>/methods/', PublicPaymentMethodsView.as_view(), name='public-payment-methods'),
+    # Paystack webhooks and verification
+    path('paystack/webhook/', PaystackWebhookView.as_view(), name='paystack-webhook'),
+    path('paystack/verify/<str:reference>/', PaystackVerifyPaymentView.as_view(), name='paystack-verify'),
 ]
