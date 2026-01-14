@@ -367,19 +367,27 @@ if [[ "$DEPLOY" == "true" ]]; then
             fi
         fi
 
-        # Ensure ArgoCD Application has correct ignoreDifferences for PVCs
+        # Ensure ArgoCD Application has correct ignoreDifferences for HPA-managed replicas and PVCs
         if [[ -n "${KUBE_CONFIG:-}" ]]; then
-            log_step "Ensuring ArgoCD Application has PVC ignoreDifferences configured..."
-            
-            # Check if ArgoCD Application exists and has ignoreDifferences for PVCs
+            log_step "Ensuring ArgoCD Application has ignoreDifferences configured..."
+
+            # Check if ArgoCD Application exists
             if kubectl -n argocd get application erp-api >/dev/null 2>&1; then
-                HAS_PVC_IGNORE=$(kubectl -n argocd get application erp-api -o jsonpath='{.spec.ignoreDifferences}' | grep -i persistentvolumeclaim || echo "")
-                
-                if [[ -z "$HAS_PVC_IGNORE" ]]; then
-                    log_info "Updating ArgoCD Application with PVC ignoreDifferences..."
+                # Check for both Deployment replicas and PVC ignore rules
+                CURRENT_IGNORE=$(kubectl -n argocd get application erp-api -o jsonpath='{.spec.ignoreDifferences}' 2>/dev/null || echo "")
+                HAS_DEPLOYMENT_IGNORE=$(echo "$CURRENT_IGNORE" | grep -i '"kind":"Deployment"' || echo "")
+                HAS_PVC_IGNORE=$(echo "$CURRENT_IGNORE" | grep -i persistentvolumeclaim || echo "")
+
+                if [[ -z "$HAS_DEPLOYMENT_IGNORE" || -z "$HAS_PVC_IGNORE" ]]; then
+                    log_info "Updating ArgoCD Application with complete ignoreDifferences..."
                     kubectl -n argocd patch application erp-api --type merge -p '{
                       "spec": {
                         "ignoreDifferences": [
+                          {
+                            "group": "apps",
+                            "kind": "Deployment",
+                            "jsonPointers": ["/spec/replicas"]
+                          },
                           {
                             "group": "",
                             "kind": "PersistentVolumeClaim",
@@ -388,12 +396,12 @@ if [[ "$DEPLOY" == "true" ]]; then
                         ]
                       }
                     }' || log_warning "Could not patch ArgoCD Application"
-                    log_success "ArgoCD Application updated with PVC ignoreDifferences"
+                    log_success "ArgoCD Application updated with Deployment and PVC ignoreDifferences"
                 else
-                    log_info "ArgoCD Application already has PVC ignoreDifferences configured"
+                    log_info "ArgoCD Application already has complete ignoreDifferences configured"
                 fi
             else
-                log_info "ArgoCD Application 'erp-api' not found yet - will be created with correct config"
+                log_info "ArgoCD Application 'erp-api' not found yet - will be created with correct config from app.yaml"
             fi
         fi
 
