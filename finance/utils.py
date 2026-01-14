@@ -377,11 +377,18 @@ def get_brand_color(company_info, default="#2563eb"):
 
 
 
-def resolve_company_info(business=None, branch=None):
+def resolve_company_info(business=None, branch=None, request=None):
     """Build a company_info dict used by PDF generator from Business and optional Branch.
 
     Returns a dict with keys: name, address, email, phone, logo_path, pin, primary_color, secondary_color, text_color.
+
+    Args:
+        business: Business instance or None
+        branch: Branch instance or None
+        request: Optional request object to extract context from headers if business/branch are None
     """
+    from business.models import Bussiness, Branch as BranchModel
+
     info = {
         'name': '',
         'address': '',
@@ -395,9 +402,26 @@ def resolve_company_info(business=None, branch=None):
     }
 
     try:
+        # If no business/branch provided, try to get from request context
+        if business is None and branch is None and request:
+            try:
+                from core.utils import get_business_context
+                ctx = get_business_context(request)
+                business = ctx.get('business')
+                branch = ctx.get('branch')
+            except Exception:
+                pass
+
+        # If still no business but have branch, get business from branch
+        if business is None and branch:
+            business = getattr(branch, 'business', None)
+
+        # If no branch but have business, get main branch
         if branch is None and business and getattr(business, 'branches', None):
             try:
                 branch = business.branches.filter(is_main_branch=True, is_active=True).first()
+                if not branch:
+                    branch = business.branches.filter(is_active=True).first()
             except Exception:
                 branch = None
 
@@ -405,20 +429,31 @@ def resolve_company_info(business=None, branch=None):
         if business:
             info['name'] = getattr(business, 'name', '')
 
-        # Logo path
+        # Logo path - try multiple ways to get it
         try:
-            if business and getattr(business, 'logo', None) and hasattr(business.logo, 'path'):
-                info['logo_path'] = business.logo.path
+            if business and getattr(business, 'logo', None):
+                logo = business.logo
+                if hasattr(logo, 'path') and logo.path:
+                    info['logo_path'] = logo.path
+                elif hasattr(logo, 'url') and logo.url:
+                    info['logo_path'] = logo.url
         except Exception:
             info['logo_path'] = None
 
-        # Contact & email: branch preferred
+        # Contact & email: branch preferred, then business
         if branch:
-            info['email'] = getattr(branch, 'email', '') or getattr(business, 'email', '') if business else ''
-            info['phone'] = getattr(branch, 'contact_number', '') or getattr(business, 'contact_number', '') if business else ''
+            info['email'] = getattr(branch, 'email', '') or ''
+            info['phone'] = getattr(branch, 'contact_number', '') or ''
             loc = getattr(branch, 'location', None)
             if loc:
                 info['address'] = format_location_address(loc)
+
+        # Fallback to business-level email/phone if not set from branch
+        if business:
+            if not info['email']:
+                info['email'] = getattr(business, 'email', '') or ''
+            if not info['phone']:
+                info['phone'] = getattr(business, 'contact_number', '') or ''
 
         # Fallback to business-level location
         if not info['address'] and business:
