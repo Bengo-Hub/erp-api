@@ -127,6 +127,9 @@ class QuotationViewSet(BaseModelViewSet):
             else:
                 company = Bussiness.objects.first()
             
+            # Generate public share URL for the email (not internal URL)
+            public_url = quotation.get_public_share_url()
+
             context = {
                 'customer_name': quotation.customer.business_name or f"{quotation.customer.user.first_name} {quotation.customer.user.last_name}".strip(),
                 'quotation_number': quotation.quotation_number,
@@ -135,7 +138,7 @@ class QuotationViewSet(BaseModelViewSet):
                 'total_amount': f"{quotation.total:,.2f}",
                 'introduction': custom_message or quotation.introduction,
                 'customer_notes': quotation.customer_notes,
-                'quotation_url': f"{request.build_absolute_uri('/')[:-1]}/finance/quotations/{quotation.id}",
+                'quotation_url': public_url,
                 'company_name': company.name if company else 'N/A',
                 'year': timezone.now().year
             }
@@ -540,6 +543,9 @@ class QuotationViewSet(BaseModelViewSet):
                 try:
                     email_to = quotation.customer.user.email
                     
+                    # Generate public share URL for the email
+                    public_url = quotation.get_public_share_url()
+
                     context = {
                         'customer_name': quotation.customer.business_name or f"{quotation.customer.user.first_name} {quotation.customer.user.last_name}".strip(),
                         'quotation_number': quotation.quotation_number,
@@ -548,7 +554,7 @@ class QuotationViewSet(BaseModelViewSet):
                         'total_amount': f"{quotation.total:,.2f}",
                         'introduction': quotation.introduction,
                         'customer_notes': quotation.customer_notes,
-                        'quotation_url': f"{request.build_absolute_uri('/')[:-1]}/finance/quotations/{quotation.id}",
+                        'quotation_url': public_url,
                         'company_name': company.name if company else 'Company',
                         'year': timezone.now().year
                     }
