@@ -128,9 +128,9 @@ def get_user_business(user):
 
         # Check if user is an employee
         from hrm.employees.models import Employee
-        employee = Employee.objects.filter(user=user).select_related('branch__business').first()
-        if employee and employee.branch:
-            return employee.branch.business
+        employee = Employee.objects.filter(user=user).select_related('organisation').first()
+        if employee and employee.organisation:
+            return employee.organisation
 
         return None
     except Exception as e:
@@ -142,7 +142,7 @@ def get_user_branch(user, request=None):
     """
     Get the branch for a user. Logic:
     1. Check request header for X-Branch-ID
-    2. Check if user is an employee with assigned branch
+    2. Check if user is an employee with assigned branch (via hr_details)
     3. For business owners/superusers, get the main branch or first branch
 
     Args:
@@ -166,11 +166,16 @@ def get_user_branch(user, request=None):
                 if branch:
                     return branch
 
-        # Check if user is an employee with assigned branch
+        # Check if user is an employee with assigned branch (via hr_details)
         from hrm.employees.models import Employee
-        employee = Employee.objects.filter(user=user).select_related('branch').first()
-        if employee and employee.branch:
-            return employee.branch
+        employee = Employee.objects.filter(user=user).first()
+        if employee:
+            # Try to get branch from hr_details
+            hr_detail = getattr(employee, 'hr_details', None)
+            if hr_detail:
+                hr = hr_detail.first() if hasattr(hr_detail, 'first') else hr_detail
+                if hr and getattr(hr, 'branch', None):
+                    return hr.branch
 
         # For business owners, get main branch or first branch
         business = get_user_business(user)
