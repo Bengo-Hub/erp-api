@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Invoice, InvoicePayment, InvoiceEmailLog, CreditNote, DebitNote, DeliveryNote, ProformaInvoice
 from core_orders.serializers import BaseOrderSerializer, OrderItemSerializer
 from crm.contacts.serializers import ContactSerializer
+from approvals.utils import get_current_approver_id, get_pending_approvals_for_object
 
 
 class InvoiceSerializer(BaseOrderSerializer):
@@ -14,7 +15,10 @@ class InvoiceSerializer(BaseOrderSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     balance_due = serializers.DecimalField(read_only=True, max_digits=15, decimal_places=2)
     payment_terms_display = serializers.CharField(source='get_payment_terms_display', read_only=True)
-    
+    current_approver_id = serializers.SerializerMethodField()
+    pending_approvals = serializers.SerializerMethodField()
+    created_by_id = serializers.ReadOnlyField(source='created_by.id')
+
     class Meta(BaseOrderSerializer.Meta):
         model = Invoice
         fields = BaseOrderSerializer.Meta.fields + [
@@ -27,22 +31,31 @@ class InvoiceSerializer(BaseOrderSerializer):
             'payment_gateway_enabled', 'payment_gateway_name', 'payment_link',
             'is_recurring', 'recurring_interval', 'next_invoice_date',
             'customer_details', 'items', 'balance_due_display', 'balance_due', 'is_overdue', 'days_until_due',
+            'current_approver_id', 'pending_approvals', 'created_by_id',
         ]
-        read_only_fields = ['invoice_number', 'order_number', 'sent_at', 'viewed_at', 
+        read_only_fields = ['invoice_number', 'order_number', 'sent_at', 'viewed_at',
                            'approved_by', 'approved_at', 'balance_due']
-    
+
     def get_is_overdue(self, obj):
         from django.utils import timezone
         if obj.due_date and obj.due_date < timezone.now().date() and obj.status not in ['paid', 'cancelled', 'void']:
             return True
         return False
-    
+
     def get_days_until_due(self, obj):
         from django.utils import timezone
         if obj.due_date:
             delta = obj.due_date - timezone.now().date()
             return delta.days
         return None
+
+    def get_current_approver_id(self, obj):
+        """Get the current approver ID for this invoice."""
+        return get_current_approver_id(obj)
+
+    def get_pending_approvals(self, obj):
+        """Get pending approvals for this invoice."""
+        return get_pending_approvals_for_object(obj)
 
 
 class InvoiceFrontendSerializer(serializers.ModelSerializer):

@@ -4,6 +4,7 @@ from .models import PurchaseOrder, PurchaseOrderPayment
 from core_orders.serializers import BaseOrderSerializer
 from approvals.models import Approval
 from approvals.serializers import ApprovalSerializer
+from approvals.utils import get_current_approver_id, get_pending_approvals_for_object
 from procurement.requisitions.models import ProcurementRequest
 
 
@@ -13,6 +14,9 @@ class PurchaseOrderSerializer(BaseOrderSerializer):
     requisition_reference = serializers.SerializerMethodField()
     approvals = serializers.SerializerMethodField()
     total_paid = serializers.SerializerMethodField()
+    current_approver_id = serializers.SerializerMethodField()
+    pending_approvals_list = serializers.SerializerMethodField()
+    created_by_id = serializers.ReadOnlyField(source='created_by.id')
     # Make requisition optional - queryset set at class level to avoid init issues
     requisition = serializers.PrimaryKeyRelatedField(
         queryset=ProcurementRequest.objects.all(),
@@ -25,7 +29,8 @@ class PurchaseOrderSerializer(BaseOrderSerializer):
         fields = BaseOrderSerializer.Meta.fields + [
             'requisition', 'supplier_name', 'requisition_reference',
             'expected_delivery', 'delivery_instructions',
-            'approved_budget', 'actual_cost', 'approvals', 'total_paid'
+            'approved_budget', 'actual_cost', 'approvals', 'total_paid',
+            'current_approver_id', 'pending_approvals_list', 'created_by_id'
         ]
 
     def get_supplier_name(self, obj):
@@ -49,18 +54,29 @@ class PurchaseOrderSerializer(BaseOrderSerializer):
         total = obj.po_payments.aggregate(Sum('amount'))['amount__sum'] or 0
         return float(total)
 
+    def get_current_approver_id(self, obj):
+        """Get the current approver ID for this PO."""
+        return get_current_approver_id(obj)
+
+    def get_pending_approvals_list(self, obj):
+        """Get pending approvals for this PO."""
+        return get_pending_approvals_for_object(obj)
+
 
 class PurchaseOrderListSerializer(BaseOrderSerializer):
     """Simplified purchase order serializer for list views"""
     supplier_name = serializers.SerializerMethodField()
     requisition_reference = serializers.SerializerMethodField()
+    current_approver_id = serializers.SerializerMethodField()
+    created_by_id = serializers.ReadOnlyField(source='created_by.id')
 
     class Meta(BaseOrderSerializer.Meta):
         model = PurchaseOrder
         fields = [
             'id', 'order_number', 'requisition_reference', 'supplier',
             'supplier_name', 'status', 'total', 'expected_delivery',
-            'approved_budget', 'actual_cost', 'created_at', 'currency'
+            'approved_budget', 'actual_cost', 'created_at', 'currency',
+            'current_approver_id', 'created_by_id'
         ]
 
     def get_supplier_name(self, obj):
@@ -73,6 +89,10 @@ class PurchaseOrderListSerializer(BaseOrderSerializer):
         if obj.requisition:
             return obj.requisition.reference_number
         return None
+
+    def get_current_approver_id(self, obj):
+        """Get the current approver ID for this PO."""
+        return get_current_approver_id(obj)
 
 
 class PurchaseOrderItemCreateSerializer(serializers.Serializer):

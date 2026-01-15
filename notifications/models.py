@@ -566,6 +566,7 @@ class InAppNotification(BaseModel):
     message = models.TextField()
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
     is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True, help_text="When the notification was read")
     is_archived = models.BooleanField(default=False)
     
     # Action fields

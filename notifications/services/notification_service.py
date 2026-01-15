@@ -213,18 +213,19 @@ class NotificationService:
         """Filter channels based on user preferences."""
         if not preferences:
             return channels
-        
+
         enabled_channels = []
         for channel in channels:
-            if channel == 'email' and preferences.email_enabled:
+            # Use correct field names from UserNotificationPreferences model
+            if channel == 'email' and getattr(preferences, 'email_notifications_enabled', True):
                 enabled_channels.append(channel)
-            elif channel == 'sms' and preferences.sms_enabled:
+            elif channel == 'sms' and getattr(preferences, 'sms_notifications_enabled', True):
                 enabled_channels.append(channel)
-            elif channel == 'push' and preferences.push_enabled:
+            elif channel == 'push' and getattr(preferences, 'push_notifications_enabled', True):
                 enabled_channels.append(channel)
-            elif channel == 'in_app' and preferences.in_app_enabled:
+            elif channel == 'in_app' and getattr(preferences, 'in_app_notifications_enabled', True):
                 enabled_channels.append(channel)
-        
+
         return enabled_channels
     
     def _send_in_app_notification(

@@ -275,10 +275,10 @@ class OrderItem(models.Model):
     Order Items - Generic items that can be linked to any order type
     """
     order = models.ForeignKey(BaseOrder, on_delete=models.CASCADE, related_name='items')
-    
-    # Generic content type for different item types
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
+
+    # Generic content type for different item types (optional - allows items without product link)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
     content_object = GenericForeignKey('content_type', 'object_id')
     
     # Item details

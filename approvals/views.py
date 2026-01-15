@@ -255,17 +255,30 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         request_obj = serializer.save(requester=self.request.user)
-        
+
         # Create approval instances for each step in the workflow
         workflow = request_obj.workflow
-        for step in workflow.steps.all():
+
+        # Try to get department from the content object for approver resolution
+        department = None
+        if request_obj.content_object:
+            department = getattr(request_obj.content_object, 'department', None)
+            if not department:
+                branch = getattr(request_obj.content_object, 'branch', None)
+                if branch:
+                    department = getattr(branch, 'department', None)
+
+        for step in workflow.steps.filter(is_active=True).order_by('step_number'):
+            # Use the step's get_approver method to resolve the actual approver
+            approver = step.get_approver(requester=self.request.user, department=department)
+
             Approval.objects.create(
                 workflow=workflow,
                 step=step,
-                approval_request=request_obj,
-                approver=step.approver,
+                approver=approver,
                 content_type=request_obj.content_type,
                 object_id=request_obj.object_id,
+                approval_amount=request_obj.amount,
                 status='pending'
             )
     

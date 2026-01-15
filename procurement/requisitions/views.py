@@ -14,6 +14,105 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def send_requisition_notification(requisition, notification_type, action_user, additional_message=None):
+    """
+    Send notification for requisition workflow events.
+
+    Args:
+        requisition: The ProcurementRequest instance
+        notification_type: Type of notification ('created', 'submitted', 'approved', 'rejected')
+        action_user: The user who performed the action
+        additional_message: Optional additional context message
+    """
+    try:
+        from notifications.services.notification_service import NotificationService
+        from django.contrib.auth import get_user_model
+        from approvals.utils import get_approvers_for_permission
+
+        User = get_user_model()
+        notification_service = NotificationService()
+
+        # Build base context
+        context = {
+            'reference_number': requisition.reference_number,
+            'request_type': requisition.get_request_type_display() if hasattr(requisition, 'get_request_type_display') else requisition.request_type,
+            'purpose': requisition.purpose or 'N/A',
+            'requester_name': f"{requisition.requester.first_name} {requisition.requester.last_name}".strip() or requisition.requester.username,
+            'action_user_name': f"{action_user.first_name} {action_user.last_name}".strip() or action_user.username,
+        }
+
+        if notification_type == 'created':
+            # Notify procurement managers/approvers about new requisition
+            title = f"New Requisition: {requisition.reference_number}"
+            message = f"A new {context['request_type']} requisition has been created by {context['requester_name']}.\n\nPurpose: {context['purpose']}"
+            recipients = get_approvers_for_permission('procurement.view_procurementrequest')
+            action_url = f"/procurement/requisitions/{requisition.id}"
+
+        elif notification_type == 'submitted':
+            # Notify approvers about submitted requisition
+            title = f"Requisition Pending Approval: {requisition.reference_number}"
+            message = f"A {context['request_type']} requisition has been submitted for approval by {context['requester_name']}.\n\nPurpose: {context['purpose']}"
+            recipients = get_approvers_for_permission('procurement.approve_procurementrequest')
+            action_url = f"/procurement/requisitions/{requisition.id}"
+
+        elif notification_type == 'approved':
+            # Notify requester about approval
+            title = f"Requisition Approved: {requisition.reference_number}"
+            message = f"Your {context['request_type']} requisition has been approved by {context['action_user_name']}."
+            if additional_message:
+                message += f"\n\n{additional_message}"
+            recipients = [requisition.requester]
+            action_url = f"/procurement/requisitions/{requisition.id}"
+
+        elif notification_type == 'rejected':
+            # Notify requester about rejection
+            title = f"Requisition Rejected: {requisition.reference_number}"
+            message = f"Your {context['request_type']} requisition has been rejected by {context['action_user_name']}."
+            if additional_message:
+                message += f"\n\nReason: {additional_message}"
+            recipients = [requisition.requester]
+            action_url = f"/procurement/requisitions/{requisition.id}"
+
+        else:
+            logger.warning(f"Unknown notification type: {notification_type}")
+            return
+
+        # Send notifications to all recipients
+        for recipient in recipients:
+            if isinstance(recipient, int):
+                try:
+                    recipient = User.objects.get(id=recipient)
+                except User.DoesNotExist:
+                    continue
+
+            # Skip sending notification to the user who performed the action
+            if recipient.id == action_user.id:
+                continue
+
+            try:
+                notification_service.send_notification(
+                    user=recipient,
+                    title=title,
+                    message=message,
+                    notification_type='APPROVAL',
+                    channels=['in_app', 'email'],
+                    action_url=action_url,
+                    data={
+                        'requisition_id': requisition.id,
+                        'reference_number': requisition.reference_number,
+                        'event_type': notification_type
+                    },
+                    async_send=False
+                )
+            except Exception as e:
+                logger.error(f"Failed to send notification to {recipient.username}: {str(e)}")
+
+    except ImportError as e:
+        logger.warning(f"Notification service not available: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error sending requisition notification: {str(e)}", exc_info=True)
+
+
 class ProcurementRequestViewSet(BaseModelViewSet):
     """
     API endpoint that allows procurement requests to be viewed or edited.
@@ -65,7 +164,9 @@ class ProcurementRequestViewSet(BaseModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(requester=self.request.user)
+        requisition = serializer.save(requester=self.request.user)
+        # Send notification about new requisition
+        send_requisition_notification(requisition, 'created', self.request.user)
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -100,6 +201,10 @@ class ProcurementRequestViewSet(BaseModelViewSet):
             purchase_order = None
             if procurement_request.request_type == 'external_item':
                 purchase_order = self._create_purchase_order_from_requisition(procurement_request, request.user)
+
+            # Send notification about approval
+            additional_msg = 'A Purchase Order has been created.' if purchase_order else None
+            send_requisition_notification(procurement_request, 'approved', request.user, additional_msg)
 
             response_data = self.get_serializer(procurement_request).data
             if purchase_order:
@@ -234,7 +339,10 @@ class ProcurementRequestViewSet(BaseModelViewSet):
                 reason='Procurement request published',
                 request=request
             )
-            
+
+            # Send notification about submission
+            send_requisition_notification(procurement_request, 'submitted', request.user)
+
             return APIResponse.success(
                 data=self.get_serializer(procurement_request).data,
                 message='Procurement request published successfully',
@@ -276,7 +384,11 @@ class ProcurementRequestViewSet(BaseModelViewSet):
                 reason='Procurement request rejected',
                 request=request
             )
-            
+
+            # Send notification about rejection
+            rejection_notes = request.data.get('notes', '')
+            send_requisition_notification(procurement_request, 'rejected', request.user, rejection_notes)
+
             return APIResponse.success(
                 data=self.get_serializer(procurement_request).data,
                 message='Procurement request rejected',

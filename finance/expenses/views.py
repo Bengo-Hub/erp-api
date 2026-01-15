@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 from django.template.loader import render_to_string
 from .models import Expense, ExpenseCategory, ExpensePayment, PaymentAccounts, ExpenseEmailLog
@@ -339,6 +339,351 @@ class ExpenseViewSet(BaseModelViewSet):
                 correlation_id=self.get_correlation_id()
             )
     
+    @action(detail=True, methods=['post'], url_path='submit-for-approval', name='submit_for_approval')
+    def submit_for_approval(self, request, pk=None):
+        """
+        Submit expense for approval - creates approval request and notifies approvers
+        """
+        try:
+            correlation_id = self.get_correlation_id()
+            expense = self.get_object()
+
+            if expense.status != 'draft':
+                return APIResponse.bad_request(
+                    message='Only draft expenses can be submitted for approval',
+                    correlation_id=correlation_id
+                )
+
+            with transaction.atomic():
+                # Get the expense approval workflow
+                from approvals.models import ApprovalWorkflow, ApprovalRequest
+                from django.contrib.contenttypes.models import ContentType
+
+                try:
+                    workflow = ApprovalWorkflow.objects.get(
+                        workflow_type='expense',
+                        is_active=True
+                    )
+                except ApprovalWorkflow.DoesNotExist:
+                    # No approval workflow configured - auto-approve to pending
+                    expense.status = 'pending'
+                    expense.save()
+
+                    return APIResponse.success(
+                        data=self.get_serializer(expense).data,
+                        message='Expense submitted (no approval workflow configured)',
+                        correlation_id=correlation_id
+                    )
+
+                # Create approval request
+                content_type = ContentType.objects.get_for_model(Expense)
+                approval_request = ApprovalRequest.objects.create(
+                    content_type=content_type,
+                    object_id=expense.id,
+                    workflow=workflow,
+                    requester=request.user,
+                    title=f'Expense Approval: {expense.reference_no}',
+                    description=expense.expense_note or f'Expense {expense.reference_no} requires approval',
+                    amount=expense.total_amount,
+                    status='draft'
+                )
+
+                # Submit the request (this creates approval steps)
+                approval_request.submit()
+
+                # Update expense status
+                expense.status = 'pending'
+                expense.save()
+
+                # Send notification to first approver
+                first_approval = approval_request.approvals.filter(status='pending').first()
+                if first_approval and first_approval.approver:
+                    self._notify_approver(expense, first_approval.approver, approval_request)
+
+                # Log action
+                AuditTrail.log(
+                    operation=AuditTrail.UPDATE,
+                    module='finance',
+                    entity_type='Expense',
+                    entity_id=expense.id,
+                    user=request.user,
+                    reason=f'Expense {expense.reference_no} submitted for approval',
+                    request=request
+                )
+
+                return APIResponse.success(
+                    data=self.get_serializer(expense).data,
+                    message='Expense submitted for approval',
+                    correlation_id=correlation_id
+                )
+
+        except Exception as e:
+            logger.error(f'Error submitting expense for approval: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error submitting expense for approval',
+                error_id=str(e),
+                correlation_id=self.get_correlation_id()
+            )
+
+    def _notify_approver(self, expense, approver, approval_request):
+        """Send notification to approver"""
+        try:
+            email_service = EmailService()
+            context = {
+                'approver_name': approver.get_full_name() or approver.email,
+                'approval_type': 'Expense',
+                'requested_by': expense.created_by.get_full_name() if hasattr(expense, 'created_by') and expense.created_by else 'Unknown',
+                'amount': str(expense.total_amount),
+                'description': expense.expense_note or f'Expense {expense.reference_no}',
+                'requested_date': str(timezone.now().date()),
+                'action_url': f'/approvals/{approval_request.id}',
+                'workflow_name': approval_request.workflow.name,
+            }
+            email_service.send_email(
+                subject=f'Approval Required: Expense {expense.reference_no}',
+                template_name='notifications/email/approval_required.html',
+                context=context,
+                recipient_list=[approver.email],
+            )
+        except Exception as e:
+            logger.warning(f'Failed to send approval notification: {str(e)}')
+
+    @action(detail=True, methods=['post'], url_path='approve', name='approve_expense')
+    def approve(self, request, pk=None):
+        """Approve an expense"""
+        try:
+            correlation_id = self.get_correlation_id()
+            expense = self.get_object()
+
+            if expense.status != 'pending':
+                return APIResponse.bad_request(
+                    message='Only pending expenses can be approved',
+                    correlation_id=correlation_id
+                )
+
+            notes = request.data.get('notes', '')
+            comments = request.data.get('comments', '')
+
+            with transaction.atomic():
+                # Check for approval request
+                from approvals.models import Approval
+                from django.contrib.contenttypes.models import ContentType
+
+                content_type = ContentType.objects.get_for_model(Expense)
+                pending_approval = Approval.objects.filter(
+                    content_type=content_type,
+                    object_id=expense.id,
+                    approver=request.user,
+                    status='pending'
+                ).first()
+
+                if pending_approval:
+                    pending_approval.approve(notes=notes, comments=comments)
+
+                    # Check if all approvals are done
+                    remaining = Approval.objects.filter(
+                        content_type=content_type,
+                        object_id=expense.id,
+                        status='pending'
+                    ).count()
+
+                    if remaining == 0:
+                        expense.status = 'approved'
+                        expense.save()
+                else:
+                    # Direct approval without workflow
+                    expense.status = 'approved'
+                    expense.save()
+
+                AuditTrail.log(
+                    operation=AuditTrail.UPDATE,
+                    module='finance',
+                    entity_type='Expense',
+                    entity_id=expense.id,
+                    user=request.user,
+                    reason=f'Expense {expense.reference_no} approved',
+                    request=request
+                )
+
+                return APIResponse.success(
+                    data=self.get_serializer(expense).data,
+                    message='Expense approved successfully',
+                    correlation_id=correlation_id
+                )
+
+        except Exception as e:
+            logger.error(f'Error approving expense: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error approving expense',
+                error_id=str(e),
+                correlation_id=self.get_correlation_id()
+            )
+
+    @action(detail=True, methods=['post'], url_path='reject', name='reject_expense')
+    def reject(self, request, pk=None):
+        """Reject an expense"""
+        try:
+            correlation_id = self.get_correlation_id()
+            expense = self.get_object()
+
+            if expense.status != 'pending':
+                return APIResponse.bad_request(
+                    message='Only pending expenses can be rejected',
+                    correlation_id=correlation_id
+                )
+
+            reason = request.data.get('reason', '')
+            if not reason:
+                return APIResponse.bad_request(
+                    message='Rejection reason is required',
+                    correlation_id=correlation_id
+                )
+
+            with transaction.atomic():
+                # Check for approval request
+                from approvals.models import Approval
+                from django.contrib.contenttypes.models import ContentType
+
+                content_type = ContentType.objects.get_for_model(Expense)
+                pending_approval = Approval.objects.filter(
+                    content_type=content_type,
+                    object_id=expense.id,
+                    approver=request.user,
+                    status='pending'
+                ).first()
+
+                if pending_approval:
+                    pending_approval.reject(notes=reason)
+
+                expense.status = 'rejected'
+                expense.save()
+
+                AuditTrail.log(
+                    operation=AuditTrail.UPDATE,
+                    module='finance',
+                    entity_type='Expense',
+                    entity_id=expense.id,
+                    user=request.user,
+                    reason=f'Expense {expense.reference_no} rejected: {reason}',
+                    request=request
+                )
+
+                return APIResponse.success(
+                    data=self.get_serializer(expense).data,
+                    message='Expense rejected',
+                    correlation_id=correlation_id
+                )
+
+        except Exception as e:
+            logger.error(f'Error rejecting expense: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error rejecting expense',
+                error_id=str(e),
+                correlation_id=self.get_correlation_id()
+            )
+
+    @action(detail=False, methods=['post'], url_path='bulk-approve', name='bulk_approve')
+    def bulk_approve(self, request):
+        """Bulk approve expenses"""
+        try:
+            correlation_id = self.get_correlation_id()
+            ids = request.data.get('ids', [])
+
+            if not ids:
+                return APIResponse.bad_request(
+                    message='No expense IDs provided',
+                    correlation_id=correlation_id
+                )
+
+            with transaction.atomic():
+                expenses = Expense.objects.filter(id__in=ids, status='pending')
+                count = expenses.update(status='approved')
+
+                return APIResponse.success(
+                    data={'approved_count': count},
+                    message=f'{count} expense(s) approved',
+                    correlation_id=correlation_id
+                )
+
+        except Exception as e:
+            logger.error(f'Error bulk approving expenses: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error bulk approving expenses',
+                error_id=str(e),
+                correlation_id=self.get_correlation_id()
+            )
+
+    @action(detail=False, methods=['post'], url_path='bulk-reject', name='bulk_reject')
+    def bulk_reject(self, request):
+        """Bulk reject expenses"""
+        try:
+            correlation_id = self.get_correlation_id()
+            ids = request.data.get('ids', [])
+            reason = request.data.get('reason', 'Bulk rejection')
+
+            if not ids:
+                return APIResponse.bad_request(
+                    message='No expense IDs provided',
+                    correlation_id=correlation_id
+                )
+
+            with transaction.atomic():
+                expenses = Expense.objects.filter(id__in=ids, status='pending')
+                count = expenses.update(status='rejected')
+
+                return APIResponse.success(
+                    data={'rejected_count': count},
+                    message=f'{count} expense(s) rejected',
+                    correlation_id=correlation_id
+                )
+
+        except Exception as e:
+            logger.error(f'Error bulk rejecting expenses: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error bulk rejecting expenses',
+                error_id=str(e),
+                correlation_id=self.get_correlation_id()
+            )
+
+    @action(detail=False, methods=['get'], url_path='summary', name='expense_summary')
+    def summary(self, request):
+        """Get expense summary statistics"""
+        try:
+            correlation_id = self.get_correlation_id()
+            queryset = self.get_queryset()
+
+            from django.db.models import Count, Sum
+
+            summary = queryset.aggregate(
+                total_expenses=Count('id'),
+                draft=Count('id', filter=models.Q(status='draft')),
+                pending=Count('id', filter=models.Q(status='pending')),
+                approved=Count('id', filter=models.Q(status='approved')),
+                rejected=Count('id', filter=models.Q(status='rejected')),
+                paid=Count('id', filter=models.Q(status='paid')),
+                total_amount=Sum('total_amount'),
+                pending_amount=Sum('total_amount', filter=models.Q(status='pending')),
+            )
+
+            # Handle None values
+            for key in summary:
+                if summary[key] is None:
+                    summary[key] = 0
+
+            return APIResponse.success(
+                data=summary,
+                message='Summary retrieved',
+                correlation_id=correlation_id
+            )
+
+        except Exception as e:
+            logger.error(f'Error getting expense summary: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error getting summary',
+                error_id=str(e),
+                correlation_id=self.get_correlation_id()
+            )
+
     @action(detail=True, methods=['get'], url_path='download-pdf', name='download_pdf')
     def download_pdf(self, request, pk=None):
         """
