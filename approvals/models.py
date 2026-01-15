@@ -77,7 +77,8 @@ class ApprovalStep(models.Model):
     is_required = models.BooleanField(default=True, help_text="Whether this step is required")
     can_delegate = models.BooleanField(default=False, help_text="Whether approver can delegate to someone else")
     auto_approve = models.BooleanField(default=False, help_text="Whether this step auto-approves")
-    
+    is_active = models.BooleanField(default=True, help_text="Whether this step is active")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -89,10 +90,74 @@ class ApprovalStep(models.Model):
             models.Index(fields=['workflow'], name='idx_approval_step_workflow'),
             models.Index(fields=['step_number'], name='idx_approval_step_number'),
             models.Index(fields=['approver_type'], name='idx_approval_step_app_type'),
+            models.Index(fields=['is_active'], name='idx_approval_step_active'),
         ]
 
     def __str__(self):
         return f"{self.workflow.name} - Step {self.step_number}: {self.name}"
+
+    def get_approver(self, requester=None, department=None):
+        """
+        Resolve the actual approver user based on approver_type.
+
+        Args:
+            requester: The user who submitted the request (for manager lookup)
+            department: The department for department_head lookup
+
+        Returns:
+            User instance or None
+        """
+        if self.approver_type == 'user':
+            return self.approver_user
+
+        elif self.approver_type == 'role':
+            # Find a user with matching role
+            from hrm.models import Employee
+            role_mapping = {
+                'supervisor': 'supervisor',
+                'hr_manager': 'hr_manager',
+                'finance_manager': 'finance_manager',
+                'director': 'director',
+                'ceo': 'ceo',
+                'cfo': 'cfo',
+                'coo': 'coo',
+            }
+            role = role_mapping.get(self.approver_role, self.approver_role)
+            # Try to find employee with this role
+            try:
+                employee = Employee.objects.filter(
+                    job_title__icontains=role,
+                    is_active=True
+                ).first()
+                return employee.user if employee else None
+            except Exception:
+                return None
+
+        elif self.approver_type == 'department_head':
+            # Get department head
+            dept = department or self.approver_department
+            if dept and hasattr(dept, 'head') and dept.head:
+                return dept.head.user if hasattr(dept.head, 'user') else dept.head
+            return None
+
+        elif self.approver_type == 'manager':
+            # Get the requester's manager
+            if requester:
+                from hrm.models import Employee
+                try:
+                    employee = Employee.objects.filter(user=requester, is_active=True).first()
+                    if employee and employee.reports_to:
+                        return employee.reports_to.user
+                except Exception:
+                    pass
+            return None
+
+        elif self.approver_type == 'owner':
+            # Get business owner - would need business context
+            # This should be passed from the requesting object
+            return None
+
+        return None
 
 
 class Approval(models.Model):
@@ -310,13 +375,27 @@ class ApprovalRequest(models.Model):
     def _create_approval_steps(self):
         """Create approval steps for this request"""
         steps = self.workflow.steps.filter(is_active=True).order_by('step_number')
+
+        # Try to get department from the content object
+        department = None
+        if self.content_object:
+            department = getattr(self.content_object, 'department', None)
+            if not department:
+                # Try to get from branch
+                branch = getattr(self.content_object, 'branch', None)
+                if branch:
+                    department = getattr(branch, 'department', None)
+
         for step in steps:
+            # Resolve the approver using the step's get_approver method
+            approver = step.get_approver(requester=self.requester, department=department)
+
             Approval.objects.create(
                 content_type=self.content_type,
                 object_id=self.object_id,
                 workflow=self.workflow,
                 step=step,
-                approver=step.approver_user,
+                approver=approver,
                 approval_amount=self.amount
             )
 
