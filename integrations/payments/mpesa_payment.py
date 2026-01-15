@@ -19,14 +19,25 @@ class MpesaPaymentService:
 
     @classmethod
     def get_settings(cls):
+        """
+        Get M-Pesa settings. First tries to find settings linked to an active
+        integration, then falls back to any existing settings.
+        """
+        # First, try to find settings linked to an active integration
         integration = Integrations.objects.filter(
             integration_type='PAYMENT',
             is_active=True,
             name='MPESA'
         ).first()
-        if not integration:
-            return None
-        return MpesaSettings.objects.filter(integration=integration).first()
+
+        if integration:
+            settings = MpesaSettings.objects.filter(integration=integration).first()
+            if settings:
+                return settings
+
+        # Fallback: find any M-Pesa settings (even if not linked to an integration)
+        # This allows the system to work when settings exist but integration record doesn't
+        return MpesaSettings.objects.first()
 
     @classmethod
     def initiate_stk_push(cls, phone, amount, account_reference, description="Payment"):
