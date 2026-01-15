@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from datetime import datetime
 
 from crm.contacts.models import Contact
 from .models import ProcurementRequest, RequestItem
@@ -98,17 +99,44 @@ class ProcurementRequestSerializer(serializers.ModelSerializer):
         many=True,
         required=False
     )
+    # Service request fields - passed through to create service-type RequestItem
+    service_description = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    expected_deliverables = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    duration = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = ProcurementRequest
         fields = [
             'id', 'reference_number', 'request_type', 'purpose', 'requester', 'required_by_date',
             'status', 'notes', 'created_at', 'updated_at', 'items',
-            'branch', 'preferred_suppliers', 'approvals', 'priority'
+            'branch', 'preferred_suppliers', 'approvals', 'priority',
+            'service_description', 'expected_deliverables', 'duration'
         ]
 
     def to_internal_value(self, data):
-        """Override to handle items with the write serializer"""
+        """Override to handle field name mappings and date format conversion"""
+        # Create a mutable copy if necessary
+        if hasattr(data, 'copy'):
+            data = data.copy()
+        else:
+            data = dict(data)
+
+        # Handle 'type' -> 'request_type' field mapping from frontend
+        if 'type' in data and 'request_type' not in data:
+            data['request_type'] = data.pop('type')
+
+        # Handle ISO datetime format for required_by_date
+        # Frontend sends "2026-01-15T21:00:00.000Z", model expects "YYYY-MM-DD"
+        if 'required_by_date' in data and data['required_by_date']:
+            date_value = data['required_by_date']
+            if isinstance(date_value, str) and 'T' in date_value:
+                try:
+                    # Parse ISO datetime and extract date
+                    parsed = datetime.fromisoformat(date_value.replace('Z', '+00:00'))
+                    data['required_by_date'] = parsed.date().isoformat()
+                except (ValueError, AttributeError):
+                    pass  # Let DRF handle validation if parsing fails
+
         items_data = data.pop('items', [])
         ret = super().to_internal_value(data)
 
@@ -124,7 +152,23 @@ class ProcurementRequestSerializer(serializers.ModelSerializer):
         items_data = validated_data.pop('items', [])
         suppliers_data = validated_data.pop('preferred_suppliers', None)
 
+        # Extract service fields (not part of ProcurementRequest model)
+        service_description = validated_data.pop('service_description', None)
+        expected_deliverables = validated_data.pop('expected_deliverables', None)
+        duration = validated_data.pop('duration', None)
+
         request = ProcurementRequest.objects.create(**validated_data)
+
+        # For service-type requests without explicit items, auto-create a service RequestItem
+        if request.request_type == 'service' and not items_data and service_description:
+            RequestItem.objects.create(
+                request=request,
+                item_type='service',
+                service_description=service_description,
+                expected_deliverables=expected_deliverables or '',
+                duration=duration or '',
+                quantity=1
+            )
 
         for item_data in items_data:
             RequestItem.objects.create(request=request, **item_data)
@@ -137,6 +181,11 @@ class ProcurementRequestSerializer(serializers.ModelSerializer):
         items_data = validated_data.pop('items', [])
         suppliers_data = validated_data.pop('preferred_suppliers', None)
 
+        # Extract service fields (not part of ProcurementRequest model)
+        service_description = validated_data.pop('service_description', None)
+        expected_deliverables = validated_data.pop('expected_deliverables', None)
+        duration = validated_data.pop('duration', None)
+
         # Update request fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -147,6 +196,24 @@ class ProcurementRequestSerializer(serializers.ModelSerializer):
             instance.items.all().delete()
             for item_data in items_data:
                 RequestItem.objects.create(request=instance, **item_data)
+
+        # For service-type requests, update or create service item
+        if instance.request_type == 'service' and service_description:
+            service_item = instance.items.filter(item_type='service').first()
+            if service_item:
+                service_item.service_description = service_description
+                service_item.expected_deliverables = expected_deliverables or ''
+                service_item.duration = duration or ''
+                service_item.save()
+            elif not items_data:
+                RequestItem.objects.create(
+                    request=instance,
+                    item_type='service',
+                    service_description=service_description,
+                    expected_deliverables=expected_deliverables or '',
+                    duration=duration or '',
+                    quantity=1
+                )
 
         # Update suppliers if provided
         if suppliers_data is not None:
