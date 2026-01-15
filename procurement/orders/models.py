@@ -55,6 +55,11 @@ class PurchaseOrder(BaseOrder):
     approvals = models.ManyToManyField('approvals.Approval', related_name='purchase_orders', blank=True)
 
     def save(self, *args, **kwargs):
+        # Set default order_type and source for procurement POs
+        if not self.order_type:
+            self.order_type = 'purchase_order'
+        if not self.source:
+            self.source = 'procurement'
         if not self.order_number:
             self.order_number = self.generate_order_number()
         super().save(*args, **kwargs)
