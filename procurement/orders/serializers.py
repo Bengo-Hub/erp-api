@@ -73,10 +73,10 @@ class PurchaseOrderListSerializer(BaseOrderSerializer):
     class Meta(BaseOrderSerializer.Meta):
         model = PurchaseOrder
         fields = [
-            'id', 'order_number', 'requisition_reference', 'supplier',
+            'id', 'order_number', 'order_type', 'requisition_reference', 'supplier',
             'supplier_name', 'status', 'total', 'expected_delivery',
             'approved_budget', 'actual_cost', 'created_at', 'currency',
-            'current_approver_id', 'created_by_id'
+            'current_approver_id', 'created_by_id', 'branch', 'source'
         ]
 
     def get_supplier_name(self, obj):
@@ -119,11 +119,13 @@ class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
     # Read-only fields returned after create/update
     id = serializers.IntegerField(read_only=True)
     order_number = serializers.CharField(read_only=True)
+    order_type = serializers.CharField(read_only=True)
+    source = serializers.CharField(read_only=True)
 
     class Meta:
         model = PurchaseOrder
         fields = [
-            'id', 'order_number',  # Include id and order_number in response
+            'id', 'order_number', 'order_type', 'source',  # Include id, order_number, order_type, source in response
             'supplier', 'branch', 'requisition', 'expected_delivery', 'delivery_instructions',
             'approved_budget', 'subtotal', 'tax_amount', 'discount_amount', 'shipping_cost', 'total',
             'tax_mode', 'tax_rate', 'items', 'shipping_address', 'billing_address', 'notes',

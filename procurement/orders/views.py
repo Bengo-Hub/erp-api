@@ -243,7 +243,9 @@ class PurchaseOrderViewSet(BaseModelViewSet):
 
         purchase_order = serializer.save(
             created_by=self.request.user,
-            branch=branch
+            branch=branch,
+            order_type='purchase_order',  # Required field from BaseOrder
+            source='procurement'  # Set source to procurement
         )
         # Determine notification type based on status
         if purchase_order.status in ['submitted', 'pending']:
