@@ -33,7 +33,8 @@ class PurchaseOrderSerializer(BaseOrderSerializer):
             'requisition', 'supplier_name', 'requisition_reference',
             'expected_delivery', 'delivery_instructions',
             'approved_budget', 'actual_cost', 'approvals', 'total_paid',
-            'current_approver_id', 'pending_approvals_list', 'created_by_id'
+            'current_approver_id', 'pending_approvals_list', 'created_by_id',
+            'source'  # Add source field (overridden with SerializerMethodField)
         ]
 
     def get_supplier_name(self, obj):
