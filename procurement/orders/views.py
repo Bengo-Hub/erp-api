@@ -225,7 +225,17 @@ class PurchaseOrderViewSet(BaseModelViewSet):
         return context
 
     def perform_create(self, serializer):
-        purchase_order = serializer.save(created_by=self.request.user)
+        # Get branch from request headers or user context if not in payload
+        from core.utils import get_user_branch
+
+        branch = serializer.validated_data.get('branch')
+        if not branch:
+            branch = get_user_branch(self.request.user, self.request)
+
+        purchase_order = serializer.save(
+            created_by=self.request.user,
+            branch=branch
+        )
         # Determine notification type based on status
         if purchase_order.status in ['submitted', 'pending']:
             send_po_notification(purchase_order, 'submitted', self.request.user)
