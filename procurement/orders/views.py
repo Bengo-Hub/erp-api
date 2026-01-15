@@ -109,6 +109,16 @@ def send_po_notification(purchase_order, notification_type, action_user, additio
                 message += f"\n\nReason: {additional_message}"
             recipients = [purchase_order.created_by] if purchase_order.created_by else []
 
+        elif notification_type == 'payment_recorded':
+            # Notify creator about payment
+            title = f"Payment Recorded: {purchase_order.order_number}"
+            payment_amount = additional_message or context['total']
+            message = f"A payment of {context['currency']} {payment_amount} has been recorded for PO {purchase_order.order_number}."
+            recipients = [purchase_order.created_by] if purchase_order.created_by else []
+            # Also notify finance team
+            finance_approvers = get_approvers_for_permission('finance.view_payment')
+            recipients.extend(finance_approvers)
+
         else:
             logger.warning(f"Unknown PO notification type: {notification_type}")
             return
@@ -197,7 +207,6 @@ class PurchaseOrderViewSet(BaseModelViewSet):
             branches = owned_branches | employee_branches
             # Include POs where branch is null OR branch is in user's branches OR created by user
             queryset = queryset.filter(
-                Q(branch__isnull=True) |
                 Q(branch__in=branches) |
                 Q(created_by=user)
             )
@@ -241,6 +250,55 @@ class PurchaseOrderViewSet(BaseModelViewSet):
             send_po_notification(purchase_order, 'submitted', self.request.user)
         else:
             send_po_notification(purchase_order, 'created', self.request.user)
+
+    @action(detail=True, methods=['post'], url_path='submit', name='submit')
+    def submit(self, request, pk=None):
+        """
+        Submit a draft purchase order for approval.
+        Changes status from 'draft' to 'submitted' and notifies approvers.
+        """
+        try:
+            correlation_id = get_correlation_id(request)
+            with transaction.atomic():
+                order = self.get_object()
+
+                if order.status != 'draft':
+                    return APIResponse.bad_request(
+                        message=f'Only draft purchase orders can be submitted. Current status: {order.status}',
+                        error_id='invalid_order_status',
+                        correlation_id=correlation_id
+                    )
+
+                # Update order status
+                order.status = 'submitted'
+                order.save()
+
+                # Log submission
+                AuditTrail.log(
+                    operation=AuditTrail.SUBMIT,
+                    module='procurement',
+                    entity_type='PurchaseOrder',
+                    entity_id=order.id,
+                    user=request.user,
+                    reason=f'Purchase order {order.order_number} submitted for approval',
+                    request=request
+                )
+
+                # Send notification about submission
+                send_po_notification(order, 'submitted', request.user)
+
+                return APIResponse.success(
+                    data=self.get_serializer(order).data,
+                    message='Purchase order submitted for approval',
+                    correlation_id=correlation_id
+                )
+        except Exception as e:
+            logger.error(f'Error submitting purchase order: {str(e)}', exc_info=True)
+            return APIResponse.server_error(
+                message='Error submitting purchase order',
+                error_id=str(e),
+                correlation_id=get_correlation_id(request)
+            )
 
     @action(detail=True, methods=['post'], url_path='approve', name='approve')
     def approve(self, request, pk=None):
@@ -520,7 +578,10 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                     reason=f'Payment of {amount} recorded for PO {purchase_order.order_number}',
                     request=request
                 )
-                
+
+                # Send notification about payment
+                send_po_notification(purchase_order, 'payment_recorded', request.user, str(amount))
+
                 return APIResponse.success(
                     data={
                         'purchase_order': self.get_serializer(purchase_order).data,
