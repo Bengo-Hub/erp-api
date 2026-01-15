@@ -3,7 +3,7 @@ from datetime import datetime
 
 from crm.contacts.models import Contact
 from .models import ProcurementRequest, RequestItem
-from business.models import Branch
+from business.models import Branch, Bussiness
 from approvals.models import Approval
 from ecommerce.stockinventory.models import StockInventory
 
@@ -88,12 +88,21 @@ class ApprovalSerializer(serializers.ModelSerializer):
 class ProcurementRequestSerializer(serializers.ModelSerializer):
     items = RequestItemSerializer(many=True, read_only=True)
     status = serializers.CharField(read_only=True)
-    requester = serializers.ReadOnlyField(source='requester.email')
+    requester = serializers.SerializerMethodField()
+    requester_id = serializers.ReadOnlyField(source='requester.id')
     approvals = ApprovalSerializer(many=True, read_only=True)
     branch = serializers.PrimaryKeyRelatedField(
         queryset=Branch.objects.all(),
-        required=False
+        required=False,
+        allow_null=True
     )
+    branch_name = serializers.ReadOnlyField(source='branch.name')
+    business = serializers.PrimaryKeyRelatedField(
+        queryset=Bussiness.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    business_name = serializers.ReadOnlyField(source='business.business_name')
     preferred_suppliers = serializers.PrimaryKeyRelatedField(
         queryset=Contact.objects.all(),
         many=True,
@@ -107,11 +116,18 @@ class ProcurementRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProcurementRequest
         fields = [
-            'id', 'reference_number', 'request_type', 'purpose', 'requester', 'required_by_date',
-            'status', 'notes', 'created_at', 'updated_at', 'items',
-            'branch', 'preferred_suppliers', 'approvals', 'priority',
+            'id', 'reference_number', 'request_type', 'purpose', 'requester', 'requester_id',
+            'required_by_date', 'status', 'notes', 'created_at', 'updated_at', 'items',
+            'branch', 'branch_name', 'business', 'business_name',
+            'preferred_suppliers', 'approvals', 'priority',
             'service_description', 'expected_deliverables', 'duration'
         ]
+
+    def get_requester(self, obj):
+        """Return requester email or username."""
+        if obj.requester:
+            return obj.requester.email or obj.requester.username
+        return None
 
     def to_internal_value(self, data):
         """Override to handle field name mappings and date format conversion"""

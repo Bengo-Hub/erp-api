@@ -23,7 +23,7 @@ from core.base_viewsets import BaseModelViewSet
 from core.utils import get_branch_id_from_request, get_business_id_from_request
 from core.response import APIResponse, get_correlation_id
 from core.audit import AuditTrail
-from .pdf_generator import generate_lpo_pdf
+from finance.pdf_generator import generate_lpo_pdf
 import logging
 
 logger = logging.getLogger(__name__)

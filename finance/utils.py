@@ -578,6 +578,10 @@ def _build_document_details_section(document_info, document_type):
         if document_type in ['lpo', 'delivery_note'] and document_info.get('expected_delivery'):
             doc_details.append(Paragraph(f"<b>Expected Delivery:</b> {document_info['expected_delivery']}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))
 
+        # Requisition Reference for LPO
+        if document_type == 'lpo' and document_info.get('requisition_reference'):
+            doc_details.append(Paragraph(f"<b>Requisition:</b> {document_info['requisition_reference']}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))
+
         # Reason for credit/debit notes
         if document_type in ['credit_note', 'debit_note'] and document_info.get('reason'):
             doc_details.append(Paragraph(f"<b>Reason:</b> {document_info['reason'][:50]}{'...' if len(document_info.get('reason', '')) > 50 else ''}", ParagraphStyle('DocDetail', parent=getSampleStyleSheet()['Normal'], fontSize=9, textColor=colors.HexColor('#374151'))))

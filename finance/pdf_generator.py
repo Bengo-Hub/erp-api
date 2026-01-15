@@ -47,6 +47,15 @@ def generate_quotation_pdf(quotation, company_info=None, document_type='quotatio
     return _generate_order_pdf(quotation, company_info=company_info, document_type=document_type)
 
 
+def generate_lpo_pdf(purchase_order, company_info=None):
+    """Generate LPO (Local Purchase Order) PDF bytes.
+
+    This delegates to the shared _generate_order_pdf with document_type='lpo'.
+    The shared generator handles supplier details, branding, and formatting.
+    """
+    return _generate_order_pdf(purchase_order, company_info=company_info, document_type='lpo')
+
+
 # Currency symbol map for PDF formatting
 CURRENCY_SYMBOLS = {
     'KES': 'KSh',
@@ -92,6 +101,47 @@ def _format_date(d):
             return str(d)
         except Exception:
             return None
+
+
+def _get_supplier_info(order):
+    """Extract supplier info from a purchase order for PDF generation.
+
+    Returns a dict with keys: name, email, phone, address (if available).
+    """
+    supplier = getattr(order, 'supplier', None)
+    if not supplier:
+        return {'name': 'Not specified', 'email': '', 'phone': ''}
+
+    # Get supplier name - try business_name first, then user name
+    name = ''
+    if hasattr(supplier, 'business_name') and supplier.business_name:
+        name = supplier.business_name
+    elif hasattr(supplier, 'name') and supplier.name:
+        name = supplier.name
+    elif hasattr(supplier, 'user') and supplier.user:
+        first = getattr(supplier.user, 'first_name', '') or ''
+        last = getattr(supplier.user, 'last_name', '') or ''
+        name = f"{first} {last}".strip()
+
+    # Get email from user or supplier
+    email = ''
+    if hasattr(supplier, 'user') and supplier.user:
+        email = getattr(supplier.user, 'email', '') or ''
+    elif hasattr(supplier, 'email'):
+        email = getattr(supplier, 'email', '') or ''
+
+    # Get phone
+    phone = getattr(supplier, 'phone', '') or ''
+
+    # Get address if available
+    address = getattr(supplier, 'business_address', '') or getattr(supplier, 'address', '') or ''
+
+    return {
+        'name': name or 'Not specified',
+        'email': email,
+        'phone': phone,
+        'address': address,
+    }
 
 
 def _generate_order_pdf(order, company_info=None, document_type='invoice'):
@@ -196,13 +246,16 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
         # Build helper pieces
         logo = _get_logo_image(company_info)
         company_section = _build_company_details_section(company_info)
-        #print(f"Company section for PDF generation: {company_section}")
-        client_info = {
-            'name': get_customer_name(order),
-            'email': get_customer_email(order),
-            'phone': get_customer_phone(order),
 
-        }
+        # For LPO/purchase orders, use supplier info; for others use customer info
+        if document_type == 'lpo':
+            client_info = _get_supplier_info(order)
+        else:
+            client_info = {
+                'name': get_customer_name(order),
+                'email': get_customer_email(order),
+                'phone': get_customer_phone(order),
+            }
         client_section = _build_client_details_section(client_info, document_type)
 
         # Build a document info dict expected by utils - support all document types
@@ -234,6 +287,12 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
         if source_invoice:
             source_invoice_number = getattr(source_invoice, 'invoice_number', None)
 
+        # Get requisition reference for LPOs
+        requisition_reference = None
+        requisition = getattr(order, 'requisition', None)
+        if requisition:
+            requisition_reference = getattr(requisition, 'reference_number', None)
+
         document_info = {
             'number': doc_number,
             'date': _format_date(doc_date),
@@ -244,6 +303,7 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
             'expected_delivery': _format_date(getattr(order, 'expected_delivery', None) or getattr(order, 'estimated_delivery_date', None)),
             'source_invoice_number': source_invoice_number,
             'reason': getattr(order, 'reason', None),
+            'requisition_reference': requisition_reference,
         }
 
         # Determine brand color and text color for styling
@@ -265,12 +325,12 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
             elements.append(Spacer(1, 0.08 * inch))
 
         # Items table (separated helper) - returns currency for totals
-        items_table, subtotal, currency = _render_items_table(order, styles, brand_color, text_color)
+        items_table, subtotal, currency = _render_items_table(order, styles, brand_color, text_color, document_type)
         elements.append(items_table)
         elements.append(Spacer(1, 0.2 * inch))
 
         # Totals (separated helper) - uses currency from items
-        totals_table = _render_totals_table(order, subtotal, styles, brand_color, currency)
+        totals_table = _render_totals_table(order, subtotal, styles, brand_color, currency, document_type)
         elements.append(totals_table)
 
         # Footer / Prepared & Approved (footer helper will include notes & terms)
@@ -290,8 +350,13 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
         raise
 
 
-def _render_items_table(order, styles, brand_color=None, text_color=None):
-    """Build and return the items Table plus subtotal value."""
+def _render_items_table(order, styles, brand_color=None, text_color=None, document_type='invoice'):
+    """Build and return the items Table plus subtotal value.
+
+    Supports different column layouts based on document type:
+    - LPO: #, Item/Description, Qty, Unit Price, Amount (no tax column - simpler for POs)
+    - Others: #, Description, Qty, Unit, Tax, Amount
+    """
     items = getattr(order, 'items', None)
     # Get currency from order (default to KES)
     currency = getattr(order, 'currency', 'KES') or 'KES'
@@ -308,48 +373,93 @@ def _render_items_table(order, styles, brand_color=None, text_color=None):
         fontSize=10
     )
 
-    rows = [[
-        Paragraph('#', header_style),
-        Paragraph('Description', header_style),
-        Paragraph('Qty', header_style),
-        Paragraph('Unit', header_style),
-        Paragraph('Tax', header_style),
-        Paragraph('Amount', header_style)
-    ]]
+    # Different header layouts based on document type
+    if document_type == 'lpo':
+        # Simpler layout for LPO - no tax column
+        rows = [[
+            Paragraph('#', header_style),
+            Paragraph('Item / Description', header_style),
+            Paragraph('Qty', header_style),
+            Paragraph('Unit Price', header_style),
+            Paragraph('Amount', header_style)
+        ]]
+        col_widths = [0.4 * inch, 4.0 * inch, 0.6 * inch, 1.2 * inch, 1.4 * inch]
+    else:
+        rows = [[
+            Paragraph('#', header_style),
+            Paragraph('Description', header_style),
+            Paragraph('Qty', header_style),
+            Paragraph('Unit', header_style),
+            Paragraph('Tax', header_style),
+            Paragraph('Amount', header_style)
+        ]]
+        col_widths = [0.4 * inch, 3.6 * inch, 0.6 * inch, 1.2 * inch, 1.0 * inch, 1.4 * inch]
 
     subtotal = Decimal(0)
     if items is not None:
         for idx, it in enumerate(items.all(), 1):
-            desc = _sanitize_text_for_pdf(getattr(it, 'name', '') or '')
-            if getattr(it, 'description', None):
-                desc += '<br/>' + _sanitize_text_for_pdf(it.description).replace('\n', '<br/>')
+            # Get item name - try multiple fields for flexibility
+            item_name = (
+                getattr(it, 'name', '') or
+                getattr(it, 'product_title', '') or
+                getattr(it, 'title', '') or
+                ''
+            )
+            desc = _sanitize_text_for_pdf(item_name)
+
+            # Add description if available
+            item_desc = getattr(it, 'description', None)
+            if item_desc:
+                desc += '<br/><font size="8" color="#6b7280">' + _sanitize_text_for_pdf(item_desc).replace('\n', '<br/>') + '</font>'
+
+            # Add SKU if available (common for LPO items)
+            sku = getattr(it, 'sku', None) or getattr(it, 'product_code', None)
+            if sku:
+                desc += f'<br/><font size="7" color="#9ca3af">SKU: {sku}</font>'
+
             qty = getattr(it, 'quantity', 1)
             unit = getattr(it, 'unit_price', 0)
-            tax = getattr(it, 'tax_amount', 0)
-            tax_type = getattr(it, 'tax_type', '') or ''
             total = getattr(it, 'total_price', None) or (Decimal(qty) * Decimal(unit))
             subtotal += Decimal(total)
-            rows.append([
-                Paragraph(str(idx), styles['Normal']),
-                Paragraph(desc, styles['Normal']),
-                Paragraph(str(qty), styles['Normal']),
-                Paragraph(_format_currency(unit, currency), styles['Normal']),
-                Paragraph(f"{tax_type} { _format_currency(tax, currency) if tax else ''}", styles['Normal']),
-                Paragraph(_format_currency(total, currency), styles['Normal']),
-            ])
 
-    items_table = Table(rows, colWidths=[0.4 * inch, 3.6 * inch, 0.6 * inch, 1.2 * inch, 1.0 * inch, 1.4 * inch])
+            if document_type == 'lpo':
+                # LPO layout - no tax column
+                rows.append([
+                    Paragraph(str(idx), styles['Normal']),
+                    Paragraph(desc, styles['Normal']),
+                    Paragraph(str(qty), styles['Normal']),
+                    Paragraph(_format_currency(unit, currency), styles['Normal']),
+                    Paragraph(_format_currency(total, currency), styles['Normal']),
+                ])
+            else:
+                # Standard layout with tax
+                tax = getattr(it, 'tax_amount', 0)
+                tax_type = getattr(it, 'tax_type', '') or ''
+                rows.append([
+                    Paragraph(str(idx), styles['Normal']),
+                    Paragraph(desc, styles['Normal']),
+                    Paragraph(str(qty), styles['Normal']),
+                    Paragraph(_format_currency(unit, currency), styles['Normal']),
+                    Paragraph(f"{tax_type} {_format_currency(tax, currency) if tax else ''}", styles['Normal']),
+                    Paragraph(_format_currency(total, currency), styles['Normal']),
+                ])
+
+    items_table = Table(rows, colWidths=col_widths)
     header_bg = brand_color or colors.HexColor('#2563eb')
 
     items_table.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('BACKGROUND', (0, 0), (-1, 0), header_bg),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]))
     return items_table, subtotal, currency
 
 
-def _render_totals_table(order, subtotal, styles, brand_color=None, currency='KES'):
-    """Build and return totals Table (subtotal, tax, discount, shipping, total)."""
+def _render_totals_table(order, subtotal, styles, brand_color=None, currency='KES', document_type='invoice'):
+    """Build and return totals Table (subtotal, tax, discount, shipping, total).
+
+    For LPO, also includes approved_budget and actual_cost if available.
+    """
     # If tax_mode == 'on_total' use order.tax_rate to compute tax, else sum per-line tax_amount
     tax_total = 0
     items = getattr(order, 'items', None)
@@ -359,10 +469,11 @@ def _render_totals_table(order, subtotal, styles, brand_color=None, currency='KE
         except Exception:
             tax_total = getattr(order, 'tax_total', 0) or 0
     else:
-        tax_total = getattr(order, 'tax_total', None) or getattr(order, 'total_tax', None) or sum([getattr(it, 'tax_amount', 0) or 0 for it in (items.all() if items is not None else [])])
+        tax_total = getattr(order, 'tax_total', None) or getattr(order, 'total_tax', None) or getattr(order, 'tax_amount', None) or sum([getattr(it, 'tax_amount', 0) or 0 for it in (items.all() if items is not None else [])])
 
     totals = []
     totals.append([Paragraph('Subtotal', styles['Normal']), Paragraph(_format_currency(subtotal, currency), styles['Normal'])])
+
     if tax_total:
         if getattr(order, 'tax_mode', None) == 'on_total':
             label = f"Tax ({getattr(order, 'tax_rate', 0)}%)"
@@ -372,7 +483,7 @@ def _render_totals_table(order, subtotal, styles, brand_color=None, currency='KE
 
     discount = getattr(order, 'discount_total', None) or getattr(order, 'discount_amount', None) or getattr(order, 'discount', 0) or 0
     if discount:
-        totals.append([Paragraph('Discount', styles['Normal']), Paragraph(_format_currency(discount, currency), styles['Normal'])])
+        totals.append([Paragraph('Discount', styles['Normal']), Paragraph(f"-{_format_currency(discount, currency)}", styles['Normal'])])
 
     shipping = getattr(order, 'shipping_cost', 0) or 0
     if shipping:
@@ -380,6 +491,26 @@ def _render_totals_table(order, subtotal, styles, brand_color=None, currency='KE
 
     grand = getattr(order, 'grand_total', None) or getattr(order, 'total', None) or (Decimal(subtotal) + Decimal(tax_total) + Decimal(shipping) - Decimal(discount))
     totals.append([Paragraph('<b>Total</b>', styles['Normal']), Paragraph(f"<b>{_format_currency(grand, currency)}</b>", styles['Normal'])])
+
+    # LPO-specific fields
+    if document_type == 'lpo':
+        # Approved Budget
+        approved_budget = getattr(order, 'approved_budget', None)
+        if approved_budget:
+            totals.append([Paragraph('Approved Budget', styles['Normal']), Paragraph(_format_currency(approved_budget, currency), styles['Normal'])])
+
+        # Actual Cost (if different from total)
+        actual_cost = getattr(order, 'actual_cost', None)
+        if actual_cost and actual_cost != grand:
+            totals.append([Paragraph('Actual Cost', styles['Normal']), Paragraph(_format_currency(actual_cost, currency), styles['Normal'])])
+
+        # Total Paid (for partial payments)
+        total_paid = getattr(order, 'total_paid', None)
+        if total_paid and Decimal(str(total_paid)) > 0:
+            totals.append([Paragraph('Amount Paid', styles['Normal']), Paragraph(_format_currency(total_paid, currency), styles['Normal'])])
+            balance = Decimal(str(grand)) - Decimal(str(total_paid))
+            if balance > 0:
+                totals.append([Paragraph('<b>Balance Due</b>', styles['Normal']), Paragraph(f"<b>{_format_currency(balance, currency)}</b>", styles['Normal'])])
 
     # Show exchange rate if not base currency
     if currency != 'KES' and hasattr(order, 'exchange_rate') and order.exchange_rate:
@@ -400,8 +531,21 @@ def _render_header(company_section, client_section, document_info, logo, documen
     """Return flowables that render the top header with title, logo, company and client details and document meta."""
     flowables = []
 
+    # Map document types to full display titles
+    title_map = {
+        'invoice': 'INVOICE',
+        'quotation': 'QUOTATION',
+        'lpo': 'LOCAL PURCHASE ORDER',
+        'delivery_note': 'DELIVERY NOTE',
+        'packing_slip': 'PACKING SLIP',
+        'credit_note': 'CREDIT NOTE',
+        'debit_note': 'DEBIT NOTE',
+        'proforma': 'PROFORMA INVOICE',
+    }
+    display_title = title_map.get(document_type, document_type.upper())
+
     title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], alignment=TA_CENTER, fontName='Helvetica-Bold', fontSize=18, textColor=(brand_color or colors.HexColor('#1f2937')))
-    title = Paragraph(document_type.upper(), title_style)
+    title = Paragraph(display_title, title_style)
 
     # Centered title
     flowables.append(title)
@@ -519,13 +663,30 @@ def _render_footer(order, styles, document_type='invoice', brand_color=None):
     """Return flowables for the document footer (notes, terms, prepared/approved/signatures).
 
     For delivery notes, include Received by fields.
+    For LPO, include delivery instructions.
     """
     flowables = []
 
-    # Notes & Terms
-    if getattr(order, 'customer_notes', None):
+    # LPO-specific: Delivery Instructions
+    if document_type == 'lpo':
+        delivery_instructions = getattr(order, 'delivery_instructions', None)
+        if delivery_instructions:
+            flowables.append(Paragraph('<b>Delivery Instructions</b>', styles['Normal']))
+            flowables.append(Paragraph(_sanitize_text_for_pdf(delivery_instructions).replace('\n', '<br/>'), styles['Normal']))
+            flowables.append(Spacer(1, 0.1 * inch))
+
+        # Payment Terms for LPO
+        payment_terms = getattr(order, 'terms', None) or getattr(order, 'payment_terms', None)
+        if payment_terms:
+            flowables.append(Paragraph('<b>Payment Terms</b>', styles['Normal']))
+            flowables.append(Paragraph(_sanitize_text_for_pdf(payment_terms).replace('\n', '<br/>'), styles['Normal']))
+            flowables.append(Spacer(1, 0.1 * inch))
+
+    # Notes - support multiple field names
+    notes = getattr(order, 'customer_notes', None) or getattr(order, 'notes', None)
+    if notes:
         flowables.append(Paragraph('<b>Notes</b>', styles['Normal']))
-        flowables.append(Paragraph(_sanitize_text_for_pdf(order.customer_notes).replace('\n', '<br/>'), styles['Normal']))
+        flowables.append(Paragraph(_sanitize_text_for_pdf(notes).replace('\n', '<br/>'), styles['Normal']))
         flowables.append(Spacer(1, 0.1 * inch))
 
     if getattr(order, 'terms_and_conditions', None):
