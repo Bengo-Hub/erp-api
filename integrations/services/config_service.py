@@ -100,20 +100,24 @@ class IntegrationConfigService:
         cached = cache.get(cache_key)
         if cached:
             return cached
-        
+
         try:
+            settings = None
+
+            # First, try to find settings linked to an active integration
             integration = Integrations.objects.filter(
                 integration_type='PAYMENT',
                 is_active=True,
                 name='MPESA'
             ).first()
-            
-            if not integration:
-                logger.warning("M-Pesa integration not found, using defaults")
-                cache.set(cache_key, cls.DEFAULT_MPESA_CONFIG, timeout=300)
-                return cls.DEFAULT_MPESA_CONFIG
-            
-            settings = MpesaSettings.objects.filter(integration=integration).first()
+
+            if integration:
+                settings = MpesaSettings.objects.filter(integration=integration).first()
+
+            # Fallback: find any M-Pesa settings (even if not linked to an integration)
+            if not settings:
+                settings = MpesaSettings.objects.first()
+
             if not settings:
                 logger.warning("M-Pesa settings not found, using defaults")
                 cache.set(cache_key, cls.DEFAULT_MPESA_CONFIG, timeout=300)
@@ -354,32 +358,40 @@ class IntegrationConfigService:
         Returns (success, message)
         """
         try:
-            from integrations.payments.mpesa_payment import MpesaPaymentService
-            
-            settings = MpesaPaymentService.get_settings()
-            if not settings:
-                return False, "M-Pesa settings not configured"
-            
-            # Try to get access token
+            # Try to get config (which now falls back to unlinked settings)
             config = cls.get_mpesa_config(decrypt_secrets=True)
-            consumer_key = config['consumer_key']
-            consumer_secret = config['consumer_secret']
-            
+
+            consumer_key = config.get('consumer_key', '')
+            consumer_secret = config.get('consumer_secret', '')
+            base_url = config.get('base_url', 'https://sandbox.safaricom.co.ke')
+
             if not consumer_key or not consumer_secret:
                 return False, "M-Pesa consumer credentials not set"
-            
+
             import requests
+
+            # Test connection by getting OAuth access token
             auth_resp = requests.get(
-                f"{config['base_url']}/oauth/v1/generate?grant_type=client_credentials",
+                f"{base_url}/oauth/v1/generate?grant_type=client_credentials",
                 auth=(consumer_key, consumer_secret),
-                timeout=10,
+                timeout=15,
             )
-            
-            if auth_resp.ok and auth_resp.json().get('access_token'):
-                return True, "M-Pesa connection successful"
+
+            if auth_resp.ok:
+                data = auth_resp.json()
+                if data.get('access_token'):
+                    expires_in = data.get('expires_in', 'N/A')
+                    return True, f"M-Pesa connection successful (token expires in {expires_in}s)"
+                else:
+                    return False, f"M-Pesa response missing access_token: {auth_resp.text}"
             else:
-                return False, f"M-Pesa authentication failed: {auth_resp.text}"
-                
+                error_detail = auth_resp.text[:200] if auth_resp.text else 'No error details'
+                return False, f"M-Pesa authentication failed ({auth_resp.status_code}): {error_detail}"
+
+        except requests.exceptions.Timeout:
+            return False, "M-Pesa connection timeout - API not responding"
+        except requests.exceptions.ConnectionError as e:
+            return False, f"M-Pesa connection error - cannot reach API: {str(e)}"
         except Exception as e:
             return False, f"M-Pesa connection error: {str(e)}"
     
@@ -532,13 +544,37 @@ class IntegrationConfigService:
     
     @classmethod
     def is_integration_configured(cls, integration_name: str) -> bool:
-        """Check if a payment integration is configured in DB."""
-        return Integrations.objects.filter(name=integration_name).exists()
-    
+        """
+        Check if a payment integration is configured in DB.
+        For M-Pesa, also check if standalone settings exist.
+        """
+        # Check if integration record exists
+        if Integrations.objects.filter(name=integration_name).exists():
+            return True
+
+        # For M-Pesa, also check if standalone settings exist
+        if integration_name == 'MPESA':
+            return MpesaSettings.objects.exists()
+
+        return False
+
     @classmethod
     def is_integration_active(cls, integration_name: str) -> bool:
-        """Check if a payment integration is active."""
-        return Integrations.objects.filter(name=integration_name, is_active=True).exists()
+        """
+        Check if a payment integration is active.
+        For M-Pesa, also check if standalone settings with credentials exist.
+        """
+        # Check if active integration record exists
+        if Integrations.objects.filter(name=integration_name, is_active=True).exists():
+            return True
+
+        # For M-Pesa, check if standalone settings exist with credentials
+        if integration_name == 'MPESA':
+            settings = MpesaSettings.objects.first()
+            if settings and settings.consumer_key and settings.consumer_secret:
+                return True
+
+        return False
     
     @classmethod
     def is_kra_configured(cls) -> bool:
