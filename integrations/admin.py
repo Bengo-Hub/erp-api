@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django import forms
 from .models import (
-    Integrations, MpesaSettings, CardPaymentSettings, PayPalSettings,
+    Integrations, PaystackSettings,
+    MpesaSettings, CardPaymentSettings, PayPalSettings,
     KRASettings, KRACertificateRequest, KRAComplianceCheck,
     WebhookEndpoint, WebhookEvent,
     BankAPISettings, GovernmentServiceSettings
@@ -40,6 +41,24 @@ class IntegrationsAdmin(admin.ModelAdmin):
             
         return inlines
 
+# Paystack Settings admin
+class PaystackSettingsForm(forms.ModelForm):
+    class Meta:
+        model = PaystackSettings
+        fields = '__all__'
+        widgets = {
+            'public_key': forms.PasswordInput(render_value=True),
+            'secret_key': forms.PasswordInput(render_value=True),
+            'webhook_secret': forms.PasswordInput(render_value=True),
+        }
+
+@admin.register(PaystackSettings)
+class PaystackSettingsAdmin(admin.ModelAdmin):
+    form = PaystackSettingsForm
+    list_display = ('integration', 'is_test_mode', 'default_currency')
+    list_filter = ('is_test_mode',)
+    search_fields = ('integration__name',)
+    raw_id_fields = ('integration',)
 
 # M-Pesa Settings admin
 class MpesaSettingsForm(forms.ModelForm):
@@ -84,7 +103,6 @@ class KRASettingsAdmin(admin.ModelAdmin):
     list_filter = ('mode',)
     search_fields = ('kra_pin', 'device_serial', 'pos_serial')
     readonly_fields = ('created_at', 'updated_at')
-
 
 @admin.register(KRACertificateRequest)
 class KRACertificateRequestAdmin(admin.ModelAdmin):
