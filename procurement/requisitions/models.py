@@ -19,7 +19,7 @@ class ProcurementRequest(models.Model):
         ('ordered', 'Ordered'),
         ('completed', 'Completed'),
     ]
-    
+
     REQUEST_TYPES = [
         ('inventory', 'Existing Inventory Item'),
         ('external_item', 'External Item Purchase'),
@@ -43,6 +43,31 @@ class ProcurementRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     approvals = models.ManyToManyField(Approval, related_name='procurement_requests', blank=True)
+
+    # Business and branch context for multi-tenancy
+    business = models.ForeignKey(
+        'business.Bussiness',
+        on_delete=models.CASCADE,
+        related_name='procurement_requests',
+        null=True,
+        blank=True,
+        help_text="Business this requisition belongs to"
+    )
+    branch = models.ForeignKey(
+        'business.Branch',
+        on_delete=models.SET_NULL,
+        related_name='procurement_requests',
+        null=True,
+        blank=True,
+        help_text="Branch this requisition is for"
+    )
+    # Preferred suppliers for external items
+    preferred_suppliers = models.ManyToManyField(
+        Contact,
+        related_name='preferred_requisitions',
+        blank=True,
+        help_text="Preferred suppliers for this requisition"
+    )
 
     def __str__(self):
         return f"PR-{self.id:06d} ({self.get_request_type_display()})"
@@ -77,6 +102,8 @@ class ProcurementRequest(models.Model):
             models.Index(fields=['status'], name='idx_procurement_request_status'),
             models.Index(fields=['created_at'], name='idx_proc_request_created'),
             models.Index(fields=['updated_at'], name='idx_proc_request_updated'),
+            models.Index(fields=['business'], name='idx_proc_request_business'),
+            models.Index(fields=['branch'], name='idx_proc_request_branch'),
         ]
 
     
