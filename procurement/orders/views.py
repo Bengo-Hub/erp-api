@@ -195,8 +195,13 @@ class PurchaseOrderViewSet(BaseModelViewSet):
             owned_branches = Branch.objects.filter(business__owner=user)
             employee_branches = Branch.objects.filter(business__employees__user=user)
             branches = owned_branches | employee_branches
-            queryset = queryset.filter(branch__in=branches)
-            
+            # Include POs where branch is null OR branch is in user's branches OR created by user
+            queryset = queryset.filter(
+                Q(branch__isnull=True) |
+                Q(branch__in=branches) |
+                Q(created_by=user)
+            )
+
         return queryset 
 
     def get_serializer_class(self):
