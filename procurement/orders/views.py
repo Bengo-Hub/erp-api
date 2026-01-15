@@ -1,4 +1,4 @@
-#views 
+#views
 from rest_framework import viewsets
 from .models import PurchaseOrder, PurchaseOrderPayment
 from .serializers import PurchaseOrderSerializer, PurchaseOrderListSerializer, PurchaseOrderPaymentSerializer, PurchaseOrderCreateSerializer
@@ -28,6 +28,125 @@ from .pdf_generator import generate_lpo_pdf
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def send_po_notification(purchase_order, notification_type, action_user, additional_message=None):
+    """
+    Send notification for Purchase Order workflow events.
+
+    Args:
+        purchase_order: The PurchaseOrder instance
+        notification_type: Type of notification ('created', 'submitted', 'approved', 'rejected', 'received', 'cancelled')
+        action_user: The user who performed the action
+        additional_message: Optional additional context message
+    """
+    try:
+        from notifications.services.notification_service import NotificationService
+        from django.contrib.auth import get_user_model
+        from approvals.utils import get_approvers_for_permission
+
+        User = get_user_model()
+        notification_service = NotificationService()
+
+        # Get supplier name
+        supplier_name = 'Unknown Supplier'
+        if purchase_order.supplier:
+            if purchase_order.supplier.user:
+                supplier_name = f"{purchase_order.supplier.user.first_name} {purchase_order.supplier.user.last_name}".strip()
+            if not supplier_name or supplier_name == '':
+                supplier_name = purchase_order.supplier.name or 'Unknown Supplier'
+
+        # Build base context
+        context = {
+            'order_number': purchase_order.order_number,
+            'supplier_name': supplier_name,
+            'total': str(purchase_order.total),
+            'currency': purchase_order.currency,
+            'action_user_name': f"{action_user.first_name} {action_user.last_name}".strip() or action_user.username,
+        }
+
+        action_url = f"/procurement/purchase-orders/{purchase_order.id}"
+
+        if notification_type == 'created':
+            # Notify procurement managers about new PO
+            title = f"New Purchase Order: {purchase_order.order_number}"
+            message = f"A new purchase order has been created for {context['supplier_name']}.\n\nTotal: {context['currency']} {context['total']}"
+            recipients = get_approvers_for_permission('procurement.view_purchaseorder')
+
+        elif notification_type == 'submitted':
+            # Notify approvers about submitted PO
+            title = f"PO Pending Approval: {purchase_order.order_number}"
+            message = f"A purchase order for {context['supplier_name']} has been submitted for approval.\n\nTotal: {context['currency']} {context['total']}"
+            recipients = get_approvers_for_permission('procurement.approve_purchaseorder')
+
+        elif notification_type == 'approved':
+            # Notify creator about approval
+            title = f"Purchase Order Approved: {purchase_order.order_number}"
+            message = f"Your purchase order for {context['supplier_name']} has been approved by {context['action_user_name']}."
+            if additional_message:
+                message += f"\n\n{additional_message}"
+            recipients = [purchase_order.created_by] if purchase_order.created_by else []
+
+        elif notification_type == 'rejected':
+            # Notify creator about rejection
+            title = f"Purchase Order Rejected: {purchase_order.order_number}"
+            message = f"Your purchase order for {context['supplier_name']} has been rejected by {context['action_user_name']}."
+            if additional_message:
+                message += f"\n\nReason: {additional_message}"
+            recipients = [purchase_order.created_by] if purchase_order.created_by else []
+
+        elif notification_type == 'received':
+            # Notify finance about received goods
+            title = f"Goods Received: {purchase_order.order_number}"
+            message = f"Goods for purchase order {purchase_order.order_number} from {context['supplier_name']} have been received.\n\nInventory has been updated."
+            recipients = get_approvers_for_permission('finance.view_payment')
+
+        elif notification_type == 'cancelled':
+            # Notify relevant parties about cancellation
+            title = f"Purchase Order Cancelled: {purchase_order.order_number}"
+            message = f"Purchase order {purchase_order.order_number} for {context['supplier_name']} has been cancelled by {context['action_user_name']}."
+            if additional_message:
+                message += f"\n\nReason: {additional_message}"
+            recipients = [purchase_order.created_by] if purchase_order.created_by else []
+
+        else:
+            logger.warning(f"Unknown PO notification type: {notification_type}")
+            return
+
+        # Send notifications to all recipients
+        for recipient in recipients:
+            if isinstance(recipient, int):
+                try:
+                    recipient = User.objects.get(id=recipient)
+                except User.DoesNotExist:
+                    continue
+
+            # Skip sending notification to the user who performed the action
+            if recipient and recipient.id == action_user.id:
+                continue
+
+            try:
+                notification_service.send_notification(
+                    user=recipient,
+                    title=title,
+                    message=message,
+                    notification_type='ORDER',
+                    channels=['in_app', 'email'],
+                    action_url=action_url,
+                    data={
+                        'purchase_order_id': purchase_order.id,
+                        'order_number': purchase_order.order_number,
+                        'event_type': notification_type
+                    },
+                    async_send=False
+                )
+            except Exception as e:
+                logger.error(f"Failed to send PO notification to {recipient.username}: {str(e)}")
+
+    except ImportError as e:
+        logger.warning(f"Notification service not available: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error sending PO notification: {str(e)}", exc_info=True)
 
 
 class PurchaseOrderViewSet(BaseModelViewSet):
@@ -101,7 +220,12 @@ class PurchaseOrderViewSet(BaseModelViewSet):
         return context
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        purchase_order = serializer.save(created_by=self.request.user)
+        # Determine notification type based on status
+        if purchase_order.status in ['submitted', 'pending']:
+            send_po_notification(purchase_order, 'submitted', self.request.user)
+        else:
+            send_po_notification(purchase_order, 'created', self.request.user)
 
     @action(detail=True, methods=['post'], url_path='approve', name='approve')
     def approve(self, request, pk=None):
@@ -142,7 +266,10 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                     reason=f'Purchase order {order.order_number} approved by {department}',
                     request=request
                 )
-                
+
+                # Send notification about approval
+                send_po_notification(order, 'approved', request.user)
+
                 return APIResponse.success(
                     data=self.get_serializer(order).data,
                     message='Purchase order approved successfully',
@@ -186,7 +313,11 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                     reason=f'Purchase order {order.order_number} rejected',
                     request=request
                 )
-                
+
+                # Send notification about rejection
+                rejection_notes = request.data.get('notes', '')
+                send_po_notification(order, 'rejected', request.user, rejection_notes)
+
                 return APIResponse.success(
                     data=self.get_serializer(order).data,
                     message='Purchase order rejected',
@@ -229,7 +360,10 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                     reason=f'Purchase order {order.order_number} cancelled',
                     request=request
                 )
-                
+
+                # Send notification about cancellation
+                send_po_notification(order, 'cancelled', request.user)
+
                 return APIResponse.success(
                     data=self.get_serializer(order).data,
                     message='Purchase order cancelled successfully',
@@ -242,7 +376,7 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                 error_id=str(e),
                 correlation_id=get_correlation_id(request)
             )
-    
+
     @action(detail=True, methods=['post'], url_path='mark-received', name='mark_received')
     def mark_received(self, request, pk=None):
         """
@@ -273,13 +407,16 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                     reason=f'Purchase order {purchase_order.order_number} marked as received - inventory updated',
                     request=request
                 )
-                
+
+                # Send notification about goods received
+                send_po_notification(purchase_order, 'received', request.user)
+
                 return APIResponse.success(
                     data=self.get_serializer(purchase_order).data,
                     message='Purchase order marked as received and inventory updated',
                     correlation_id=correlation_id
                 )
-        
+
         except Exception as e:
             logger.error(f'Error marking PO as received: {str(e)}', exc_info=True)
             return APIResponse.server_error(
@@ -287,7 +424,7 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                 error_id=str(e),
                 correlation_id=get_correlation_id(request)
             )
-    
+
     @action(detail=True, methods=['post'], url_path='record-payment', name='record_payment')
     def record_payment(self, request, pk=None):
         """
