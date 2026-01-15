@@ -116,10 +116,14 @@ class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    # Read-only fields returned after create/update
+    id = serializers.IntegerField(read_only=True)
+    order_number = serializers.CharField(read_only=True)
 
     class Meta:
         model = PurchaseOrder
         fields = [
+            'id', 'order_number',  # Include id and order_number in response
             'supplier', 'branch', 'requisition', 'expected_delivery', 'delivery_instructions',
             'approved_budget', 'subtotal', 'tax_amount', 'discount_amount', 'shipping_cost', 'total',
             'tax_mode', 'tax_rate', 'items', 'shipping_address', 'billing_address', 'notes',
