@@ -17,6 +17,9 @@ class PurchaseOrderSerializer(BaseOrderSerializer):
     current_approver_id = serializers.SerializerMethodField()
     pending_approvals_list = serializers.SerializerMethodField()
     created_by_id = serializers.ReadOnlyField(source='created_by.id')
+    # Override order_type to ensure it always returns a value (for existing records with null)
+    order_type = serializers.SerializerMethodField()
+    source = serializers.SerializerMethodField()
     # Make requisition optional - queryset set at class level to avoid init issues
     requisition = serializers.PrimaryKeyRelatedField(
         queryset=ProcurementRequest.objects.all(),
@@ -62,6 +65,14 @@ class PurchaseOrderSerializer(BaseOrderSerializer):
         """Get pending approvals for this PO."""
         return get_pending_approvals_for_object(obj)
 
+    def get_order_type(self, obj):
+        """Return order_type with default for existing records with null value."""
+        return obj.order_type or 'purchase_order'
+
+    def get_source(self, obj):
+        """Return source with default for existing records with null value."""
+        return obj.source or 'procurement'
+
 
 class PurchaseOrderListSerializer(BaseOrderSerializer):
     """Simplified purchase order serializer for list views"""
@@ -69,6 +80,9 @@ class PurchaseOrderListSerializer(BaseOrderSerializer):
     requisition_reference = serializers.SerializerMethodField()
     current_approver_id = serializers.SerializerMethodField()
     created_by_id = serializers.ReadOnlyField(source='created_by.id')
+    # Override order_type and source to ensure they always return values
+    order_type = serializers.SerializerMethodField()
+    source = serializers.SerializerMethodField()
 
     class Meta(BaseOrderSerializer.Meta):
         model = PurchaseOrder
@@ -93,6 +107,14 @@ class PurchaseOrderListSerializer(BaseOrderSerializer):
     def get_current_approver_id(self, obj):
         """Get the current approver ID for this PO."""
         return get_current_approver_id(obj)
+
+    def get_order_type(self, obj):
+        """Return order_type with default for existing records with null value."""
+        return obj.order_type or 'purchase_order'
+
+    def get_source(self, obj):
+        """Return source with default for existing records with null value."""
+        return obj.source or 'procurement'
 
 
 class PurchaseOrderItemCreateSerializer(serializers.Serializer):
