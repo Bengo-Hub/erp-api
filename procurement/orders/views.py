@@ -14,7 +14,6 @@ from django.db import transaction
 from procurement.purchases.models import *
 from procurement.requisitions.models import *
 from core.models import Departments
-from approvals.models import Approval
 from .functions import generate_purchase_order
 from business.models import Branch
 from rest_framework.views import APIView
@@ -306,31 +305,27 @@ class PurchaseOrderViewSet(BaseModelViewSet):
     def approve(self, request, pk=None):
         """
         Approve a purchase order by a user from procurement/finance department.
+        Simple approval - directly updates order status without complex workflow.
         """
-        try:    
+        try:
             correlation_id = get_correlation_id(request)
-            with transaction.atomic():  
+            with transaction.atomic():
                 order = self.get_object()
                 department = request.data.get('department', 'Procurement')
-                
+                notes = request.data.get('notes', f'Approved by {request.user.username}')
+
                 if department.lower() not in ['procurement', 'finance']:
                     return APIResponse.forbidden(
                         message='Only procurement/finance can approve',
                         correlation_id=correlation_id
                     )
-                
-                # Create approval using centralized approval system
-                approval = Approval.objects.create(
-                    content_object=order,
-                    approver=request.user,
-                    status='approved',
-                    notes=request.data.get('notes', f'Approved by {request.user.username}')
-                )
-                
-                # Update order status if all approvals are complete
+
+                # Update order status and approval info
                 order.status = 'approved'
-                order.save()
-                
+                order.approved_by = request.user
+                order.approved_at = timezone.now()
+                order.save(update_fields=['status', 'approved_by', 'approved_at'])
+
                 # Log approval
                 AuditTrail.log(
                     operation=AuditTrail.APPROVAL,
@@ -338,7 +333,7 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                     entity_type='PurchaseOrder',
                     entity_id=order.id,
                     user=request.user,
-                    reason=f'Purchase order {order.order_number} approved by {department}',
+                    reason=f'Purchase order {order.order_number} approved by {department}. Notes: {notes}',
                     request=request
                 )
 
@@ -360,24 +355,17 @@ class PurchaseOrderViewSet(BaseModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='reject', name='reject')
     def reject(self, request, pk=None):
-        """Reject a purchase order."""
+        """Reject a purchase order - simple rejection without complex workflow."""
         try:
             correlation_id = get_correlation_id(request)
             with transaction.atomic():
                 order = self.get_object()
-                
-                # Create rejection approval
-                Approval.objects.create(
-                    content_object=order,
-                    approver=request.user,
-                    status='rejected',
-                    notes=request.data.get('notes', f'Rejected by {request.user.username}')
-                )
-                
+                notes = request.data.get('notes', f'Rejected by {request.user.username}')
+
                 # Update order status
                 order.status = 'rejected'
-                order.save()
-                
+                order.save(update_fields=['status'])
+
                 # Log rejection
                 AuditTrail.log(
                     operation=AuditTrail.CANCEL,
@@ -385,13 +373,12 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                     entity_type='PurchaseOrder',
                     entity_id=order.id,
                     user=request.user,
-                    reason=f'Purchase order {order.order_number} rejected',
+                    reason=f'Purchase order {order.order_number} rejected. Notes: {notes}',
                     request=request
                 )
 
                 # Send notification about rejection
-                rejection_notes = request.data.get('notes', '')
-                send_po_notification(order, 'rejected', request.user, rejection_notes)
+                send_po_notification(order, 'rejected', request.user, notes)
 
                 return APIResponse.success(
                     data=self.get_serializer(order).data,
@@ -637,7 +624,7 @@ class PurchaseOrderViewSet(BaseModelViewSet):
             
             # Log PDF access
             AuditTrail.log(
-                operation=AuditTrail.READ,
+                operation=AuditTrail.VIEW,
                 module='procurement',
                 entity_type='PurchaseOrder',
                 entity_id=purchase_order.id,
