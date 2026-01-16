@@ -62,6 +62,13 @@ RUN echo "=== Static Files Collection ===" \
 FROM base AS runtime
 WORKDIR /app
 
+# Install PostgreSQL client tools for database backup/restore functionality
+# pg_dump and psql are required for backup operations
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
 # Non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
@@ -82,12 +89,14 @@ ENV DJANGO_SETTINGS_MODULE=ProcureProKEAPI.settings \
 # Create media directories with proper permissions
 # Static files are pre-collected in the image during build (WhiteNoise serves them)
 # Media files should be persisted via PersistentVolume in production
+# Backups directory is within media for shared storage in K8s
 RUN mkdir -p /app/staticfiles \
     && mkdir -p /app/media/business/logo \
     && mkdir -p /app/media/invoices \
     && mkdir -p /app/media/receipts \
     && mkdir -p /app/media/reports \
     && mkdir -p /app/media/uploads \
+    && mkdir -p /app/media/backups \
     && chown -R appuser:appgroup /app/staticfiles /app/media \
     && chmod -R 755 /app/media
 

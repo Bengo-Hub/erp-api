@@ -90,6 +90,9 @@ class Quotation(BaseOrder):
     is_shared = models.BooleanField(default=False, help_text="Whether this quotation has been shared publicly")
     shared_at = models.DateTimeField(null=True, blank=True, help_text="When the quotation was first shared")
     allow_public_payment = models.BooleanField(default=False, help_text="Allow customer to make payment via public link")
+
+    # Acceptance notes (from public acceptance)
+    acceptance_notes = models.TextField(blank=True, null=True, help_text="Notes provided when quotation was accepted")
     
     class Meta:
         verbose_name = 'Quotation'
@@ -318,6 +321,7 @@ class QuotationEmailLog(BaseModel):
         ('reminder', 'Follow-up Reminder'),
         ('thank_you', 'Thank You'),
         ('expired_notice', 'Expiry Notice'),
+        ('accepted', 'Quotation Accepted'),
     ])
     recipient_email = models.EmailField()
     sent_at = models.DateTimeField(default=timezone.now)
@@ -330,7 +334,9 @@ class QuotationEmailLog(BaseModel):
         ('clicked', 'Clicked'),
         ('bounced', 'Bounced'),
         ('failed', 'Failed'),
+        ('logged', 'Logged'),
     ])
+    notes = models.TextField(blank=True, null=True, help_text="Additional notes for this log entry")
     
     class Meta:
         verbose_name = 'Quotation Email Log'

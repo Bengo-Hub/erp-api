@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
+    <title>{% block title %}{{ company_name|default:"BengoBox ERP" }}{% endblock %}</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        /* Reset styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: #f4f7fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #374151;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        table {
+            border-spacing: 0;
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        td {
+            padding: 0;
+        }
+
+        img {
+            border: 0;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* Container */
+        .email-wrapper {
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+
+        .email-container {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .email-header {
+            background: linear-gradient(135deg, {{ primary_color|default:"#7c3aed" }} 0%, {{ primary_color_dark|default:"#6d28d9" }} 100%);
+            padding: 32px 40px;
+            text-align: center;
+        }
+
+        .logo-container {
+            margin-bottom: 16px;
+        }
+
+        .logo {
+            max-height: 48px;
+            max-width: 180px;
+            height: auto;
+        }
+
+        .logo-placeholder {
+            display: inline-block;
+            width: 48px;
+            height: 48px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            line-height: 48px;
+            font-size: 24px;
+            color: #ffffff;
+        }
+
+        .header-title {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .header-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Content */
+        .email-body {
+            padding: 40px;
+            background-color: #ffffff;
+        }
+
+        .greeting {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 16px;
+        }
+
+        .content-text {
+            color: #4b5563;
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+
+        /* Buttons */
+        .button-container {
+            text-align: center;
+            margin: 32px 0;
+        }
+
+        .primary-button {
+            display: inline-block;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, {{ primary_color|default:"#7c3aed" }} 0%, {{ primary_color_dark|default:"#6d28d9" }} 100%);
+            color: #ffffff !important;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+            transition: all 0.2s ease;
+        }
+
+        .primary-button:hover {
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.45);
+        }
+
+        .secondary-button {
+            display: inline-block;
+            padding: 12px 28px;
+            background-color: #f3f4f6;
+            color: #374151 !important;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Info Box */
+        .info-box {
+            background-color: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+            padding: 16px 20px;
+            margin: 24px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-box-title {
+            font-weight: 600;
+            color: #0369a1;
+            margin-bottom: 4px;
+        }
+
+        .info-box-text {
+            color: #0c4a6e;
+            font-size: 14px;
+        }
+
+        /* Warning Box */
+        .warning-box {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 16px 20px;
+            margin: 24px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .warning-box-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 4px;
+        }
+
+        .warning-box-text {
+            color: #78350f;
+            font-size: 14px;
+        }
+
+        /* Success Box */
+        .success-box {
+            background-color: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 16px 20px;
+            margin: 24px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .success-box-title {
+            font-weight: 600;
+            color: #166534;
+            margin-bottom: 4px;
+        }
+
+        .success-box-text {
+            color: #14532d;
+            font-size: 14px;
+        }
+
+        /* Detail Card */
+        .detail-card {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+        }
+
+        .detail-card-title {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 16px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 14px;
+        }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background-color: #e5e7eb;
+            margin: 32px 0;
+        }
+
+        /* Footer */
+        .email-footer {
+            background-color: #f9fafb;
+            padding: 32px 40px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .footer-logo {
+            margin-bottom: 16px;
+        }
+
+        .footer-logo img {
+            max-height: 32px;
+            opacity: 0.7;
+        }
+
+        .footer-text {
+            color: #6b7280;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .footer-links {
+            margin: 16px 0;
+        }
+
+        .footer-links a {
+            color: #6b7280;
+            font-size: 13px;
+            text-decoration: none;
+            margin: 0 12px;
+        }
+
+        .footer-links a:hover {
+            color: {{ primary_color|default:"#7c3aed" }};
+        }
+
+        .footer-social {
+            margin: 20px 0;
+        }
+
+        .footer-social a {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            background-color: #e5e7eb;
+            border-radius: 50%;
+            line-height: 36px;
+            margin: 0 6px;
+            color: #6b7280;
+            font-size: 16px;
+        }
+
+        .footer-copyright {
+            color: #9ca3af;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        .unsubscribe-text {
+            color: #9ca3af;
+            font-size: 11px;
+            margin-top: 12px;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 640px) {
+            .email-wrapper {
+                width: 100% !important;
+            }
+
+            .email-header {
+                padding: 24px 20px;
+            }
+
+            .email-body {
+                padding: 24px 20px;
+            }
+
+            .email-footer {
+                padding: 24px 20px;
+            }
+
+            .header-title {
+                font-size: 20px;
+            }
+
+            .greeting {
+                font-size: 16px;
+            }
+
+            .content-text {
+                font-size: 15px;
+            }
+
+            .primary-button {
+                display: block;
+                text-align: center;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1f2937 !important;
+            }
+
+            .email-wrapper {
+                background-color: #111827 !important;
+            }
+
+            .email-body {
+                background-color: #111827 !important;
+            }
+
+            .greeting {
+                color: #f9fafb !important;
+            }
+
+            .content-text {
+                color: #d1d5db !important;
+            }
+
+            .detail-card {
+                background-color: #1f2937 !important;
+                border-color: #374151 !important;
+            }
+
+            .detail-card-title {
+                color: #f9fafb !important;
+                border-color: #374151 !important;
+            }
+
+            .detail-value {
+                color: #f9fafb !important;
+            }
+
+            .email-footer {
+                background-color: #1f2937 !important;
+                border-color: #374151 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <center style="width: 100%; background-color: #f4f7fa; padding: 40px 0;">
+        <!--[if mso | IE]>
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="640" align="center" style="width:640px;">
+        <tr>
+        <td>
+        <![endif]-->
+        <div class="email-wrapper" style="max-width: 640px; margin: 0 auto;">
+            <!-- Header -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td class="email-header">
+                        <div class="logo-container">
+                            {% if company_logo %}
+                            <img src="{{ company_logo }}" alt="{{ company_name|default:'BengoBox ERP' }}" class="logo">
+                            {% else %}
+                            <div class="logo-placeholder">
+                                {{ company_name|default:"B"|slice:":1" }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% block header_content %}
+                        <h1 class="header-title">{{ company_name|default:"BengoBox ERP" }}</h1>
+                        {% if header_subtitle %}
+                        <p class="header-subtitle">{{ header_subtitle }}</p>
+                        {% endif %}
+                        {% endblock %}
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Body -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td class="email-body">
+                        {% block content %}
+                        <!-- Email content goes here -->
+                        {% endblock %}
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Footer -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td class="email-footer">
+                        {% block footer_content %}
+                        <p class="footer-text">
+                            This email was sent by <strong>{{ company_name|default:"BengoBox ERP" }}</strong>
+                            {% if company_address %}
+                            <br>{{ company_address }}
+                            {% endif %}
+                        </p>
+
+                        {% if support_email or support_phone %}
+                        <p class="footer-text">
+                            Need help?
+                            {% if support_email %}
+                            <a href="mailto:{{ support_email }}" style="color: {{ primary_color|default:'#7c3aed' }};">{{ support_email }}</a>
+                            {% endif %}
+                            {% if support_phone %}
+                            | <a href="tel:{{ support_phone }}" style="color: {{ primary_color|default:'#7c3aed' }};">{{ support_phone }}</a>
+                            {% endif %}
+                        </p>
+                        {% endif %}
+
+                        <div class="footer-links">
+                            {% if website_url %}
+                            <a href="{{ website_url }}">Website</a>
+                            {% endif %}
+                            {% if privacy_url %}
+                            <a href="{{ privacy_url }}">Privacy Policy</a>
+                            {% endif %}
+                            {% if terms_url %}
+                            <a href="{{ terms_url }}">Terms of Service</a>
+                            {% endif %}
+                        </div>
+
+                        <p class="footer-copyright">
+                            &copy; {{ year|default:"2024" }} {{ company_name|default:"BengoBox ERP" }}. All rights reserved.
+                        </p>
+
+                        <p class="unsubscribe-text">
+                            This is an automated message. Please do not reply directly to this email.
+                            {% if unsubscribe_url %}
+                            <br><a href="{{ unsubscribe_url }}" style="color: #9ca3af;">Unsubscribe from these emails</a>
+                            {% endif %}
+                        </p>
+                        {% endblock %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <!--[if mso | IE]>
+        </td>
+        </tr>
+        </table>
+        <![endif]-->
+    </center>
+</body>
+</html>

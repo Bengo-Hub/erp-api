@@ -44,8 +44,8 @@ class QuotationSerializer(BaseOrderSerializer):
         return None
     
     def get_can_convert(self, obj):
-        """Check if quotation can be converted to invoice"""
-        return not obj.is_converted and obj.status not in ['expired', 'cancelled', 'declined']
+        """Check if quotation can be converted to invoice - only when accepted"""
+        return not obj.is_converted and obj.status == 'accepted'
 
 
 class QuotationEmailLogSerializer(serializers.ModelSerializer):
