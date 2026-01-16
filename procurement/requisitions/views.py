@@ -126,6 +126,10 @@ class ProcurementRequestViewSet(BaseModelViewSet):
 
     def get_queryset(self):
         """Optimize queries with select_related and prefetch_related for related objects."""
+        from core.utils import get_user_business_and_branch
+        from business.models import Bussiness
+        from django.db.models import Q
+
         queryset = ProcurementRequest.objects.all().select_related(
             'requester', 'business', 'branch'
         ).prefetch_related(
@@ -150,30 +154,29 @@ class ProcurementRequestViewSet(BaseModelViewSet):
         if request_type:
             queryset = queryset.filter(request_type=request_type)
 
-        # Get business and branch context
-        business_id = get_business_id_from_request(self.request)
-        branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
+        # Get business and branch context using unified utility (headers + user fallback)
+        business, branch = get_user_business_and_branch(self.request, return_objects=True)
+        business_id = business.id if business else None
+        branch_id = self.request.query_params.get('branch_id') or (branch.id if branch else None)
 
         # Filter by business/branch for non-superusers
         if not self.request.user.is_superuser:
             user = self.request.user
 
             # Get user's associated businesses
-            from business.models import Bussiness
             owned_businesses = Bussiness.objects.filter(owner=user)
             employee_businesses = Bussiness.objects.filter(employees__user=user)
             user_businesses = owned_businesses | employee_businesses
 
             # Filter requisitions by:
             # 1. Requisitions where user is the requester
-            # 2. Requisitions in user's businesses
-            from django.db.models import Q
+            # 2. Requisitions in user's businesses (including those with business=null created by user)
             queryset = queryset.filter(
                 Q(requester=user) |
                 Q(business__in=user_businesses)
             ).distinct()
         else:
-            # For superusers, filter by business_id if provided
+            # For superusers, filter by business_id if provided/resolved
             if business_id:
                 queryset = queryset.filter(business_id=business_id)
 
@@ -185,43 +188,22 @@ class ProcurementRequestViewSet(BaseModelViewSet):
 
     def perform_create(self, serializer):
         """Create requisition with requester, business and branch context."""
-        # Get business and branch from request context
-        business_id = get_business_id_from_request(self.request)
-        branch_id = get_branch_id_from_request(self.request)
+        from core.utils import get_user_business_and_branch
+        from business.models import Bussiness
 
-        # Prepare save kwargs
+        # Get business and branch using the unified utility (handles headers + user fallback)
+        business, branch = get_user_business_and_branch(self.request, return_objects=True)
+
+        # Prepare save kwargs - always set the requester to logged-in user
         save_kwargs = {'requester': self.request.user}
 
-        # Set business from context or user's business
-        if business_id:
-            from business.models import Bussiness
-            try:
-                business = Bussiness.objects.get(id=business_id)
-                save_kwargs['business'] = business
-            except Bussiness.DoesNotExist:
-                pass
+        # Set business if resolved
+        if business:
+            save_kwargs['business'] = business
 
-        # Fallback: Get business from user context
-        if 'business' not in save_kwargs:
-            from core.utils import get_user_business
-            business = get_user_business(self.request.user)
-            if business:
-                save_kwargs['business'] = business
-
-        # Set branch from context or user's branch
-        if branch_id:
-            try:
-                branch = Branch.objects.get(id=branch_id)
-                save_kwargs['branch'] = branch
-            except Branch.DoesNotExist:
-                pass
-
-        # Fallback: Get branch from user context
-        if 'branch' not in save_kwargs:
-            from core.utils import get_user_branch
-            branch = get_user_branch(self.request.user, self.request)
-            if branch:
-                save_kwargs['branch'] = branch
+        # Set branch if resolved
+        if branch:
+            save_kwargs['branch'] = branch
 
         requisition = serializer.save(**save_kwargs)
         # Send notification about new requisition
@@ -567,39 +549,20 @@ class UserRequestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Create requisition with requester, business and branch context."""
-        # Get business and branch from request context
-        business_id = get_business_id_from_request(self.request)
-        branch_id = get_branch_id_from_request(self.request)
+        from core.utils import get_user_business_and_branch
 
+        # Get business and branch using the unified utility (handles headers + user fallback)
+        business, branch = get_user_business_and_branch(self.request, return_objects=True)
+
+        # Prepare save kwargs - always set the requester to logged-in user
         save_kwargs = {'requester': self.request.user}
 
-        # Set business from context or user's business
-        if business_id:
-            from business.models import Bussiness
-            try:
-                business = Bussiness.objects.get(id=business_id)
-                save_kwargs['business'] = business
-            except Bussiness.DoesNotExist:
-                pass
+        # Set business if resolved
+        if business:
+            save_kwargs['business'] = business
 
-        if 'business' not in save_kwargs:
-            from core.utils import get_user_business
-            business = get_user_business(self.request.user)
-            if business:
-                save_kwargs['business'] = business
-
-        # Set branch from context or user's branch
-        if branch_id:
-            try:
-                branch = Branch.objects.get(id=branch_id)
-                save_kwargs['branch'] = branch
-            except Branch.DoesNotExist:
-                pass
-
-        if 'branch' not in save_kwargs:
-            from core.utils import get_user_branch
-            branch = get_user_branch(self.request.user, self.request)
-            if branch:
-                save_kwargs['branch'] = branch
+        # Set branch if resolved
+        if branch:
+            save_kwargs['branch'] = branch
 
         serializer.save(**save_kwargs)
