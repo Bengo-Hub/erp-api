@@ -198,17 +198,30 @@ class EmailService:
             If async_send is False, returns a dict with status info.
         """
         # Use configuration from_email if none provided
-        if not from_email and self.config:
-            from_email = f"{self.config.from_name} <{self.config.from_email}>"
-        
+        if not from_email:
+            if self.config:
+                from_email = f"{self.config.from_name} <{self.config.from_email}>"
+            else:
+                # Fall back to Django's default email settings
+                from django.conf import settings as django_settings
+                from_email = getattr(django_settings, 'DEFAULT_FROM_EMAIL', 'noreply@bengobox.com')
+
         # Convert single recipient to list
         if isinstance(recipient_list, str):
             recipient_list = [recipient_list]
-            
+
+        # Get sender email for logging
+        sender_email = from_email if from_email else 'unknown'
+        if self.config and not from_email:
+            sender_email = self.config.from_email
+        elif not self.config:
+            from django.conf import settings as django_settings
+            sender_email = getattr(django_settings, 'DEFAULT_FROM_EMAIL', 'noreply@bengobox.com')
+
         # Log the email
         email_log = EmailLog.objects.create(
             integration=self.integration,
-            sender=from_email if from_email else (self.config.from_email if self.config else "unknown"),
+            sender=sender_email,
             recipients=", ".join(recipient_list),
             cc=", ".join(cc) if cc else None,
             bcc=", ".join(bcc) if bcc else None,

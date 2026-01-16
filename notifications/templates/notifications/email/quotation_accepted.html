@@ -1,0 +1,58 @@
+{% extends "notifications/email/base_email.html" %}
+
+{% block title %}Quotation Accepted - {{ company_name|default:"BengoBox ERP" }}{% endblock %}
+
+{% block header_content %}
+<h1 class="header-title">Quotation Accepted!</h1>
+<p class="header-subtitle">{{ quotation_number }}</p>
+{% endblock %}
+
+{% block content %}
+<div class="success-box">
+    <p class="success-box-title">Great news!</p>
+    <p class="success-box-text">
+        Your quotation <strong>{{ quotation_number }}</strong> has been accepted by the customer.
+    </p>
+</div>
+
+<div class="detail-card">
+    <p class="detail-card-title">Acceptance Details</p>
+    <table width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Customer</td>
+            <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #1f2937; font-size: 14px;">{{ customer_name }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #6b7280; font-size: 14px; border-top: 1px solid #f3f4f6;">Email</td>
+            <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #1f2937; font-size: 14px; border-top: 1px solid #f3f4f6;">{{ customer_email }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #6b7280; font-size: 14px; border-top: 1px solid #f3f4f6;">Quotation Number</td>
+            <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #1f2937; font-size: 14px; border-top: 1px solid #f3f4f6;">{{ quotation_number }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #6b7280; font-size: 14px; border-top: 1px solid #f3f4f6;">Total Amount</td>
+            <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #059669; font-size: 16px; border-top: 1px solid #f3f4f6;">KES {{ total_amount }}</td>
+        </tr>
+    </table>
+</div>
+
+{% if acceptance_notes %}
+<div class="info-box">
+    <p class="info-box-title">Customer Notes</p>
+    <p class="info-box-text">{{ acceptance_notes }}</p>
+</div>
+{% endif %}
+
+<p class="content-text">
+    <strong>Next Steps:</strong><br>
+    Consider reaching out to the customer to discuss delivery timelines and payment arrangements. You may also want to convert this quotation to an invoice.
+</p>
+
+<div class="divider"></div>
+
+<p class="content-text">
+    Congratulations on the sale!<br>
+    <strong>{{ company_name|default:"BengoBox ERP" }} Team</strong>
+</p>
+{% endblock %}

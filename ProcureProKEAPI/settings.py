@@ -542,6 +542,11 @@ STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),) if os.path.isdir(_static_
 # In development, use local directory
 MEDIA_ROOT = os.getenv('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 
+# Backup files configuration
+# In production (K8s), uses PersistentVolume at /app/backups
+# This path is shared storage for backup files
+BACKUP_ROOT = os.getenv('BACKUP_ROOT', os.path.join(BASE_DIR, 'backups'))
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',

@@ -318,8 +318,36 @@ def _process_bulk_operation(data: Dict[str, Any], user_id: Optional[int]) -> Dic
     return {'status': 'completed', 'processed_items': 0}
 
 def _process_system_maintenance(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Process system maintenance tasks"""
-    # Implementation for system maintenance
+    """Process system maintenance tasks including backups"""
+    operation = data.get('operation', '')
+
+    if operation == 'backup':
+        from authmanagement.services.backup_service import backup_service
+
+        backup_type = data.get('backup_type', 'full')
+        user_id = data.get('user_id')
+
+        try:
+            backup = backup_service.create_backup(
+                backup_type=backup_type,
+                user_id=user_id
+            )
+            return {
+                'status': 'completed',
+                'operation': 'backup',
+                'backup_id': backup.id,
+                'backup_path': backup.path,
+                'backup_size': backup.size
+            }
+        except Exception as e:
+            logger.error(f"Backup failed: {str(e)}")
+            return {
+                'status': 'failed',
+                'operation': 'backup',
+                'error': str(e)
+            }
+
+    # Default maintenance tasks
     return {'status': 'completed', 'maintenance_tasks': []}
 
 # API functions for job management

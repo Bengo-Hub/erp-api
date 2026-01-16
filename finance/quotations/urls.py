@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import QuotationViewSet, QuotationEmailLogViewSet, PublicQuotationView, PublicQuotationPDFView
+from .views import QuotationViewSet, QuotationEmailLogViewSet, PublicQuotationView, PublicQuotationPDFView, PublicQuotationAcceptView
 
 router = DefaultRouter()
 router.register(r'quotations', QuotationViewSet, basename='quotation')
@@ -11,5 +11,6 @@ urlpatterns = [
     # Public API endpoints for accessing quotations via share token
     path('public/quotation/<int:quotation_id>/<str:token>/', PublicQuotationView.as_view(), name='public-quotation-api'),
     path('public/quotation/<int:quotation_id>/<str:token>/pdf/', PublicQuotationPDFView.as_view(), name='public-quotation-pdf'),
+    path('public/quotation/<int:quotation_id>/<str:token>/accept/', PublicQuotationAcceptView.as_view(), name='public-quotation-accept'),
 ]
 

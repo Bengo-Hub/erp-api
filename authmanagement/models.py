@@ -115,7 +115,7 @@ class Backup(models.Model):
         ('full', 'Full Backup'),
         ('incremental', 'Incremental Backup')
     ]
-    
+
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('in_progress', 'In Progress'),
@@ -124,15 +124,32 @@ class Backup(models.Model):
     ]
 
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
-    path = models.CharField(max_length=255)
-    size = models.BigIntegerField(help_text="Size in bytes")
+    path = models.CharField(max_length=500, blank=True, default='')
+    size = models.BigIntegerField(default=0, help_text="Size in bytes")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     error_message = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='backups_created'
+    )
+    storage_type = models.CharField(max_length=10, default='local', choices=[
+        ('local', 'Local Storage'),
+        ('s3', 'Amazon S3')
+    ])
 
     def __str__(self):
         return f"{self.type} backup - {self.created_at}"
+
+    @property
+    def filename(self):
+        """Get the filename from the path."""
+        import os
+        return os.path.basename(self.path) if self.path else ''
 
     class Meta:
         indexes = [
@@ -140,6 +157,7 @@ class Backup(models.Model):
             models.Index(fields=['status'], name='idx_backup_status'),
             models.Index(fields=['created_at'], name='idx_backup_created_at'),
         ]
+        ordering = ['-created_at']
 
 
 class BackupConfig(models.Model):

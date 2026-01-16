@@ -221,19 +221,8 @@ class InvoiceViewSet(BaseModelViewSet):
                 'company_name': company.name if company else 'Company',
                 'year': timezone.now().year
             }
-            
-            # Generate PDF attachment
-            from .pdf_generator import generate_invoice_pdf
-            # Resolve company info using shared helper so it includes logo and branding
-            from finance.utils import resolve_company_info
-            branch = getattr(invoice, 'branch', None)
-            biz = getattr(branch, 'business', None) if branch else (company if company else None)
-            company_info = resolve_company_info(biz, branch)
-            
-            doc_type = request.query_params.get('type', 'invoice')
-            pdf_bytes = generate_invoice_pdf(invoice, company_info, document_type=doc_type)
-            
-            # Send email with PDF attachment
+
+            # Send email with public link (no PDF attachment to avoid email delivery issues)
             email_service = EmailService()
             email_service.send_django_template_email(
                 template_name='notifications/email/invoice_sent.html',
@@ -241,9 +230,6 @@ class InvoiceViewSet(BaseModelViewSet):
                 subject=f'Invoice {invoice.invoice_number} from {company.name if company else "Company"}',
                 recipient_list=[email_to],
                 cc=send_copy_to if send_copy_to else None,
-                attachments=[
-                    (f'Invoice_{invoice.invoice_number}.pdf', pdf_bytes, 'application/pdf')
-                ],
                 async_send=True
             )
             

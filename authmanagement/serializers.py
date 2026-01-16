@@ -234,21 +234,50 @@ class BackupScheduleSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class BackupSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    created_at = serializers.DateTimeField(read_only=True)
-    type = serializers.ChoiceField(choices=['full', 'incremental'])
-    size = serializers.IntegerField(read_only=True)
-    status = serializers.CharField(read_only=True)
-    path = serializers.CharField(read_only=True)
+class BackupSerializer(serializers.ModelSerializer):
+    """Serializer for Backup model with computed fields."""
+    filename = serializers.SerializerMethodField()
+    download_url = serializers.SerializerMethodField()
 
-class BackupConfigSerializer(serializers.Serializer):
-    storage_type = serializers.ChoiceField(choices=['local', 's3'])
-    path = serializers.CharField(required=False)
-    bucket = serializers.CharField(required=False)
-    region = serializers.CharField(required=False)
-    access_key = serializers.CharField(required=False)
-    secret_key = serializers.CharField(required=False)
+    class Meta:
+        model = Backup
+        fields = [
+            'id', 'type', 'status', 'path', 'size', 'error_message',
+            'created_at', 'completed_at', 'storage_type', 'filename', 'download_url'
+        ]
+        read_only_fields = ['id', 'path', 'size', 'status', 'error_message', 'created_at', 'completed_at', 'storage_type']
+
+    def get_filename(self, obj):
+        return obj.filename
+
+    def get_download_url(self, obj):
+        # Download URL is added dynamically in the view
+        return getattr(obj, '_download_url', None)
+
+
+class BackupConfigSerializer(serializers.ModelSerializer):
+    """Serializer for BackupConfig model."""
+
+    class Meta:
+        model = BackupConfig
+        fields = [
+            'id', 'storage_type', 'local_path', 's3_bucket', 's3_region',
+            's3_access_key', 's3_secret_key', 'retention_days', 'created_at', 'updated_at'
+        ]
+        extra_kwargs = {
+            's3_access_key': {'write_only': True},
+            's3_secret_key': {'write_only': True},
+        }
+
+    def to_representation(self, instance):
+        """Hide sensitive data on read, show masked versions."""
+        data = super().to_representation(instance)
+        # Show masked versions of sensitive fields
+        if instance.s3_access_key:
+            data['s3_access_key_set'] = True
+        if instance.s3_secret_key:
+            data['s3_secret_key_set'] = True
+        return data
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
