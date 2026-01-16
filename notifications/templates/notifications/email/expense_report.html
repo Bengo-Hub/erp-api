@@ -1,290 +1,120 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expense Report</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        .email-container {
-            background-color: #ffffff;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header {
-            text-align: center;
-            padding-bottom: 20px;
-            border-bottom: 3px solid #2563eb;
-            margin-bottom: 30px;
-        }
-        .company-name {
-            font-size: 28px;
-            font-weight: bold;
-            color: #2563eb;
-            margin: 0;
-        }
-        .document-type {
-            font-size: 14px;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 5px;
-        }
-        .expense-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #1e293b;
-            text-align: center;
-            margin: 20px 0;
-        }
-        .info-section {
-            margin: 25px 0;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .info-label {
-            color: #64748b;
-            font-weight: 500;
-        }
-        .info-value {
-            color: #1e293b;
-            font-weight: 600;
-        }
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 25px 0;
-        }
-        .items-table th {
-            background-color: #f1f5f9;
-            color: #475569;
-            font-weight: 600;
-            padding: 12px;
-            text-align: left;
-            border-bottom: 2px solid #cbd5e1;
-        }
-        .items-table td {
-            padding: 12px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .items-table tr:hover {
-            background-color: #f8fafc;
-        }
-        .totals-section {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px solid #e2e8f0;
-        }
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            font-size: 16px;
-        }
-        .grand-total {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid #2563eb;
-        }
-        .message-box {
-            background-color: #eff6ff;
-            border-left: 4px solid #2563eb;
-            padding: 15px;
-            margin: 25px 0;
-            border-radius: 4px;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .status-approved {
-            background-color: #d1fae5;
-            color: #065f46;
-        }
-        .status-pending {
-            background-color: #fef3c7;
-            color: #92400e;
-        }
-        .cta-button {
-            display: inline-block;
-            background-color: #2563eb;
-            color: #ffffff;
-            padding: 12px 30px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            margin-top: 20px;
-            text-align: center;
-        }
-        .cta-button:hover {
-            background-color: #1d4ed8;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
-            color: #64748b;
-            font-size: 12px;
-        }
-        @media only screen and (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            .email-container {
-                padding: 20px;
-            }
-            .items-table {
-                font-size: 12px;
-            }
-            .items-table th, .items-table td {
-                padding: 8px 4px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="email-container">
-        <!-- Header -->
-        <div class="header">
-            <h1 class="company-name">{{ business_name }}</h1>
-            <p class="document-type">Expense Report</p>
-        </div>
+{% extends "notifications/email/base_email.html" %}
 
-        <!-- Greeting -->
-        <p>Hello{% if recipient_name %} {{ recipient_name }}{% endif %},</p>
+{% block title %}Expense Report - {{ company_name|default:"BengoBox ERP" }}{% endblock %}
 
-        {% if custom_message %}
-        <div class="message-box">
-            <p style="margin: 0;">{{ custom_message }}</p>
-        </div>
-        {% endif %}
+{% block header_content %}
+<h1 class="header-title">Expense Report</h1>
+<p class="header-subtitle">#{{ expense.reference_no }}</p>
+{% endblock %}
 
-        <p>Please find the expense report details below:</p>
+{% block content %}
+<p class="greeting">Hello{% if recipient_name %} {{ recipient_name }}{% endif %},</p>
 
-        <!-- Expense Number -->
-        <div class="expense-number">
-            Expense #{{ expense.reference_no }}
-        </div>
+{% if custom_message %}
+<div class="info-box">
+    <div class="info-box-text">{{ custom_message }}</div>
+</div>
+{% endif %}
 
-        <!-- Expense Info -->
-        <div class="info-section">
-            <div class="info-row">
-                <span class="info-label">Category:</span>
-                <span class="info-value">{{ expense.category.name }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date:</span>
-                <span class="info-value">{{ expense.date_added|date:"d M, Y" }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Status:</span>
-                <span class="info-value">
-                    <span class="status-badge {% if expense.status == 'approved' %}status-approved{% else %}status-pending{% endif %}">
-                        {{ expense.get_status_display|default:expense.status }}
-                    </span>
+<p class="content-text">
+    Please find the expense report details below:
+</p>
+
+<div class="detail-card">
+    <div class="detail-card-title">Expense Information</div>
+    <table width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr class="detail-row">
+            <td class="detail-label" style="padding: 8px 0;">Category:</td>
+            <td class="detail-value" style="padding: 8px 0; text-align: right;">{{ expense.category.name }}</td>
+        </tr>
+        <tr class="detail-row">
+            <td class="detail-label" style="padding: 8px 0;">Date:</td>
+            <td class="detail-value" style="padding: 8px 0; text-align: right;">{{ expense.date_added|date:"d M, Y" }}</td>
+        </tr>
+        <tr class="detail-row">
+            <td class="detail-label" style="padding: 8px 0;">Status:</td>
+            <td class="detail-value" style="padding: 8px 0; text-align: right;">
+                {% if expense.status == 'approved' %}
+                <span style="background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                    {{ expense.get_status_display|default:expense.status|upper }}
                 </span>
-            </div>
-            {% if expense.expense_for_user %}
-            <div class="info-row">
-                <span class="info-label">Expense For:</span>
-                <span class="info-value">{{ expense.expense_for_user.get_full_name }}</span>
-            </div>
-            {% endif %}
-        </div>
+                {% else %}
+                <span style="background-color: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                    {{ expense.get_status_display|default:expense.status|upper }}
+                </span>
+                {% endif %}
+            </td>
+        </tr>
+        {% if expense.expense_for_user %}
+        <tr class="detail-row">
+            <td class="detail-label" style="padding: 8px 0;">Expense For:</td>
+            <td class="detail-value" style="padding: 8px 0; text-align: right;">{{ expense.expense_for_user.get_full_name }}</td>
+        </tr>
+        {% endif %}
+    </table>
+</div>
 
-        <!-- Items Table (if available) -->
+{% if expense.items %}
+<div class="detail-card">
+    <div class="detail-card-title">Expense Items</div>
+    <table width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 12px;">
+        <thead>
+            <tr style="background-color: #f3f4f6;">
+                <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Description</th>
+                <th style="padding: 12px 8px; text-align: right; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Qty</th>
+                <th style="padding: 12px 8px; text-align: right; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Amount</th>
+                <th style="padding: 12px 8px; text-align: right; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in expense.items %}
+            <tr>
+                <td style="padding: 12px 8px; border-bottom: 1px solid #f3f4f6;">
+                    <strong>{{ item.name }}</strong>
+                    {% if item.description %}
+                    <br><small style="color: #6b7280;">{{ item.description }}</small>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;">{{ item.quantity|default:1 }}</td>
+                <td style="padding: 12px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;">{{ currency_symbol }}{{ item.unit_price|floatformat:2 }}</td>
+                <td style="padding: 12px 8px; text-align: right; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ currency_symbol }}{{ item.total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<div class="detail-card" style="background-color: #f0fdf4; border: 1px solid #bbf7d0;">
+    <div class="detail-card-title" style="color: #166534; border-bottom-color: #bbf7d0;">Totals</div>
+    <table width="100%" cellspacing="0" cellpadding="0" border="0">
         {% if expense.items %}
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th>Description</th>
-                    <th style="text-align: right;">Quantity</th>
-                    <th style="text-align: right;">Amount</th>
-                    <th style="text-align: right;">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in expense.items %}
-                <tr>
-                    <td>
-                        <strong>{{ item.name }}</strong>
-                        {% if item.description %}
-                        <br><small style="color: #64748b;">{{ item.description }}</small>
-                        {% endif %}
-                    </td>
-                    <td style="text-align: right;">{{ item.quantity|default:1 }}</td>
-                    <td style="text-align: right;">{{ currency_symbol }}{{ item.unit_price|floatformat:2 }}</td>
-                    <td style="text-align: right;">{{ currency_symbol }}{{ item.total|floatformat:2 }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <tr class="detail-row">
+            <td class="detail-label" style="padding: 8px 0;">Subtotal:</td>
+            <td class="detail-value" style="padding: 8px 0; text-align: right;">{{ currency_symbol }}{{ subtotal|floatformat:2 }}</td>
+        </tr>
+        <tr class="detail-row">
+            <td class="detail-label" style="padding: 8px 0;">Tax:</td>
+            <td class="detail-value" style="padding: 8px 0; text-align: right;">{{ currency_symbol }}{{ tax_amount|floatformat:2 }}</td>
+        </tr>
         {% endif %}
+        <tr class="detail-row" style="border-top: 2px solid #22c55e;">
+            <td class="detail-label" style="padding: 12px 0; font-weight: 600; font-size: 16px;">Total Amount:</td>
+            <td class="detail-value" style="padding: 12px 0; text-align: right; color: #059669; font-size: 24px; font-weight: bold;">{{ currency_symbol }}{{ expense.total_amount|floatformat:2 }}</td>
+        </tr>
+    </table>
+</div>
 
-        <!-- Totals -->
-        <div class="totals-section">
-            {% if expense.items %}
-            <div class="total-row">
-                <span>Subtotal:</span>
-                <span>{{ currency_symbol }}{{ subtotal|floatformat:2 }}</span>
-            </div>
-            <div class="total-row">
-                <span>Tax:</span>
-                <span>{{ currency_symbol }}{{ tax_amount|floatformat:2 }}</span>
-            </div>
-            {% endif %}
-            <div class="total-row grand-total">
-                <span>Total Amount:</span>
-                <span>{{ currency_symbol }}{{ expense.total_amount|floatformat:2 }}</span>
-            </div>
-        </div>
+{% if expense.expense_note %}
+<div class="info-box">
+    <div class="info-box-title">Notes</div>
+    <div class="info-box-text">{{ expense.expense_note }}</div>
+</div>
+{% endif %}
 
-        <!-- Notes -->
-        {% if expense.expense_note %}
-        <div style="margin-top: 25px; padding: 15px; background-color: #f8fafc; border-radius: 6px;">
-            <strong style="color: #475569;">Notes:</strong>
-            <p style="margin: 10px 0 0 0; color: #64748b;">{{ expense.expense_note }}</p>
-        </div>
-        {% endif %}
-
-        <!-- Call to Action -->
-        {% if view_url %}
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="{{ view_url }}" class="cta-button">View Expense Report</a>
-        </div>
-        {% endif %}
-
-        <!-- Footer -->
-        <div class="footer">
-            <p>This is an automated email from {{ business_name }}.</p>
-            <p>If you have any questions, please contact us.</p>
-            {% if business_email %}
-            <p><a href="mailto:{{ business_email }}" style="color: #2563eb;">{{ business_email }}</a></p>
-            {% endif %}
-        </div>
-    </div>
-</body>
-</html>
-
+{% if view_url %}
+<div class="button-container">
+    <a href="{{ view_url }}" class="primary-button">View Expense Report</a>
+</div>
+{% endif %}
+{% endblock %}

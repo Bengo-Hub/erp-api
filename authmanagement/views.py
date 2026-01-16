@@ -117,54 +117,101 @@ def email_confirm_success(request):
     return render(request,'auth/email_confirm_success.html',{'site_url':site_url.domain,'site_name':site_url.name})
 
 class ForgotPasswordView(generics.CreateAPIView):
+    """
+    Production-ready password reset request endpoint.
+    Sends a secure password reset email with proper branding and URL configuration.
+    """
     permission_classes = ()
-    authentication_classes=[]
+    authentication_classes = []
     serializer_class = ForgotPasswordSerializer
-    site_url = ''#Site.objects.filter(name='frontend_url').first()
-    
-    # Exempt from CSRF for API password reset
+
     @csrf_exempt
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        
+
         if serializer.is_valid():
             email = serializer.data.get("email")
             user = User.objects.filter(email=email).first()
 
             if user:
-                # Generate and send password reset email
-                token = default_token_generator.make_token(user)
-                uid = urlsafe_base64_encode(force_bytes(user.id))
-                reset_url = f"{self.site_url}/password-reset-confirm/{uid}/{token}/"
-                subject = 'Reset your password'
-                message = render_to_string('auth/forgot_password_email.html', {
-                    'reset_url':reset_url,
-                })
-                # schedule in a thread
-                email_service = EmailService()
-                email_service.send_email(
-                    subject=subject,
-                    message=message,
-                    recipient_list=[user.email],
-                    async_send=True
-                )
-                print("Email sent successfully!")
-                return Response({"detail": "Password reset email sent successfully."}, status=status.HTTP_200_OK)
-            
-            # If the user is not found, don't reveal that the email is not registered.
-            return Response({"detail": "Password reset email sent successfully. If the email is registered, you will receive a reset link shortly."}, status=status.HTTP_200_OK)
+                try:
+                    # Generate secure token
+                    token = default_token_generator.make_token(user)
+                    uid = urlsafe_base64_encode(force_bytes(user.id))
+
+                    # Build reset URL using frontend URL from settings
+                    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5217').rstrip('/')
+                    reset_url = f"{frontend_url}/auth/reset-password/{uid}/{token}"
+
+                    # Get company branding if available
+                    company_name = "BengoBox ERP"
+                    company_logo = None
+                    primary_color = "#7c3aed"
+                    support_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'support@bengobox.com')
+
+                    try:
+                        from business.models import Bussiness
+                        business = Bussiness.objects.first()
+                        if business:
+                            company_name = business.name or company_name
+                            company_logo = business.logo.url if business.logo else None
+                            primary_color = business.primary_color or primary_color
+                    except Exception:
+                        pass
+
+                    # Get user's display name
+                    user_name = user.first_name or user.username or "User"
+
+                    # Prepare email context
+                    context = {
+                        'user_name': user_name,
+                        'user_email': user.email,
+                        'reset_url': reset_url,
+                        'expiry_hours': 24,
+                        'company_name': company_name,
+                        'company_logo': company_logo,
+                        'primary_color': primary_color,
+                        'primary_color_dark': primary_color,
+                        'support_email': support_email,
+                        'year': timezone.now().year,
+                    }
+
+                    # Send email using the new template
+                    email_service = EmailService()
+                    email_service.send_django_template_email(
+                        template_name='notifications/email/password_reset_request.html',
+                        context=context,
+                        subject=f'Reset Your Password - {company_name}',
+                        recipient_list=[user.email],
+                        async_send=True
+                    )
+
+                    logger.info(f"Password reset email sent to {user.email}")
+
+                except Exception as e:
+                    logger.error(f"Failed to send password reset email: {str(e)}")
+                    # Still return success to not reveal user existence
+
+            # Always return success to prevent email enumeration
+            return Response({
+                "detail": "If an account with that email exists, you will receive a password reset link shortly.",
+                "success": True
+            }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PasswordResetConfirmView(APIView):
+    """
+    Production-ready password reset confirmation endpoint.
+    Validates token, updates password, and sends confirmation email.
+    """
     permission_classes = ()
-    authentication_classes=[]
+    authentication_classes = []
     serializer_class = SetPasswordSerializer
-    
-    # Exempt from CSRF for API password reset confirmation
+
     @csrf_exempt
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
@@ -179,25 +226,88 @@ class PasswordResetConfirmView(APIView):
         if user is not None and default_token_generator.check_token(user, token):
             serializer = SetPasswordSerializer(data=request.data)
             if serializer.is_valid():
-                print(serializer.data)
-                new_password = request.data["new_password"]
-                if new_password !=None:
-                    user.set_password(new_password)
-                    print('password->',new_password,user.password)
-                    # Track password lifecycle
+                new_password = request.data.get("new_password")
+                if not new_password:
+                    return Response({
+                        "detail": "New password cannot be empty.",
+                        "success": False
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Update password
+                user.set_password(new_password)
+
+                # Track password lifecycle
+                try:
+                    user.password_changed_at = timezone.now()
+                    user.must_change_password = False
+                except Exception:
+                    pass
+
+                user.save()
+
+                # Send password change confirmation email
+                try:
+                    # Get company branding
+                    company_name = "BengoBox ERP"
+                    company_logo = None
+                    primary_color = "#7c3aed"
+                    support_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'support@bengobox.com')
+
                     try:
-                        user.password_changed_at = timezone.now()
-                        user.must_change_password = False
+                        from business.models import Bussiness
+                        business = Bussiness.objects.first()
+                        if business:
+                            company_name = business.name or company_name
+                            company_logo = business.logo.url if business.logo else None
+                            primary_color = business.primary_color or primary_color
                     except Exception:
                         pass
-                    user.save()
-                else:
-                    return Response({"detail":"New password cannot be null!"}, status=status.HTTP_400_BAD_REQUEST)
-                return Response({"detail": "Password reset successfully."}, status=status.HTTP_200_OK)
+
+                    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5217').rstrip('/')
+                    login_url = f"{frontend_url}/auth/login"
+
+                    # Get client IP
+                    ip_address = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR', 'Unknown')
+
+                    context = {
+                        'user_name': user.first_name or user.username or "User",
+                        'user_email': user.email,
+                        'changed_at': timezone.now().strftime('%B %d, %Y at %I:%M %p'),
+                        'ip_address': ip_address,
+                        'login_url': login_url,
+                        'company_name': company_name,
+                        'company_logo': company_logo,
+                        'primary_color': primary_color,
+                        'primary_color_dark': primary_color,
+                        'support_email': support_email,
+                        'year': timezone.now().year,
+                    }
+
+                    email_service = EmailService()
+                    email_service.send_django_template_email(
+                        template_name='notifications/email/password_reset_success.html',
+                        context=context,
+                        subject=f'Password Changed - {company_name}',
+                        recipient_list=[user.email],
+                        async_send=True
+                    )
+
+                    logger.info(f"Password reset confirmation email sent to {user.email}")
+
+                except Exception as e:
+                    logger.error(f"Failed to send password change confirmation: {str(e)}")
+
+                return Response({
+                    "detail": "Password has been reset successfully. You can now log in with your new password.",
+                    "success": True
+                }, status=status.HTTP_200_OK)
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"detail": "Invalid reset link."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "detail": "Invalid or expired reset link. Please request a new password reset.",
+            "success": False
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 class ChangePasswordView(UpdateAPIView):
     serializer_class = ChangePasswordSerializer
@@ -330,82 +440,287 @@ class PasswordPolicyView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class BackupView(APIView):
+    """
+    Production-ready backup management API.
+    Supports local and S3 storage with download URLs.
+    """
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get(self, request):
+        """List all backups with download URLs."""
+        from authmanagement.services.backup_service import backup_service
+
         backups = Backup.objects.all().order_by('-created_at')
         serializer = BackupSerializer(backups, many=True)
-        return Response(serializer.data)
-    
-    def post(self, request):
-        backup_type = request.data.get('type', 'full')
-        
-        # Use enhanced background job system instead of basic threading
-        from core.background_jobs import submit_background_job
-        
-        job_id = submit_background_job(
-            'system_maintenance',
-            {
-                'operation': 'backup',
-                'backup_type': backup_type,
-                'user_id': request.user.id if request.user.is_authenticated else None
-            },
-            user_id=request.user.id if request.user.is_authenticated else None
-        )
-        
+        data = serializer.data
+
+        # Add download URLs for completed backups
+        for backup_data in data:
+            if backup_data.get('status') == 'completed':
+                try:
+                    backup_id = backup_data.get('id')
+                    backup_data['download_url'] = backup_service.get_download_url(backup_id)
+                except Exception as e:
+                    backup_data['download_url'] = None
+                    logger.error(f"Failed to get download URL for backup {backup_id}: {e}")
+
         return Response({
-            'message': 'Backup process started',
-            'job_id': job_id
-        }, status=status.HTTP_202_ACCEPTED)
-    
-    def create_backup(self, backup_type):
+            'success': True,
+            'results': data,
+            'count': len(data)
+        })
+
+    def post(self, request):
+        """Create a new backup (async via Celery or sync fallback)."""
+        from authmanagement.services.backup_service import backup_service
+
+        backup_type = request.data.get('type', 'full')
+
+        # Try async first, fallback to sync
         try:
-            # Create backup using appropriate database command
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f'backup_{backup_type}_{timestamp}.sql'
-            path = os.path.join(settings.BACKUP_ROOT, filename)
-            
-            if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
-                cmd = f'pg_dump -U {settings.DATABASES["default"]["USER"]} -h {settings.DATABASES["default"]["HOST"]} {settings.DATABASES["default"]["NAME"]} > {path}'
-            else:  # MySQL
-                cmd = f'mysqldump -u {settings.DATABASES["default"]["USER"]} -p{settings.DATABASES["default"]["PASSWORD"]} -h {settings.DATABASES["default"]["HOST"]} {settings.DATABASES["default"]["NAME"]} > {path}'
-            
-            subprocess.run(cmd, shell=True, check=True)
-            
-            # Create backup record
-            Backup.objects.create(
-                type=backup_type,
-                path=path,
-                size=os.path.getsize(path),
-                status='completed'
-            )
-        except Exception as e:
-            Backup.objects.create(
-                type=backup_type,
-                path=path,
-                status='failed',
-                error_message=str(e)
+            from core.background_jobs import submit_background_job
+
+            job_id = submit_background_job(
+                'system_maintenance',
+                {
+                    'operation': 'backup',
+                    'backup_type': backup_type,
+                    'user_id': request.user.id if request.user.is_authenticated else None
+                },
+                user_id=request.user.id if request.user.is_authenticated else None
             )
 
-class BackupConfigView(APIView):
+            return Response({
+                'success': True,
+                'message': 'Backup process started in background',
+                'job_id': job_id
+            }, status=status.HTTP_202_ACCEPTED)
+
+        except Exception as e:
+            logger.warning(f"Background job failed, running sync: {e}")
+
+            # Fallback to sync backup
+            try:
+                backup = backup_service.create_backup(
+                    backup_type=backup_type,
+                    user_id=request.user.id if request.user.is_authenticated else None
+                )
+                serializer = BackupSerializer(backup)
+                return Response({
+                    'success': True,
+                    'message': 'Backup created successfully',
+                    'data': serializer.data
+                }, status=status.HTTP_201_CREATED)
+            except Exception as backup_error:
+                return Response({
+                    'success': False,
+                    'message': f'Backup failed: {str(backup_error)}'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BackupDetailView(APIView):
+    """
+    Backup detail operations: download, restore, delete.
+    """
     permission_classes = [permissions.IsAuthenticated]
-    
+
+    def get(self, request, pk):
+        """Get backup details or download backup file."""
+        from authmanagement.services.backup_service import backup_service
+        from django.http import HttpResponse
+
+        action = request.query_params.get('action', 'detail')
+
+        try:
+            backup = Backup.objects.get(pk=pk)
+
+            if action == 'download':
+                # Download backup file
+                content, filename, content_type = backup_service.download_backup(pk)
+                response = HttpResponse(content, content_type=content_type)
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                response['Content-Length'] = len(content)
+                return response
+
+            elif action == 'url':
+                # Get presigned download URL (for S3)
+                url = backup_service.get_download_url(pk)
+                return Response({
+                    'success': True,
+                    'download_url': url
+                })
+
+            else:
+                # Return backup details
+                serializer = BackupSerializer(backup)
+                data = serializer.data
+                if backup.status == 'completed':
+                    try:
+                        data['download_url'] = backup_service.get_download_url(pk)
+                    except Exception:
+                        data['download_url'] = None
+                return Response({
+                    'success': True,
+                    'data': data
+                })
+
+        except Backup.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Backup not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Backup detail error: {e}")
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request, pk):
+        """Restore from backup."""
+        from authmanagement.services.backup_service import backup_service
+
+        try:
+            backup = Backup.objects.get(pk=pk)
+
+            if backup.status != 'completed':
+                return Response({
+                    'success': False,
+                    'message': 'Cannot restore from incomplete backup'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Restore is a dangerous operation - require confirmation
+            confirm = request.data.get('confirm', False)
+            if not confirm:
+                return Response({
+                    'success': False,
+                    'message': 'Restore requires confirmation. Set confirm=true to proceed.',
+                    'warning': 'This will overwrite all current data!'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            success = backup_service.restore_backup(pk)
+
+            if success:
+                return Response({
+                    'success': True,
+                    'message': 'Backup restored successfully'
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'message': 'Restore failed'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Backup.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Backup not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Restore error: {e}")
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete(self, request, pk):
+        """Delete a backup."""
+        from authmanagement.services.backup_service import backup_service
+
+        try:
+            backup_service.delete_backup(pk)
+            return Response({
+                'success': True,
+                'message': 'Backup deleted successfully'
+            }, status=status.HTTP_204_NO_CONTENT)
+        except Backup.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Backup not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Delete error: {e}")
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BackupConfigView(APIView):
+    """Backup configuration management."""
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
         config = BackupConfig.objects.first()
         if not config:
             config = BackupConfig.objects.create()
         serializer = BackupConfigSerializer(config)
-        return Response(serializer.data)
-    
+        return Response({
+            'success': True,
+            'data': serializer.data
+        })
+
     def put(self, request):
         config = BackupConfig.objects.first()
         if not config:
             config = BackupConfig.objects.create()
-        serializer = BackupConfigSerializer(config, data=request.data)
+        serializer = BackupConfigSerializer(config, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+        return Response({
+            'success': False,
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BackupScheduleView(APIView):
+    """Backup schedule management."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        schedule = BackupSchedule.objects.first()
+        if not schedule:
+            schedule = BackupSchedule.objects.create(frequency='daily')
+        serializer = BackupScheduleSerializer(schedule)
+        return Response({
+            'success': True,
+            'data': serializer.data
+        })
+
+    def put(self, request):
+        schedule = BackupSchedule.objects.first()
+        if not schedule:
+            schedule = BackupSchedule.objects.create(frequency='daily')
+
+        serializer = BackupScheduleSerializer(schedule, data=request.data, partial=True)
+        if serializer.is_valid():
+            schedule = serializer.save()
+
+            # Calculate next run time based on frequency
+            from datetime import timedelta
+            now = timezone.now()
+
+            if schedule.frequency == 'daily':
+                schedule.next_run = now + timedelta(days=1)
+            elif schedule.frequency == 'weekly':
+                schedule.next_run = now + timedelta(weeks=1)
+            elif schedule.frequency == 'monthly':
+                schedule.next_run = now + timedelta(days=30)
+
+            schedule.save(update_fields=['next_run'])
+
+            return Response({
+                'success': True,
+                'data': BackupScheduleSerializer(schedule).data
+            })
+        return Response({
+            'success': False,
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 class RoleView(APIView):
     permission_classes = [permissions.IsAuthenticated]

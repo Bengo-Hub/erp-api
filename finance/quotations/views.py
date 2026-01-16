@@ -142,13 +142,8 @@ class QuotationViewSet(BaseModelViewSet):
                 'company_name': company.name if company else 'N/A',
                 'year': timezone.now().year
             }
-            
-            # Generate PDF attachment
-            # Resolve company info (prefer branch or HQ branch location)
-            company_info = self._resolve_company_info(quotation)
-            pdf_bytes = generate_quotation_pdf(quotation, company_info)
-            
-            # Send email with PDF attachment
+
+            # Send email with public link (no PDF attachment to avoid email delivery issues)
             email_service = EmailService()
             email_service.send_django_template_email(
                 template_name='notifications/email/quotation_sent.html',
@@ -156,9 +151,6 @@ class QuotationViewSet(BaseModelViewSet):
                 subject=f'Quotation {quotation.quotation_number} from {company.name if company else "Company"}',
                 recipient_list=[email_to],
                 cc=send_copy_to if send_copy_to else None,
-                attachments=[
-                    (f'Quotation_{quotation.quotation_number}.pdf', pdf_bytes, 'application/pdf')
-                ],
                 async_send=True
             )
             
@@ -705,4 +697,97 @@ class PublicQuotationPDFView(APIView):
             return HttpResponse('Quotation not found or access denied', status=404, content_type='text/plain')
         except Exception as e:
             return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
+
+
+class PublicQuotationAcceptView(APIView):
+    """
+    Public API endpoint for accepting a quotation via share token.
+    Allows customers to accept quotations without authentication.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, quotation_id, token):
+        """Accept quotation by ID and share token"""
+        try:
+            quotation = Quotation.objects.get(id=quotation_id, share_token=token, is_shared=True)
+
+            # Check if already accepted
+            if quotation.status == 'accepted':
+                return APIResponse.bad_request(
+                    message='This quotation has already been accepted'
+                )
+
+            # Check if expired
+            if quotation.valid_until and quotation.valid_until < timezone.now().date():
+                return APIResponse.bad_request(
+                    message='This quotation has expired and cannot be accepted'
+                )
+
+            # Get accept data
+            email = request.data.get('email', '')
+            notes = request.data.get('notes', '')
+
+            # Update quotation status
+            quotation.status = 'accepted'
+            quotation.accepted_at = timezone.now()
+            quotation.acceptance_notes = notes
+            quotation.save(update_fields=['status', 'accepted_at', 'acceptance_notes'])
+
+            # Log the acceptance
+            QuotationEmailLog.objects.create(
+                quotation=quotation,
+                email_type='accepted',
+                recipient_email=email or quotation.customer.user.email,
+                status='logged',
+                notes=f'Quotation accepted via public link. Notes: {notes}'
+            )
+
+            # Send notification to business owner
+            try:
+                from notifications.services.email_service import EmailService
+                from business.models import Bussiness
+
+                company = quotation.branch.business if quotation.branch else Bussiness.objects.first()
+                customer_name = quotation.customer.business_name or f"{quotation.customer.user.first_name} {quotation.customer.user.last_name}".strip()
+
+                # Get business owner email
+                owner_email = company.owner.email if company and company.owner else None
+                if owner_email:
+                    email_service = EmailService()
+                    email_service.send_django_template_email(
+                        template_name='notifications/email/quotation_accepted.html',
+                        context={
+                            'quotation_number': quotation.quotation_number,
+                            'customer_name': customer_name,
+                            'customer_email': email,
+                            'total_amount': f"{quotation.total:,.2f}",
+                            'acceptance_notes': notes,
+                            'company_name': company.name if company else 'Company',
+                            'year': timezone.now().year
+                        },
+                        subject=f'Quotation {quotation.quotation_number} Accepted by {customer_name}',
+                        recipient_list=[owner_email],
+                        async_send=True
+                    )
+            except Exception as e:
+                # Log but don't fail the acceptance
+                print(f"Failed to send acceptance notification: {str(e)}")
+
+            return APIResponse.success(
+                data={'status': 'accepted', 'quotation_number': quotation.quotation_number},
+                message='Quotation accepted successfully. The supplier will be notified.'
+            )
+
+        except Quotation.DoesNotExist:
+            return APIResponse.error(
+                error_code='QUOTATION_NOT_FOUND',
+                message='Quotation not found or access denied',
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return APIResponse.error(
+                error_code='ACCEPT_ERROR',
+                message=f'Error accepting quotation: {str(e)}',
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
