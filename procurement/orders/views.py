@@ -179,36 +179,49 @@ class PurchaseOrderViewSet(BaseModelViewSet):
 
     def get_queryset(self):
         """Optimize queries with select_related for related objects."""
+        from core.utils import get_user_business_and_branch
+        from business.models import Bussiness
+
         queryset = super().get_queryset()
-        
+
         # Filter by params
         approver = self.request.query_params.get('approver', None)
         status_filter = self.request.query_params.get('status', None)
 
         if approver:
             queryset = queryset.filter(approvals__approver_id=approver)
-        
+
         if status_filter:
             queryset = queryset.filter(status=status_filter)
-        # Filter by branch header or query param
-        try:
-            branch_id = self.request.query_params.get('branch_id') or get_branch_id_from_request(self.request)
-        except Exception:
-            branch_id = None
 
+        # Get business and branch context using unified utility (headers + user fallback)
+        business, branch = get_user_business_and_branch(self.request, return_objects=True)
+        branch_id = self.request.query_params.get('branch_id') or (branch.id if branch else None)
+
+        # Filter by branch if explicitly specified
         if branch_id:
             queryset = queryset.filter(branch_id=branch_id)
 
         if not self.request.user.is_superuser:
             user = self.request.user
-            owned_branches = Branch.objects.filter(business__owner=user)
-            employee_branches = Branch.objects.filter(business__employees__user=user)
-            branches = owned_branches | employee_branches
-            # Include POs where branch is null OR branch is in user's branches OR created by user
+
+            # Get user's associated businesses using the same pattern as requisitions
+            owned_businesses = Bussiness.objects.filter(owner=user)
+            employee_businesses = Bussiness.objects.filter(employees__user=user)
+            user_businesses = owned_businesses | employee_businesses
+
+            # Get branches belonging to user's businesses
+            user_branches = Branch.objects.filter(business__in=user_businesses)
+
+            # Include POs where:
+            # 1. Branch is in user's branches
+            # 2. Created by user
+            # 3. Branch is null (for backwards compatibility with older records)
             queryset = queryset.filter(
-                Q(branch__in=branches) |
-                Q(created_by=user)
-            )
+                Q(branch__in=user_branches) |
+                Q(created_by=user) |
+                Q(branch__isnull=True)
+            ).distinct()
 
         return queryset 
 
