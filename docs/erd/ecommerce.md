@@ -134,7 +134,7 @@ The E-commerce module manages product catalog, orders, shopping cart, POS operat
 **Integration Points**:
 - When order is created → Publish `erp.order.created` event → inventory-service reserves stock
 - When order is fulfilled → Publish `erp.order.fulfilled` event → logistics-service creates shipment
-- Payment processing → Handled by treasury-app
+- Payment processing → Handled by treasury-api
 
 ### order_items
 
@@ -267,8 +267,8 @@ The E-commerce module manages product catalog, orders, shopping cart, POS operat
 - `pos_sessions.cashier_id` → `auth_users(id)` (cashier)
 
 **Treasury Service**:
-- Order payments → Handled by treasury-app
-- When order is created → Publish `erp.order.created` event → treasury-app processes payment
+- Order payments → Handled by treasury-api
+- When order is created → Publish `erp.order.created` event → treasury-api processes payment
 
 **Inventory Service**:
 - Stock levels → References `stock_inventory` table (managed by inventory-service)
@@ -316,6 +316,6 @@ The E-commerce module manages product catalog, orders, shopping cart, POS operat
 - After changing Django models, run migrations and refresh the ERD.
 - **Inventory management is handled by inventory-service** - do not duplicate inventory logic. Reference stock items only.
 - **POS operations are handled by pos-service** - do not duplicate POS logic. Sync product catalog only.
-- **Payment processing is handled by treasury-app** - do not duplicate payment logic.
+- **Payment processing is handled by treasury-api** - do not duplicate payment logic.
 - User management is handled by auth-service - reference user IDs only.
 

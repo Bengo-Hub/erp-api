@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-**System Purpose**: Enterprise Resource Planning (ERP) system for BengoBox, providing integrated business management across **CRM, HRM, Procurement, Manufacturing, and E-commerce**. The ERP service focuses on these core domains and integrates with specialized microservices (treasury-app, inventory-service, auth-service, notifications-service) for financial, inventory, authentication, and notification capabilities.
+**System Purpose**: Enterprise Resource Planning (ERP) system for BengoBox, providing integrated business management across **CRM, HRM, Procurement, Manufacturing, and E-commerce**. The ERP service focuses on these core domains and integrates with specialized microservices (treasury-api, inventory-service, auth-service, notifications-service) for financial, inventory, authentication, and notification capabilities.
 
 **Key Capabilities**:
 - **Customer Relationship Management (CRM)**: Contacts, leads, opportunities, sales pipeline, campaigns
@@ -11,10 +11,10 @@
 - **Manufacturing**: Work orders, BOM, production planning, quality control
 - **E-commerce**: Product catalog, orders, cart, POS operations, vendor management
 
-**Entity Ownership**: This service owns ERP-specific entities: CRM (contacts, leads, opportunities, campaigns), HRM (employees, payroll, attendance, leave), Procurement (purchase orders, requisitions, vendors), Manufacturing (work orders, BOM), E-commerce (products, orders, cart, POS). **ERP does NOT own**: users (references auth-service), tenants (references auth-service), financial transactions (references treasury-app), inventory balances (references inventory-service), notifications (references notifications-service).
+**Entity Ownership**: This service owns ERP-specific entities: CRM (contacts, leads, opportunities, campaigns), HRM (employees, payroll, attendance, leave), Procurement (purchase orders, requisitions, vendors), Manufacturing (work orders, BOM), E-commerce (products, orders, cart, POS). **ERP does NOT own**: users (references auth-service), tenants (references auth-service), financial transactions (references treasury-api), inventory balances (references inventory-service), notifications (references notifications-service).
 
 **Integration Strategy**: ERP integrates with external microservices instead of duplicating logic:
-- **Finance/Accounting** → `treasury-app` (invoices, bills, payments, ledger, reconciliation, expenses, taxes)
+- **Finance/Accounting** → `treasury-api` (invoices, bills, payments, ledger, reconciliation, expenses, taxes)
 - **Inventory Management** → `inventory-service` (stock levels, movements, warehouses)
 - **Authentication/Authorization** → `auth-service` (SSO, JWT, user management)
 - **Notifications** → `notifications-service` (emails, SMS, push notifications)
@@ -77,7 +77,7 @@
 **Integration Points**:
 - **auth-service**: User identity (references only)
 - **notifications-service**: Campaign emails, lead notifications
-- **treasury-app**: Invoice generation from opportunities (via API)
+- **treasury-api**: Invoice generation from opportunities (via API)
 
 **Module ERD**: See `docs/erd/crm.md`
 
@@ -106,7 +106,7 @@
 **Integration Points**:
 - **auth-service**: User identity sync (references only)
 - **notifications-service**: Payroll notifications, leave approvals
-- **treasury-app**: Payroll payments, expense reimbursements (via API)
+- **treasury-api**: Payroll payments, expense reimbursements (via API)
 
 **Module ERD**: See `docs/erd/hrm.md`
 
@@ -129,7 +129,7 @@
 
 **Integration Points**:
 - **inventory-service**: Stock receipt, inventory updates (via API/events)
-- **treasury-app**: Bill creation from POs, payment processing (via API/events)
+- **treasury-api**: Bill creation from POs, payment processing (via API/events)
 - **notifications-service**: PO notifications, approval requests
 
 **Module ERD**: See `docs/erd/procurement.md`
@@ -179,7 +179,7 @@
 - **inventory-service**: Inventory balances, stock movements (via API/events) - **DO NOT duplicate inventory logic**
 - **pos-service**: POS operations (via API/events) - **DO NOT duplicate POS logic**
 - **logistics-service**: Order fulfillment (via API/events)
-- **treasury-app**: Payment processing (via API/events) - **DO NOT duplicate payment logic**
+- **treasury-api**: Payment processing (via API/events) - **DO NOT duplicate payment logic**
 - **notifications-service**: Order confirmations, shipping notifications
 
 **Module ERD**: See `docs/erd/ecommerce.md`
@@ -190,7 +190,7 @@
 
 ### Finance/Accounting → Treasury Service
 
-**Removed from ERP**: All financial management modules (accounts, expenses, taxes, payment, budgets, cashflow, reconciliation, invoicing, quotations) are now handled by `treasury-app`.
+**Removed from ERP**: All financial management modules (accounts, expenses, taxes, payment, budgets, cashflow, reconciliation, invoicing, quotations) are now handled by `treasury-api`.
 
 **Integration**: ERP publishes events and calls APIs:
 - Invoice creation → `POST /api/v1/treasury/invoices`
@@ -285,8 +285,8 @@
 ## Compliance & Risk Controls
 
 - Align with Kenya Data Protection Act: explicit consent flows, user data export/delete endpoints, audit logging
-- Financial compliance: Integration with treasury-app for double-entry bookkeeping, audit trails, financial reporting
-- Tax compliance: KRA iTax integration (via treasury-app)
+- Financial compliance: Integration with treasury-api for double-entry bookkeeping, audit trails, financial reporting
+- Tax compliance: KRA iTax integration (via treasury-api)
 - Disaster recovery playbook, RTO/RPO targets (<1 hour)
 
 ---
