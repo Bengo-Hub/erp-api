@@ -106,7 +106,7 @@ The Procurement module manages purchase requisitions, purchase orders, vendor ma
 - `approved_by_id` → `auth_users(id)` (references auth-service)
 
 **Integration Points**:
-- When PO is received → Publish `erp.purchase_order.received` event → treasury-app creates bill, inventory-service updates stock
+- When PO is received → Publish `erp.purchase_order.received` event → treasury-api creates bill, inventory-service updates stock
 
 ### purchase_order_items
 
@@ -255,8 +255,8 @@ The Procurement module manages purchase requisitions, purchase orders, vendor ma
 - `purchase_orders.approved_by_id` → `auth_users(id)` (approver)
 
 **Treasury Service**:
-- When `purchase_orders.status` = "received" → Publish `erp.purchase_order.received` event → treasury-app creates bill
-- Purchase payments → Handled by treasury-app
+- When `purchase_orders.status` = "received" → Publish `erp.purchase_order.received` event → treasury-api creates bill
+- Purchase payments → Handled by treasury-api
 
 **Inventory Service**:
 - `request_items.stock_item_id` → `stock_inventory(id)` (references inventory-service)
@@ -288,7 +288,7 @@ The Procurement module manages purchase requisitions, purchase orders, vendor ma
 
 - Maintain this document alongside Django model changes.
 - After changing Django models, run migrations and refresh the ERD.
-- Financial transactions (bills, payments) are managed by treasury-app - do not duplicate financial logic.
+- Financial transactions (bills, payments) are managed by treasury-api - do not duplicate financial logic.
 - Inventory management is handled by inventory-service - reference stock items only.
 - User management is handled by auth-service - reference user IDs only.
 

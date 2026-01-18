@@ -111,7 +111,7 @@ The HRM module manages employees, payroll, attendance, leave, recruitment, train
 - `processed_by_id` → `auth_users(id)` (references auth-service)
 
 **Integration Points**:
-- When payroll is processed → Publish `erp.payroll.processed` event → treasury-app creates payments
+- When payroll is processed → Publish `erp.payroll.processed` event → treasury-api creates payments
 
 ### employee_loans
 
@@ -421,8 +421,8 @@ The HRM module manages employees, payroll, attendance, leave, recruitment, train
 - `advances.approver_id` → `auth_users(id)` (approver)
 
 **Treasury Service**:
-- When `payroll_records.status` = "processed" → Publish `erp.payroll.processed` event → treasury-app creates payments
-- Employee expenses → Publish `erp.expense.approved` event → treasury-app records expense
+- When `payroll_records.status` = "processed" → Publish `erp.payroll.processed` event → treasury-api creates payments
+- Employee expenses → Publish `erp.expense.approved` event → treasury-api records expense
 
 **Notifications Service**:
 - Payroll notifications → Publish `erp.payroll.processed` event
@@ -453,6 +453,6 @@ The HRM module manages employees, payroll, attendance, leave, recruitment, train
 
 - Maintain this document alongside Django model changes.
 - After changing Django models, run migrations and refresh the ERD.
-- Financial transactions (payroll payments) are managed by treasury-app - do not duplicate financial logic.
+- Financial transactions (payroll payments) are managed by treasury-api - do not duplicate financial logic.
 - User management is handled by auth-service - reference user IDs only.
 

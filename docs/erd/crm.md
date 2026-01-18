@@ -92,7 +92,7 @@ The CRM module manages customer relationships, leads, opportunities, sales pipel
 **Relations**:
 - `contact_id` → `contacts(id)`
 
-**Note**: Financial transactions are managed by treasury-app. This table tracks account balances for reference only.
+**Note**: Financial transactions are managed by treasury-api. This table tracks account balances for reference only.
 
 ---
 
@@ -180,7 +180,7 @@ The CRM module manages customer relationships, leads, opportunities, sales pipel
 - `owner_id` → `auth_users(id)` (references auth-service)
 
 **Integration Points**:
-- When deal reaches "won" stage → Publish `erp.opportunity.won` event → treasury-app creates invoice
+- When deal reaches "won" stage → Publish `erp.opportunity.won` event → treasury-api creates invoice
 
 ---
 
@@ -273,8 +273,8 @@ The CRM module manages customer relationships, leads, opportunities, sales pipel
 - `crm_campaigns.created_by_id` → `auth_users(id)` (campaign creator)
 
 **Treasury Service**:
-- When `crm_deals.status` = "won" → Publish `erp.opportunity.won` event → treasury-app creates invoice
-- `contact_accounts` balances are reference only (actual transactions in treasury-app)
+- When `crm_deals.status` = "won" → Publish `erp.opportunity.won` event → treasury-api creates invoice
+- `contact_accounts` balances are reference only (actual transactions in treasury-api)
 
 **Notifications Service**:
 - Campaign emails → Publish `erp.campaign.sent` event
@@ -308,6 +308,6 @@ The CRM module manages customer relationships, leads, opportunities, sales pipel
 
 - Maintain this document alongside Django model changes.
 - After changing Django models, run migrations and refresh the ERD.
-- Financial transactions are managed by treasury-app - do not duplicate financial logic.
+- Financial transactions are managed by treasury-api - do not duplicate financial logic.
 - User management is handled by auth-service - reference user IDs only.
 

@@ -99,7 +99,7 @@ This document provides detailed integration information for all external service
 - `treasury.payment.processed` - Payment processed
 - `treasury.bill.created` - Bill created
 
-**Note**: ERP does NOT manage financial transactions, invoices, bills, payments, or accounting - all financial operations are handled by treasury-app.
+**Note**: ERP does NOT manage financial transactions, invoices, bills, payments, or accounting - all financial operations are handled by treasury-api.
 
 ### Inventory Service
 
@@ -213,9 +213,9 @@ This document provides detailed integration information for all external service
 
 **Purpose**: Payment processing for invoices, bills, and orders
 
-**Integration**: Handled via treasury-app, ERP publishes events
+**Integration**: Handled via treasury-api, ERP publishes events
 
-**Configuration** (Tier 1 - in treasury-app):
+**Configuration** (Tier 1 - in treasury-api):
 - Gateway credentials: Stored encrypted
 - API keys: Stored encrypted
 - Webhook endpoints: Configured
@@ -224,9 +224,9 @@ This document provides detailed integration information for all external service
 
 **Purpose**: Tax compliance and reporting
 
-**Integration**: Handled via treasury-app, ERP publishes tax events
+**Integration**: Handled via treasury-api, ERP publishes tax events
 
-**Configuration** (Tier 1 - in treasury-app):
+**Configuration** (Tier 1 - in treasury-api):
 - KRA API credentials: Stored encrypted
 - Tax registration numbers: Stored encrypted
 
@@ -322,7 +322,7 @@ This document provides detailed integration information for all external service
 
 **Configuration Items**:
 - Business settings
-- Tax rates (references from treasury-app)
+- Tax rates (references from treasury-api)
 - Payment terms
 - Notification preferences
 - Report templates
@@ -484,7 +484,7 @@ This document provides detailed integration information for all external service
 ## References
 
 - [Auth Service Integration](../auth-service/auth-service/docs/integrations.md)
-- [Treasury Service Integration](../finance-service/treasury-app/docs/integrations.md)
+- [Treasury Service Integration](../finance-service/treasury-api/docs/integrations.md)
 - [Inventory Service Integration](../inventory-service/inventory-api/docs/integrations.md)
 - [Logistics Service Integration](../logistics-service/logistics-api/docs/integrations.md)
 - [Notifications Service Integration](../notifications-service/notifications-api/docs/integrations.md)
