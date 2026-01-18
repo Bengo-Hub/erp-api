@@ -204,7 +204,7 @@ This document provides detailed integration information for all external service
 - Bill payment processing
 - Order payment processing
 
-**Integration**: Handled via treasury-app, ERP publishes events
+**Integration**: Handled via treasury-api, ERP publishes events
 
 ### KRA iTax (via Treasury Service)
 
@@ -219,7 +219,7 @@ This document provides detailed integration information for all external service
 - Tax return filing
 - Tax compliance reporting
 
-**Integration**: Handled via treasury-app, ERP publishes tax events
+**Integration**: Handled via treasury-api, ERP publishes tax events
 
 ### Email Providers (via Notifications Service)
 
@@ -500,7 +500,7 @@ This document provides detailed integration information for all external service
 ## References
 
 - [Auth Service Integration](../auth-service/auth-service/docs/integrations.md)
-- [Treasury Service Integration](../finance-service/treasury-app/docs/integrations.md)
+- [Treasury Service Integration](../finance-service/treasury-api/docs/integrations.md)
 - [Inventory Service Integration](../inventory-service/inventory-api/docs/integrations.md)
 - [Logistics Service Integration](../logistics-service/logistics-api/docs/integrations.md)
 - [Notifications Service Integration](../notifications-service/notifications-api/docs/integrations.md)
