@@ -1261,6 +1261,52 @@ class ExchangeRateViewSet(viewsets.ModelViewSet):
             'rate': rate
         })
 
+    @action(detail=False, methods=['get'], url_path='latest/all')
+    def latest_all(self, request):
+        """
+        Get all latest exchange rates for frontend currency switcher.
+        Returns rates for priority currencies (KES, USD, EUR, GBP) from KES base.
+        """
+        from .models import ExchangeRate
+        from decimal import Decimal
+
+        # Priority currencies for frontend
+        currencies = ['USD', 'EUR', 'GBP', 'KES']
+        rates = {}
+
+        for currency in currencies:
+            if currency == 'KES':
+                rates[currency] = float(Decimal('1.0'))
+                continue
+
+            # Get latest rate for this currency to/from KES
+            rate_obj = ExchangeRate.objects.filter(
+                from_currency=currency,
+                to_currency='KES',
+                is_active=True
+            ).order_by('-effective_date').first()
+
+            if rate_obj:
+                rates[currency] = float(rate_obj.rate)
+            else:
+                # Fallback: try reverse rate
+                reverse_rate_obj = ExchangeRate.objects.filter(
+                    from_currency='KES',
+                    to_currency=currency,
+                    is_active=True
+                ).order_by('-effective_date').first()
+
+                if reverse_rate_obj and reverse_rate_obj.rate > 0:
+                    rates[currency] = float(Decimal('1.0') / reverse_rate_obj.rate)
+                else:
+                    rates[currency] = 1.0  # Fallback
+
+        return Response({
+            'rates': rates,
+            'base_currency': 'KES',
+            'last_updated': timezone.now().isoformat()
+        })
+
 
 class BrandingSettingsViewSet(viewsets.ViewSet):
     """
