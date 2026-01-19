@@ -1191,6 +1191,87 @@ class CurrencyViewSet(viewsets.ViewSet):
             'symbol': symbol
         })
 
+    @action(detail=False, methods=['post'])
+    def bulk_rates(self, request):
+        """
+        Get exchange rates for multiple currency pairs at once.
+        This significantly reduces API calls for pages with many line items.
+
+        Request body:
+        {
+            "pairs": [
+                {"from": "KES", "to": "USD"},
+                {"from": "EUR", "to": "USD"},
+                ...
+            ]
+        }
+
+        Response:
+        {
+            "rates": {
+                "KES_USD": 0.0075,
+                "EUR_USD": 1.08,
+                ...
+            },
+            "cached": 15,
+            "fetched": 2
+        }
+        """
+        from .currency import CurrencyService
+        from django.core.cache import cache
+
+        pairs = request.data.get('pairs', [])
+        if not pairs or not isinstance(pairs, list):
+            return Response(
+                {'error': 'pairs array is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        results = {}
+        cached_count = 0
+        fetched_count = 0
+
+        for pair in pairs:
+            from_currency = pair.get('from', '').upper()
+            to_currency = pair.get('to', '').upper()
+
+            if not from_currency or not to_currency:
+                continue
+
+            # Same currency returns 1.0
+            if from_currency == to_currency:
+                key = f"{from_currency}_{to_currency}"
+                results[key] = 1.0
+                continue
+
+            # Validate currencies
+            if not (CurrencyService.is_valid_currency(from_currency) and
+                    CurrencyService.is_valid_currency(to_currency)):
+                continue
+
+            # Check cache first
+            cache_key = f"exchange_rate:{from_currency}:{to_currency}"
+            rate = cache.get(cache_key)
+
+            if rate:
+                cached_count += 1
+            else:
+                # Fetch from service
+                rate = CurrencyService.get_exchange_rate(from_currency, to_currency)
+                # Cache for 1 hour
+                cache.set(cache_key, str(rate), 3600)
+                fetched_count += 1
+
+            key = f"{from_currency}_{to_currency}"
+            results[key] = float(rate)
+
+        return Response({
+            'rates': results,
+            'cached': cached_count,
+            'fetched': fetched_count,
+            'total': len(results)
+        })
+
 
 class ExchangeRateViewSet(viewsets.ModelViewSet):
     """
