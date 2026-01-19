@@ -40,7 +40,11 @@ class QuotationViewSet(BaseModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return QuotationCreateSerializer
         return QuotationSerializer
-    
+
+    def perform_create(self, serializer):
+        """Set created_by when creating quotations"""
+        serializer.save(created_by=self.request.user)
+
     def get_queryset(self):
         """Filter quotations based on user organization"""
         queryset = super().get_queryset()
@@ -392,8 +396,12 @@ class QuotationViewSet(BaseModelViewSet):
         Professional print-ready quotation document
         """
         try:
-            quotation = self.get_object()
-            
+            # Refresh quotation from DB with all related fields to get latest updates (created_by, etc.)
+            from finance.quotations.models import Quotation
+            quotation = Quotation.objects.select_related(
+                'customer__user', 'branch', 'created_by', 'approved_by', 'converted_by'
+            ).prefetch_related('items__content_type').get(pk=pk)
+
             # Get company info from branch/business (use branch contact/location when available)
             company = quotation.branch.business if getattr(quotation.branch, 'business', None) else None
             company_name = company.name if company else (quotation.branch.business.name if getattr(quotation.branch, 'business', None) else 'Company')
@@ -409,10 +417,7 @@ class QuotationViewSet(BaseModelViewSet):
                 'phone': company_phone,
                 'pin': getattr(company, 'kra_number', '') if company else ''
             }
-            try:
-                quotation.refresh_from_db()
-            except Exception:
-                pass
+
             # Generate PDF
             pdf_bytes = generate_quotation_pdf(quotation, company_info)
             
@@ -432,13 +437,11 @@ class QuotationViewSet(BaseModelViewSet):
         - download: 'true' to force download, 'false' (default) for inline preview
         """
         try:
-            quotation = self.get_object()
-
-            # Ensure DB state is fresh and include related changes (items) before rendering
-            try:
-                quotation.refresh_from_db()
-            except Exception:
-                pass
+            # Refresh quotation from DB with all related fields to get latest updates (created_by, etc.)
+            from finance.quotations.models import Quotation
+            quotation = Quotation.objects.select_related(
+                'customer__user', 'branch', 'created_by', 'approved_by', 'converted_by'
+            ).prefetch_related('items__content_type').get(pk=pk)
 
             # Resolve company info (prefer branch/HQ branch)
             company_info = self._resolve_company_info(quotation)

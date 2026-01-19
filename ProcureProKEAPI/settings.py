@@ -253,6 +253,7 @@ MIDDLEWARE = [
     'core.security.SecurityMiddleware',  # Enhanced security middleware
     'authmanagement.middleware.SiteWideConfigs',
     'core.middleware.CoreMiddleware',
+    'core.middleware.CurrencyContextMiddleware',  # Currency sync between frontend and backend
     #'finance.accounts.middleware.TaxFormulaMiddleware',
     'hrm.payroll.middleware.PayrollFormulaMiddleware',
     'hrm.payroll_settings.middleware.TaxFormulaMiddleware',
@@ -480,6 +481,7 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
     'x-branch-id',
     'x-business-id',
+    'x-currency',  # Allow currency header from frontend
     'cache-control',
     'pragma',
     'if-modified-since',
@@ -496,6 +498,8 @@ CORS_EXPOSE_HEADERS = [
     'x-csrftoken',
     'x-branch-id',
     'x-business-id',
+    'x-currency',  # Expose currency header to frontend
+    'x-active-currency',  # Expose active currency set by backend
     'cache-control',
 ]
 

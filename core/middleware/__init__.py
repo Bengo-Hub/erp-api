@@ -9,9 +9,10 @@ from pathlib import Path
 # CoreMiddleware is only loaded when explicitly accessed, not at module import time
 _CoreMiddleware = None
 _CoreMiddleware_module = None
+_CurrencyContextMiddleware = None
 
 def __getattr__(name):
-    """Lazy loader for CoreMiddleware to avoid early Django model imports."""
+    """Lazy loader for middleware classes to avoid early Django model imports."""
     if name == 'CoreMiddleware':
         global _CoreMiddleware
         if _CoreMiddleware is None:
@@ -24,7 +25,14 @@ def __getattr__(name):
             else:
                 raise ImportError("core/middleware.py file not found")
         return _CoreMiddleware
+
+    if name == 'CurrencyContextMiddleware':
+        global _CurrencyContextMiddleware
+        if _CurrencyContextMiddleware is None:
+            from .currency_middleware import CurrencyContextMiddleware as _CurrencyContextMiddleware
+        return _CurrencyContextMiddleware
+
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
-__all__ = ['CoreMiddleware']
+__all__ = ['CoreMiddleware', 'CurrencyContextMiddleware']
 

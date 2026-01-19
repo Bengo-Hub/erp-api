@@ -1,14 +1,24 @@
 """
 Multi-Currency Support Module
 Provides centralized currency handling for the ERP system.
+
+Features:
+- Session/request-aware active currency management
+- Automatic currency conversion with exchange rates
+- Formatting with proper symbols and decimal places
+- Single source of truth for currency operations across all modules
 """
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, Any
 from django.conf import settings
 from django.core.cache import cache
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
+
+# Thread-local storage for request context
+_thread_local = threading.local()
 
 
 # ISO 4217 Currency Definitions
@@ -44,7 +54,101 @@ class CurrencyService:
     """
     Centralized currency service for multi-currency operations.
     Provides formatting, conversion, and validation.
+
+    Context Management:
+    - Supports request-scoped active currency
+    - Syncs with frontend currency switcher via session/headers
+    - Falls back to business default or system default (KES)
     """
+
+    # ========== Context Management ==========
+
+    @staticmethod
+    def set_active_currency(currency_code: str, request=None):
+        """
+        Set the active currency for the current request/thread context.
+
+        Args:
+            currency_code: ISO 4217 currency code (e.g., 'USD', 'EUR')
+            request: Optional Django request object to persist to session
+        """
+        currency_code = currency_code.upper()
+        if not CurrencyService.is_valid_currency(currency_code):
+            logger.warning(f"Invalid currency code: {currency_code}, using default")
+            currency_code = DEFAULT_CURRENCY
+
+        # Set in thread-local storage
+        _thread_local.active_currency = currency_code
+
+        # Persist to session if request provided
+        if request and hasattr(request, 'session'):
+            request.session['active_currency'] = currency_code
+
+    @staticmethod
+    def get_active_currency(request=None) -> str:
+        """
+        Get the active currency for the current request/thread context.
+
+        Priority:
+        1. Request header (X-Currency) - from frontend switcher
+        2. Session stored currency
+        3. Thread-local active currency
+        4. Business default currency (if available)
+        5. System default (KES)
+
+        Args:
+            request: Optional Django request object
+
+        Returns:
+            ISO 4217 currency code
+        """
+        # Priority 1: Request header (frontend sends this)
+        if request and hasattr(request, 'headers'):
+            header_currency = request.headers.get('X-Currency')
+            if header_currency and CurrencyService.is_valid_currency(header_currency):
+                # Sync to session for future requests
+                CurrencyService.set_active_currency(header_currency, request)
+                return header_currency.upper()
+
+        # Priority 2: Session
+        if request and hasattr(request, 'session'):
+            session_currency = request.session.get('active_currency')
+            if session_currency and CurrencyService.is_valid_currency(session_currency):
+                return session_currency.upper()
+
+        # Priority 3: Thread-local
+        if hasattr(_thread_local, 'active_currency'):
+            return _thread_local.active_currency
+
+        # Priority 4: Business default (if user is authenticated)
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            try:
+                # Get user's business default currency
+                from business.models import Bussiness
+                business = Bussiness.objects.filter(
+                    owner=request.user
+                ).first() or Bussiness.objects.filter(
+                    employees__user=request.user
+                ).first()
+
+                if business and hasattr(business, 'default_currency'):
+                    return business.default_currency or DEFAULT_CURRENCY
+            except Exception as e:
+                logger.debug(f"Could not get business default currency: {e}")
+
+        # Priority 5: System default
+        return DEFAULT_CURRENCY
+
+    @staticmethod
+    def clear_active_currency(request=None):
+        """Clear the active currency context."""
+        if hasattr(_thread_local, 'active_currency'):
+            delattr(_thread_local, 'active_currency')
+
+        if request and hasattr(request, 'session') and 'active_currency' in request.session:
+            del request.session['active_currency']
+
+    # ========== Currency Information ==========
 
     @staticmethod
     def get_all_currencies() -> Dict[str, dict]:
@@ -171,23 +275,32 @@ class CurrencyService:
         cls,
         amount: Decimal,
         from_currency: str,
-        to_currency: str,
-        rate: Optional[Decimal] = None
+        to_currency: str = None,
+        rate: Optional[Decimal] = None,
+        request: Any = None
     ) -> Tuple[Decimal, Decimal]:
         """
         Convert amount from one currency to another.
 
+        If to_currency is None, converts to the active currency from request context.
+
         Args:
             amount: Amount to convert
             from_currency: Source currency code
-            to_currency: Target currency code
+            to_currency: Target currency code (defaults to active currency)
             rate: Exchange rate (if None, will try to fetch)
+            request: Django request object for context
 
         Returns:
             Tuple of (converted_amount, rate_used)
         """
         from_currency = from_currency.upper()
-        to_currency = to_currency.upper()
+
+        # Default to active currency if not specified
+        if to_currency is None:
+            to_currency = cls.get_active_currency(request)
+        else:
+            to_currency = to_currency.upper()
 
         if from_currency == to_currency:
             return amount, Decimal('1.0000')
@@ -199,6 +312,27 @@ class CurrencyService:
         converted = cls.round_amount(converted, to_currency)
 
         return converted, rate
+
+    @classmethod
+    def convert_to_active(
+        cls,
+        amount: Decimal,
+        from_currency: str,
+        request: Any = None
+    ) -> Decimal:
+        """
+        Convert amount to the active currency (simplified).
+
+        Args:
+            amount: Amount to convert
+            from_currency: Source currency code
+            request: Django request object for context
+
+        Returns:
+            Converted amount in active currency
+        """
+        converted, _ = cls.convert(amount, from_currency, None, None, request)
+        return converted
 
     @classmethod
     def get_exchange_rate(
