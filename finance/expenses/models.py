@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from decimal import Decimal
 from crm.contacts.models import Contact
 from business.models import Branch, Bussiness
 from finance.taxes.models import Tax
@@ -31,6 +32,8 @@ class Expense(models.Model):
     expense_for_contact = models.ForeignKey(Contact, on_delete=models.CASCADE,related_name='conatct_expenses',blank=True, null=True)
     attach_document = models.FileField(upload_to='expense/documents/', blank=True, null=True)
     applicable_tax = models.ForeignKey(Tax,on_delete=models.SET_NULL,related_name='expense_taxes',blank=True, null=True)
+    currency = models.CharField(max_length=3, default='KES', help_text="ISO 4217 currency code (e.g., KES, USD, EUR)")
+    exchange_rate = models.DecimalField(max_digits=15, decimal_places=6, default=Decimal('1.000000'), help_text="Exchange rate to KES at time of expense")
     total_amount = models.DecimalField(max_digits=14, decimal_places=2)
     expense_note = models.TextField(blank=True, null=True)
     is_refund = models.BooleanField(default=False)
