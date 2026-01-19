@@ -66,6 +66,8 @@ class BillingDocument(BaseModel):
     related_order = models.ForeignKey('core_orders.BaseOrder', on_delete=models.SET_NULL, null=True, blank=True)
     
     # Financial fields
+    currency = models.CharField(max_length=3, default='KES', help_text="ISO 4217 currency code (e.g., KES, USD, EUR)")
+    exchange_rate = models.DecimalField(max_digits=15, decimal_places=6, default=Decimal('1.000000'), help_text="Exchange rate to KES at time of document creation")
     subtotal = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     tax_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     total = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
@@ -295,6 +297,8 @@ class Payment(BaseModel):
     
     # Core Payment Fields
     amount = models.DecimalField(max_digits=15, decimal_places=2)
+    currency = models.CharField(max_length=3, default='KES', help_text="ISO 4217 currency code (e.g., KES, USD, EUR)")
+    exchange_rate = models.DecimalField(max_digits=15, decimal_places=6, default=Decimal('1.000000'), help_text="Exchange rate to KES at time of payment")
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS)
     status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
     reference_number = models.CharField(max_length=50, unique=True)
