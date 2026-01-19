@@ -308,11 +308,10 @@ class InvoiceViewSet(BaseModelViewSet):
         try:
             # Change status from draft to sent
             invoice.status = 'sent'
-            # If the invoice requires approval, mark it approved and record approver info
-            if getattr(invoice, 'requires_approval', False):
-                invoice.approval_status = 'approved'
-                invoice.approved_by = request.user
-                invoice.approved_at = timezone.now()
+            # Mark it approved and record approver info (always set approved_by when approving)
+            invoice.approval_status = 'approved'
+            invoice.approved_by = request.user
+            invoice.approved_at = timezone.now()
             invoice.save(update_fields=['status', 'approval_status', 'approved_by', 'approved_at'])
             
             return APIResponse.success(
@@ -621,16 +620,20 @@ class InvoiceViewSet(BaseModelViewSet):
         Professional print-ready invoice document
         """
         try:
-            invoice = self.get_object()
+            # Refresh invoice from DB to get latest updates (approved_by, approved_at, etc.)
+            invoice = Invoice.objects.select_related(
+                'customer__user', 'branch', 'approved_by', 'created_by', 'source_quotation'
+            ).prefetch_related('items__content_type').get(pk=pk)
+
             # Ensure invoice totals/status are up-to-date before rendering PDF
             try:
                 invoice.recalculate_payments()
             except Exception:
                 pass
-            
+
             # Resolve company info (including logo) for PDF
             company_info = self._resolve_company_info(invoice, request=request)
-            
+
             # Generate PDF
             doc_type = request.query_params.get('type', 'invoice')
             pdf_bytes = generate_invoice_pdf(invoice, company_info, document_type=doc_type)
@@ -651,23 +654,20 @@ class InvoiceViewSet(BaseModelViewSet):
         - download: 'true' to force download, 'false' (default) for inline preview
         """
         try:
-            invoice = self.get_object()
+            # Refresh invoice from DB with all related fields to get latest updates
+            invoice = Invoice.objects.select_related(
+                'customer__user', 'branch', 'approved_by', 'created_by', 'source_quotation'
+            ).prefetch_related('items__content_type').get(pk=pk)
 
-            # Ensure latest payment state and DB state before rendering PDF
+            # Ensure latest payment state before rendering PDF
             try:
                 invoice.recalculate_payments()
             except Exception:
                 pass
 
-            # Refresh from DB to make sure totals updated via related-model updates
-            try:
-                invoice.refresh_from_db()
-            except Exception:
-                pass
-            
             # Resolve company info (including logo) for PDF
             company_info = self._resolve_company_info(invoice, request=request)
-            
+
             # Generate PDF
             pdf_bytes = generate_invoice_pdf(invoice, company_info)
             
