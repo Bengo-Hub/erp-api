@@ -3,6 +3,8 @@ Shared Analytics Utilities
 
 Provides common analytics functions used across multiple modules (executive dashboard,
 finance dashboard, reports, etc.) to ensure consistent data calculations.
+
+CRITICAL: All financial calculations use multi-currency conversion to KES for accurate reporting.
 """
 
 from datetime import datetime, timedelta
@@ -11,6 +13,8 @@ from django.utils import timezone
 from django.db.models import Sum, Count, Avg, Q
 from django.db.models.functions import TruncMonth, TruncWeek
 import logging
+
+from core.analytics.currency_converter import AnalyticsCurrencyConverter
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +50,10 @@ class SharedAnalyticsService:
     @staticmethod
     def get_revenue(start_date, end_date, business_id=None):
         """
-        Calculate total revenue for a date range.
+        Calculate total revenue for a date range with multi-currency conversion to KES.
 
         Revenue is calculated from incoming payments (direction='in').
+        All payments are converted to KES using their recorded exchange rates.
 
         Args:
             start_date: Start date for filtering
@@ -56,7 +61,7 @@ class SharedAnalyticsService:
             business_id: Optional business ID to filter by
 
         Returns:
-            Decimal: Total revenue amount
+            Decimal: Total revenue amount in KES
         """
         try:
             from finance.payment.models import Payment
@@ -73,8 +78,16 @@ class SharedAnalyticsService:
                     Q(branch__business_id=business_id) | Q(branch__isnull=True)
                 )
 
-            total = queryset.aggregate(total=Sum('amount'))['total']
-            return Decimal(str(total)) if total else Decimal('0')
+            # Convert all payments to KES using currency converter
+            converter = AnalyticsCurrencyConverter(base_currency='KES')
+            total_kes = converter.convert_queryset_aggregate(
+                queryset,
+                amount_field='amount',
+                currency_field='currency',
+                default_currency='KES'
+            )
+
+            return total_kes
 
         except ImportError as e:
             logger.error(f"Payment module not available: {e}")
@@ -86,7 +99,9 @@ class SharedAnalyticsService:
     @staticmethod
     def get_expenses(start_date, end_date, business_id=None):
         """
-        Calculate total expenses for a date range.
+        Calculate total expenses for a date range with multi-currency conversion to KES.
+
+        All expenses are converted to KES using their recorded exchange rates.
 
         Args:
             start_date: Start date for filtering
@@ -94,7 +109,7 @@ class SharedAnalyticsService:
             business_id: Optional business ID to filter by
 
         Returns:
-            Decimal: Total expenses amount
+            Decimal: Total expenses amount in KES
         """
         try:
             from finance.expenses.models import Expense
@@ -110,8 +125,16 @@ class SharedAnalyticsService:
                     Q(branch__business_id=business_id) | Q(branch__isnull=True)
                 )
 
-            total = queryset.aggregate(total=Sum('total_amount'))['total']
-            return Decimal(str(total)) if total else Decimal('0')
+            # Convert all expenses to KES using currency converter
+            converter = AnalyticsCurrencyConverter(base_currency='KES')
+            total_kes = converter.convert_queryset_aggregate(
+                queryset,
+                amount_field='total_amount',
+                currency_field='currency',
+                default_currency='KES'
+            )
+
+            return total_kes
 
         except ImportError as e:
             logger.error(f"Expense module not available: {e}")
