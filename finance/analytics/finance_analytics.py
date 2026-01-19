@@ -5,10 +5,13 @@ Provides comprehensive analytics for finance management including accounts,
 expenses, taxes, and payment analytics.
 
 Uses SharedAnalyticsService for consistent calculations across all dashboards.
+
+CRITICAL: All financial calculations use multi-currency conversion to KES for accurate reporting.
 """
 
 from datetime import datetime, timedelta
 import logging
+from decimal import Decimal
 from django.utils import timezone
 from django.db.models import Avg, Count, Q, Sum, F, Min, Max
 from django.db import connection
@@ -19,6 +22,7 @@ from finance.taxes.models import Tax, TaxPeriod
 from finance.payment.models import BillingDocument, Payment
 from finance.invoicing.models import Invoice
 from core.analytics.shared_analytics import SharedAnalyticsService
+from core.analytics.currency_converter import AnalyticsCurrencyConverter
 
 logger = logging.getLogger(__name__)
 
@@ -175,18 +179,38 @@ class FinanceAnalyticsService:
                     Q(branch__business_id=business_id) | Q(branch__isnull=True)
                 )
             
-            # Calculate totals
-            total_billing = billing_qs.aggregate(total=Sum('total'))['total'] or 0
-            total_invoice_models = invoice_model_qs.aggregate(total=Sum('total'))['total'] or 0
+            # Calculate totals with multi-currency conversion to KES
+            converter = AnalyticsCurrencyConverter(base_currency='KES')
+
+            # Convert BillingDocument invoices to KES
+            total_billing = converter.convert_queryset_aggregate(
+                billing_qs, 'total', 'currency', 'KES'
+            )
+
+            # Convert Invoice model records to KES (uses BaseOrder currency field)
+            total_invoice_models = converter.convert_queryset_aggregate(
+                invoice_model_qs, 'total', 'currency', 'KES'
+            )
+
             total_invoices = total_billing + total_invoice_models
-            total_payments = payment_qs.aggregate(total=Sum('amount'))['total'] or 0
-            total_expenses = expense_qs.aggregate(total=Sum('total_amount'))['total'] or 0
-            outstanding_billing = billing_qs.filter(balance_due__gt=0).aggregate(
-                total=Sum('balance_due')
-            )['total'] or 0
-            outstanding_invoice_models = invoice_model_qs.filter(balance_due__gt=0).aggregate(
-                total=Sum('balance_due')
-            )['total'] or 0
+
+            # Convert payments to KES
+            total_payments = converter.convert_queryset_aggregate(
+                payment_qs, 'amount', 'currency', 'KES'
+            )
+
+            # Convert expenses to KES
+            total_expenses = converter.convert_queryset_aggregate(
+                expense_qs, 'total_amount', 'currency', 'KES'
+            )
+
+            # Convert outstanding balances to KES
+            outstanding_billing = converter.convert_queryset_aggregate(
+                billing_qs.filter(balance_due__gt=0), 'balance_due', 'currency', 'KES'
+            )
+            outstanding_invoice_models = converter.convert_queryset_aggregate(
+                invoice_model_qs.filter(balance_due__gt=0), 'balance_due', 'currency', 'KES'
+            )
             outstanding_invoices = outstanding_billing + outstanding_invoice_models
             
             return {
