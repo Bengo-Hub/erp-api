@@ -10,8 +10,6 @@ from django.contrib.auth import get_user_model
 from business.models import Bussiness
 
 User=get_user_model()
-# Define the Kenyan phone number regex pattern
-kenyan_phone_regex = r"^(?:\+?254|0)(?:\d{9}|\d{3}\s\d{3}\s\d{3}|\d{2}\s\d{3}\s\d{3})$"
 
 class AccountTypes(models.Model):
     name=models.CharField(max_length=100)

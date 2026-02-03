@@ -357,13 +357,16 @@ if [[ "$DEPLOY" == "true" ]]; then
             fi
         fi
 
-        # Helm values update (using modular script)
+        # Helm values update using centralized script
         if [[ -n "${KUBE_CONFIG:-}" ]]; then
-            if [[ -f "scripts/update_helm_values.sh" ]]; then
-                chmod +x scripts/update_helm_values.sh
-                ./scripts/update_helm_values.sh || log_warning "Helm values update failed"
+            log_step "Updating Helm values..."
+            source "${HOME}/devops-k8s/scripts/helm/update-values.sh" 2>/dev/null || {
+              log_warning "Centralized helm update script not available"
+            }
+            if declare -f update_helm_values >/dev/null 2>&1; then
+              update_helm_values "$APP_NAME" "$GIT_COMMIT_ID" "$IMAGE_REPO"
             else
-                log_warning "scripts/update_helm_values.sh not found; skipping Helm values update"
+              log_warning "update_helm_values function not available - helm values not updated"
             fi
         fi
 

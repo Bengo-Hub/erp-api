@@ -7,20 +7,12 @@ from django_countries.fields import CountryField
 from phonenumber_field.modelfields import PhoneNumberField
 from business.models import Bussiness
 from core.models import Regions,Projects,Departments,BankInstitution,BankBranches
+from core.validators import get_global_phone_validator
 from django.utils.translation import gettext_lazy as _
 from datetime import datetime
 
-# Define the Kenyan phone number regex pattern
-kenyan_phone_regex = r"^(?:\+?254|0)(?:\d{9}|\d{3}\s\d{3}\s\d{3}|\d{2}\s\d{3}\s\d{3})$"
-
-# Create a RegexValidator instance using the regex pattern
-kenyan_phone_validator = RegexValidator(
-    regex=kenyan_phone_regex,
-    message="Please enter a valid Kenyan phone number."
-)
-# mobile_num_regex = RegexValidator(
-#     regex=r"^(?:\+254|0)[17]\d{8}$", message="Entered mobile number isn't in a right format!"
-# )
+# Use global phone validator instead of Kenyan-specific regex
+global_phone_validator = get_global_phone_validator(region='KE')
 
 class Employee(models.Model):
     GENDER = [("male", "Male"), ("female", "Female"), ("other", "Other")]
@@ -471,8 +463,8 @@ class ContactDetails(models.Model):
     city=models.CharField(max_length=255,verbose_name="City/Town")
     zip=models.CharField(max_length=6,verbose_name="Zip/Postal Code")
     address=models.TextField()
-    mobile_phone = PhoneNumberField(default='+254743793901',validators=[kenyan_phone_validator])
-    official_phone = PhoneNumberField(default='+254743793901',validators=[kenyan_phone_validator])
+    mobile_phone = PhoneNumberField(default='+254700000000',validators=[global_phone_validator])
+    official_phone = PhoneNumberField(default='+254700000000',validators=[global_phone_validator])
     
     def __str__(self) -> str:
         return self.employee.user.email
@@ -493,7 +485,7 @@ class NextOfKin(models.Model):
     employee=models.ForeignKey(Employee,on_delete=models.CASCADE,related_name="kins")
     name=models.CharField(max_length=255)
     relation=models.CharField(max_length=255)
-    phone = PhoneNumberField(default='254743793901',validators=[kenyan_phone_validator])
+    phone = PhoneNumberField(default='254700000000',validators=[global_phone_validator])
     email=models.EmailField(unique=True)
 
     def __str__(self) -> str:

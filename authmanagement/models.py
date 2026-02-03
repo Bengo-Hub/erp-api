@@ -12,14 +12,10 @@ from tinymce.models import HTMLField
 from django.core.validators import RegexValidator
 
 from phonenumber_field.modelfields import PhoneNumberField
-# Define the Kenyan phone number regex pattern
-kenyan_phone_regex = r"^(?:\+?254|0)(?:\d{9}|\d{3}\s\d{3}\s\d{3}|\d{2}\s\d{3}\s\d{3})$"
+from core.validators import get_global_phone_validator
 
-# Create a RegexValidator instance using the regex pattern
-kenyan_phone_validator = RegexValidator(
-    regex=kenyan_phone_regex,
-    message="Please enter a valid Kenyan phone number."
-)
+# Use global phone validator instead of Kenyan-specific regex
+global_phone_validator = get_global_phone_validator(region='KE')
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -50,8 +46,15 @@ class CustomUser(AbstractUser):
     first_name = models.CharField(max_length=30, blank=False)
     last_name = models.CharField(max_length=150, blank=False)
     middle_name = models.CharField(max_length=255, blank=True, null=True)
-    phone = models.CharField(max_length=15,default='+254743793901',validators=[kenyan_phone_validator],blank=True,null=True)
+    phone = models.CharField(max_length=15,default='+254700000000',validators=[global_phone_validator],blank=True,null=True)
     pic=models.ImageField(upload_to='userprofiles',blank=True,null=True)
+    # Digital signature for document approvals (transparent PNG recommended, max 500x200px)
+    signature = models.ImageField(
+        upload_to='user_signatures',
+        blank=True,
+        null=True,
+        help_text="Upload your digital signature image (transparent PNG recommended, max 500x200px). Used for signing approved documents."
+    )
     timezone = TimeZoneField(choices_display="WITH_GMT_OFFSET",use_pytz=True, default="Africa/Nairobi", blank=True, null=True)
     email_confirm_token=models.CharField(max_length=255,default='token')
     ip_address = models.CharField(max_length=100, default="192.168.0.1")

@@ -299,6 +299,7 @@ class ProcurementRequestViewSet(BaseModelViewSet):
         try:
             from procurement.orders.models import PurchaseOrder
             from core_orders.models import OrderItem
+            from core.utils import get_user_branch
 
             # Check if a PO already exists for this requisition
             if hasattr(requisition, 'purchase_order') and requisition.purchase_order:
@@ -316,11 +317,15 @@ class ProcurementRequestViewSet(BaseModelViewSet):
                     unit_price = Decimal(str(item.estimated_price))
                 total_budget += unit_price * item.quantity
 
-            # Get branch from requisition items or user
-            branch = None
-            first_item = requisition.items.first()
-            if first_item and first_item.stock_item:
-                branch = first_item.stock_item.branch
+            # Get branch from requisition, items, or user context (fallback)
+            branch = requisition.branch
+            if not branch:
+                first_item = requisition.items.first()
+                if first_item and first_item.stock_item:
+                    branch = first_item.stock_item.branch
+            if not branch:
+                # Fallback to user's branch context
+                branch = get_user_branch(user, self.request)
 
             # Create the Purchase Order
             purchase_order = PurchaseOrder.objects.create(

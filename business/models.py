@@ -4,17 +4,12 @@ from django.core.validators import RegexValidator
 from django_countries.fields import CountryField
 from django.utils import timezone
 from authmanagement.models import CustomUser
-from core.validators import validate_kenyan_county, validate_kenyan_postal_code
+from core.validators import validate_kenyan_county, validate_kenyan_postal_code, get_global_phone_validator
 from decimal import Decimal
 User = CustomUser
 
-# Define the Kenyan phone number regex pattern
-kenyan_phone_regex = r"^(?:\+?254|0)(?:\d{9}|\d{3}\s\d{3}\s\d{3}|\d{2}\s\d{3}\s\d{3})$"
-# Create a RegexValidator instance using the regex pattern
-kenyan_phone_validator = RegexValidator(
-    regex=kenyan_phone_regex,
-    message="Please enter a valid Kenyan phone number."
-)
+# Use global phone validator instead of Kenyan-specific regex
+global_phone_validator = get_global_phone_validator(region='KE')
 
 class BusinessLocation(models.Model):
     country = CountryField(blank=True,null=True,default='KE')
@@ -102,6 +97,13 @@ class Bussiness(models.Model):
     default_profit_margin=models.DecimalField(max_digits=10,decimal_places=2,default=Decimal('25.00'),help_text="Percentage (%)")
     logo = models.ImageField(upload_to="business/logo",blank=True,null=True)
     watermarklogo=models.ImageField(upload_to="business/logo",blank=True,null=True)
+    # Official business stamp for documents (transparent PNG recommended, max 300x300px)
+    business_stamp = models.ImageField(
+        upload_to="business/stamps",
+        blank=True,
+        null=True,
+        help_text="Upload official business stamp image (transparent PNG recommended, max 300x300px). Appears on invoices, quotations, and official documents."
+    )
     timezone = TimeZoneField(default = 'Africa/Nairobi')
     
     # Basic branding colors
@@ -221,15 +223,15 @@ class Branch(models.Model):
     location=models.ForeignKey(BusinessLocation,on_delete=models.CASCADE,related_name="branches")
     name=models.CharField(max_length=100,default="Main Branch")
     branch_code=models.CharField(max_length=100,default="MB00100",unique=True)
-    contact_number = models.CharField(max_length=15,default='+254743793901',validators=[kenyan_phone_validator])
-    alternate_contact_number = models.CharField(max_length=15,default='+254743793901',validators=[kenyan_phone_validator],blank=True,null=True)
+    contact_number = models.CharField(max_length=15,default='+254700000000',validators=[global_phone_validator])
+    alternate_contact_number = models.CharField(max_length=15,default='+254700000000',validators=[global_phone_validator],blank=True,null=True)
     email=models.EmailField(max_length=255,default='info@codevertexitsolutions.com')
      # Business Hours (Kenyan format)
     opening_hours = models.CharField(max_length=255, default="Monday-Friday: 8:00 AM - 5:00 PM", help_text="Business operating hours")
     is_24_hours = models.BooleanField(default=False, help_text="Whether location operates 24/7")
     
     # Additional Contact Information
-    whatsapp_number = models.CharField(max_length=15, blank=True, null=True, validators=[kenyan_phone_validator], help_text="WhatsApp business number")
+    whatsapp_number = models.CharField(max_length=15, blank=True, null=True, validators=[global_phone_validator], help_text="WhatsApp business number")
     landline_number = models.CharField(max_length=15, blank=True, null=True, help_text="Landline phone number")
     
     is_active=models.BooleanField(default=True)

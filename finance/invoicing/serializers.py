@@ -401,9 +401,12 @@ class DeliveryNoteCreateSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
+        from core.utils import get_user_branch
+
         source_invoice_id = validated_data.pop('source_invoice_id', None)
         source_purchase_order_id = validated_data.pop('source_purchase_order_id', None)
-        user = self.context.get('request').user if self.context.get('request') else None
+        request = self.context.get('request')
+        user = request.user if request else None
 
         if source_invoice_id:
             from .models import Invoice
@@ -422,7 +425,10 @@ class DeliveryNoteCreateSerializer(serializers.ModelSerializer):
                 delivery_address=validated_data.get('delivery_address')
             )
         else:
-            # Create standalone delivery note
+            # Create standalone delivery note - resolve branch if not in payload
+            if not validated_data.get('branch') and user and request:
+                validated_data['branch'] = get_user_branch(user, request)
+            validated_data['created_by'] = user
             delivery_note = DeliveryNote.objects.create(**validated_data)
 
         # Update additional fields
@@ -484,15 +490,20 @@ class ProformaInvoiceCreateSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
+        from core.utils import get_user_branch
+
         source_quotation_id = validated_data.pop('source_quotation_id', None)
-        user = self.context.get('request').user if self.context.get('request') else None
+        request = self.context.get('request')
+        user = request.user if request else None
 
         if source_quotation_id:
             from finance.quotations.models import Quotation
             quotation = Quotation.objects.get(pk=source_quotation_id)
             proforma = ProformaInvoice.create_from_quotation(quotation, created_by=user)
         else:
-            # Create standalone proforma
+            # Create standalone proforma - resolve branch if not in payload
+            if not validated_data.get('branch') and user and request:
+                validated_data['branch'] = get_user_branch(user, request)
             validated_data['created_by'] = user
             proforma = ProformaInvoice.objects.create(**validated_data)
 

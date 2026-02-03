@@ -195,7 +195,14 @@ class ProductionBatchViewSet(BaseModelViewSet):
     ordering_fields = ['scheduled_date', 'created_at', 'start_date', 'end_date', 'status']
     
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        from core.utils import get_user_branch
+
+        # Get branch from payload or resolve from headers/user context
+        branch = serializer.validated_data.get('branch')
+        if not branch:
+            branch = get_user_branch(self.request.user, self.request)
+
+        serializer.save(created_by=self.request.user, branch=branch)
 
     def get_queryset(self):
         queryset = super().get_queryset()

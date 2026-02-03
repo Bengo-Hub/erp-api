@@ -30,7 +30,7 @@ from .models import *
 from .serializers import *
 from .performance import PerformanceMonitor, DatabaseIndexManager, QueryOptimizer
 from .background_jobs import get_job_status, get_queue_statistics, get_thread_pool_stats, submit_background_job
-from .image_optimization import image_optimizer, cdn_manager, optimize_and_upload_image, get_responsive_image_urls, get_cdn_url
+from .image_optimization import image_optimizer, cdn_manager, optimize_and_upload_image, get_responsive_image_urls, get_cdn_url, remove_signature_background, remove_stamp_background
 from .load_testing import LoadTestManager, create_comprehensive_load_test_config
 import json
 import psutil
@@ -1518,3 +1518,97 @@ class BrandingSettingsViewSet(viewsets.ViewSet):
     def partial_update(self, request, pk=None):
         """Update branding settings for a business (PATCH - partial update)"""
         return self.update(request, pk)
+
+
+class BackgroundRemovalView(APIView):
+    """
+    API endpoint for removing backgrounds from signature and stamp images.
+    Supports simple threshold, edge-aware, and AI-based (rembg) methods.
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def post(self, request, format=None):
+        """
+        Remove background from an uploaded image.
+        
+        Request:
+            - file: Image file (required)
+            - type: 'signature' or 'stamp' (default: 'signature')
+            - method: 'auto', 'simple', 'edge', or 'advanced' (default: 'auto')
+        
+        Returns:
+            PNG image with transparent background
+        """
+        if 'file' not in request.FILES:
+            return Response(
+                {'error': 'No file uploaded'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        file_obj = request.FILES['file']
+        image_type = request.data.get('type', 'signature')
+        method = request.data.get('method', 'auto')
+        
+        # Validate file type
+        valid_types = ['image/png', 'image/jpeg', 'image/webp']
+        if file_obj.content_type not in valid_types:
+            return Response(
+                {'error': 'Invalid file type. Use PNG, JPEG, or WebP.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file size (max 5MB)
+        if file_obj.size > 5 * 1024 * 1024:
+            return Response(
+                {'error': 'File too large. Maximum size is 5MB.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Security scan
+        try:
+            from .file_security import scan_signature_file, scan_stamp_file
+            if image_type == 'stamp':
+                scan_result = scan_stamp_file(file_obj, strict=True)
+            else:
+                scan_result = scan_signature_file(file_obj, strict=True)
+            
+            if not scan_result['is_safe']:
+                return Response(
+                    {'error': '; '.join(scan_result['errors'])},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except ImportError:
+            pass  # Security module not available, skip scan
+        
+        # Remove background
+        try:
+            if image_type == 'stamp':
+                result = remove_stamp_background(file_obj, method=method)
+            else:
+                result = remove_signature_background(file_obj, method=method)
+            
+            if not result:
+                return Response(
+                    {'error': 'Failed to process image'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Return as base64 encoded image
+            import base64
+            b64_image = base64.b64encode(result).decode('utf-8')
+            
+            return Response({
+                'success': True,
+                'image': f'data:image/png;base64,{b64_image}',
+                'size': len(result),
+                'method': method,
+                'type': image_type
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Error processing image: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+

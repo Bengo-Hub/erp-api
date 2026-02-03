@@ -692,3 +692,334 @@ class BoxedSection(Flowable):
                 continue
         c.restoreState()
 
+
+# =============================================================================
+# Signature and Stamp Helper Functions
+# =============================================================================
+
+def _get_user_signature_image(user, max_width=1.5*inch, max_height=0.6*inch):
+    """
+    Get user's signature image for document signing.
+    
+    Args:
+        user: User model instance with optional 'signature' ImageField
+        max_width: Maximum width for the signature image
+        max_height: Maximum height for the signature image
+    
+    Returns:
+        reportlab Image object or None if no signature available
+    """
+    if not user:
+        return None
+    
+    try:
+        signature_field = getattr(user, 'signature', None)
+        if not signature_field or not signature_field.name:
+            return None
+        
+        # Get the file path or URL
+        try:
+            signature_path = signature_field.path
+            if not os.path.exists(signature_path):
+                return None
+        except Exception:
+            # If path doesn't exist, try URL
+            try:
+                signature_path = signature_field.url
+            except Exception:
+                return None
+        
+        # Use ImageReader for robust size detection
+        from reportlab.lib.utils import ImageReader
+        from io import BytesIO
+        
+        # Read the file content
+        try:
+            signature_field.seek(0)
+            content = signature_field.read()
+            data_source = BytesIO(content)
+        except Exception:
+            data_source = signature_path
+        
+        ir = ImageReader(data_source)
+        iw, ih = ir.getSize()
+        if not iw or not ih:
+            return None
+        
+        iw = float(iw)
+        ih = float(ih)
+        aspect = iw / ih
+        
+        # Calculate dimensions maintaining aspect ratio
+        if aspect > (float(max_width) / float(max_height)):
+            drawW = float(max_width)
+            drawH = float(max_width) / aspect
+        else:
+            drawH = float(max_height)
+            drawW = float(max_height) * aspect
+        
+        # Reset file pointer if needed
+        if hasattr(data_source, 'seek'):
+            data_source.seek(0)
+        
+        img = Image(data_source, width=drawW, height=drawH)
+        return img
+        
+    except Exception:
+        return None
+
+
+def _get_user_initials(user):
+    """
+    Get user initials for fallback signature display.
+    
+    Args:
+        user: User model instance
+    
+    Returns:
+        String with user initials (e.g., "J.M" for "John Mwangi")
+    """
+    if not user:
+        return ''
+    
+    try:
+        first_name = getattr(user, 'first_name', '') or ''
+        last_name = getattr(user, 'last_name', '') or ''
+        
+        initials = []
+        if first_name:
+            initials.append(first_name[0].upper())
+        if last_name:
+            initials.append(last_name[0].upper())
+        
+        if initials:
+            return '.'.join(initials)
+        
+        # Fallback to username
+        username = getattr(user, 'username', '') or ''
+        if username:
+            return username[:2].upper()
+        
+        return ''
+    except Exception:
+        return ''
+
+
+def _get_business_stamp_image(business_or_company_info, max_width=1.5*inch, max_height=1.5*inch, opacity=0.85):
+    """
+    Get business stamp image for official documents.
+    
+    Args:
+        business_or_company_info: Business model instance or company_info dict
+        max_width: Maximum width for the stamp image
+        max_height: Maximum height for the stamp image
+        opacity: Transparency level (0.0 to 1.0, where 1.0 is fully opaque)
+    
+    Returns:
+        reportlab Image object or None if no stamp available
+    """
+    try:
+        stamp_field = None
+        
+        # Try to get stamp from different sources
+        if isinstance(business_or_company_info, dict):
+            stamp_field = business_or_company_info.get('business_stamp') or business_or_company_info.get('stamp')
+        else:
+            stamp_field = getattr(business_or_company_info, 'business_stamp', None)
+        
+        if not stamp_field:
+            return None
+        
+        # Handle string path
+        if isinstance(stamp_field, str):
+            if not os.path.exists(stamp_field):
+                return None
+            stamp_path = stamp_field
+            data_source = stamp_path
+        elif hasattr(stamp_field, 'name') and stamp_field.name:
+            # Django FieldFile
+            try:
+                stamp_path = stamp_field.path
+                if not os.path.exists(stamp_path):
+                    return None
+                data_source = stamp_path
+            except Exception:
+                try:
+                    stamp_field.seek(0)
+                    content = stamp_field.read()
+                    from io import BytesIO
+                    data_source = BytesIO(content)
+                except Exception:
+                    return None
+        else:
+            return None
+        
+        # Use ImageReader for robust size detection
+        from reportlab.lib.utils import ImageReader
+        
+        ir = ImageReader(data_source)
+        iw, ih = ir.getSize()
+        if not iw or not ih:
+            return None
+        
+        iw = float(iw)
+        ih = float(ih)
+        aspect = iw / ih
+        
+        # Calculate dimensions maintaining aspect ratio
+        if aspect > (float(max_width) / float(max_height)):
+            drawW = float(max_width)
+            drawH = float(max_width) / aspect
+        else:
+            drawH = float(max_height)
+            drawW = float(max_height) * aspect
+        
+        # Reset file pointer if needed
+        if hasattr(data_source, 'seek'):
+            data_source.seek(0)
+        
+        img = Image(data_source, width=drawW, height=drawH)
+        # Store opacity for later use in custom drawing
+        img._stamp_opacity = opacity
+        return img
+        
+    except Exception:
+        return None
+
+
+class SignatureBlock(Flowable):
+    """
+    A custom Flowable that displays user signature or initials.
+    Shows signature image if available, otherwise displays initials.
+    """
+    
+    def __init__(self, user, label="Sign:", max_width=1.5*inch, max_height=0.6*inch, 
+                 show_line=True, font_name='Helvetica', font_size=10):
+        super().__init__()
+        self.user = user
+        self.label = label
+        self.max_width = max_width
+        self.max_height = max_height
+        self.show_line = show_line
+        self.font_name = font_name
+        self.font_size = font_size
+        
+        # Get signature image or prepare initials
+        self.signature_img = _get_user_signature_image(user, max_width, max_height)
+        self.initials = _get_user_initials(user) if not self.signature_img else ''
+        
+        # Calculate dimensions
+        self.width = max_width + 0.5*inch  # Extra space for label
+        self.height = max_height + 0.15*inch  # Extra space for line
+    
+    def wrap(self, availWidth, availHeight):
+        return (self.width, self.height)
+    
+    def draw(self):
+        c = self.canv
+        c.saveState()
+        
+        if self.signature_img:
+            # Draw signature image
+            try:
+                self.signature_img.drawOn(c, 0.3*inch, 0.1*inch)
+            except Exception:
+                # Fallback to initials if image fails
+                self._draw_initials(c)
+        else:
+            # Draw initials
+            self._draw_initials(c)
+        
+        # Draw signature line if requested
+        if self.show_line:
+            c.setStrokeColor(colors.HexColor('#9ca3af'))
+            c.setLineWidth(0.5)
+            c.line(0, 0.05*inch, self.max_width, 0.05*inch)
+        
+        c.restoreState()
+    
+    def _draw_initials(self, canvas):
+        """Draw initials as fallback signature."""
+        if self.initials:
+            canvas.setFont(self.font_name + '-Oblique' if 'Oblique' not in self.font_name else self.font_name, 
+                          self.font_size + 4)
+            canvas.setFillColor(colors.HexColor('#1e40af'))
+            # Draw initials in a stylized way
+            canvas.drawString(0.4*inch, 0.15*inch, self.initials)
+
+
+class TransparentStamp(Flowable):
+    """
+    A custom Flowable that displays a business stamp with transparency.
+    Can overlay text when placed at specific positions.
+    """
+    
+    def __init__(self, business_or_company_info, max_width=1.5*inch, max_height=1.5*inch, 
+                 opacity=0.85, position='bottom-right'):
+        super().__init__()
+        self.stamp_img = _get_business_stamp_image(business_or_company_info, max_width, max_height, opacity)
+        self.opacity = opacity
+        self.position = position
+        
+        if self.stamp_img:
+            self.width = self.stamp_img.drawWidth
+            self.height = self.stamp_img.drawHeight
+        else:
+            self.width = 0
+            self.height = 0
+    
+    def wrap(self, availWidth, availHeight):
+        if not self.stamp_img:
+            return (0, 0)
+        return (self.width, self.height)
+    
+    def draw(self):
+        if not self.stamp_img:
+            return
+        
+        c = self.canv
+        c.saveState()
+        
+        # Apply transparency
+        try:
+            from reportlab.pdfgen.canvas import Canvas
+            # Set fill and stroke alpha for transparency
+            c.setFillAlpha(self.opacity)
+            c.setStrokeAlpha(self.opacity)
+        except Exception:
+            pass  # Older ReportLab versions may not support alpha
+        
+        try:
+            self.stamp_img.drawOn(c, 0, 0)
+        except Exception:
+            pass
+        
+        c.restoreState()
+
+
+def get_signature_or_initials_paragraph(user, header_style):
+    """
+    Get a Paragraph with signature image or initials for table cells.
+    
+    Args:
+        user: User model instance
+        header_style: ParagraphStyle for text formatting
+    
+    Returns:
+        Paragraph or Image flowable
+    """
+    if not user:
+        return Paragraph("", header_style)
+    
+    # Try to get signature image
+    sig_img = _get_user_signature_image(user, max_width=1.2*inch, max_height=0.5*inch)
+    
+    if sig_img:
+        return sig_img
+    
+    # Fallback to initials
+    initials = _get_user_initials(user)
+    if initials:
+        return Paragraph(f"<i><font color='#1e40af'>{initials}</font></i>", header_style)
+    
+    return Paragraph("", header_style)
