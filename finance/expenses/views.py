@@ -63,12 +63,20 @@ class ExpenseViewSet(BaseModelViewSet):
         return queryset
 
     def create(self, request, *args, **kwargs):
-        """Create expense with auto-generated reference number."""
+        """Create expense with auto-generated reference number and branch resolution."""
+        from core.utils import get_user_branch
+
         try:
             correlation_id = self.get_correlation_id()
             
             # Auto-generate reference number
             request.data['reference_no'] = generate_enxpense_ref("EP")
+
+            # Resolve branch if not provided in payload
+            if not request.data.get('branch'):
+                branch = get_user_branch(request.user, request)
+                if branch:
+                    request.data['branch'] = branch.id
             
             serializer = self.get_serializer(data=request.data)
             

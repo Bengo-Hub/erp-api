@@ -17,7 +17,9 @@ from ..utils import (
     get_customer_name, get_customer_email, get_customer_phone,
     _sanitize_text_for_pdf, _get_logo_image, _build_company_details_section,
     _build_client_details_section, _build_document_details_section, BoxedSection,
-    get_brand_color
+    get_brand_color, _get_user_signature_image, _get_user_initials,
+    _get_business_stamp_image, get_signature_or_initials_paragraph,
+    SignatureBlock, TransparentStamp
 )
 
 
@@ -53,23 +55,10 @@ def _resolve_company_from_document(doc):
     return _impl(doc)
 
 
-def _user_initials(user):
-    try:
-        if not user:
-            return ''
-        fn = getattr(user, 'first_name', '') or ''
-        ln = getattr(user, 'last_name', '') or ''
-        parts = [p for p in [fn, ln] if p]
-        if parts:
-            return ''.join([p[0].upper() for p in parts])
-        return getattr(user, 'username', '')[:2].upper()
-    except Exception:
-        return ''
-
-
 def _build_signature_table(prepared_by, approved_by, header_style, prepared_date=None, approved_date=None):
     """Return a signature Table flowable for prepared/approved details.
 
+    Displays user signatures if uploaded, otherwise falls back to initials (e.g., "J.M").
     prepared_date and approved_date can be provided as strings (formatted) or datetime objects.
     """
     prepared_name = f"{getattr(prepared_by, 'first_name', '') or ''} {getattr(prepared_by, 'last_name', '') or ''}".strip() if prepared_by else ''
@@ -85,12 +74,28 @@ def _build_signature_table(prepared_by, approved_by, header_style, prepared_date
     else:
         approved_date_str = approved_date or ''
 
+    # Get signature images or fallback to initials
+    prepared_sig = get_signature_or_initials_paragraph(prepared_by, header_style)
+    approved_sig = get_signature_or_initials_paragraph(approved_by, header_style)
+    
+    # Build signature table with images or initials
     sig_table = Table([
         [Paragraph('<b>Prepared by</b>', header_style), Paragraph('<b>Approved by</b>', header_style)],
         [Paragraph(prepared_name, header_style), Paragraph(approved_name, header_style)],
         [Paragraph(prepared_date_str, header_style), Paragraph(approved_date_str, header_style)],
-        [Paragraph(f"Sign: { _user_initials(prepared_by) }", header_style), Paragraph(f"Sign: { _user_initials(approved_by) }", header_style)]
+        [prepared_sig, approved_sig]
     ], colWidths=[3.5*inch, 3.5*inch])
+    
+    # Style the signature table
+    sig_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        # Add subtle line above signature row
+        ('LINEABOVE', (0, 3), (-1, 3), 0.5, colors.HexColor('#d1d5db')),
+    ]))
+    
     return sig_table
 
 
@@ -177,7 +182,8 @@ def _build_totals_table(document, document_type, label_style, label_bold_style):
         if rate and float(rate) != 1.0:
             rows.append([Paragraph(f'Exchange Rate ({currency}/KES):', label_style), Paragraph(f"{float(rate):,.6f}", label_style)])
 
-    tbl = Table(rows, colWidths=[4.5*inch, 2.5*inch])
+    # Totals table widths must fit within CONTENT_WIDTH (6.5 inches)
+    tbl = Table(rows, colWidths=[4.25*inch, 2.25*inch])
     tbl.setStyle(TableStyle([
         ('FONT', (0, 0), (-1, -2), 'Helvetica', 10),
         ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 11),
@@ -203,6 +209,9 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
     """
     try:
         buffer = BytesIO()
+        # A4 page width is 8.27 inches; with 0.75*inch margins on each side, available width is ~6.77 inches
+        # Use consistent content width across all document elements
+        CONTENT_WIDTH = 6.5 * inch  # Safe content width respecting margins
         doc = SimpleDocTemplate(
             buffer, 
             pagesize=A4, 
@@ -214,7 +223,7 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
         elements = []
         styles = getSampleStyleSheet()
         
-        # Custom styles
+        # Custom styles with text wrapping
         title_style = ParagraphStyle(
             'InvoiceTitle',
             parent=styles['Heading1'],
@@ -229,6 +238,17 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             parent=styles['Normal'],
             fontSize=10,
             textColor=colors.HexColor('#374151'),
+            wordWrap='CJK',  # Enable word wrapping
+        )
+        
+        # Table cell style with proper text wrapping
+        table_cell_style = ParagraphStyle(
+            'TableCell',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.HexColor('#374151'),
+            wordWrap='CJK',
+            leading=12,  # Line height for wrapped text
         )
         
         # Company Header: use imported helper function for logo
@@ -347,7 +367,8 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             [Paragraph('Payment Terms:', label_bold_style), Paragraph(invoice.get_payment_terms_display(), label_style), '', ''],
         ]
         
-        details_table = Table(details_data, colWidths=[1.5*inch, 2*inch, 1*inch, 2.5*inch])
+        # Details table widths must fit within CONTENT_WIDTH (6.5 inches)
+        details_table = Table(details_data, colWidths=[1.3*inch, 1.8*inch, 0.9*inch, 2.5*inch])
         details_table.setStyle(TableStyle([
             ('FONT', (0, 0), (-1, -1), 'Helvetica', 9),
             ('ALIGN', (0, 0), (1, -1), 'LEFT'),
@@ -361,14 +382,25 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
         # Get currency from invoice (default to KES)
         currency = getattr(invoice, 'currency', 'KES') or 'KES'
 
-        # Line Items Table
+        # Line Items Table - Column widths must fit within CONTENT_WIDTH (6.5 inches)
+        # Columns: # (0.35"), Description (2.8"), Qty (0.55"), Unit Price (0.95"), Tax (0.85"), Amount (1.0")
+        # Total: 6.5 inches
+        items_header_style = ParagraphStyle(
+            'ItemsHeader',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.whitesmoke,
+            fontName='Helvetica-Bold',
+            wordWrap='CJK',
+        )
+        
         items_data = [[
-            Paragraph('#', header_style),
-            Paragraph('Description', header_style),
-            Paragraph('Qty', header_style),
-            Paragraph('Unit Price', header_style),
-            Paragraph('Tax', header_style),
-            Paragraph('Amount', header_style)
+            Paragraph('#', items_header_style),
+            Paragraph('Description', items_header_style),
+            Paragraph('Qty', items_header_style),
+            Paragraph('Unit Price', items_header_style),
+            Paragraph('Tax', items_header_style),
+            Paragraph('Amount', items_header_style)
         ]]
 
         for idx, item in enumerate(invoice.items.all(), 1):
@@ -384,21 +416,24 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             tax_amount = getattr(item, 'tax_amount', 0)
             total_amount = getattr(item, 'total_price', None) or getattr(item, 'total', 0) or (qty * unit_price)
 
+            # Use table_cell_style for proper text wrapping in cells
             items_data.append([
-                Paragraph(str(idx), header_style),
-                Paragraph(desc, header_style),
-                Paragraph(str(qty), header_style),
-                Paragraph(_format_currency(unit_price, currency), header_style),
-                Paragraph(_format_currency(tax_amount, currency), header_style),
-                Paragraph(_format_currency(total_amount, currency), header_style)
+                Paragraph(str(idx), table_cell_style),
+                Paragraph(desc, table_cell_style),
+                Paragraph(str(qty), table_cell_style),
+                Paragraph(_format_currency(unit_price, currency), table_cell_style),
+                Paragraph(_format_currency(tax_amount, currency), table_cell_style),
+                Paragraph(_format_currency(total_amount, currency), table_cell_style)
             ])
         
-        items_table = Table(items_data, colWidths=[0.4*inch, 3*inch, 0.7*inch, 1.2*inch, 0.7*inch, 1.2*inch])
+        # Column widths that fit within content width (6.5 inches total)
+        items_table = Table(items_data, colWidths=[0.35*inch, 2.8*inch, 0.55*inch, 0.95*inch, 0.85*inch, 1.0*inch])
         items_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563eb')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (0, -1), 'CENTER'),
             ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Top align for wrapped text
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 10),
             ('FONTSIZE', (0, 1), (-1, -1), 9),
@@ -445,12 +480,38 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             sanitized_tc = _sanitize_text_for_pdf(invoice.terms_and_conditions)
             elements.append(Paragraph(sanitized_tc.replace('\n', '<br/>'), tc_style))
 
-        # Prepared / Approved signature block
+        # Prepared / Approved signature block with business stamp
         elements.append(Spacer(1, 0.2*inch))
         prepared_by = getattr(invoice, 'created_by', None)
         approved_by = getattr(invoice, 'approved_by', None)
         sig = _build_signature_table(prepared_by, approved_by, header_style, prepared_date=getattr(invoice, 'created_at', None), approved_date=getattr(invoice, 'approved_at', None))
-        elements.append(sig)
+        
+        # Get business stamp if available
+        business_stamp = None
+        try:
+            branch = getattr(invoice, 'branch', None)
+            business = getattr(branch, 'business', None) if branch else None
+            if not business and company_info:
+                business = company_info.get('business') if isinstance(company_info, dict) else getattr(company_info, 'business', None)
+            if business:
+                business_stamp = TransparentStamp(business, max_width=1.2*inch, max_height=1.2*inch, opacity=0.85)
+        except Exception:
+            pass
+        
+        # Create signature + stamp layout (signature left, stamp right)
+        if business_stamp and business_stamp.stamp_img:
+            sig_stamp_table = Table(
+                [[sig, business_stamp]],
+                colWidths=[5.5*inch, 1.5*inch]
+            )
+            sig_stamp_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
+                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ]))
+            elements.append(sig_stamp_table)
+        else:
+            elements.append(sig)
         
         # Footer
         # Create page footer function matching Masterspace format
@@ -470,8 +531,8 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             postal_code = _ci('postal_code') or '57935 - 00100'
             city = _ci('city') or 'Nairobi'
             country = _ci('country') or 'Kenya'
-            phone1 = _ci('contact_number') or _ci('phone') or '+254 715 857 832'
-            phone2 = _ci('alternate_contact_number') or '+254 720 995 917'
+            phone1 = _ci('contact_number') or _ci('phone') or '+254 754 906577 '
+            phone2 = _ci('alternate_contact_number') or '+254 758 045 348',
             email = _ci('email') or 'info@masterspace.co.ke'
             website = _ci('website') or 'www.masterspace.co.ke'
 
@@ -652,7 +713,8 @@ def generate_quotation_pdf(quotation, company_info=None):
             [Paragraph('Valid Until:', label_bold_style), Paragraph(quotation.valid_until.strftime('%d/%m/%Y'), label_style), Paragraph('Phone:', label_bold_style), Paragraph(get_customer_phone(quotation), label_style)],
         ]
 
-        details_table = Table(details_data, colWidths=[1.5*inch, 2*inch, 1*inch, 2.5*inch])
+        # Quotation details table widths must fit within CONTENT_WIDTH (6.5 inches)
+        details_table = Table(details_data, colWidths=[1.3*inch, 1.8*inch, 0.9*inch, 2.5*inch])
         details_table.setStyle(TableStyle([
             ('FONT', (0, 0), (-1, -1), 'Helvetica', 9),
             ('ALIGN', (0, 0), (1, -1), 'LEFT'),
@@ -737,7 +799,9 @@ def generate_quotation_pdf(quotation, company_info=None):
                 Paragraph(_format_currency(tax_amount, currency), header_style),
                 Paragraph(_format_currency(total_amount, currency), header_style)
             ])
-        items_table = Table(items_data, colWidths=[0.4*inch, 3.3*inch, 0.7*inch, 1.0*inch, 0.6*inch, 1.2*inch], repeatRows=1)
+        # Quotation items table widths must fit within CONTENT_WIDTH (6.5 inches)
+        # 0.35 + 2.8 + 0.55 + 0.95 + 0.85 + 1.0 = 6.5 inches
+        items_table = Table(items_data, colWidths=[0.35*inch, 2.8*inch, 0.55*inch, 0.95*inch, 0.85*inch, 1.0*inch], repeatRows=1)
         items_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563eb')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -752,7 +816,8 @@ def generate_quotation_pdf(quotation, company_info=None):
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ROWBACKGROUND', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
             ('LEFTPADDING', (1, 0), (1, -1), 6),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP')
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('WORDWRAP', (0, 0), (-1, -1), True),
         ]))
         elements.append(items_table)
         elements.append(Spacer(1, 0.3*inch))
@@ -789,12 +854,38 @@ def generate_quotation_pdf(quotation, company_info=None):
             )
             elements.append(Paragraph(quotation.terms_and_conditions, tc_style))
         
-        # Prepared / Approved signature block for quotation
+        # Prepared / Approved signature block for quotation with business stamp
         elements.append(Spacer(1, 0.2*inch))
         prepared_by = getattr(quotation, 'created_by', None)
         approved_by = getattr(quotation, 'approved_by', None)
         sig = _build_signature_table(prepared_by, approved_by, header_style, prepared_date=getattr(quotation, 'created_at', None), approved_date=getattr(quotation, 'approved_at', None))
-        elements.append(sig)
+        
+        # Get business stamp if available
+        business_stamp = None
+        try:
+            branch = getattr(quotation, 'branch', None)
+            business = getattr(branch, 'business', None) if branch else None
+            if not business and company_info:
+                business = company_info.get('business') if isinstance(company_info, dict) else getattr(company_info, 'business', None)
+            if business:
+                business_stamp = TransparentStamp(business, max_width=1.2*inch, max_height=1.2*inch, opacity=0.85)
+        except Exception:
+            pass
+        
+        # Create signature + stamp layout (signature left, stamp right)
+        if business_stamp and business_stamp.stamp_img:
+            sig_stamp_table = Table(
+                [[sig, business_stamp]],
+                colWidths=[5.5*inch, 1.5*inch]
+            )
+            sig_stamp_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
+                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ]))
+            elements.append(sig_stamp_table)
+        else:
+            elements.append(sig)
 
         # Footer
         # Validity note in content

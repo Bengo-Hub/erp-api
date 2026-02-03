@@ -56,16 +56,50 @@ class UserSerializer(serializers.ModelSerializer):
             'password',
             'phone',
             'pic',
+            'signature',
             'is_active',
             'is_staff',
         )
         extra_kwargs = {
             'password': {'write_only': True, 'required': False},
             'pic': {'required': False},
+            'signature': {'required': False},
             'phone': {'required': False},
             'is_active': {'required': False},
             'is_staff': {'required': False},
         }
+    
+    def validate_signature(self, value):
+        """Validate signature file for security."""
+        if value:
+            try:
+                from core.file_security import scan_signature_file
+                result = scan_signature_file(value, strict=True)
+                if not result['is_safe']:
+                    raise serializers.ValidationError('; '.join(result['errors']))
+            except ImportError:
+                # Fallback validation if file_security module not available
+                if hasattr(value, 'size') and value.size > 2 * 1024 * 1024:
+                    raise serializers.ValidationError('Signature file too large (max 2MB)')
+                if hasattr(value, 'content_type'):
+                    valid_types = ['image/png', 'image/jpeg', 'image/webp']
+                    if value.content_type not in valid_types:
+                        raise serializers.ValidationError('Invalid file type. Use PNG, JPEG, or WebP.')
+        return value
+    
+    def validate_pic(self, value):
+        """Validate profile picture for security."""
+        if value:
+            try:
+                from core.file_security import scan_profile_image
+                result = scan_profile_image(value, strict=True)
+                if not result['is_safe']:
+                    raise serializers.ValidationError('; '.join(result['errors']))
+            except ImportError:
+                # Fallback validation
+                if hasattr(value, 'size') and value.size > 5 * 1024 * 1024:
+                    raise serializers.ValidationError('Profile picture too large (max 5MB)')
+        return value
         
     @extend_schema_field(OpenApiTypes.STR)
     def get_timezone(self, obj):
@@ -183,6 +217,10 @@ class UserSerializer(serializers.ModelSerializer):
         if 'pic' in validated_data:
             instance.pic = validated_data['pic']
 
+        # Handle signature if provided
+        if 'signature' in validated_data:
+            instance.signature = validated_data['signature']
+
         instance.save()
 
         # Update groups if provided - accept names or ids
@@ -213,6 +251,9 @@ class UserSerializer(serializers.ModelSerializer):
         data['is_superuser'] = getattr(instance, 'is_superuser', False)
         data['date_joined'] = getattr(instance, 'date_joined', None)
         data['last_login'] = getattr(instance, 'last_login', None)
+        # Include signature URL if available
+        if instance.signature:
+            data['signature'] = instance.signature.url if instance.signature else None
         # Include employee mapping for consistent frontend checks
         try:
             from hrm.employees.models import Employee

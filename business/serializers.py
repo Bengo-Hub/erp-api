@@ -268,6 +268,24 @@ class BussinessSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bussiness
         fields = '__all__'
+    
+    def validate_business_stamp(self, value):
+        """Validate business stamp file for security."""
+        if value:
+            try:
+                from core.file_security import scan_stamp_file
+                result = scan_stamp_file(value, strict=True)
+                if not result['is_safe']:
+                    raise serializers.ValidationError('; '.join(result['errors']))
+            except ImportError:
+                # Fallback validation if file_security module not available
+                if hasattr(value, 'size') and value.size > 5 * 1024 * 1024:
+                    raise serializers.ValidationError('Stamp file too large (max 5MB)')
+                if hasattr(value, 'content_type'):
+                    valid_types = ['image/png', 'image/jpeg', 'image/webp']
+                    if value.content_type not in valid_types:
+                        raise serializers.ValidationError('Invalid file type. Use PNG, JPEG, or WebP.')
+        return value
         
     def get_branches(self, obj):
         """Get branches for this business"""

@@ -8,7 +8,7 @@ from .views import (
     PerformanceMetricsView, DatabaseOptimizationView, CacheManagementView,
     SystemHealthView, BackgroundJobManagementView, ImageOptimizationView,
     CDNManagementView, ResponsiveImagesView, LoadTestingView,
-    CurrencyViewSet, ExchangeRateViewSet
+    CurrencyViewSet, ExchangeRateViewSet, BackgroundRemovalView
 )
 
 router = DefaultRouter()
@@ -50,4 +50,7 @@ urlpatterns = [
     
     # Load testing endpoints
     path('load-testing/', LoadTestingView.as_view(), name='load-testing'),
+    
+    # Background removal for signatures and stamps
+    path('remove-background/', BackgroundRemovalView.as_view(), name='remove-background'),
 ]
