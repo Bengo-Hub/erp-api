@@ -42,8 +42,15 @@ class QuotationViewSet(BaseModelViewSet):
         return QuotationSerializer
 
     def perform_create(self, serializer):
-        """Set created_by when creating quotations"""
-        serializer.save(created_by=self.request.user)
+        """Set created_by and branch when creating quotations"""
+        from core.utils import get_user_branch
+
+        # Get branch from payload or resolve from headers/user context
+        branch = serializer.validated_data.get('branch')
+        if not branch:
+            branch = get_user_branch(self.request.user, self.request)
+
+        serializer.save(created_by=self.request.user, branch=branch)
 
     def get_queryset(self):
         """Filter quotations based on user organization"""
@@ -424,6 +431,10 @@ class QuotationViewSet(BaseModelViewSet):
             # Return as downloadable file
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="Quotation_{quotation.quotation_number}.pdf"'
+            # Prevent clients from using stale cached PDF - always revalidate
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
             return response
             
         except Exception as e:

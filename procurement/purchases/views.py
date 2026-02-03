@@ -116,7 +116,10 @@ class PurchaseViewSet(BaseModelViewSet):
                 for purchase_item in purchase.purchaseitems.all():
                     stock_item = purchase_item.stock_item
                     if not stock_item:
-                        # Service or non-stock item
+                        # Service or non-stock item - skip
+                        continue
+                    # Skip service products - services should never be added to stock
+                    if stock_item.product and getattr(stock_item.product, 'product_type', None) == 'service':
                         continue
                     stock_item.stock_level += purchase_item.qty  # Increase stock level
                     stock_item.save()
@@ -228,7 +231,10 @@ class PurchaseViewSet(BaseModelViewSet):
             for purchase_item in purchase.purchaseitems.all():
                 stock_item = purchase_item.stock_item
                 if not stock_item:
-                    # Non-stock product/service
+                    # Non-stock product/service - skip
+                    continue
+                # Skip service products - services should never be added to stock
+                if stock_item.product and getattr(stock_item.product, 'product_type', None) == 'service':
                     continue
                 stock_item.stock_level += purchase_item.qty  # Increase stock level
                 stock_item.save()

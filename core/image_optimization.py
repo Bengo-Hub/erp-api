@@ -428,3 +428,237 @@ def get_cdn_url(file_path: str, size_name: str = None) -> str:
         CDN URL
     """
     return cdn_manager.get_cdn_url(file_path, size_name)
+
+
+# Background Removal Utilities
+
+def remove_background_simple(image_file, threshold: int = 240, margin: int = 5) -> Optional[bytes]:
+    """
+    Remove white/light background from an image using simple thresholding.
+    Best for signatures and stamps with clean white backgrounds.
+    
+    Args:
+        image_file: File object or path to image
+        threshold: Brightness threshold for transparency (0-255, higher = more aggressive)
+        margin: Fuzziness margin for threshold
+    
+    Returns:
+        PNG image bytes with transparent background, or None on error
+    """
+    try:
+        if isinstance(image_file, str):
+            img = Image.open(image_file)
+        else:
+            image_file.seek(0)
+            img = Image.open(image_file)
+        
+        # Convert to RGBA if needed
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        
+        # Get image data
+        data = img.getdata()
+        
+        new_data = []
+        for item in data:
+            # Check if pixel is close to white (above threshold)
+            r, g, b = item[0], item[1], item[2]
+            # Calculate brightness
+            brightness = (r + g + b) / 3
+            
+            if brightness >= threshold - margin:
+                # Make transparent (keep RGB, set alpha to 0)
+                new_data.append((r, g, b, 0))
+            else:
+                # Keep original with full opacity
+                new_data.append((r, g, b, 255))
+        
+        img.putdata(new_data)
+        
+        # Save to bytes
+        output = io.BytesIO()
+        img.save(output, format='PNG', optimize=True)
+        return output.getvalue()
+        
+    except Exception as e:
+        logger.error(f"Error removing background: {e}")
+        return None
+
+
+def remove_background_edge_aware(image_file, tolerance: int = 30) -> Optional[bytes]:
+    """
+    Remove background using edge-aware flood fill from corners.
+    Better for signatures with varying ink colors.
+    
+    Args:
+        image_file: File object or path to image
+        tolerance: Color tolerance for flood fill (0-255)
+    
+    Returns:
+        PNG image bytes with transparent background, or None on error
+    """
+    try:
+        if isinstance(image_file, str):
+            img = Image.open(image_file)
+        else:
+            image_file.seek(0)
+            img = Image.open(image_file)
+        
+        # Convert to RGBA
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        
+        width, height = img.size
+        data = list(img.getdata())
+        
+        def get_pixel(x, y):
+            if 0 <= x < width and 0 <= y < height:
+                return data[y * width + x]
+            return None
+        
+        def set_pixel(x, y, value):
+            if 0 <= x < width and 0 <= y < height:
+                data[y * width + x] = value
+        
+        def color_distance(c1, c2):
+            return abs(c1[0] - c2[0]) + abs(c1[1] - c2[1]) + abs(c1[2] - c2[2])
+        
+        # Get background color from corners (sample multiple points)
+        corner_samples = [
+            get_pixel(0, 0), get_pixel(width-1, 0),
+            get_pixel(0, height-1), get_pixel(width-1, height-1),
+            get_pixel(5, 5), get_pixel(width-6, 5),
+            get_pixel(5, height-6), get_pixel(width-6, height-6)
+        ]
+        corner_samples = [c for c in corner_samples if c]
+        
+        if not corner_samples:
+            return None
+        
+        # Average corner colors
+        avg_r = sum(c[0] for c in corner_samples) // len(corner_samples)
+        avg_g = sum(c[1] for c in corner_samples) // len(corner_samples)
+        avg_b = sum(c[2] for c in corner_samples) // len(corner_samples)
+        bg_color = (avg_r, avg_g, avg_b)
+        
+        # Flood fill from corners
+        visited = set()
+        stack = [(0, 0), (width-1, 0), (0, height-1), (width-1, height-1)]
+        
+        while stack:
+            x, y = stack.pop()
+            if (x, y) in visited:
+                continue
+            if x < 0 or x >= width or y < 0 or y >= height:
+                continue
+            
+            pixel = get_pixel(x, y)
+            if not pixel:
+                continue
+            
+            if color_distance(pixel[:3], bg_color) <= tolerance * 3:
+                visited.add((x, y))
+                # Make transparent
+                set_pixel(x, y, (pixel[0], pixel[1], pixel[2], 0))
+                # Add neighbors
+                stack.extend([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
+        
+        # Create new image with processed data
+        img.putdata(data)
+        
+        # Save to bytes
+        output = io.BytesIO()
+        img.save(output, format='PNG', optimize=True)
+        return output.getvalue()
+        
+    except Exception as e:
+        logger.error(f"Error removing background (edge-aware): {e}")
+        return None
+
+
+def remove_background_advanced(image_file) -> Optional[bytes]:
+    """
+    Remove background using rembg library (AI-based).
+    Best quality but requires rembg package.
+    
+    Args:
+        image_file: File object or path to image
+    
+    Returns:
+        PNG image bytes with transparent background, or None on error
+    """
+    try:
+        from rembg import remove
+        
+        if isinstance(image_file, str):
+            with open(image_file, 'rb') as f:
+                input_data = f.read()
+        else:
+            image_file.seek(0)
+            input_data = image_file.read()
+        
+        # Remove background using AI
+        output_data = remove(input_data)
+        return output_data
+        
+    except ImportError:
+        logger.info("rembg not installed, falling back to simple removal")
+        return remove_background_simple(image_file)
+    except Exception as e:
+        logger.error(f"Error removing background (advanced): {e}")
+        return None
+
+
+def remove_signature_background(image_file, method: str = 'auto') -> Optional[bytes]:
+    """
+    Remove background from a signature image.
+    
+    Args:
+        image_file: File object or path to signature image
+        method: 'simple' (threshold), 'edge' (flood fill), 'advanced' (AI/rembg), or 'auto'
+    
+    Returns:
+        PNG image bytes with transparent background, or None on error
+    """
+    if method == 'auto':
+        # Try advanced first, fall back to simple
+        result = remove_background_advanced(image_file)
+        if result:
+            return result
+        return remove_background_simple(image_file)
+    elif method == 'simple':
+        return remove_background_simple(image_file)
+    elif method == 'edge':
+        return remove_background_edge_aware(image_file)
+    elif method == 'advanced':
+        return remove_background_advanced(image_file)
+    else:
+        return remove_background_simple(image_file)
+
+
+def remove_stamp_background(image_file, method: str = 'auto') -> Optional[bytes]:
+    """
+    Remove background from a business stamp image.
+    
+    Args:
+        image_file: File object or path to stamp image
+        method: 'simple' (threshold), 'edge' (flood fill), 'advanced' (AI/rembg), or 'auto'
+    
+    Returns:
+        PNG image bytes with transparent background, or None on error
+    """
+    # Stamps typically have cleaner edges, so edge-aware works well
+    if method == 'auto':
+        result = remove_background_edge_aware(image_file, tolerance=40)
+        if result:
+            return result
+        return remove_background_simple(image_file, threshold=235)
+    elif method == 'simple':
+        return remove_background_simple(image_file, threshold=235)
+    elif method == 'edge':
+        return remove_background_edge_aware(image_file, tolerance=40)
+    elif method == 'advanced':
+        return remove_background_advanced(image_file)
+    else:
+        return remove_background_simple(image_file)
+

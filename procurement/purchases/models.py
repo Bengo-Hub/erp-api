@@ -82,6 +82,12 @@ class Purchase(models.Model):
             if (self.purchase_status == 'received') and (self.payment_status in ['paid', 'partial']):
                 for purchase_item in self.purchaseitems.all():
                     stock_item = purchase_item.stock_item
+                    if not stock_item:
+                        # Non-stock item - skip
+                        continue
+                    # Skip service products - services should never be added to stock
+                    if stock_item.product and getattr(stock_item.product, 'product_type', None) == 'service':
+                        continue
                     stock_item.stock_level += purchase_item.qty  # Increase stock level
                     stock_item.save()
                 self.balance_due = max(self.grand_total - self.purchase_ammount, 0)

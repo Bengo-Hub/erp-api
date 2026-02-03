@@ -96,13 +96,20 @@ class InvoiceViewSet(BaseModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """Create invoice and return invoice data plus generated PDF (base64) for immediate preview"""
+        from core.utils import get_user_branch
+
         try:
             serializer = self.get_serializer(data=request.data)
             if not serializer.is_valid():
                 return APIResponse.validation_error(message='Validation failed', errors=serializer.errors)
 
-            # Save invoice with created_by set
-            invoice = serializer.save(created_by=request.user)
+            # Get branch from request payload or resolve from headers/user context
+            branch = serializer.validated_data.get('branch')
+            if not branch:
+                branch = get_user_branch(request.user, request)
+
+            # Save invoice with created_by and branch set
+            invoice = serializer.save(created_by=request.user, branch=branch)
 
             # Resolve company info and logo path (if available)
             company_info = self._resolve_company_info(invoice, request=request)
@@ -641,6 +648,10 @@ class InvoiceViewSet(BaseModelViewSet):
             # Return as downloadable file
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="Invoice_{invoice.invoice_number}.pdf"'
+            # Prevent clients from using stale cached PDF - always revalidate
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
             return response
             
         except Exception as e:
@@ -985,7 +996,11 @@ class CreditNoteViewSet(BaseModelViewSet):
     def pdf_stream(self, request, pk=None):
         """Stream credit note as PDF"""
         try:
-            credit_note = self.get_object()
+            # Refresh credit note from DB with all related fields to get latest updates
+            credit_note = CreditNote.objects.select_related(
+                'customer__user', 'branch', 'created_by', 'source_invoice'
+            ).prefetch_related('items__content_type').get(pk=pk)
+
             from finance.utils import resolve_company_info
             branch = getattr(credit_note, 'branch', None)
             biz = getattr(branch, 'business', None) if branch else None
@@ -998,6 +1013,10 @@ class CreditNoteViewSet(BaseModelViewSet):
 
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'{disposition}; filename="CreditNote_{credit_note.credit_note_number}.pdf"'
+            # Prevent clients from using stale cached PDF - always revalidate
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
             return response
         except Exception as e:
             return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
@@ -1047,7 +1066,11 @@ class DebitNoteViewSet(BaseModelViewSet):
     def pdf_stream(self, request, pk=None):
         """Stream debit note as PDF"""
         try:
-            debit_note = self.get_object()
+            # Refresh debit note from DB with all related fields to get latest updates
+            debit_note = DebitNote.objects.select_related(
+                'customer__user', 'branch', 'created_by', 'source_invoice'
+            ).prefetch_related('items__content_type').get(pk=pk)
+
             from finance.utils import resolve_company_info
             branch = getattr(debit_note, 'branch', None)
             biz = getattr(branch, 'business', None) if branch else None
@@ -1060,6 +1083,10 @@ class DebitNoteViewSet(BaseModelViewSet):
 
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'{disposition}; filename="DebitNote_{debit_note.debit_note_number}.pdf"'
+            # Prevent clients from using stale cached PDF - always revalidate
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
             return response
         except Exception as e:
             return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
@@ -1140,7 +1167,11 @@ class DeliveryNoteViewSet(BaseModelViewSet):
     def pdf_stream(self, request, pk=None):
         """Stream delivery note as PDF"""
         try:
-            delivery_note = self.get_object()
+            # Refresh delivery note from DB with all related fields to get latest updates
+            delivery_note = DeliveryNote.objects.select_related(
+                'customer__user', 'branch', 'created_by', 'source_invoice', 'source_purchase_order'
+            ).prefetch_related('items__content_type').get(pk=pk)
+
             from finance.utils import resolve_company_info
             branch = getattr(delivery_note, 'branch', None)
             biz = getattr(branch, 'business', None) if branch else None
@@ -1153,6 +1184,10 @@ class DeliveryNoteViewSet(BaseModelViewSet):
 
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'{disposition}; filename="DeliveryNote_{delivery_note.delivery_note_number}.pdf"'
+            # Prevent clients from using stale cached PDF - always revalidate
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
             return response
         except Exception as e:
             return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')
@@ -1230,7 +1265,11 @@ class ProformaInvoiceViewSet(BaseModelViewSet):
     def pdf_stream(self, request, pk=None):
         """Stream proforma invoice as PDF"""
         try:
-            proforma = self.get_object()
+            # Refresh proforma from DB with all related fields to get latest updates
+            proforma = ProformaInvoice.objects.select_related(
+                'customer__user', 'branch', 'created_by', 'source_quotation', 'converted_invoice'
+            ).prefetch_related('items__content_type').get(pk=pk)
+
             from finance.utils import resolve_company_info
             branch = getattr(proforma, 'branch', None)
             biz = getattr(branch, 'business', None) if branch else None
@@ -1243,6 +1282,10 @@ class ProformaInvoiceViewSet(BaseModelViewSet):
 
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'{disposition}; filename="Proforma_{proforma.proforma_number}.pdf"'
+            # Prevent clients from using stale cached PDF - always revalidate
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
             return response
         except Exception as e:
             return HttpResponse(f'Error generating PDF: {str(e)}', status=500, content_type='text/plain')

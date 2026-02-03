@@ -612,7 +612,11 @@ class PurchaseOrderViewSet(BaseModelViewSet):
         """
         try:
             correlation_id = get_correlation_id(request)
-            purchase_order = self.get_object()
+            
+            # Refresh purchase order from DB with all related fields to get latest updates
+            purchase_order = PurchaseOrder.objects.select_related(
+                'supplier', 'branch', 'created_by', 'approved_by', 'requisition'
+            ).prefetch_related('items__content_type').get(pk=pk)
             
             # Resolve company info using business/branch so PDFs use real branding
             from finance.utils import resolve_company_info
@@ -633,7 +637,10 @@ class PurchaseOrderViewSet(BaseModelViewSet):
                 content_type='application/pdf'
             )
             response['Content-Disposition'] = f'{disposition}; filename="LPO-{purchase_order.order_number}.pdf"'
-            response['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
+            # Prevent clients from using stale cached PDF - always revalidate
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
             
             # Log PDF access
             AuditTrail.log(

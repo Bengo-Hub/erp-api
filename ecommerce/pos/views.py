@@ -157,8 +157,18 @@ class SalesReturnViewSet(viewsets.ViewSet):
                 for i, sku in enumerate(returned_item_skus):
                     stockitem = StockInventory.objects.filter(Q(product__sku=sku)|Q(variation__sku=sku)).first()
                     qty=int(qtys[i])
-                    stockitem.stock_level+=qty
-                    stockitem.save()
+                    # Skip service products - services should never be added to stock
+                    if stockitem and stockitem.product and getattr(stockitem.product, 'product_type', None) == 'service':
+                        # Still create the return record but don't update stock
+                        ReturnedItem.objects.create(
+                            return_record=sales_return,
+                            stock_item=stockitem,
+                            qty=qty
+                        )
+                        continue
+                    if stockitem:
+                        stockitem.stock_level+=qty
+                        stockitem.save()
                     # Create returned items
                     ReturnedItem.objects.create(
                         return_record=sales_return,

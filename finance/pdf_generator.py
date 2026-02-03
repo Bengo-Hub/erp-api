@@ -32,9 +32,19 @@ from .utils import (
     get_customer_phone,
     BoxedSection,
     get_brand_color,
+    _get_user_signature_image,
+    _get_user_initials,
+    _get_business_stamp_image,
+    get_signature_or_initials_paragraph,
+    TransparentStamp,
 )
 
 logger = logging.getLogger(__name__)
+
+# Page layout constants (A4 with 0.5" margins on each side)
+# A4 width = 8.27 inches, margin = 36pt = 0.5 inch
+# Content width = 8.27 - 0.5 - 0.5 = 7.27 inches, using 7.0 for safety
+CONTENT_WIDTH = 7.0 * inch
 
 
 def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
@@ -374,8 +384,10 @@ def _render_items_table(order, styles, brand_color=None, text_color=None, docume
     )
 
     # Different header layouts based on document type
+    # Column widths must fit within CONTENT_WIDTH (7.0 inches)
     if document_type == 'lpo':
         # Simpler layout for LPO - no tax column
+        # 0.35 + 3.55 + 0.6 + 1.1 + 1.4 = 7.0 inches
         rows = [[
             Paragraph('#', header_style),
             Paragraph('Item / Description', header_style),
@@ -383,8 +395,9 @@ def _render_items_table(order, styles, brand_color=None, text_color=None, docume
             Paragraph('Unit Price', header_style),
             Paragraph('Amount', header_style)
         ]]
-        col_widths = [0.4 * inch, 4.0 * inch, 0.6 * inch, 1.2 * inch, 1.4 * inch]
+        col_widths = [0.35 * inch, 3.55 * inch, 0.6 * inch, 1.1 * inch, 1.4 * inch]
     else:
+        # Standard layout: 0.35 + 3.15 + 0.5 + 0.9 + 0.9 + 1.2 = 7.0 inches
         rows = [[
             Paragraph('#', header_style),
             Paragraph('Description', header_style),
@@ -393,7 +406,7 @@ def _render_items_table(order, styles, brand_color=None, text_color=None, docume
             Paragraph('Tax', header_style),
             Paragraph('Amount', header_style)
         ]]
-        col_widths = [0.4 * inch, 3.6 * inch, 0.6 * inch, 1.2 * inch, 1.0 * inch, 1.4 * inch]
+        col_widths = [0.35 * inch, 3.15 * inch, 0.5 * inch, 0.9 * inch, 0.9 * inch, 1.2 * inch]
 
     subtotal = Decimal(0)
     if items is not None:
@@ -451,6 +464,7 @@ def _render_items_table(order, styles, brand_color=None, text_color=None, docume
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('BACKGROUND', (0, 0), (-1, 0), header_bg),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('WORDWRAP', (0, 0), (-1, -1), True),
     ]))
     return items_table, subtotal, currency
 
@@ -518,7 +532,8 @@ def _render_totals_table(order, subtotal, styles, brand_color=None, currency='KE
         if rate and float(rate) != 1.0:
             totals.append([Paragraph(f'Exchange Rate ({currency}/KES)', styles['Normal']), Paragraph(f"{float(rate):,.6f}", styles['Normal'])])
 
-    totals_table = Table(totals, colWidths=[6.6 * inch, 1.4 * inch])
+    # Totals table widths must fit within CONTENT_WIDTH (7.0 inches)
+    totals_table = Table(totals, colWidths=[5.4 * inch, 1.6 * inch])
     line_color = brand_color or colors.black
     totals_table.setStyle(TableStyle([
         ('LINEABOVE', (0, -1), (-1, -1), 1, line_color),
@@ -720,39 +735,41 @@ def _render_footer(order, styles, document_type='invoice', brand_color=None):
     prepared_date = getattr(order, 'created_at', None) or None
     approved_date = getattr(order, 'approved_at', None) or getattr(order, 'approved_on', None) or None
 
+    # Get signature images or fallback to initials
+    prepared_sig = get_signature_or_initials_paragraph(prepared_user, styles['Normal'])
+    approved_sig = get_signature_or_initials_paragraph(approved_user, styles['Normal'])
+    
     # Create signature lines - each on single horizontal line with balanced spacing
-    doc_width = 7.0 * inch  # Approximate document width (A4 minus margins)
+    doc_width = CONTENT_WIDTH  # Use the consistent content width (7.0 inches)
     
     prepared_str = f"Prepared by: {prepared_name}"
     prepared_date_str = f"Date: {prepared_date.strftime('%d/%m/%Y') if prepared_date else '________'}"
-    prepared_sig_str = f"Sign: {prepared_initials if prepared_initials else '________'}"
     
     approved_str = f"Approved by: {approved_name}"
     approved_date_str = f"Date: {approved_date.strftime('%d/%m/%Y') if approved_date else '________'}"
-    approved_sig_str = f"Sign: {approved_initials if approved_initials else '________'}"
     
-    # Prepared line: balance across the width
+    # Prepared line with signature image or initials
     prepared_cols = [
         Paragraph(prepared_str, styles['Normal']),
         Paragraph(prepared_date_str, styles['Normal']),
-        Paragraph(prepared_sig_str, styles['Normal'])
+        prepared_sig
     ]
     prepared_line = Table([prepared_cols], colWidths=[2.5 * inch, 2.0 * inch, 2.5 * inch])
     prepared_line.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
         ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
     
-    # Approved line: balance across the width  
+    # Approved line with signature image or initials
     approved_cols = [
         Paragraph(approved_str, styles['Normal']),
         Paragraph(approved_date_str, styles['Normal']),
-        Paragraph(approved_sig_str, styles['Normal'])
+        approved_sig
     ]
     approved_line = Table([approved_cols], colWidths=[2.5 * inch, 2.0 * inch, 2.5 * inch])
     approved_line.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
         ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
@@ -763,7 +780,34 @@ def _render_footer(order, styles, document_type='invoice', brand_color=None):
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
         ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
-    flowables.append(sig_table)
+    
+    # Get business stamp if available and add alongside signature table
+    business_stamp = None
+    try:
+        branch = getattr(order, 'branch', None)
+        business = getattr(branch, 'business', None) if branch else None
+        if not business:
+            # Try to get from company_info passed through styles or order attributes
+            business = getattr(order, 'business', None)
+        if business:
+            business_stamp = TransparentStamp(business, max_width=1.2*inch, max_height=1.2*inch, opacity=0.85)
+    except Exception:
+        pass
+    
+    # Create signature + stamp layout (signature left, stamp right)
+    if business_stamp and business_stamp.stamp_img:
+        sig_stamp_table = Table(
+            [[sig_table, business_stamp]],
+            colWidths=[5.5 * inch, 1.5 * inch]
+        )
+        sig_stamp_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ]))
+        flowables.append(sig_stamp_table)
+    else:
+        flowables.append(sig_table)
 
     # Delivery note special footer for Received by
     if document_type in ['delivery_note', 'packing_slip']:
