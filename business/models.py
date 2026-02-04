@@ -97,12 +97,12 @@ class Bussiness(models.Model):
     default_profit_margin=models.DecimalField(max_digits=10,decimal_places=2,default=Decimal('25.00'),help_text="Percentage (%)")
     logo = models.ImageField(upload_to="business/logo",blank=True,null=True)
     watermarklogo=models.ImageField(upload_to="business/logo",blank=True,null=True)
-    # Official business stamp for documents (transparent PNG recommended, max 300x300px)
+    # Official business stamp for documents (PNG or JPG supported, max 300x300px)
     business_stamp = models.ImageField(
         upload_to="business/stamps",
         blank=True,
         null=True,
-        help_text="Upload official business stamp image (transparent PNG recommended, max 300x300px). Appears on invoices, quotations, and official documents."
+        help_text="Upload official business stamp image (PNG or JPG, max 300x300px). PNG with transparency recommended. Appears on invoices, quotations, and official documents."
     )
     timezone = TimeZoneField(default = 'Africa/Nairobi')
     
