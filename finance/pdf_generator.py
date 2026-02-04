@@ -164,6 +164,9 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
     """
     buffer = BytesIO()
     try:
+        # Container for stamp overlay (will be populated later)
+        stamp_container = {'stamp_img': None}
+        
         # Create page footer function matching Masterspace format
         def _create_page_footer(canvas, doc, order=order, company_info=company_info):
             """Draw footer on each page in Masterspace format.
@@ -172,7 +175,7 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
             [Blue bar] Address | P.O Box info | Phone numbers | email | website
             """
             canvas.saveState()
-
+            
             # Extract company info with fallbacks
             def _ci(key, default=''):
                 if company_info:
@@ -248,6 +251,33 @@ def _generate_order_pdf(order, company_info=None, document_type='invoice'):
             canvas.drawRightString(right_margin, footer_y + 8, website)
 
             canvas.restoreState()
+            
+            # Draw stamp overlay at center-bottom AFTER footer (so it's on top)
+            stamp_data = stamp_container.get('stamp_img')
+            if stamp_data:
+                try:
+                    # Position stamp centered horizontally in bottom area
+                    page_width, page_height = A4
+                    stamp_width = stamp_data['width']
+                    stamp_height = stamp_data['height']
+                    # Center horizontally
+                    x_position = (page_width - stamp_width) / 2.0
+                    # Position higher up to avoid being cut off by margins
+                    y_position = 2.5*inch
+                    
+                    # Draw with transparency - supports both PNG (with alpha channel) and JPG
+                    canvas.saveState()
+                    canvas.setFillAlpha(stamp_data['opacity'])
+                    canvas.setStrokeAlpha(stamp_data['opacity'])
+                    # Use mask='auto' only for PNG images with alpha channel
+                    mask_param = 'auto' if stamp_data.get('format') == 'png' else None
+                    canvas.drawImage(stamp_data['image_reader'], x_position, y_position, 
+                                   width=stamp_width, height=stamp_height, 
+                                   mask=mask_param, preserveAspectRatio=True)
+                    canvas.restoreState()
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).debug(f"Stamp overlay error: {e}")
         
         doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
         styles = getSampleStyleSheet()
@@ -780,34 +810,22 @@ def _render_footer(order, styles, document_type='invoice', brand_color=None):
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
         ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
+    flowables.append(sig_table)
     
-    # Get business stamp if available and add alongside signature table
-    business_stamp = None
-    try:
-        branch = getattr(order, 'branch', None)
-        business = getattr(branch, 'business', None) if branch else None
-        if not business:
-            # Try to get from company_info passed through styles or order attributes
-            business = getattr(order, 'business', None)
-        if business:
-            business_stamp = TransparentStamp(business, max_width=1.2*inch, max_height=1.2*inch, opacity=0.85)
-    except Exception:
-        pass
-    
-    # Create signature + stamp layout (signature left, stamp right)
-    if business_stamp and business_stamp.stamp_img:
-        sig_stamp_table = Table(
-            [[sig_table, business_stamp]],
-            colWidths=[5.5 * inch, 1.5 * inch]
-        )
-        sig_stamp_table.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
-            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-        ]))
-        flowables.append(sig_stamp_table)
-    else:
-        flowables.append(sig_table)
+    # Store stamp info for overlay in footer (only on approved documents)
+    approved_by = getattr(order, 'approved_by', None)
+    if approved_by:  # Only show stamp when document is approved
+        try:
+            branch = getattr(order, 'branch', None)
+            business = getattr(branch, 'business', None) if branch else None
+            if not business:
+                # Try to get from company_info passed through styles or order attributes
+                business = getattr(order, 'business', None)
+            if business:
+                # Get stamp image for overlay and store in container
+                stamp_container['stamp_img'] = _get_business_stamp_image(business, max_width=1.8*inch, max_height=1.8*inch, opacity=0.6)
+        except Exception:
+            pass
 
     # Delivery note special footer for Received by
     if document_type in ['delivery_note', 'packing_slip']:

@@ -50,9 +50,29 @@ except Exception:
 def _resolve_company_from_document(doc):
     """Attempt to construct a company_info dict from a document (invoice/quotation)
     Falls back to provided branch.business if available."""
-    # now implemented in finance.utils as _resolve_company_from_document
-    from ..utils import _resolve_company_from_document as _impl
-    return _impl(doc)
+    try:
+        branch = getattr(doc, 'branch', None)
+        business = getattr(branch, 'business', None) if branch else None
+        
+        if not business:
+            return {}
+        
+        return {
+            'business': business,
+            'name': getattr(business, 'name', ''),
+            'email': getattr(business, 'email', ''),
+            'phone': getattr(business, 'contact_number', ''),
+            'alternate_contact_number': getattr(business, 'alternate_contact_number', ''),
+            'website': getattr(business, 'website', ''),
+            'postal_address': getattr(business, 'postal_address', ''),
+            'postal_code': getattr(business, 'postal_code', ''),
+            'city': getattr(business, 'city', ''),
+            'country': getattr(business, 'country', ''),
+            'logo': getattr(business, 'logo', None),
+            'business_stamp': getattr(business, 'business_stamp', None),
+        }
+    except Exception:
+        return {}
 
 
 def _build_signature_table(prepared_by, approved_by, header_style, prepared_date=None, approved_date=None):
@@ -209,6 +229,9 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
     """
     try:
         buffer = BytesIO()
+        # Container for stamp overlay (will be populated later)
+        stamp_container = {'stamp_img': None}
+        
         # A4 page width is 8.27 inches; with 0.75*inch margins on each side, available width is ~6.77 inches
         # Use consistent content width across all document elements
         CONTENT_WIDTH = 6.5 * inch  # Safe content width respecting margins
@@ -480,45 +503,40 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             sanitized_tc = _sanitize_text_for_pdf(invoice.terms_and_conditions)
             elements.append(Paragraph(sanitized_tc.replace('\n', '<br/>'), tc_style))
 
-        # Prepared / Approved signature block with business stamp
+        # Prepared / Approved signature block
         elements.append(Spacer(1, 0.2*inch))
         prepared_by = getattr(invoice, 'created_by', None)
         approved_by = getattr(invoice, 'approved_by', None)
         sig = _build_signature_table(prepared_by, approved_by, header_style, prepared_date=getattr(invoice, 'created_at', None), approved_date=getattr(invoice, 'approved_at', None))
+        elements.append(sig)
         
-        # Get business stamp if available
-        business_stamp = None
-        try:
-            branch = getattr(invoice, 'branch', None)
-            business = getattr(branch, 'business', None) if branch else None
-            if not business and company_info:
-                business = company_info.get('business') if isinstance(company_info, dict) else getattr(company_info, 'business', None)
-            if business:
-                business_stamp = TransparentStamp(business, max_width=1.2*inch, max_height=1.2*inch, opacity=0.85)
-        except Exception:
-            pass
-        
-        # Create signature + stamp layout (signature left, stamp right)
-        if business_stamp and business_stamp.stamp_img:
-            sig_stamp_table = Table(
-                [[sig, business_stamp]],
-                colWidths=[5.5*inch, 1.5*inch]
-            )
-            sig_stamp_table.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
-                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-                ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-            ]))
-            elements.append(sig_stamp_table)
-        else:
-            elements.append(sig)
+        # Store stamp info for overlay in footer (only on approved documents)
+        if approved_by:  # Only show stamp when document is approved
+            try:
+                branch = getattr(invoice, 'branch', None)
+                business = getattr(branch, 'business', None) if branch else None
+                if not business and company_info:
+                    business = company_info.get('business') if isinstance(company_info, dict) else getattr(company_info, 'business', None)
+                if business:
+                    logger.info(f"Loading stamp for business: {getattr(business, 'name', 'Unknown')}")
+                    # Get stamp image data for overlay and store in container
+                    stamp_data = _get_business_stamp_image(business, max_width=2.0*inch, max_height=2.0*inch, opacity=0.7)
+                    if stamp_data:
+                        logger.info(f"Stamp loaded: {stamp_data.get('width')}x{stamp_data.get('height')}, format={stamp_data.get('format')}")
+                        stamp_container['stamp_img'] = stamp_data
+                    else:
+                        logger.warning("No stamp data returned from _get_business_stamp_image")
+                else:
+                    logger.warning("No business found for stamp loading")
+            except Exception as e:
+                logger.error(f"Error loading stamp: {e}", exc_info=True)
         
         # Footer
         # Create page footer function matching Masterspace format
         def _create_page_footer(canvas, doc_obj, company_info=company_info):
             """Draw footer on each page in Masterspace format."""
             canvas.saveState()
-
+            
             def _ci(key, default=''):
                 if company_info:
                     try:
@@ -576,6 +594,37 @@ def generate_invoice_pdf(invoice, company_info=None, document_type='invoice'):
             canvas.drawRightString(right_margin, footer_y + 8, website)
 
             canvas.restoreState()
+            
+            # Draw stamp overlay at center-bottom AFTER footer (so it's on top)
+            stamp_data = stamp_container.get('stamp_img')
+            if stamp_data:
+                try:
+                    # Position stamp centered horizontally in bottom area
+                    page_width, page_height = A4
+                    stamp_width = stamp_data['width']
+                    stamp_height = stamp_data['height']
+                    # Center horizontally
+                    x_position = (page_width - stamp_width) / 2.0
+                    # Position in lower portion, overlaying signature area
+                    y_position = 1.5*inch
+                    
+                    # Draw with transparency - supports both PNG (with alpha channel) and JPG
+                    canvas.saveState()
+                    canvas.setFillAlpha(stamp_data['opacity'])
+                    canvas.setStrokeAlpha(stamp_data['opacity'])
+                    # Use mask='auto' only for PNG images with alpha channel
+                    mask_param = 'auto' if stamp_data.get('format') == 'png' else None
+                    canvas.drawImage(stamp_data['image_reader'], x_position, y_position, 
+                                   width=stamp_width, height=stamp_height, 
+                                   mask=mask_param, preserveAspectRatio=True)
+                    canvas.restoreState()
+                    print("DEBUG: Stamp drawn!")
+                except Exception as e:
+                    print(f"DEBUG ERROR: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print("DEBUG: No stamp_data")
 
         # Build PDF with page footer
         doc.build(elements, onFirstPage=_create_page_footer, onLaterPages=_create_page_footer)
@@ -603,6 +652,9 @@ def generate_quotation_pdf(quotation, company_info=None):
     """
     try:
         buffer = BytesIO()
+        # Container for stamp overlay (will be populated later)
+        stamp_container = {'stamp_img': None}
+        
         doc = SimpleDocTemplate(
             buffer, 
             pagesize=A4, 
@@ -854,38 +906,33 @@ def generate_quotation_pdf(quotation, company_info=None):
             )
             elements.append(Paragraph(quotation.terms_and_conditions, tc_style))
         
-        # Prepared / Approved signature block for quotation with business stamp
+        # Prepared / Approved signature block
         elements.append(Spacer(1, 0.2*inch))
         prepared_by = getattr(quotation, 'created_by', None)
         approved_by = getattr(quotation, 'approved_by', None)
         sig = _build_signature_table(prepared_by, approved_by, header_style, prepared_date=getattr(quotation, 'created_at', None), approved_date=getattr(quotation, 'approved_at', None))
+        elements.append(sig)
         
-        # Get business stamp if available
-        business_stamp = None
-        try:
-            branch = getattr(quotation, 'branch', None)
-            business = getattr(branch, 'business', None) if branch else None
-            if not business and company_info:
-                business = company_info.get('business') if isinstance(company_info, dict) else getattr(company_info, 'business', None)
-            if business:
-                business_stamp = TransparentStamp(business, max_width=1.2*inch, max_height=1.2*inch, opacity=0.85)
-        except Exception:
-            pass
-        
-        # Create signature + stamp layout (signature left, stamp right)
-        if business_stamp and business_stamp.stamp_img:
-            sig_stamp_table = Table(
-                [[sig, business_stamp]],
-                colWidths=[5.5*inch, 1.5*inch]
-            )
-            sig_stamp_table.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
-                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-                ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-            ]))
-            elements.append(sig_stamp_table)
-        else:
-            elements.append(sig)
+        # Store stamp info for overlay in footer (only on approved documents)
+        if approved_by:  # Only show stamp when document is approved
+            try:
+                branch = getattr(quotation, 'branch', None)
+                business = getattr(branch, 'business', None) if branch else None
+                if not business and company_info:
+                    business = company_info.get('business') if isinstance(company_info, dict) else getattr(company_info, 'business', None)
+                if business:
+                    logger.info(f"Loading stamp for quotation business: {getattr(business, 'name', 'Unknown')}")
+                    # Get stamp image data for overlay and store in container
+                    stamp_data = _get_business_stamp_image(business, max_width=2.0*inch, max_height=2.0*inch, opacity=0.7)
+                    if stamp_data:
+                        logger.info(f"Quotation stamp loaded: {stamp_data.get('width')}x{stamp_data.get('height')}, format={stamp_data.get('format')}")
+                        stamp_container['stamp_img'] = stamp_data
+                    else:
+                        logger.warning("No stamp data returned for quotation")
+                else:
+                    logger.warning("No business found for quotation stamp")
+            except Exception as e:
+                logger.error(f"Error loading quotation stamp: {e}", exc_info=True)
 
         # Footer
         # Validity note in content
@@ -904,7 +951,7 @@ def generate_quotation_pdf(quotation, company_info=None):
         def _create_page_footer(canvas, doc_obj, company_info=company_info):
             """Draw footer on each page in Masterspace format."""
             canvas.saveState()
-
+            
             def _ci(key, default=''):
                 if company_info:
                     try:
@@ -962,6 +1009,33 @@ def generate_quotation_pdf(quotation, company_info=None):
             canvas.drawRightString(right_margin, footer_y + 8, website)
 
             canvas.restoreState()
+            
+            # Draw stamp overlay at center-bottom AFTER footer (so it's on top)
+            stamp_data = stamp_container.get('stamp_img')
+            if stamp_data:
+                try:
+                    # Position stamp centered horizontally in bottom area
+                    page_width, page_height = A4
+                    stamp_width = stamp_data['width']
+                    stamp_height = stamp_data['height']
+                    # Center horizontally
+                    x_position = (page_width - stamp_width) / 2.0
+                    # Position in lower portion, overlaying signature area
+                    y_position = 1.5*inch
+                    
+                    # Draw with transparency - supports both PNG (with alpha channel) and JPG
+                    canvas.saveState()
+                    canvas.setFillAlpha(stamp_data['opacity'])
+                    canvas.setStrokeAlpha(stamp_data['opacity'])
+                    # Use mask='auto' only for PNG images with alpha channel
+                    mask_param = 'auto' if stamp_data.get('format') == 'png' else None
+                    canvas.drawImage(stamp_data['image_reader'], x_position, y_position, 
+                                   width=stamp_width, height=stamp_height, 
+                                   mask=mask_param, preserveAspectRatio=True)
+                    canvas.restoreState()
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).debug(f"Stamp overlay error: {e}")
 
         # Build PDF with page footer
         doc.build(elements, onFirstPage=_create_page_footer, onLaterPages=_create_page_footer)

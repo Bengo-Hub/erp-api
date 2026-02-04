@@ -97,10 +97,10 @@ class BusinessAdmin(admin.ModelAdmin):
         }),
         ('Transaction Settings', {
             'fields': ('transaction_edit_days', 'default_profit_margin')
-        }),
-        ('Logo Settings', {
-            'fields': ('logo', 'watermarklogo')
-        }),
+            }),
+            (' Logo & Stamp', {
+                'fields': ('logo', 'watermarklogo', 'business_stamp')
+            }),
         ('Basic Branding', {
             'fields': ('business_primary_color', 'business_secondary_color', 'business_text_color', 'business_background_color'),
             'description': 'Basic color settings for your business branding.'

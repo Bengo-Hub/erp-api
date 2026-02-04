@@ -9,13 +9,13 @@ from .models import (
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    list_display = ('email', 'first_name', 'last_name', 'phone', 'is_active', 'is_staff')
+    list_display = ('email', 'first_name', 'last_name', 'phone', 'signature','is_active', 'is_staff')
     list_filter = ('is_active', 'is_staff', 'is_superuser')
     search_fields = ('email', 'first_name', 'last_name', 'phone')
     ordering = ('email',)
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'middle_name', 'phone', 'pic')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'middle_name', 'phone', 'pic', 'signature')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )

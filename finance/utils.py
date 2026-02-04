@@ -6,8 +6,9 @@ import html
 from django.conf import settings
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Image, Flowable
+from reportlab.platypus import Paragraph, Image, Flowable, Table
 from reportlab.lib import colors
+from reportlab.platypus.tables import TableStyle
 
 try:
     from django.contrib.staticfiles import finders
@@ -399,6 +400,8 @@ def resolve_company_info(business=None, branch=None, request=None):
         'primary_color': None,
         'secondary_color': None,
         'text_color': None,
+        'business': None,  # Include business object for stamp access
+        'business_stamp': None,
     }
 
     try:
@@ -467,6 +470,13 @@ def resolve_company_info(business=None, branch=None, request=None):
 
         # Branding colors
         if business:
+            # Store business object for stamp access
+            info['business'] = business
+            
+            # Get business stamp
+            if hasattr(business, 'business_stamp'):
+                info['business_stamp'] = getattr(business, 'business_stamp', None)
+            
             bs = business.get_branding_settings() if hasattr(business, 'get_branding_settings') else None
             if isinstance(bs, dict):
                 info['primary_color'] = bs.get('primary_color') or getattr(business, 'business_primary_color', None)
@@ -816,8 +826,11 @@ def _get_business_stamp_image(business_or_company_info, max_width=1.5*inch, max_
         opacity: Transparency level (0.0 to 1.0, where 1.0 is fully opaque)
     
     Returns:
-        reportlab Image object or None if no stamp available
+        dict with 'image_reader', 'width', 'height', 'opacity' or None if no stamp available
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
         stamp_field = None
         
@@ -828,39 +841,55 @@ def _get_business_stamp_image(business_or_company_info, max_width=1.5*inch, max_
             stamp_field = getattr(business_or_company_info, 'business_stamp', None)
         
         if not stamp_field:
+            logger.debug("No business stamp field found")
             return None
+        
+        logger.debug(f"Stamp field type: {type(stamp_field)}, has name: {hasattr(stamp_field, 'name')}")
         
         # Handle string path
         if isinstance(stamp_field, str):
             if not os.path.exists(stamp_field):
+                logger.warning(f"Stamp file path does not exist: {stamp_field}")
                 return None
             stamp_path = stamp_field
             data_source = stamp_path
+            logger.debug(f"Using stamp from path: {stamp_path}")
         elif hasattr(stamp_field, 'name') and stamp_field.name:
             # Django FieldFile
             try:
                 stamp_path = stamp_field.path
                 if not os.path.exists(stamp_path):
+                    logger.warning(f"Stamp file does not exist: {stamp_path}")
                     return None
                 data_source = stamp_path
-            except Exception:
+                logger.debug(f"Using stamp from Django field: {stamp_path}")
+            except Exception as e:
+                logger.debug(f"Could not get stamp path, trying file content: {e}")
                 try:
                     stamp_field.seek(0)
                     content = stamp_field.read()
                     from io import BytesIO
                     data_source = BytesIO(content)
-                except Exception:
+                    logger.debug(f"Using stamp from BytesIO, size: {len(content)} bytes")
+                except Exception as e2:
+                    logger.error(f"Failed to read stamp file content: {e2}")
                     return None
         else:
+            logger.warning(f"Stamp field has no name or is invalid type: {type(stamp_field)}")
             return None
         
         # Use ImageReader for robust size detection
         from reportlab.lib.utils import ImageReader
+        from PIL import Image as PILImage
         
+        logger.debug(f"Creating ImageReader from data_source: {type(data_source)}")
         ir = ImageReader(data_source)
         iw, ih = ir.getSize()
         if not iw or not ih:
+            logger.warning(f"Could not get image dimensions: width={iw}, height={ih}")
             return None
+        
+        logger.debug(f"Stamp image dimensions: {iw}x{ih}")
         
         iw = float(iw)
         ih = float(ih)
@@ -874,16 +903,43 @@ def _get_business_stamp_image(business_or_company_info, max_width=1.5*inch, max_
             drawH = float(max_height)
             drawW = float(max_height) * aspect
         
-        # Reset file pointer if needed
-        if hasattr(data_source, 'seek'):
-            data_source.seek(0)
+        logger.debug(f"Calculated stamp size: {drawW}x{drawH}, opacity: {opacity}")
         
-        img = Image(data_source, width=drawW, height=drawH)
-        # Store opacity for later use in custom drawing
-        img._stamp_opacity = opacity
-        return img
+        # Detect image format using PIL (imghdr was removed in Python 3.13)
+        image_format = None
+        try:
+            if isinstance(data_source, str):
+                with PILImage.open(data_source) as img:
+                    image_format = img.format.lower() if img.format else None
+            elif hasattr(data_source, 'seek'):
+                current_pos = data_source.tell()
+                data_source.seek(0)
+                with PILImage.open(data_source) as img:
+                    image_format = img.format.lower() if img.format else None
+                data_source.seek(current_pos)
+        except Exception as e:
+            logger.debug(f"Could not detect image format via PIL: {e}")
+            # Fallback: check file extension
+            if isinstance(data_source, str):
+                ext = data_source.lower().split('.')[-1]
+                image_format = 'png' if ext == 'png' else 'jpeg'
+            elif hasattr(stamp_field, 'name') and stamp_field.name:
+                ext = stamp_field.name.lower().split('.')[-1]
+                image_format = 'png' if ext == 'png' else 'jpeg'
         
-    except Exception:
+        logger.info(f"Stamp loaded successfully: format={image_format}, size={drawW:.1f}x{drawH:.1f}, opacity={opacity}")
+        
+        # Return ImageReader object with dimensions and format info for canvas.drawImage()
+        return {
+            'image_reader': ir,
+            'width': drawW,
+            'height': drawH,
+            'opacity': opacity,
+            'format': image_format  # 'png' or 'jpeg'
+        }
+        
+    except Exception as e:
+        logger.error(f"Error loading business stamp: {e}", exc_info=True)
         return None
 
 
@@ -999,27 +1055,115 @@ class TransparentStamp(Flowable):
 
 def get_signature_or_initials_paragraph(user, header_style):
     """
-    Get a Paragraph with signature image or initials for table cells.
+    Get a signature block with 'Signature:' label, line, and signature image/initials.
     
     Args:
         user: User model instance
         header_style: ParagraphStyle for text formatting
     
     Returns:
-        Paragraph or Image flowable
+        Table flowable with signature display
     """
     if not user:
         return Paragraph("", header_style)
     
-    # Try to get signature image
-    sig_img = _get_user_signature_image(user, max_width=1.2*inch, max_height=0.5*inch)
+    from reportlab.platypus import Table, Spacer
+    from reportlab.lib.colors import HexColor
+    from reportlab.lib.units import inch
+    from reportlab.platypus.flowables import Flowable
     
+    # Signature line flowable
+    class SignatureLine(Flowable):
+        def __init__(self, width=2*inch, has_signature=False):
+            Flowable.__init__(self)
+            self.width = width
+            self.height = 0.5*inch
+            self.has_signature = has_signature
+        
+        def draw(self):
+            c = self.canv
+            c.saveState()
+            # Draw the signature line
+            c.setStrokeColor(HexColor('#374151'))
+            c.setLineWidth(0.5)
+            c.line(0, 0.25*inch, self.width, 0.25*inch)
+            c.restoreState()
+    
+    # Try to get signature image - smaller size to fit on line
+    sig_img = _get_user_signature_image(user, max_width=1.8*inch, max_height=0.4*inch)
+    
+    # Create signature display table
     if sig_img:
-        return sig_img
-    
-    # Fallback to initials
-    initials = _get_user_initials(user)
-    if initials:
-        return Paragraph(f"<i><font color='#1e40af'>{initials}</font></i>", header_style)
-    
-    return Paragraph("", header_style)
+        # Position image slightly above the line
+        sig_line = SignatureLine(width=2*inch, has_signature=True)
+        sig_data = [
+            [Paragraph("Signature:", header_style)],
+            [sig_line],
+        ]
+        sig_table = Table(sig_data, colWidths=[2*inch])
+        sig_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        
+        # Create a container with both line and image overlay
+        class SignatureWithImage(Flowable):
+            def __init__(self, label, sig_img):
+                Flowable.__init__(self)
+                self.label = label
+                self.sig_img = sig_img
+                self.width = 2*inch
+                self.height = 0.7*inch
+            
+            def draw(self):
+                c = self.canv
+                c.saveState()
+                # Draw label
+                c.setFont('Helvetica', 10)
+                c.setFillColor(HexColor('#374151'))
+                c.drawString(0, 0.55*inch, self.label)
+                # Draw line
+                c.setStrokeColor(HexColor('#9ca3af'))
+                c.setLineWidth(0.5)
+                c.line(0, 0.25*inch, 2*inch, 0.25*inch)
+                # Draw signature on the line
+                if self.sig_img:
+                    self.sig_img.drawOn(c, 0.1*inch, 0.15*inch)
+                c.restoreState()
+        
+        return SignatureWithImage("Signature:", sig_img)
+    else:
+        # Fallback to initials on line
+        initials = _get_user_initials(user)
+        
+        class SignatureWithInitials(Flowable):
+            def __init__(self, label, initials):
+                Flowable.__init__(self)
+                self.label = label
+                self.initials = initials or ""
+                self.width = 2*inch
+                self.height = 0.7*inch
+            
+            def draw(self):
+                c = self.canv
+                c.saveState()
+                # Draw label
+                c.setFont('Helvetica', 10)
+                c.setFillColor(HexColor('#374151'))
+                c.drawString(0, 0.55*inch, self.label)
+                # Draw line
+                c.setStrokeColor(HexColor('#9ca3af'))
+                c.setLineWidth(0.5)
+                c.line(0, 0.25*inch, 2*inch, 0.25*inch)
+                # Draw initials on the line in handwriting-style
+                if self.initials:
+                    c.setFont('Helvetica-Oblique', 14)
+                    c.setFillColor(HexColor('#1e40af'))
+                    c.drawString(0.5*inch, 0.2*inch, self.initials)
+                c.restoreState()
+        
+        return SignatureWithInitials("Signature:", initials)
