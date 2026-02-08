@@ -3,9 +3,80 @@ name: Build and Deploy ERP API
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
+
+# Deployment secrets are stored in devops-k8s repo and synced here on demand.
+# The sync-secrets job checks which secrets are missing and only requests those.
+# GH_PAT must exist in THIS repo to authenticate cross-repo workflow triggers.
 
 jobs:
+  sync-secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.sync.outputs.result }}
+    steps:
+      - name: Check and sync missing secrets
+        id: sync
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          # Tier 2 (standard backend) + Tier 3 (SSH/Contabo for ERP VPS deployment)
+          REQUIRED_SECRETS="REGISTRY_USERNAME REGISTRY_PASSWORD REGISTRY_EMAIL GIT_TOKEN POSTGRES_PASSWORD REDIS_PASSWORD RABBITMQ_PASSWORD KUBE_CONFIG SSH_HOST SSH_USER SSH_PRIVATE_KEY DOCKER_SSH_KEY CONTABO_CLIENT_ID CONTABO_CLIENT_SECRET CONTABO_API_USERNAME CONTABO_API_PASSWORD"
+
+          echo "🔍 Checking which deployment secrets exist..."
+          EXISTING=$(gh secret list --repo "${{ github.repository }}" --json name -q '.[].name' 2>/dev/null || echo "")
+
+          MISSING=()
+          for secret in $REQUIRED_SECRETS; do
+            if echo "$EXISTING" | grep -qx "$secret"; then
+              echo "  ✅ $secret"
+            else
+              echo "  ❌ $secret — missing"
+              MISSING+=("$secret")
+            fi
+          done
+
+          echo ""
+          if [ ${#MISSING[@]} -eq 0 ]; then
+            echo "✅ All secrets already exist — skipping sync"
+            echo "result=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          MISSING_LIST="${MISSING[*]}"
+          echo "📊 ${#MISSING[@]} secret(s) need syncing: $MISSING_LIST"
+          echo ""
+
+          # Trigger devops-k8s sync for ONLY the missing secrets
+          echo "🔄 Triggering devops-k8s/sync-secrets.yml..."
+          gh workflow run sync-secrets.yml \
+            --repo Bengo-Hub/devops-k8s \
+            --ref main \
+            -f target_repo="${{ github.repository }}" \
+            -f secrets="$MISSING_LIST"
+
+          # Wait for the missing secrets to appear (max 3 min)
+          echo "⏳ Waiting for secrets to be synced..."
+          for i in $(seq 1 18); do
+            sleep 10
+            CURRENT=$(gh secret list --repo "${{ github.repository }}" --json name -q '.[].name' 2>/dev/null || echo "")
+            STILL_MISSING=0
+            for secret in "${MISSING[@]}"; do
+              echo "$CURRENT" | grep -qx "$secret" || STILL_MISSING=$((STILL_MISSING + 1))
+            done
+            if [ $STILL_MISSING -eq 0 ]; then
+              echo "✅ All ${#MISSING[@]} secrets synced after $((i * 10))s"
+              echo "result=synced" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "  ⏳ ${STILL_MISSING} still missing ($((i * 10))s)..."
+          done
+
+          echo "⚠️ Timeout — some secrets may not have synced"
+          echo "result=partial" >> $GITHUB_OUTPUT
+
   deploy:
+    needs: sync-secrets
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,14 +92,6 @@ jobs:
     - name: Install DevOps Tools
       uses: Bengo-Hub/devops-k8s/.github/actions/install-devops-tools@main
 
-    - name: Debug available secrets
-      run: |
-        echo "Checking which tokens are available..."
-        [[ -n "${{ secrets.GH_PAT }}" ]] && echo "✅ GH_PAT is set" || echo "❌ GH_PAT not found"
-        [[ -n "${{ secrets.GIT_SECRET }}" ]] && echo "✅ GITHUB_SECRET is set" || echo "❌ GITHUB_SECRET not found"
-        [[ -n "${{ secrets.GITHUB_TOKEN }}" ]] && echo "✅ GITHUB_TOKEN is set (default, may lack cross-repo write)" || echo "❌ GITHUB_TOKEN not found"
-        echo "Note: At least GH_PAT or GITHUB_SECRET must be set for cross-repo push to devops-k8s"
-
     - name: Set deployment variables
       run: |
         echo "DEPLOY=true" >> $GITHUB_ENV
@@ -43,52 +106,68 @@ jobs:
         echo "DEPLOYMENT_SUCCESS_MESSAGE=BengoERP API deployment completed! The API should be accessible via the URLs above." >> $GITHUB_ENV
         echo "APPLICATION_DISPLAY_NAME=BengoERP API" >> $GITHUB_ENV
 
-    - name: Sync deployment secrets
-      env:
-        GH_TOKEN: ${{ secrets.PROPAGATE_PAT || secrets.GH_PAT || secrets.GIT_TOKEN || github.token }}
+    - name: Debug available secrets
       run: |
-        REQUIRED_SECRETS=(REGISTRY_USERNAME REGISTRY_PASSWORD REGISTRY_EMAIL GIT_TOKEN POSTGRES_PASSWORD REDIS_PASSWORD RABBITMQ_PASSWORD KUBE_CONFIG)
-        MAX_RETRIES=3
-        MAX_WAIT=300
-        RETRY_COUNT=0
-        
-        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-          echo "[Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES] Triggering secret sync from devops-k8s..."
-          
-          gh workflow run sync-secrets.yml \
-            --repo Bengo-Hub/devops-k8s \
-            -f target_repo=${{ github.repository }} \
-            -f secrets="${REQUIRED_SECRETS[*]}"
-          
-          echo "Waiting for sync workflow to complete (max ${MAX_WAIT}s)..."
-          ELAPSED=0
-          while [ $ELAPSED -lt $MAX_WAIT ]; do
-            sleep 10
-            ELAPSED=$((ELAPSED + 10))
-            
-            # Check if secrets exist
-            MISSING=0
-            for secret in "${REQUIRED_SECRETS[@]}"; do
-              if ! gh secret list --repo ${{ github.repository }} 2>/dev/null | grep -q "^${secret}[[:space:]]"; then
-                MISSING=$((MISSING + 1))
-              fi
-            done
-            
-            if [ $MISSING -eq 0 ]; then
-              echo "✅ All secrets synced successfully after ${ELAPSED}s"
-              exit 0
-            fi
-            
-            echo "⏳ Still waiting... (${MISSING} secrets pending, ${ELAPSED}s elapsed)"
-          done
-          
-          echo "⚠️  Timeout waiting for secrets (attempt $((RETRY_COUNT + 1)))"
-          RETRY_COUNT=$((RETRY_COUNT + 1))
-        done
-        
-        echo "❌ Failed to sync secrets after $MAX_RETRIES attempts"
-        echo "Build.sh will attempt to continue with existing secrets..."
-        exit 0
+        echo "Checking which tokens are available..."
+        [[ -n "${{ secrets.GH_PAT }}" ]] && echo "✅ GH_PAT is set" || echo "❌ GH_PAT not found"
+        [[ -n "${{ secrets.GIT_SECRET }}" ]] && echo "✅ GITHUB_SECRET is set" || echo "❌ GITHUB_SECRET not found"
+        [[ -n "${{ secrets.GITHUB_TOKEN }}" ]] && echo "✅ GITHUB_TOKEN is set (default, may lack cross-repo write)" || echo "❌ GITHUB_TOKEN not found"
+        echo "Note: At least GH_PAT or GITHUB_SECRET must be set for cross-repo push to devops-k8s"
+
+    - name: Verify secrets
+      run: |
+        echo "Verifying deployment secrets..."
+        echo "Sync result: ${{ needs.sync-secrets.outputs.result }}"
+        echo ""
+        FAIL=0
+
+        check_secret() {
+          local name="$1" min_len="$2" value="$3"
+          if [[ -z "$value" ]]; then
+            echo "❌ $name — empty"
+            FAIL=1
+          elif [[ ${#value} -lt $min_len ]]; then
+            echo "⚠️  $name — ${#value} chars (need >=$min_len)"
+            FAIL=1
+          else
+            echo "✅ $name (${#value} chars)"
+          fi
+        }
+
+        check_secret "REGISTRY_USERNAME"  5    "$REGISTRY_USERNAME"
+        check_secret "REGISTRY_PASSWORD"  20   "$REGISTRY_PASSWORD"
+        check_secret "KUBE_CONFIG"        1000 "$KUBE_CONFIG"
+        check_secret "GIT_TOKEN"          20   "$GIT_TOKEN"
+        check_secret "POSTGRES_PASSWORD"  8    "$POSTGRES_PASSWORD"
+        check_secret "REDIS_PASSWORD"     8    "$REDIS_PASSWORD"
+
+        if [[ $FAIL -eq 1 ]]; then
+          echo ""
+          echo "❌ Secret verification failed!"
+          echo ""
+          echo "Possible causes:"
+          echo "  1. Secrets were just synced in this workflow run."
+          echo "     GitHub loads secrets when each job STARTS."
+          echo "     If sync-secrets just created them, re-run this workflow."
+          echo ""
+          echo "  2. devops-k8s PROPAGATE_PAT may lack write access."
+          echo "     Check: https://github.com/Bengo-Hub/devops-k8s/actions"
+          echo ""
+          echo "  3. Corrupted repo-level secret overriding correct value."
+          echo "     Fix: delete the bad secret, then re-run:"
+          echo "     gh secret delete <NAME> --repo ${{ github.repository }}"
+          exit 1
+        fi
+
+        echo ""
+        echo "✅ All secrets verified"
+      env:
+        REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+        REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+        POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
 
     - name: Run production deployment
       env:
