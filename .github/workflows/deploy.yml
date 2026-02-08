@@ -201,6 +201,7 @@ jobs:
         # Database secrets and configuration
         POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+        RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
         PG_DATABASE: bengo_erp
         # Optional: enable DB validation debug
         DEBUG_DB_VALIDATION: ${{ secrets.DEBUG_DB_VALIDATION || 'false' }}
