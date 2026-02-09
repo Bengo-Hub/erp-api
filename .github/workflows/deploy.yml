@@ -23,8 +23,6 @@ jobs:
           _REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           _REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
           _REGISTRY_EMAIL: ${{ secrets.REGISTRY_EMAIL }}
-          _GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
-          _GIT_SECRET: ${{ secrets.GIT_SECRET }}
           _POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           _REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
           _RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
@@ -39,7 +37,7 @@ jobs:
           _CONTABO_API_PASSWORD: ${{ secrets.CONTABO_API_PASSWORD }}
         run: |
           # Tier 2 (standard backend) + Tier 3 (SSH/Contabo for ERP VPS deployment)
-          REQUIRED_SECRETS="REGISTRY_USERNAME REGISTRY_PASSWORD REGISTRY_EMAIL GIT_TOKEN GIT_SECRET POSTGRES_PASSWORD REDIS_PASSWORD RABBITMQ_PASSWORD KUBE_CONFIG SSH_HOST SSH_USER SSH_PRIVATE_KEY DOCKER_SSH_KEY CONTABO_CLIENT_ID CONTABO_CLIENT_SECRET CONTABO_API_USERNAME CONTABO_API_PASSWORD"
+ REQUIRED_SECRETS="REGISTRY_USERNAME REGISTRY_PASSWORD REGISTRY_EMAIL POSTGRES_PASSWORD REDIS_PASSWORD RABBITMQ_PASSWORD KUBE_CONFIG SSH_HOST SSH_USER SSH_PRIVATE_KEY DOCKER_SSH_KEY CONTABO_CLIENT_ID CONTABO_CLIENT_SECRET CONTABO_API_USERNAME CONTABO_API_PASSWORD"
 
           # Step 1: Delete any secrets that exist but have empty values.
           # gh secret list reports empty-value secrets as "existing", so the
@@ -200,7 +198,6 @@ jobs:
         check_secret "REGISTRY_USERNAME"  5    "$REGISTRY_USERNAME"
         check_secret "REGISTRY_PASSWORD"  20   "$REGISTRY_PASSWORD"
         check_secret "KUBE_CONFIG"        1000 "$KUBE_CONFIG"
-        check_secret "GIT_TOKEN"          20   "$GIT_TOKEN"
         check_secret "POSTGRES_PASSWORD"  8    "$POSTGRES_PASSWORD"
         check_secret "REDIS_PASSWORD"     8    "$REDIS_PASSWORD"
 
@@ -228,7 +225,6 @@ jobs:
         REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
         REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-        GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
         POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
 
@@ -240,7 +236,6 @@ jobs:
         # Use GH token for HTTPS auth fallback in build.sh
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GH_PAT: ${{ secrets.GH_PAT }}
-        GITHUB_SECRET: ${{ secrets.GIT_SECRET }}
         REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
         REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         GITHUB_SHA: ${{ github.sha }}
