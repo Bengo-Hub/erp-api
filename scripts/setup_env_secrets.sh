@@ -27,6 +27,19 @@ if ! command -v kubectl &> /dev/null; then
     exit 1
 fi
 
+# Verify kubectl is properly configured
+if ! kubectl version --client &> /dev/null; then
+    log_error "kubectl is not properly configured"
+    exit 1
+fi
+
+# Verify infra namespace exists
+if ! kubectl get namespace infra &> /dev/null; then
+    log_error "Namespace 'infra' does not exist. Please provision infrastructure first."
+    log_error "Run: https://github.com/Bengo-Hub/devops-k8s/actions/workflows/provision.yml"
+    exit 1
+fi
+
 # Get PostgreSQL password - Use master password for service-specific user
 APP_DB_USER="${APP_DB_USER:-erp_user}"  # Service-specific user (created by create-service-database.sh)
 APP_DB_NAME="$PG_DATABASE"
@@ -59,6 +72,12 @@ if kubectl -n infra get secret postgresql >/dev/null 2>&1; then
 else
     log_error "PostgreSQL secret not found in Kubernetes"
     log_error "Ensure PostgreSQL is installed: kubectl get secret postgresql -n infra"
+    log_error ""
+    log_error "To provision infrastructure, run:"
+    log_error "  https://github.com/Bengo-Hub/devops-k8s/actions/workflows/provision.yml"
+    log_error ""
+    log_error "Or check if PostgreSQL is deployed:"
+    log_error "  kubectl get statefulset postgresql -n infra"
     exit 1
 fi
 
@@ -78,6 +97,12 @@ if kubectl -n infra get secret redis >/dev/null 2>&1; then
             log_warning "Using database secret password (must match actual DB)"
         fi
     else
+    log_error ""
+    log_error "To provision infrastructure, run:"
+    log_error "  https://github.com/Bengo-Hub/devops-k8s/actions/workflows/provision.yml"
+    log_error ""
+    log_error "Or check if Redis is deployed:"
+    log_error "  kubectl get statefulset redis-master -n infra"
         log_error "Could not retrieve Redis password from Kubernetes secret"
         exit 1
     fi
