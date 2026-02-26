@@ -315,18 +315,19 @@ if [[ "$DEPLOY" == "true" ]]; then
             log_info "Databases are managed by devops-k8s infrastructure"
             log_info "Retrieving credentials from existing secrets and setting up app environment"
             
-            if [[ -f "scripts/setup_env_secrets.sh" ]]; then
-                chmod +x scripts/setup_env_secrets.sh
-                VALIDATION_OUTPUT=$(./scripts/setup_env_secrets.sh) || { log_error "Environment secret setup failed"; exit 1; }
-                
-                # Parse output for validated credentials
-                export EFFECTIVE_PG_PASS=$(echo "$VALIDATION_OUTPUT" | grep "^EFFECTIVE_PG_PASS=" | cut -d= -f2-)
-                export VALIDATED_DB_USER=$(echo "$VALIDATION_OUTPUT" | grep "^VALIDATED_DB_USER=" | cut -d= -f2-)
-                export VALIDATED_DB_NAME=$(echo "$VALIDATION_OUTPUT" | grep "^VALIDATED_DB_NAME=" | cut -d= -f2-)
-                
-                log_success "Environment secrets configured successfully"
-            else
-                log_error "scripts/setup_env_secrets.sh not found"
+            # Create service secrets using devops-k8s script
+            if [[ -d "$DEVOPS_DIR" && -f "$DEVOPS_DIR/scripts/infrastructure/create-service-secrets.sh" ]]; then
+                log_info "Creating secrets for ${APP_NAME} using devops-k8s script..."
+                SERVICE_NAME="$APP_NAME" \
+                NAMESPACE="$NAMESPACE" \
+                DB_NAME="$SERVICE_DB_NAME" \
+                DB_USER="$SERVICE_DB_USER" \
+                SECRET_NAME="$ENV_SECRET_NAME" \
+                bash "$DEVOPS_DIR/scripts/infrastructure/create-service-secrets.sh" || { log_error "Environment secret setup failed"; exit 1; }
+                log_success "Environment secrets configured with real credentials"
+            elif ! kubectl -n "$NAMESPACE" get secret "$ENV_SECRET_NAME" >/dev/null 2>&1; then
+                log_error "Secret $ENV_SECRET_NAME not found and centralized scripts are missing"
+                log_error "Cannot proceed without database credentials"
                 exit 1
             fi
         fi
