@@ -18,6 +18,7 @@ from django.contrib.auth import get_user_model
 from notifications.services import EmailService
 from django.contrib.auth.models import Group, Permission
 from django.db.models import Q
+from django.db import transaction
 
 User = get_user_model()
 
@@ -105,80 +106,73 @@ class UserSerializer(serializers.ModelSerializer):
     def get_timezone(self, obj):
         return str(obj.timezone) if obj.timezone else 'Africa/Nairobi'
 
-    def create(self, validated_data):
+    def _assign_groups_to_user(self, user, selectedroles):
+        """
+        Helper method to safely assign groups to user.
+        Called after user is saved and has an ID.
+        
+        Args:
+            user: User instance with ID
+            selectedroles: List of group IDs or names
+        
+        Returns:
+            List of assigned groups
+        """
+        if not selectedroles:
+            return []
+        
+        # Parse group IDs and names
+        ids, names = [], []
+        for r in selectedroles:
+            try:
+                ids.append(int(r))
+            except (TypeError, ValueError):
+                names.append(str(r))
+        
+        # Query groups by ID or name (case-insensitive for names)
+        name_q = Q()
+        for nm in names:
+            name_q |= Q(name__iexact=nm)
+        
+        roles = Group.objects.filter(Q(id__in=ids) | name_q) if (ids or names) else []
+        
+        # Assign groups using set() (safer than add() in bulk)
+        if roles.exists():
+            user.groups.set(roles)
+        
+        return list(roles)
+
+    def _send_confirmation_email_async(self, user):
+        """
+        Helper method to send confirmation email asynchronously.
+        Called after user is created and token is generated.
+        
+        Args:
+            user: User instance with ID and email_confirm_token
+        """
         try:
-            # Extract and remove groups from validated_data (we handle assignment manually)
-            selectedroles = validated_data.pop('groups', None)
-            user = User(
-                first_name=validated_data['first_name'],
-                last_name=validated_data['last_name'],
-                middle_name=validated_data['middle_name'],
-                username=validated_data['username'],
-                email=validated_data['email'],
-                phone=validated_data.get('phone'),
-                pic=validated_data.get('pic'),
-            )
-            if validated_data.get('password'):
-                user.set_password(validated_data['password'])
-            else:
-                raise serializers.ValidationError({'password': 'This field is required.'})
-            user.is_staff = True
-            user.save()
-            
-            # Get or create staff group (case-insensitive to prevent duplicates)
-            staff_group = Group.objects.filter(name__iexact='staff').first()
-            if not staff_group:
-                staff_group = Group.objects.create(name='Staff')
-            
-            user.is_active = False
-            user.save()
-            
-            # Assign roles
-            if selectedroles:
-                # User-specified roles (accept ids or names, case-insensitive for names)
-                ids, names = [], []
-                for r in selectedroles:
-                    try:
-                        ids.append(int(r))
-                    except (TypeError, ValueError):
-                        names.append(str(r))
-                name_q = Q()
-                for nm in names:
-                    name_q |= Q(name__iexact=nm)
-                roles = Group.objects.filter(Q(id__in=ids) | name_q)
-                for role in roles:
-                    user.groups.add(role)
-                
-                # Also assign Staff role if not admin/superuser role selected
-                admin_roles = ['superusers', 'admin', 'superuser']
-                if not any(role.lower() in admin_roles for role in selectedroles):
-                    # Add staff role in addition to specified roles
-                    user.groups.add(staff_group)
-            else:
-                # No roles specified - assign Staff role by default
-                user.groups.add(staff_group)
-            
-            user.save()
-            Token.objects.create(user=user)
-            # Send confirmation email
             token = default_token_generator.make_token(user)
-            user.email_confirm_token=token
-            user.save()
+            user.email_confirm_token = token
+            user.save(update_fields=['email_confirm_token'])
+            
             uid = urlsafe_base64_encode(force_bytes(user.pk))
-            print(uid,'\n',token)
-            request=HttpRequest()
-            reqdata=os.environ.get('REQUEST_DATA',{})
-            print(reqdata)
-            jsondata = json.loads(reqdata)
-            request.META=jsondata
+            
+            # Get request data from environment or use defaults
+            reqdata = os.environ.get('REQUEST_DATA', '{}')
+            try:
+                jsondata = json.loads(reqdata)
+                host = jsondata.get('REQUEST_URL', 'http://localhost:3000')
+            except:
+                host = 'http://localhost:3000'
+            
             subject = 'Confirm your registration'
-            host = request.META['REQUEST_URL']
             message = render_to_string('auth/confirm_email.html', {
-                'host':host,
+                'host': host,
                 'user': user,
                 'uid': uid,
                 'token': token,
             })
+            
             # Send email using centralized service
             email_service = EmailService()
             email_service.send_email(
@@ -187,11 +181,92 @@ class UserSerializer(serializers.ModelSerializer):
                 recipient_list=[user.email],
                 async_send=True
             )
-            print("Email sent successfully!")
         except Exception as e:
-            user.delete()
-            print("send mail error:{}".format(e))
-        return user
+            # Log error but don't fail the user creation
+            print(f"Error sending confirmation email: {str(e)}")
+
+    @transaction.atomic
+    def create(self, validated_data):
+        """
+        Create a new user with groups and send confirmation email.
+        
+        Uses @transaction.atomic to ensure all operations succeed together
+        or rollback on failure.
+        
+        Args:
+            validated_data: Validated data from serializer
+            
+        Returns:
+            User instance
+            
+        Raises:
+            serializers.ValidationError: If required fields missing or invalid
+        """
+        try:
+            # Extract and remove groups from validated_data (handled separately)
+            selectedroles = validated_data.pop('groups', None)
+            
+            # Create user instance (not saved yet)
+            user = User(
+                first_name=validated_data.get('first_name', ''),
+                last_name=validated_data.get('last_name', ''),
+                middle_name=validated_data.get('middle_name', ''),
+                username=validated_data.get('username', ''),
+                email=validated_data.get('email', ''),
+                phone=validated_data.get('phone', ''),
+                pic=validated_data.get('pic'),
+            )
+            
+            # Validate password is provided
+            password = validated_data.get('password')
+            if not password:
+                raise serializers.ValidationError({'password': 'This field is required.'})
+            
+            user.set_password(password)
+            
+            # Set account flags BEFORE first save to avoid double-save
+            user.is_staff = True
+            user.is_active = False  # Require email confirmation
+            
+            # Save user (now has ID)
+            user.save()
+            
+            # Get or create staff group (case-insensitive to prevent duplicates)
+            staff_group, created = Group.objects.get_or_create(
+                name__iexact='staff',
+                defaults={'name': 'Staff'}
+            )
+            
+            # Assign groups (user now has ID, so M2M is safe)
+            if selectedroles:
+                assigned_groups = self._assign_groups_to_user(user, selectedroles)
+                
+                # Also assign Staff role if not admin/superuser role selected
+                admin_roles = ['superusers', 'admin', 'superuser']
+                if not any(role.lower() in admin_roles for role in selectedroles):
+                    # Add staff role in addition to specified roles
+                    if staff_group not in assigned_groups:
+                        user.groups.add(staff_group)
+            else:
+                # No roles specified - assign Staff role by default
+                user.groups.add(staff_group)
+            
+            # Create authentication token
+            Token.objects.create(user=user)
+            
+            # Send confirmation email asynchronously
+            self._send_confirmation_email_async(user)
+            
+            return user
+        
+        except serializers.ValidationError:
+            # Re-raise validation errors as-is
+            raise
+        except Exception as e:
+            # Transform unexpected errors to validation errors with context
+            raise serializers.ValidationError({
+                'non_field_errors': f'Failed to create user: {str(e)}'
+            })
 
     def update(self, instance, validated_data):
         # Extract write-only groups

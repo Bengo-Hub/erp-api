@@ -1,5 +1,5 @@
 africastalking
-apns2
+apns2>=0.7.0
 cssselect2
 dataclasses-json
 decorator
@@ -68,13 +68,12 @@ jedi
 jiter
 jmespath
 joblib
-jsmin
 jsonpatch
 jsonpointer
 jsonschema
 jsonschema-specifications
-celery>=5.3,<6
-kombu>=5.3,<6
+celery
+kombu
 django-celery-beat>=2.6.0
 # ASGI and websockets stack
 channels>=4.1.0
@@ -85,8 +84,7 @@ hyperframe>=6.0.0
 h2>=4.0.0
 # Removed unused packages that had security vulnerabilities
 loguru
-# Pin lxml to a stable prebuilt wheel to avoid source build on alpine/debian slim
-lxml==4.9.4
+# lxml pinned below in prompt_toolkit section for Python 3.14 compatibility
 mark
 Markdown
 markdownify
@@ -114,6 +112,8 @@ reportlab>=4.0.0
 # 'prometheus-client' and 'prometheus_client' refer to the same package; keep one
 # Keep only 'prometheus-client'
 prompt_toolkit
+# Pin lxml to version with Python 3.14 wheel support
+lxml>=6.0.2
 propcache
 proto-plus
 protobuf

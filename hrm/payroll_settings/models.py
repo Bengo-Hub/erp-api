@@ -336,9 +336,9 @@ class Loans(models.Model):
         managed=True
 
 class DefaultPayrollSettings(models.Model):
-    default_deductions=models.ManyToManyField(PayrollComponents,blank=True,null=True,related_name='default_deductions')
-    default_earnings=models.ManyToManyField(PayrollComponents,blank=True,null=True,related_name='default_earnings')
-    default_benefits=models.ManyToManyField(PayrollComponents,blank=True,null=True,related_name="default_benefits")
+    default_deductions=models.ManyToManyField(PayrollComponents,blank=True,related_name='default_deductions')
+    default_earnings=models.ManyToManyField(PayrollComponents,blank=True,related_name='default_earnings')
+    default_benefits=models.ManyToManyField(PayrollComponents,blank=True,related_name="default_benefits")
 
     class Meta:
         verbose_name_plural="Default Payroll Settings"
