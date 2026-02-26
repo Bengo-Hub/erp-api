@@ -379,13 +379,21 @@ python manage.py seed_all
 
 ## Troubleshooting
 
-### Issue: "No module named 'collections.abc.MutableMapping'"
+### Issue: apns2 Module Missing or Dependency Conflict
+
+**Context:** apns2 is an optional dependency for iOS push notifications. It's not included in the main requirements.txt due to version conflicts with PyJWT. The push notification service gracefully handles its absence.
 
 **Solution:**
 ```bash
-pip install --upgrade apns2
-# or uninstall if not needed
+# Option 1: Skip apns2 (recommended for most development)
+# No action needed. Push notifications will log a warning but continue working
+
+# Option 2: Install apns2 separately if you need iOS push notifications
+pip install apns2
+
+# Option 3: If you encounter installation problems
 pip uninstall apns2
+# Then resolve any dependency conflicts
 ```
 
 ### Issue: PostgreSQL connection refused
