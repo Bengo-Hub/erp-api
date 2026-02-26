@@ -15,10 +15,21 @@ class Command(BaseCommand):
         # Note: DeliveryRegion and PickupStations are created by middleware
         # We only need to seed data that is NOT automatically created by middleware
         
+        # Ensure admin user exists for business and address creation
+        admin_user = User.objects.filter(is_superuser=True).first()
+        if not admin_user:
+            admin_user = User.objects.create_superuser(
+                username='admin', 
+                email='admin@example.com', 
+                password='admin123'
+            )
+            self.stdout.write(self.style.SUCCESS('Created admin user'))
+        
         # Ensure the single configured business exists; if missing, create it using a standard name
         business, created = Bussiness.objects.get_or_create(
             name='Codevertex IT Solutions',
             defaults={
+                'owner': admin_user,
                 'start_date': '2024-01-01',
                 'currency': 'KES',
                 'kra_number': 'A123456789X',
@@ -26,10 +37,9 @@ class Command(BaseCommand):
                 'county': 'Nairobi'
             }
         )
-        if created:
-            self.stdout.write(self.style.SUCCESS(f'Created default business: {business.name}'))
         
         # Get existing business location if any; otherwise create a default location
+
         location = business.location if business.location and business.location.is_active else None
         if not location:
             self.stdout.write(self.style.WARNING('No business location found. Creating default location...'))
@@ -48,17 +58,8 @@ class Command(BaseCommand):
             business.location = location
             business.save()
         
-        # Ensure admin user exists for address creation
-        admin_user = User.objects.filter(is_superuser=True).first()
-        if not admin_user:
-            admin_user = User.objects.create_superuser(
-                username='admin', 
-                email='admin@example.com', 
-                password='admin123'
-            )
-            self.stdout.write(self.style.SUCCESS('Created admin user'))
-        
         # Create sample address books
+
         address_books_data = [
             {
                 'address_label': 'Home Address',
