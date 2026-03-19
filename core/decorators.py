@@ -76,27 +76,37 @@ def apply_common_filters(view_func):
     return wrapper
 
 
+def _is_platform_owner(request):
+    """Check if the request user is a platform owner (superuser) — bypasses tenant context."""
+    return (hasattr(request, 'user') and
+            request.user.is_authenticated and
+            request.user.is_superuser)
+
+
 def require_business_context(view_func):
     """
     Decorator to ensure that business context is available.
     Returns error if no business_id is found.
+    Platform owners (superusers) bypass this — they operate cross-tenant.
     """
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        # Apply common filters first
         if not hasattr(request, 'filters'):
             business_id = get_business_id_from_request(request)
             request.filters = {'business_id': business_id}
-        
+
         if not request.filters.get('business_id'):
+            if _is_platform_owner(request):
+                logger.info(f"Platform owner {request.user.email} bypassing business context for {view_func.__name__}")
+                return view_func(request, *args, **kwargs)
             return JsonResponse({
                 'success': False,
                 'message': 'Business context is required. Please provide business_id in query parameters or headers.',
                 'timestamp': timezone.now().isoformat()
             }, status=400)
-        
+
         return view_func(request, *args, **kwargs)
-    
+
     return wrapper
 
 
@@ -104,23 +114,25 @@ def require_branch_context(view_func):
     """
     Decorator to ensure that branch context is available.
     Returns error if no branch_id is found in headers.
+    Platform owners (superusers) bypass this — they operate cross-tenant.
     """
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        # Apply common filters first
         if not hasattr(request, 'filters'):
             branch_id = get_branch_id_from_request(request)
             request.filters = {'branch_id': branch_id}
-        
+
         if not request.filters.get('branch_id'):
+            if _is_platform_owner(request):
+                return view_func(request, *args, **kwargs)
             return JsonResponse({
                 'success': False,
                 'message': 'Branch context is required. Provide X-Branch-ID header (branch id or branch_code).',
                 'timestamp': timezone.now().isoformat()
             }, status=400)
-        
+
         return view_func(request, *args, **kwargs)
-    
+
     return wrapper
 
 
@@ -128,32 +140,33 @@ def require_business_and_branch_context(view_func):
     """
     Decorator to ensure that both business and branch context are available.
     Returns error if either is missing.
+    Platform owners (superusers) bypass this — they operate cross-tenant.
     """
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        # Apply common filters first
         if not hasattr(request, 'filters'):
             business_id = get_business_id_from_request(request)
             branch_id = get_branch_id_from_request(request)
             request.filters = {'business_id': business_id, 'branch_id': branch_id}
-        
-        validation = validate_business_context(request, 
-                                           request.filters.get('business_id'), 
+
+        validation = validate_business_context(request,
+                                           request.filters.get('business_id'),
                                            request.filters.get('branch_id'))
-        
+
         if not validation['is_valid']:
+            if _is_platform_owner(request):
+                return view_func(request, *args, **kwargs)
             missing = []
             if not validation['business_id']:
                 missing.append('business_id')
             if not validation['branch_id']:
                 missing.append('X-Branch-ID header')
-            
             return JsonResponse({
                 'success': False,
                 'message': f'Missing required context: {", ".join(missing)}',
                 'timestamp': timezone.now().isoformat()
             }, status=400)
-        
+
         return view_func(request, *args, **kwargs)
-    
+
     return wrapper
