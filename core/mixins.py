@@ -101,10 +101,16 @@ class BusinessBranchContextMixin:
     def _validate_required_context(self, data):
         """
         Validate that required context fields are present.
+        Platform owners (superusers) bypass required context validation.
 
         Returns:
             tuple: (is_valid, error_response or None)
         """
+        # Platform owners bypass required context
+        request = self.request
+        if hasattr(request, 'user') and request.user.is_authenticated and request.user.is_superuser:
+            return True, None
+
         errors = []
 
         if self.require_branch and not data.get(self.branch_field_name):

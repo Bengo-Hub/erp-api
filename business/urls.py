@@ -2,6 +2,7 @@
 from django.urls import path, include
 from rest_framework import routers
 from .views import *
+from .views import public_branding
 
 router = routers.DefaultRouter()
 # Business settings at root (api/v1/business/)
@@ -21,5 +22,7 @@ router.register(r'delivery-regions', DeliveryRegionsViewSet)
 router.register(r'pickup-stations', PickupStationsViewSet)
 
 urlpatterns = [
+    # Public branding endpoint (no auth required) — for login page tenant branding
+    path('public-branding/', public_branding, name='public-branding'),
     path('', include(router.urls)),
 ]
