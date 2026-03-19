@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes as perm_dec
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import filters
 from rest_framework.pagination import LimitOffsetPagination
 from .models import (BusinessLocation, Bussiness, ProductSettings, SaleSettings,
@@ -62,8 +62,10 @@ class BussinessViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """Filter to user's business - always returns only the user's own business."""
+        """Filter to user's business. Platform owners (superusers) see all businesses."""
         user = self.request.user
+        if user.is_superuser:
+            return Bussiness.objects.all()
         business = get_user_business(user)
         if business:
             return Bussiness.objects.filter(id=business.id)
@@ -424,3 +426,68 @@ class DocumentSequenceViewSet(viewsets.ModelViewSet):
                 })
 
         return Response(summary)
+
+
+@api_view(['GET'])
+@perm_dec([AllowAny])
+def public_branding(request):
+    """
+    Public branding endpoint for login pages (no auth required).
+    Accepts ?org= query param to resolve business by name match.
+    Falls back to first active business if no org specified.
+
+    Returns brand settings: name, logo, colors, theme preset.
+    """
+    org_code = request.query_params.get('org', '').strip()
+
+    business = None
+    if org_code:
+        # Try case-insensitive name match
+        business = Bussiness.objects.filter(name__icontains=org_code).first()
+        if not business:
+            # Try matching branch code
+            branch = Branch.objects.filter(branch_code__iexact=org_code, is_active=True).select_related('business').first()
+            if branch:
+                business = branch.business
+
+    if not business:
+        # Fallback: first active business (demo or default)
+        business = Bussiness.objects.first()
+
+    if not business:
+        return Response({
+            'name': 'CodeVertex ERP',
+            'logo': None,
+            'business_primary_color': '#5B1C4D',
+            'business_secondary_color': '#ea8022',
+        })
+
+    # Get branding from business
+    logo_url = None
+    if business.logo:
+        try:
+            logo_url = request.build_absolute_uri(business.logo.url)
+        except Exception:
+            logo_url = None
+
+    data = {
+        'id': business.id,
+        'name': business.name,
+        'business__name': business.name,
+        'logo': logo_url,
+        'business__logo': logo_url,
+        'business_primary_color': getattr(business, 'business_primary_color', '#5B1C4D'),
+        'business_secondary_color': getattr(business, 'business_secondary_color', '#ea8022'),
+        'business_text_color': getattr(business, 'business_text_color', '#212121'),
+        'business_background_color': getattr(business, 'business_background_color', '#FFFFFF'),
+    }
+
+    # Add extended branding settings if available
+    try:
+        branding = business.get_branding_settings()
+        if branding:
+            data['branding_settings'] = branding
+    except Exception:
+        pass
+
+    return Response(data)
