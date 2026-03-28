@@ -23,3 +23,10 @@ api-generator/typedoc.json
 # Backup files
 *.bak
 kubeSecrets/*.bak
+
+# Kubernetes secrets
+kubeSecrets/
+KubeSecrets/
+
+# Certificates
+*.pem
