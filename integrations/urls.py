@@ -10,6 +10,7 @@ from .health_views import (
     sms_health_check, email_health_check, clear_integration_cache,
     integration_summary, get_integration_urls, sync_integration_urls
 )
+from .pos_bridge_views import pos_clock_in, pos_clock_out
 # Notification-related views moved to centralized notifications app
 
 # Create router for ViewSets
@@ -36,4 +37,7 @@ urlpatterns = [
     # URL configuration endpoints
     path('urls/', get_integration_urls, name='integration-urls'),
     path('urls/sync/', sync_integration_urls, name='sync-integration-urls'),
+    # POS → ERP clock-in bridge (S2S, X-API-Key auth)
+    path('pos/clock-in/', pos_clock_in, name='pos-clock-in'),
+    path('pos/clock-out/', pos_clock_out, name='pos-clock-out'),
 ]
