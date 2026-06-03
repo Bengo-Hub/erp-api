@@ -88,6 +88,10 @@ class Bussiness(models.Model):
     )
     location=models.ForeignKey(BusinessLocation,on_delete=models.SET_NULL,related_name="businesses",null=True,blank=True)
     owner=models.ForeignKey(User,on_delete=models.CASCADE,related_name="businesses")
+    # Link to the auth-api tenant (single source of truth for tenant identity/branding).
+    # The ERP keys tenant-scoped data on this UUID; branding/KRA are fetched from
+    # auth-api/treasury (see integrations.branding), not owned here.
+    tenant_id=models.UUIDField(null=True,blank=True,unique=True,db_index=True,help_text="auth-api tenant UUID")
     name = models.CharField(max_length=100,default='Yogis Delight')
     start_date=models.DateField(default=timezone.now)
     finacial_year_start_month = models.CharField(max_length=50,choices=MONTH_CHOICES,default="Jan")
@@ -134,12 +138,10 @@ class Bussiness(models.Model):
     county = models.CharField(max_length=100, blank=True, null=True, help_text="Kenyan county where business is located", validators=[validate_kenyan_county])
     postal_code = models.CharField(max_length=10, blank=True, null=True, help_text="Postal code for business location", validators=[validate_kenyan_postal_code])
     
-    # KRA Integration Fields
-    kra_api_enabled = models.BooleanField(default=False, help_text="Enable KRA API integration")
-    kra_api_key = models.CharField(max_length=255, blank=True, null=True, help_text="KRA API key for integration")
-    kra_api_secret = models.CharField(max_length=255, blank=True, null=True, help_text="KRA API secret for integration")
-    kra_last_sync = models.DateTimeField(blank=True, null=True, help_text="Last KRA data synchronization")
-    
+    # KRA/eTIMS integration + credentials are owned by treasury-api (single source of
+    # truth for tax/fiscalisation). The ERP no longer stores KRA API keys/secrets here.
+    # kra_number (above) is retained only as a display cache; treasury is canonical.
+
     # Compliance Tracking
     tax_compliance_status = models.CharField(max_length=20, choices=[
         ('compliant', 'Compliant'),
@@ -213,7 +215,7 @@ class Bussiness(models.Model):
             models.Index(fields=['business_type'], name='idx_business_type'),
             models.Index(fields=['county'], name='idx_business_county'),
             models.Index(fields=['postal_code'], name='idx_business_postal_code'),
-            models.Index(fields=['kra_api_enabled'], name='idx_business_kra_api_enabled'),
+            models.Index(fields=['tenant_id'], name='idx_business_tenant_id'),
             models.Index(fields=['tax_compliance_status'], name='idx_business_tax_comp_status'),
             models.Index(fields=['last_compliance_check'], name='idx_business_last_comp_check'),
         ]
