@@ -1,0 +1,42 @@
+"""
+POST /api/v1/hrm/payroll/disburse/ — finalise an approved payroll period: post the GL
+journal (via erp.payroll.processed) and disburse net pay through treasury.
+
+Body: { "period": "2026-06", "outlet_id": "<uuid?>", "payslip_ids": [<id>...]? }
+Selects approved, complete, non-deleted payslips for the period (optionally scoped to
+an outlet via the employee's outlet_id, or an explicit payslip_ids list).
+"""
+from __future__ import annotations
+
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import status
+
+from .models import Payslip
+from .treasury_integration import publish_and_disburse
+
+
+class PayrollDisburseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        period = (request.data.get("period") or "").strip()
+        outlet_id = request.data.get("outlet_id") or getattr(request, "outlet_id", "") or ""
+        payslip_ids = request.data.get("payslip_ids") or []
+        if not period and not payslip_ids:
+            return Response({"error": "period or payslip_ids is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        qs = Payslip.objects.filter(approval_status="approved", payroll_status="complete", delete_status=False)
+        if payslip_ids:
+            qs = qs.filter(id__in=payslip_ids)
+        if period:
+            qs = qs.filter(payment_period__startswith=period[:7])
+        if outlet_id:
+            qs = qs.filter(employee__outlet_id=outlet_id)
+        qs = qs.select_related("employee", "employee__user")
+
+        tenant_id = getattr(request, "tenant_id", "") or ""
+        result = publish_and_disburse(list(qs), tenant_id, outlet_id, period, request=request)
+        code = status.HTTP_200_OK if result.get("published") else status.HTTP_400_BAD_REQUEST
+        return Response(result, status=code)

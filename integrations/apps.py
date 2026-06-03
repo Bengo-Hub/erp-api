@@ -16,3 +16,10 @@ class IntegrationsConfig(AppConfig):
 
         CONSUMER_HANDLERS.setdefault("auth.tenant.>", handle_tenant_event)
         CONSUMER_HANDLERS.setdefault("auth.outlet.>", handle_outlet_event)
+
+        # Payroll disbursement confirmation from treasury (WS4).
+        try:
+            from hrm.payroll.treasury_integration import handle_payroll_disbursed
+            CONSUMER_HANDLERS.setdefault("treasury.payroll.disbursed", handle_payroll_disbursed)
+        except Exception:  # hrm import issues should never block app startup
+            pass
