@@ -1,7 +1,10 @@
+import logging
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import permissions
 from integrations.notifications_client import EmailService
+
+logger = logging.getLogger(__name__)
 from hrm.employees.models import Employee
 from hrm.employees.permissions import StaffDataFilterMixin, SensitiveModuleFilterMixin
 from datetime import datetime, date
@@ -1001,75 +1004,39 @@ class EmailPayslipsView(APIView):
 
     def post(self, request, *args, **kwargs):
         try:
-            # Extract form data
             emails = request.POST.getlist('emails')
             names = request.POST.getlist('names')
             periods = request.POST.getlist('period')
             files = request.FILES.getlist('files')
-            process_async = request.data.get("async", True)  # New parameter for async processing
 
             if not emails or not files:
                 return JsonResponse({'error': 'Emails and files are required'}, status=400)
 
-            if process_async:
-                # Prepare email data for async processing
-                email_data_list = []
-                
-                for idx, email in enumerate(emails):
-                    # Validate and match file with email
-                    file = files[idx] if idx < len(files) else None
-                    
-                    if file:
-                        # Prepare template context
-                        context = {
-                            "name": names[idx] if idx < len(names) else "Employee",
-                            "period": periods[idx] if idx < len(periods) else "Current Period",
-                            "company_name": "Bengo ERP",
-                            "footer_text": "This is an automated email. Please do not reply."
-                        }
-                        
-                        # Queue the email task
-                        email_data_list.append({
-                            "subject": f"Payslip - ID {names[idx] if idx < len(names) else 'N/A'}",
-                            "body": f"Dear {names[idx]},\n\nPlease find attached your payslip for the period of {periods[idx]}.\n\nRegards,\nProcurePro Team",
-                            "recipients": [email],
-                            "attachments": [file]
-                        })
-                
-                # Send emails asynchronously
-                result = send_bulk_emails.delay(email_data_list)
-                
-                return JsonResponse({
-                    'message': f'Payslips queued for sending to {len(emails)} recipients',
-                    'task_id': result.id,
-                    'status': 'processing'
-                }, status=202)  # 202 Accepted
-            
-            else:
-                # Original synchronous implementation
-                for idx, email in enumerate(emails):
-                    file = files[idx] if idx < len(files) else None
-                    
-                    if file:
-                        attachments = [file]
-                        subject = f"Payslip - ID {names[idx] if idx < len(names) else 'N/A'}"
-                        body = f"Dear {names[idx]},\n\nPlease find attached your payslip for the period of {periods[idx]}.\n\nRegards,\nProcurePro Team"
-                        
-                        email_service = EmailService()
-                        email_service.send_email(
-                            subject=subject,
-                            message=body,
-                            recipient_list=[email],
-                            attachments=attachments,
-                            async_send=True
-                        )
-                    else:
-                        print(f"File missing for email: {email}")
-                
-                return JsonResponse({'message': 'Payslips emailed successfully'}, status=200)
+            # Email each payslip PDF as a real attachment. EmailService publishes
+            # erp.email.requested to the outbox (attachment base64-encoded); notifications-api
+            # decodes it and delivers the file via the email provider (SMTP/Brevo/SendGrid).
+            sent = 0
+            for idx, email in enumerate(emails):
+                file = files[idx] if idx < len(files) else None
+                if not file:
+                    logger.warning("EmailPayslips: file missing for %s", email)
+                    continue
+                name = names[idx] if idx < len(names) else "Employee"
+                period = periods[idx] if idx < len(periods) else "Current Period"
+                mimetype = getattr(file, 'content_type', None) or 'application/pdf'
+                EmailService().send_email(
+                    subject=f"Payslip - {period}",
+                    message=f"Dear {name},\n\nPlease find your payslip for {period} attached.\n\nRegards,\nHR Team",
+                    recipient_list=[email],
+                    attachments=[(file.name, file.read(), mimetype)],
+                    async_send=True,
+                )
+                sent += 1
+
+            return JsonResponse({'message': f'Payslips queued for {sent} recipients', 'status': 'processing'}, status=202)
 
         except Exception as e:
-            print(f"Error: {e}")
+            logger.exception("EmailPayslips failed: %s", e)
             return JsonResponse({'error': f'Failed to email payslips: {str(e)}'}, status=500)
 
 class EmployeeAdvancesViewSet(SensitiveModuleFilterMixin, viewsets.ModelViewSet):
