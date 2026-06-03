@@ -18,6 +18,9 @@ class Employee(models.Model):
     GENDER = [("male", "Male"), ("female", "Female"), ("other", "Other")]
     user=models.OneToOneField(CustomUser,on_delete=models.CASCADE,verbose_name="Employee ESS")#id,first_name,last
     organisation=models.ForeignKey(Bussiness,on_delete=models.CASCADE,blank=True,null=True,related_name="employees")
+    # Auth-api outlet/branch this employee is assigned to (source of truth = auth-api;
+    # mirrored in authmanagement.AuthOutlet). Enables X-Outlet-ID scoping of HR data.
+    outlet_id=models.UUIDField(null=True,blank=True,db_index=True,help_text="Auth-api outlet UUID (HR outlet scoping)")
     gender = models.CharField(max_length=10, choices=GENDER)
     passport_photo = models.ImageField(
         upload_to='passports', blank=True, null=True)

@@ -296,3 +296,54 @@ class UserPreferences(models.Model):
         indexes = [
             models.Index(fields=['user'], name='idx_user_preferences_user'),
         ]
+
+
+class AuthTenant(models.Model):
+    """Thin read-only shadow of an auth-api tenant (the single source of truth).
+
+    Populated by the tenant syncer (integrations.tenant_sync) and NATS
+    ``auth.tenant.*`` events. The ERP keys all tenant-scoped data on ``id`` (the
+    auth-api tenant UUID). Branding/identity are NOT stored here — fetch from auth-api.
+    """
+    id = models.UUIDField(primary_key=True, editable=False)  # auth-api tenant UUID
+    slug = models.CharField(max_length=120, unique=True)
+    name = models.CharField(max_length=255, blank=True, default="")
+    is_platform = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, default="active")
+    synced_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.slug} ({self.id})"
+
+    class Meta:
+        verbose_name = "Auth Tenant (shadow)"
+        verbose_name_plural = "Auth Tenants (shadow)"
+        indexes = [models.Index(fields=["slug"], name="idx_authtenant_slug")]
+
+
+class AuthOutlet(models.Model):
+    """Thin read-only shadow of an auth-api outlet/branch (source of truth = auth-api).
+
+    Synced via GET /api/v1/tenants/{slug}/outlets and NATS ``auth.outlet.*`` events.
+    HR records reference outlets by this UUID; the ERP never creates outlets.
+    """
+    id = models.UUIDField(primary_key=True, editable=False)  # auth-api outlet UUID
+    tenant_id = models.UUIDField(db_index=True)
+    code = models.CharField(max_length=60, blank=True, default="")
+    name = models.CharField(max_length=255, blank=True, default="")
+    use_case = models.CharField(max_length=40, blank=True, default="")
+    is_hq = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, default="active")
+    timezone = models.CharField(max_length=64, blank=True, default="Africa/Nairobi")
+    synced_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.code or self.name} ({self.id})"
+
+    class Meta:
+        verbose_name = "Auth Outlet (shadow)"
+        verbose_name_plural = "Auth Outlets (shadow)"
+        indexes = [
+            models.Index(fields=["tenant_id"], name="idx_authoutlet_tenant"),
+            models.Index(fields=["tenant_id", "status"], name="idx_authoutlet_tenant_status"),
+        ]
