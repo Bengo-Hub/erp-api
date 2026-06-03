@@ -7,7 +7,6 @@ from django.db import IntegrityError
 import logging
 
 from business.models import BusinessLocation, Branch
-from crm.contacts.models import Contact
 
 logger = logging.getLogger(__name__)
 
@@ -148,19 +147,8 @@ class SiteWideConfigs:
                                 if admin_group:
                                     walk_in_user.groups.add(admin_group)
                                 walk_in_user.save()
-                                
-                                # Create contact for walk-in user
-                                Contact.objects.update_or_create(
-                                    user=walk_in_user,
-                                    contact_id=f'C{branch.id}000001',
-                                    defaults={
-                                        "branch": branch,  # Use the branch object directly
-                                        "contact_type": 'Customers',
-                                        "account_type": 'Individual',
-                                        "designation": 'Other',
-                                        "credit_limit": 0,
-                                    }
-                                )
+                                # CRM Contact for the walk-in user is now owned by marketflow
+                                # (created there via the user-provisioning event), not the ERP.
                                 logger.info(f"Created walk-in user for business: {business_name}")
                             except IntegrityError as e:
                                 logger.error(f"Error creating walk-in user for business {business_name}: {str(e)}")

@@ -1,8 +1,23 @@
 # ERP Module Removal Plan
 
 **Created:** April 2026
-**Status:** Planning — deletion deferred until all owner microservices are production-ready
+**Status:** In progress — integration foundation built (2026-06-03); per-module deletion gated on owner readiness
 **Scope:** Remove ~85+ models across ~16 Django apps that are now owned by dedicated microservices
+
+> ## Status update — 2026-06-03
+>
+> **Corrections to this plan:** the platform now has standalone **marketflow** (CRM) and **projects-service**, so:
+> - **CRM is NOT kept** — `crm/*` is now slated for removal (owner: marketflow). The "KEEP" row below is superseded.
+> - **task_management IS kept** — it is an internal job/task tracker, a different domain from projects-service (tenders + external delivery). projects-service is additive (menu link only).
+>
+> **Integration foundation built (ERP side, all env-flag-gated, OFF by default):**
+> - SSO + JWT-via-JWKS + JIT user shadow: `authmanagement/sso.py`, `authmanagement/sso_middleware.py`, `CustomUser.external_id` (migration 0004).
+> - Subscription gating (mutations-only) middleware.
+> - S2S REST client: `integrations/service_client.py`.
+> - Transactional outbox + NATS publish/consume: `EventOutbox` (migration 0005), `integrations/events.py`, `manage.py drain_outbox|consume_events`.
+> - erp-ui: OIDC PKCE SSO client + axios Bearer/refresh/403 handling (`src/services/auth/ssoService.js`).
+>
+> **Cross-module deletion dependency (important):** `ecommerce.product/stockinventory/vendor` are imported by **kept** modules (`core`, `procurement`, `manufacturing`, `hrm`, `core_orders`) as well as by `finance`/`crm`. Deleting product/stock requires first refactoring those importers to reference-by-ID + inventory-api S2S reads. Because order/pos/finance also depend on product/stock, stage the physical `ecommerce` deletion as a consolidated cutover once inventory + pos + ordering owners are all production-ready. See inventory-api `docs/sprints/sprint-erp-gaps.md` Gap 5 (INV-ERP-20..22).
 
 ---
 

@@ -12,7 +12,7 @@ from asgiref.sync import async_to_sync
 from .models import Payslip, PayslipAudit
 from .utils import PayrollGenerator
 from hrm.employees.models import Employee
-from notifications.services import EmailService
+from integrations.notifications_client import EmailService
 
 logger = logging.getLogger('ditapi_logger')
 

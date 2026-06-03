@@ -360,16 +360,7 @@ class ProductSettings(models.Model):
 class SaleSettings(models.Model):
     business=models.ForeignKey(Bussiness,on_delete=models.CASCADE,related_name="salesettings")
     default_discount=models.DecimalField(max_digits=10,decimal_places=2,default=Decimal('0.00'))
-    # Updated to use centralized Tax model from finance.taxes
-    default_tax=models.ForeignKey(
-        'taxes.Tax',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        default=None,
-        related_name='sale_settings',
-        help_text='Default tax rate for sales'
-    )
+    # default_tax removed: tax + sales config are owned by treasury-api / pos-api now.
 
     def __str__(self):
         return 'Sale Setting'

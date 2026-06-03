@@ -1,7 +1,7 @@
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import permissions
-from notifications.services import EmailService
+from integrations.notifications_client import EmailService
 from hrm.employees.models import Employee
 from hrm.employees.permissions import StaffDataFilterMixin, SensitiveModuleFilterMixin
 from datetime import datetime, date

@@ -1,4 +1,4 @@
-# commands/seed_employees.py
+﻿# commands/seed_employees.py
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils.timezone import make_aware
@@ -15,7 +15,7 @@ from django.contrib.auth.models import Group
 fake = Faker()
 
 class Command(BaseCommand):
-    help = 'Seed database with demo employee records linked to Codevertex IT Solutions business'
+    help = 'Seed database with demo employee records linked to Codevertex Africa Limited business'
 
     def add_arguments(self, parser):
         parser.add_argument('--count', type=int, default=1, help='Number of employees to generate')
@@ -32,8 +32,8 @@ class Command(BaseCommand):
             count = 1
         self.stdout.write(self.style.SUCCESS(f'Starting to seed {count} demo employees across multiple branches...'))
     
-        # Get the business "Codevertex IT Solutions" (standardized), fallback to first
-        business = Bussiness.objects.filter(name__iexact='Codevertex IT Solutions').first() or Bussiness.objects.first()
+        # Get the business "Codevertex Africa Limited" (standardized), fallback to first
+        business = Bussiness.objects.filter(name__iexact='Codevertex Africa Limited').first() or Bussiness.objects.first()
         if not business:
             self.stdout.write(self.style.ERROR('No business found. Please run business seeding first.'))
             return

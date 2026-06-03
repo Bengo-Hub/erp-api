@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand
+﻿from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from addresses.models import AddressBook
 from business.models import Bussiness, BusinessLocation
@@ -27,7 +27,7 @@ class Command(BaseCommand):
         
         # Ensure the single configured business exists; if missing, create it using a standard name
         business, created = Bussiness.objects.get_or_create(
-            name='Codevertex IT Solutions',
+            name='Codevertex Africa Limited',
             defaults={
                 'owner': admin_user,
                 'start_date': '2024-01-01',

@@ -1,283 +1,45 @@
 """
-API Views for Enhanced Communication Features (Task 3.1)
-Provides endpoints for:
-- Notification preferences management
-- Communication analytics
-- Bounce handling
-- Spam prevention
-- Communication testing
+Integration API views for the decomposed ERP.
+
+Only generic, ERP-retained integration concerns remain here:
+- Exchange-rate API settings + manual FX fetch (feeds core.ExchangeRate)
+- A lightweight integration health/summary endpoint
+
+Payment gateways (Mpesa/Paystack/PayPal/Card), KRA/eTIMS fiscalisation, bank &
+government service integrations, and webhook delivery all moved to treasury-api.
+Notification providers moved to notifications-api.
 """
-from rest_framework import viewsets, status, generics
-from rest_framework.decorators import action
+from rest_framework import viewsets, status
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.utils import timezone
-from datetime import datetime, timedelta
-from typing import Dict, Any
+from datetime import timedelta
 
-from .models import (
-    KRASettings, WebhookEndpoint, WebhookEvent, MpesaSettings, ExchangeRateAPISettings,
-    PaystackSettings
-)
-from .serializers import (
-    KRASettingsSerializer, WebhookEndpointSerializer, WebhookEventSerializer,
-    MpesaSettingsSerializer, ExchangeRateAPISettingsSerializer, PaystackSettingsSerializer
-)
-from core.base_viewsets import BaseModelViewSet
-from core.response import APIResponse, get_correlation_id
-from core.audit import AuditTrail
+from .models import ExchangeRateAPISettings
+from .serializers import ExchangeRateAPISettingsSerializer
 import logging
 
 logger = logging.getLogger(__name__)
 
-class KRASettingsViewSet(BaseModelViewSet):
-    """ViewSet to manage KRA eTIMS settings with RBAC protection."""
-    serializer_class = KRASettingsSerializer
-    permission_classes = [IsAuthenticated]
-    queryset = KRASettings.objects.all()
 
-    def get_permissions(self):
-        # Only admins can create/update/delete settings. Authenticated users can read.
-        if self.action in ['list', 'retrieve', 'current']:
-            return [IsAuthenticated()]
-        return [IsAdminUser()]
-
-    def perform_create(self, serializer):
-        instance = serializer.save()
-        return instance
-
-    @action(detail=False, methods=['get'])
-    def current(self, request):
-        obj = KRASettings.objects.order_by('-updated_at').first()
-        if not obj:
-            return Response({
-                'mode': 'sandbox',
-                'base_url': 'https://api.sandbox.kra.go.ke',
-                'token_path': '/oauth/token',
-                'invoice_path': '/etims/v1/invoices',
-                'invoice_status_path': '/etims/v1/invoices/status',
-            })
-        return Response(self.get_serializer(obj).data)
-
-    @action(detail=False, methods=['post'])
-    def validate_pin(self, request):
-        """Validate a KRA PIN via KRAService."""
-        try:
-            pin = request.data.get('pin') or request.data.get('kra_pin')
-            if not pin:
-                return Response({'detail': 'pin is required'}, status=status.HTTP_400_BAD_REQUEST)
-            from integrations.services import KRAService  # type: ignore
-            kra = KRAService()
-            ok, result = kra.validate_pin(pin)
-            if ok:
-                return Response({'success': True, 'result': result})
-            return Response({'success': False, 'error': result}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as exc:
-            return Response({'success': False, 'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-class MpesaSettingsViewSet(viewsets.ModelViewSet):
-    """ViewSet to manage M-Pesa settings with RBAC protection."""
-    serializer_class = MpesaSettingsSerializer
-    permission_classes = [IsAuthenticated]
-    queryset = MpesaSettings.objects.all()
-
-    def get_permissions(self):
-        # Only admins can create/update/delete settings. Authenticated users can read.
-        if self.action in ['list', 'retrieve', 'current']:
-            return [IsAuthenticated()]
-        return [IsAdminUser()]
-
-    @action(detail=False, methods=['get'])
-    def current(self, request):
-        obj = MpesaSettings.objects.order_by('-updated_at').first() if hasattr(MpesaSettings, 'updated_at') else MpesaSettings.objects.first()
-        if not obj:
-            # Provide safe defaults from config service
-            from .services.config_service import IntegrationConfigService
-            return Response(IntegrationConfigService.DEFAULT_MPESA_CONFIG)
-        return Response(self.get_serializer(obj).data)
-
-
-class PaystackSettingsViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet to manage Paystack payment gateway settings.
-    Provides endpoints to configure API credentials and test connectivity.
-    """
-    serializer_class = PaystackSettingsSerializer
-    permission_classes = [IsAuthenticated]
-    queryset = PaystackSettings.objects.all()
-
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'current', 'status']:
-            return [IsAuthenticated()]
-        return [IsAdminUser()]
-
-    @action(detail=False, methods=['get'])
-    def current(self, request):
-        """Get the currently configured Paystack settings."""
-        obj = PaystackSettings.objects.order_by('-updated_at').first()
-        if not obj:
-            return Response({
-                'is_test_mode': True,
-                'base_url': 'https://api.paystack.co',
-                'default_currency': 'KES',
-                'enabled_channels': ['card', 'bank_transfer', 'mobile_money'],
-                'is_configured': False,
-            })
-        data = self.get_serializer(obj).data
-        data['is_configured'] = True
-        return Response(data)
-
-    @action(detail=False, methods=['get'])
-    def status(self, request):
-        """Check Paystack connection status and fetch totals."""
-        try:
-            from integrations.payments.paystack_payment import PaystackPaymentService
-            result = PaystackPaymentService.get_transaction_totals()
-
-            if result.get('success'):
-                return Response({
-                    'is_configured': True,
-                    'is_connected': True,
-                    'total_transactions': result.get('total_transactions', 0),
-                    'total_volume': float(result.get('total_volume', 0)),
-                    'pending_transfers': float(result.get('pending_transfers', 0)),
-                })
-            else:
-                return Response({
-                    'is_configured': True,
-                    'is_connected': False,
-                    'error': result.get('error', 'Connection failed'),
-                })
-        except Exception as exc:
-            logger.error(f"Error checking Paystack status: {exc}")
-            return Response({
-                'is_configured': False,
-                'is_connected': False,
-                'error': str(exc)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, methods=['post'])
-    def test_connection(self, request):
-        """Test Paystack API connection with current credentials."""
-        try:
-            from integrations.payments.paystack_payment import PaystackPaymentService
-            result = PaystackPaymentService.get_transaction_totals()
-
-            if result.get('success'):
-                return Response({
-                    'success': True,
-                    'message': 'Paystack connection successful',
-                    'total_transactions': result.get('total_transactions', 0),
-                })
-            else:
-                return Response({
-                    'success': False,
-                    'message': 'Connection failed',
-                    'error': result.get('error'),
-                }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as exc:
-            logger.error(f"Error testing Paystack connection: {exc}")
-            return Response({
-                'success': False,
-                'error': str(exc)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, methods=['get'])
-    def banks(self, request):
-        """Get list of supported banks for bank transfers."""
-        try:
-            from integrations.payments.paystack_payment import PaystackPaymentService
-            country = request.query_params.get('country', 'kenya')
-            result = PaystackPaymentService.list_banks(country)
-
-            if result.get('success'):
-                return Response({
-                    'success': True,
-                    'banks': result.get('banks', []),
-                })
-            else:
-                return Response({
-                    'success': False,
-                    'error': result.get('error'),
-                }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as exc:
-            logger.error(f"Error fetching Paystack banks: {exc}")
-            return Response({
-                'success': False,
-                'error': str(exc)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class WebhookEndpointViewSet(viewsets.ModelViewSet):
-    serializer_class = WebhookEndpointSerializer
-    permission_classes = [IsAuthenticated]
-    queryset = WebhookEndpoint.objects.all()
-
-
-class WebhookEventViewSet(viewsets.ModelViewSet):
-    serializer_class = WebhookEventSerializer
-    permission_classes = [IsAuthenticated]
-    queryset = WebhookEvent.objects.select_related('endpoint').all()
-
-    @action(detail=True, methods=['post'])
-    def deliver(self, request, pk=None):
-        try:
-            from integrations.services import WebhookDeliveryService  # type: ignore
-            event = self.get_object()
-            job_id = WebhookDeliveryService.schedule_delivery(event.pk)
-            return Response({'success': True, 'message': 'Delivery scheduled', 'job_id': job_id})
-        except Exception as exc:
-            return Response({'success': False, 'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, methods=['post'])
-    def certificate(self, request):
-        """Retrieve a KRA tax certificate for a given type and period."""
-        try:
-            tax_type = request.data.get('type') or request.data.get('tax_type')
-            period = request.data.get('period')
-            if not tax_type or not period:
-                return Response({'detail': 'type and period are required'}, status=status.HTTP_400_BAD_REQUEST)
-            from integrations.services import KRAService  # type: ignore
-            kra = KRAService()
-            ok, result = kra.get_tax_certificate(tax_type, period)
-            if ok:
-                return Response({'success': True, 'result': result})
-            return Response({'success': False, 'error': result}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as exc:
-            return Response({'success': False, 'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, methods=['post'])
-    def compliance(self, request):
-        """Check KRA compliance for a PIN."""
-        try:
-            pin = request.data.get('pin') or request.data.get('kra_pin')
-            if not pin:
-                return Response({'detail': 'pin is required'}, status=status.HTTP_400_BAD_REQUEST)
-            from integrations.services import KRAService  # type: ignore
-            kra = KRAService()
-            ok, result = kra.check_compliance(pin)
-            if ok:
-                return Response({'success': True, 'result': result})
-            return Response({'success': False, 'error': result}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as exc:
-            return Response({'success': False, 'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, methods=['post'])
-    def sync(self, request):
-        """Sync tax data within a date range."""
-        try:
-            start_date = request.data.get('start_date')
-            end_date = request.data.get('end_date')
-            if not start_date or not end_date:
-                return Response({'detail': 'start_date and end_date are required'}, status=status.HTTP_400_BAD_REQUEST)
-            from integrations.services import KRAService  # type: ignore
-            kra = KRAService()
-            ok, result = kra.sync_tax_data(start_date, end_date)
-            if ok:
-                return Response({'success': True, 'result': result})
-            return Response({'success': False, 'error': result}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as exc:
-            return Response({'success': False, 'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def integration_health_check(request):
+    """Generic health summary for the ERP's retained integrations (outbox + FX)."""
+    from .models import EventOutbox
+    pending = EventOutbox.objects.filter(status=EventOutbox.STATUS_PENDING).count()
+    failed = EventOutbox.objects.filter(status=EventOutbox.STATUS_FAILED).count()
+    fx = ExchangeRateAPISettings.objects.filter(is_active=True).first()
+    return Response({
+        'status': 'ok',
+        'outbox': {'pending': pending, 'failed': failed},
+        'exchange_rate': {
+            'configured': bool(fx),
+            'last_fetch_at': fx.last_fetch_at.isoformat() if fx and fx.last_fetch_at else None,
+            'last_fetch_status': fx.last_fetch_status if fx else None,
+        },
+    })
 
 
 class ExchangeRateAPISettingsViewSet(viewsets.ModelViewSet):
@@ -370,9 +132,6 @@ class ExchangeRateAPISettingsViewSet(viewsets.ModelViewSet):
         """Get the latest exchange rates from local database."""
         try:
             from core.models import ExchangeRate
-            today = timezone.now().date()
-
-            # Get rates for today or the most recent date
             rates = ExchangeRate.objects.filter(
                 source='api'
             ).order_by('-effective_date', 'from_currency', 'to_currency')
