@@ -118,6 +118,22 @@ class Claims:
     def outlet_id(self) -> str:
         return self.raw.get("outlet_id", "") or ""
 
+    @property
+    def outlet_code(self) -> str:
+        return self.raw.get("outlet_code", "") or ""
+
+    @property
+    def outlet_use_case(self) -> str:
+        return self.raw.get("outlet_use_case", "") or ""
+
+    @property
+    def is_hq_user(self) -> bool:
+        return bool(self.raw.get("is_hq_user"))
+
+    def can_access_all_outlets(self) -> bool:
+        """HQ users, platform owners and superusers bypass outlet-scoped filtering."""
+        return self.is_hq_user or self.is_platform_owner or self.is_superuser
+
     # authorization
     @property
     def roles(self) -> list[str]:
@@ -144,7 +160,32 @@ class Claims:
     def sub_features(self) -> list[str]:
         return list(self.raw.get("sub_features", []) or [])
 
+    @property
+    def sub_limits(self) -> dict[str, Any]:
+        return dict(self.raw.get("sub_limits", {}) or {})
+
+    @property
+    def sub_expires(self) -> int:
+        try:
+            return int(self.raw.get("sub_expires", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    @property
+    def billing_mode(self) -> str:
+        return (self.raw.get("billing_mode", "") or "").lower()
+
+    @property
+    def is_demo(self) -> bool:
+        return bool(self.raw.get("is_demo"))
+
+    def has_feature(self, code: str) -> bool:
+        return code in self.sub_features
+
     def is_subscription_active(self) -> bool:
+        # service_charge billing and demo tenants bypass subscription gating entirely.
+        if self.billing_mode == "service_charge" or self.is_demo:
+            return True
         # Absence of subscription claims is treated as active so non-gated tenants
         # (and tokens minted before subscription enrichment) are not blocked.
         if "sub_status" not in self.raw:
@@ -191,7 +232,42 @@ def get_or_provision_user(claims: Claims):
         user.is_staff = True
         user.save(update_fields=["is_superuser", "is_staff"])
 
+    _assign_service_roles(user, claims)
     return user
+
+
+# Map global JWT roles → ERP-local Django group (Layer-3 service role) per Trinity §JIT.
+_GLOBAL_TO_ERP_ROLE = {
+    "superuser": "erp_admin",
+    "admin": "erp_admin",
+    "manager": "erp_manager",
+    "staff": "erp_staff",
+    "member": "erp_staff",
+}
+
+
+def _assign_service_roles(user, claims: "Claims") -> None:
+    """Ensure the SSO user has at least one ERP service-level role (Django group).
+
+    Idempotent; only adds a default role when the user has no ERP group yet, so manual
+    role changes by an admin are not overwritten on every request.
+    """
+    try:
+        from django.contrib.auth.models import Group
+
+        if user.groups.exists():
+            return
+        target = "erp_admin" if (claims.is_superuser or claims.is_platform_owner) else None
+        if target is None:
+            for r in claims.roles:
+                if r in _GLOBAL_TO_ERP_ROLE:
+                    target = _GLOBAL_TO_ERP_ROLE[r]
+                    break
+        target = target or "erp_staff"
+        group, _ = Group.objects.get_or_create(name=target)
+        user.groups.add(group)
+    except Exception as exc:  # never block auth on role assignment
+        logger.warning("JIT role assignment failed for %s: %s", getattr(user, "email", "?"), exc)
 
 
 # ---------------------------------------------------------------------------

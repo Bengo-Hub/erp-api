@@ -60,6 +60,44 @@ class SSOAuthenticationMiddleware:
         return self.get_response(request)
 
 
+class TenantOutletContextMiddleware:
+    """Resolve tenant + outlet context onto the request from claims/headers.
+
+    - ``request.tenant_id`` — platform owners may override via ``?tenantId=`` (see
+      shared-docs Platform Owner Pattern); otherwise from claims / ``X-Tenant-ID``.
+    - ``request.outlet_id`` — from ``X-Outlet-ID`` header (optional; HQ/platform users
+      typically omit it). Outlet filtering is ALWAYS optional in handlers.
+    - Lazily ensures the local ``AuthTenant`` shadow exists (JIT tenant sync) so
+      tenant-scoped HR data has a valid tenant reference.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        claims: Claims | None = getattr(request, "auth_claims", None)
+        # Outlet (header-only, optional)
+        request.outlet_id = request.META.get("HTTP_X_OUTLET_ID", "") or (claims.outlet_id if claims else "")
+
+        # Tenant resolution with platform-owner override
+        tenant_id = ""
+        if claims is not None:
+            if claims.is_platform_owner:
+                tenant_id = request.GET.get("tenantId", "") or request.META.get("HTTP_X_TENANT_ID", "") or claims.tenant_id
+            else:
+                tenant_id = claims.tenant_id or request.META.get("HTTP_X_TENANT_ID", "")
+        request.tenant_id = tenant_id
+
+        # JIT tenant shadow (best-effort, gated by SSO; never blocks the request)
+        if claims is not None and getattr(settings, "SSO_ENABLED", False) and (claims.tenant_slug or tenant_id):
+            try:
+                from integrations.tenant_sync import ensure_tenant
+                ensure_tenant(slug=claims.tenant_slug, tenant_id=tenant_id, request=request)
+            except Exception:  # pragma: no cover - sync is best-effort
+                pass
+        return self.get_response(request)
+
+
 class SubscriptionGatingMiddleware:
     """Block mutations when the tenant's subscription is inactive."""
 
