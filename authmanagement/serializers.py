@@ -15,7 +15,7 @@ import os,json
 from django.http import HttpRequest
 import threading
 from django.contrib.auth import get_user_model
-from notifications.services import EmailService
+from integrations.notifications_client import EmailService
 from django.contrib.auth.models import Group, Permission
 from django.db.models import Q
 from django.db import transaction

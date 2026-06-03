@@ -8,7 +8,7 @@ import string
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.conf import settings
-from notifications.services.email_service import EmailService
+from integrations.notifications_client import EmailService
 
 User = get_user_model()
 

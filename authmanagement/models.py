@@ -42,6 +42,12 @@ class CustomUserManager(BaseUserManager):
 class CustomUser(AbstractUser):
     username = models.CharField(
         max_length=150, unique=True, blank=True, null=True)
+    # Auth-service (SSO) subject identifier. Links this local shadow record to the
+    # canonical user in auth-service. Populated on JIT provisioning during SSO login.
+    external_id = models.CharField(
+        max_length=64, unique=True, blank=True, null=True, db_index=True,
+        help_text="Auth-service user UUID (JWT 'sub'). Set when the user is provisioned via SSO."
+    )
     email = models.EmailField(unique=True,verbose_name="Official Email")
     first_name = models.CharField(max_length=30, blank=False)
     last_name = models.CharField(max_length=150, blank=False)

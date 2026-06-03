@@ -1,11 +1,13 @@
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-from ecommerce.pos import routing as pos_routing
+from hrm.payroll import routing as payroll_routing
+from task_management import routing as task_routing
 
 application = ProtocolTypeRouter({
     'websocket': AuthMiddlewareStack(
         URLRouter(
-            pos_routing.websocket_urlpatterns
+            payroll_routing.websocket_urlpatterns +
+            task_routing.websocket_urlpatterns
         )
     ),
-}) 
+})

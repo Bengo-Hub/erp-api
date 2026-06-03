@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import AddressBook, DeliveryRegion, AddressValidation
 from django.contrib.auth import get_user_model
-from crm.contacts.models import Contact
 
 User = get_user_model()
 
@@ -10,14 +9,6 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email']
-
-
-class ContactSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    
-    class Meta:
-        model = Contact
-        fields = ['id', 'user', 'first_name', 'last_name', 'email', 'phone']
 
 
 class DeliveryRegionSerializer(serializers.ModelSerializer):

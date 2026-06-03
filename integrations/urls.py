@@ -1,43 +1,13 @@
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
-    KRASettingsViewSet, WebhookEndpointViewSet, WebhookEventViewSet,
-    MpesaSettingsViewSet, ExchangeRateAPISettingsViewSet, PaystackSettingsViewSet
-)
-from .health_views import (
-    integration_health_check, mpesa_health_check, kra_health_check,
-    sms_health_check, email_health_check, clear_integration_cache,
-    integration_summary, get_integration_urls, sync_integration_urls
-)
-from .pos_bridge_views import pos_clock_in, pos_clock_out
-# Notification-related views moved to centralized notifications app
+from .views import ExchangeRateAPISettingsViewSet, integration_health_check
 
-# Create router for ViewSets
+# Payment/KRA/webhook/pos-bridge integrations moved to treasury-api / pos-api.
+# The ERP retains only the generic event outbox + FX (exchange-rate) integration.
 router = DefaultRouter()
-router.register(r'kra-settings', KRASettingsViewSet, basename='kra-settings')
-router.register(r'mpesa-settings', MpesaSettingsViewSet, basename='mpesa-settings')
-router.register(r'webhook-endpoints', WebhookEndpointViewSet, basename='webhook-endpoints')
-router.register(r'webhook-events', WebhookEventViewSet, basename='webhook-events')
 router.register(r'exchange-rate-api', ExchangeRateAPISettingsViewSet, basename='exchange-rate-api')
-router.register(r'paystack-settings', PaystackSettingsViewSet, basename='paystack-settings')
 
 urlpatterns = [
-    # Include router URLs
     path('', include(router.urls)),
-    
-    # Health check endpoints
     path('health/', integration_health_check, name='integration-health'),
-    path('health/mpesa/', mpesa_health_check, name='mpesa-health'),
-    path('health/kra/', kra_health_check, name='kra-health'),
-    path('health/sms/', sms_health_check, name='sms-health'),
-    path('health/email/', email_health_check, name='email-health'),
-    path('cache/clear/', clear_integration_cache, name='clear-integration-cache'),
-    path('summary/', integration_summary, name='integration-summary'),
-    # URL configuration endpoints
-    path('urls/', get_integration_urls, name='integration-urls'),
-    path('urls/sync/', sync_integration_urls, name='sync-integration-urls'),
-    # POS → ERP clock-in bridge (S2S, X-API-Key auth)
-    path('pos/clock-in/', pos_clock_in, name='pos-clock-in'),
-    path('pos/clock-out/', pos_clock_out, name='pos-clock-out'),
 ]

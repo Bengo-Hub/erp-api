@@ -41,7 +41,7 @@ def send_email_async(self, subject, body, recipient_list, attachments=None, user
     """
     Task to send emails asynchronously using centralized notifications
     """
-    from notifications.services import EmailService
+    from integrations.notifications_client import EmailService
     
     task_id = self.request.id
     task = None
@@ -122,18 +122,9 @@ def generate_report_async(self, report_type, params, user_id):
         
         update_task_progress(task_id, progress=30, message="Loading report data")
         
-        # Implement report generation logic based on report_type
+        # HR/ops report generation only. Financial reports now live in treasury-api,
+        # inventory in inventory-api, and sales in ordering-backend (or Superset BI).
         result = None
-        if report_type == "financial":
-            from finance.accounts.reports import generate_financial_report
-            result = generate_financial_report(params)
-        elif report_type == "inventory":
-            from ecommerce.stockinventory.reports import generate_inventory_report
-            result = generate_inventory_report(params)
-        elif report_type == "sales":
-            from ecommerce.order.reports import generate_sales_report
-            result = generate_sales_report(params)
-        # Add other report types as needed
         
         update_task_progress(task_id, progress=80, message="Finalizing report")
         
