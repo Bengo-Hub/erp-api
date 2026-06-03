@@ -201,90 +201,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f'   ⚠️  ESS settings: {str(e)}'))
 
     def _create_tax_rates(self):
-        """Create default tax categories and rates using finance.taxes models"""
-        self.stdout.write('\n4️⃣  Creating Default Tax Categories & Rates...')
+        """Tax categories/rates moved to treasury-api during the ERP decomposition.
 
-        try:
-            from finance.taxes.models import Tax, TaxCategory
-            from business.models import Bussiness
-
-            # Get or create a default business for system-wide taxes
-            business = Bussiness.objects.first()
-            if not business:
-                self.stdout.write(self.style.WARNING('   ⚠️  No business found. Skipping tax rates.'))
-                return
-
-            # Create tax categories
-            categories_data = [
-                {'name': 'VAT', 'description': 'Value Added Tax - Standard VAT rates'},
-                {'name': 'Withholding Tax', 'description': 'Withholding tax deductions'},
-                {'name': 'Excise Duty', 'description': 'Excise duties on specific goods'},
-                {'name': 'Corporate Tax', 'description': 'Corporate income tax rates'},
-                {'name': 'Payroll Tax', 'description': 'Employment-related taxes (PAYE, NHIF, NSSF)'},
-                {'name': 'Customs Duty', 'description': 'Import and export duties'},
-            ]
-
-            created_categories = {}
-            for cat_data in categories_data:
-                category, created = TaxCategory.objects.get_or_create(
-                    name=cat_data['name'],
-                    business=business,
-                    defaults={'description': cat_data['description'], 'is_active': True}
-                )
-                created_categories[cat_data['name']] = category
-                if created:
-                    self.stdout.write(f'   ✅ Created category: {category.name}')
-                else:
-                    self.stdout.write(f'   ✅ Category exists: {category.name}')
-
-            # Create tax rates with proper categories
-            tax_rates_data = [
-                # VAT rates (Kenya)
-                {'name': 'VAT 16%', 'rate': Decimal('16.0'), 'category': 'VAT', 'is_default': True, 'is_vat': True, 'kra_code': 'A', 'description': 'Standard VAT rate'},
-                {'name': 'VAT Zero Rated', 'rate': Decimal('0.0'), 'category': 'VAT', 'is_vat': True, 'kra_code': 'B', 'description': 'Zero-rated supplies (exports, etc)'},
-                {'name': 'VAT Exempt', 'rate': Decimal('0.0'), 'category': 'VAT', 'is_vat': False, 'kra_code': 'E', 'description': 'VAT exempt supplies'},
-                {'name': 'VAT 8%', 'rate': Decimal('8.0'), 'category': 'VAT', 'is_vat': True, 'kra_code': 'C', 'description': 'Reduced VAT rate (petroleum products)'},
-                # Withholding Tax rates
-                {'name': 'WHT 5%', 'rate': Decimal('5.0'), 'category': 'Withholding Tax', 'is_withholding': True, 'description': 'Standard withholding tax on services'},
-                {'name': 'WHT 3%', 'rate': Decimal('3.0'), 'category': 'Withholding Tax', 'is_withholding': True, 'description': 'Withholding tax on management fees'},
-                {'name': 'WHT 10%', 'rate': Decimal('10.0'), 'category': 'Withholding Tax', 'is_withholding': True, 'description': 'Withholding tax on dividends'},
-                {'name': 'WHT 15%', 'rate': Decimal('15.0'), 'category': 'Withholding Tax', 'is_withholding': True, 'description': 'Withholding tax on royalties'},
-                {'name': 'WHT 20%', 'rate': Decimal('20.0'), 'category': 'Withholding Tax', 'is_withholding': True, 'description': 'Withholding tax on non-residents'},
-                # Payroll taxes
-                {'name': 'PAYE', 'rate': Decimal('30.0'), 'category': 'Payroll Tax', 'description': 'Pay As You Earn - Top bracket'},
-                {'name': 'NHIF', 'rate': Decimal('0.0'), 'category': 'Payroll Tax', 'description': 'National Hospital Insurance Fund (fixed amounts)'},
-                {'name': 'NSSF Tier I', 'rate': Decimal('6.0'), 'category': 'Payroll Tax', 'description': 'National Social Security Fund - Tier I'},
-                {'name': 'NSSF Tier II', 'rate': Decimal('6.0'), 'category': 'Payroll Tax', 'description': 'National Social Security Fund - Tier II'},
-                {'name': 'Housing Levy', 'rate': Decimal('1.5'), 'category': 'Payroll Tax', 'description': 'Affordable Housing Levy'},
-                # Corporate tax
-                {'name': 'Corporate Tax 30%', 'rate': Decimal('30.0'), 'category': 'Corporate Tax', 'description': 'Standard corporate income tax'},
-                {'name': 'Corporate Tax 25%', 'rate': Decimal('25.0'), 'category': 'Corporate Tax', 'description': 'Newly listed companies (first 5 years)'},
-            ]
-
-            for tax_data in tax_rates_data:
-                category = created_categories.get(tax_data.pop('category'))
-                tax, created = Tax.objects.get_or_create(
-                    name=tax_data['name'],
-                    business=business,
-                    defaults={
-                        'category': category,
-                        'rate': tax_data['rate'],
-                        'is_default': tax_data.get('is_default', False),
-                        'is_vat': tax_data.get('is_vat', False),
-                        'is_withholding': tax_data.get('is_withholding', False),
-                        'kra_code': tax_data.get('kra_code'),
-                        'description': tax_data.get('description'),
-                        'calculation_type': 'percentage',
-                        'is_active': True,
-                    }
-                )
-                if created:
-                    self.stdout.write(f'   ✅ Created tax rate: {tax.name} ({tax.rate}%)')
-                else:
-                    self.stdout.write(f'   ✅ Tax rate exists: {tax.name}')
-
-        except Exception as e:
-            self.stdout.write(self.style.WARNING(f'   ⚠️  Tax rates: {str(e)}'))
+        The ERP (HR + internal-ops) no longer owns finance/tax data, so tax seeding
+        is now performed by treasury-api. This is intentionally a no-op."""
+        self.stdout.write('\n4️⃣  Tax categories & rates → owned by treasury-api (skipped).')
 
     def _seed_core_reference_data(self):
         """Seed essential core reference data"""

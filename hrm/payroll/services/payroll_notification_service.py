@@ -9,7 +9,7 @@ from decimal import Decimal
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from notifications.services import NotificationService
+from integrations.notifications_client import NotificationService
 
 logger = logging.getLogger('payroll')
 User = get_user_model()

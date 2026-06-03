@@ -3,8 +3,6 @@ from rest_framework import viewsets, filters
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 
-from crm.contacts.utils import ImportContacts
-from ecommerce.product.functions import ImportProducts
 from .serializers import *
 from hrm.payroll_settings.serializers import *
 from hrm.payroll_settings.models import *
@@ -86,14 +84,8 @@ class UploadEmployData(APIView):
             file_name = default_storage.save(file_obj.name, ContentFile(file_obj.read()))
             path = default_storage.path(file_name)
             
-            # Process the file based on fileType
-            if fileType == 'products':
-                import_response = ImportProducts(request, path, organisation).save_product()
-            elif fileType == 'contacts':
-                import_response = ImportContacts(request, path, organisation).save_contact()
-            else:
-                # Default to employee import
-                import_response = EmployeeDataImport(request=request, path=path, organisation=organisation).import_employee_data()
+            # Employee import (product/contact imports moved to inventory-api / marketflow)
+            import_response = EmployeeDataImport(request=request, path=path, organisation=organisation).import_employee_data()
             
             return Response({'message': import_response}, status=status.HTTP_201_CREATED)
         

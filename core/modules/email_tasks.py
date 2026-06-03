@@ -6,7 +6,7 @@ Now using centralized notifications app.
 from celery import shared_task
 import logging
 from django.core.cache import cache
-from notifications.services import EmailService
+from integrations.notifications_client import EmailService
 from datetime import datetime
 
 logger = logging.getLogger('ditapi_logger')
@@ -83,7 +83,7 @@ def send_bulk_emails(email_data_list):
     Returns:
         Dictionary with results from all email sends
     """
-    from notifications.services import EmailService
+    from integrations.notifications_client import EmailService
     
     email_service = EmailService()
     result = email_service.send_bulk_email(
@@ -111,7 +111,7 @@ def send_template_email(template_key, context, recipients, attachments=None, cc=
         Dictionary with email sending result
     """
     try:
-        from notifications.services import EmailService
+        from integrations.notifications_client import EmailService
         
         email_service = EmailService()
         result = email_service.send_template_email(

@@ -1,6 +1,6 @@
 from datetime import timedelta, timezone
 from celery import shared_task
-from notifications.services import EmailService
+from integrations.notifications_client import EmailService
 from hrm.employees.models import Contract
 
 

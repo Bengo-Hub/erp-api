@@ -7,7 +7,7 @@ from business.models import (
 )
 from authmanagement.models import CustomUser
 from business.models import BusinessLocation, Branch, Bussiness
-from finance.taxes.models import Tax, TaxCategory
+# finance.taxes (Tax/TaxCategory) moved to treasury-api during decomposition.
 User = get_user_model()
 
 class Command(BaseCommand):
@@ -64,8 +64,6 @@ class Command(BaseCommand):
         """Clear existing data."""
         Branch.objects.all().delete()
         TaxRates.objects.all().delete()
-        Tax.objects.all().delete()
-        TaxCategory.objects.all().delete()
         ProductSettings.objects.all().delete()
         SaleSettings.objects.all().delete()
         PrefixSettings.objects.all().delete()
@@ -189,7 +187,10 @@ class Command(BaseCommand):
         return business, location, main_branch
 
     def create_tax_rates(self, business):
-        """Create tax rates for the business (both TaxRates and Tax models)."""
+        """Seed the ERP-local TaxRates reference (business.models).
+
+        The centralized finance Tax model moved to treasury-api; only the simple
+        legacy TaxRates reference (used by some HR/ops reports) is seeded here."""
         tax_rates_data = [
             {'tax_name': 'VAT', 'percentage': 16.0, 'tax_number': 'T001', 'is_vat': True, 'is_withholding': False},
             {'tax_name': 'Withholding Tax', 'percentage': 5.0, 'tax_number': 'T002', 'is_vat': False, 'is_withholding': True},
@@ -199,19 +200,8 @@ class Command(BaseCommand):
             {'tax_name': 'NSSF', 'percentage': 6.0, 'tax_number': 'T006', 'is_vat': False, 'is_withholding': False}
         ]
 
-        # Create or get default tax category for finance.taxes.Tax model
-        tax_category, cat_created = TaxCategory.objects.get_or_create(
-            name='Sales Tax',
-            business=business,
-            defaults={'description': 'Default tax category for sales taxes', 'is_active': True}
-        )
-        if cat_created:
-            self.stdout.write(self.style.SUCCESS('Created tax category: Sales Tax'))
-
         tax_rates = []
-        taxes = []  # For finance.taxes.Tax model
         for tax_data in tax_rates_data:
-            # Create TaxRates (business.models) - legacy model
             tax_rate = TaxRates.objects.filter(tax_number=tax_data['tax_number']).first()
             created = False
             if not tax_rate:
@@ -239,27 +229,6 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(f'Created tax rate: {tax_rate.tax_name} ({tax_rate.percentage}%)')
 
-            # Create Tax (finance.taxes.models) - new centralized model
-            tax, tax_created = Tax.objects.get_or_create(
-                name=tax_data['tax_name'],
-                business=business,
-                defaults={
-                    'category': tax_category,
-                    'calculation_type': 'percentage',
-                    'rate': tax_data['percentage'],
-                    'tax_number': tax_data['tax_number'],
-                    'is_vat': tax_data.get('is_vat', False),
-                    'is_withholding': tax_data.get('is_withholding', False),
-                    'is_default': tax_data['tax_name'] == 'VAT',  # Set VAT as default
-                    'is_active': True
-                }
-            )
-            taxes.append(tax)
-            if tax_created:
-                self.stdout.write(f'Created Tax (finance): {tax.name} ({tax.rate}%)')
-
-        # Store taxes in instance for use by create_sale_settings
-        self._taxes = taxes
         return tax_rates
 
     def create_product_settings(self, business):
@@ -281,18 +250,11 @@ class Command(BaseCommand):
         return [product_settings]
 
     def create_sale_settings(self, business, tax_rates):
-        """Create sale settings for the business."""
-        # Use Tax model (finance.taxes) for default_tax, not TaxRates
-        default_tax = None
-        if hasattr(self, '_taxes') and self._taxes:
-            # Find VAT tax (marked as default)
-            default_tax = next((t for t in self._taxes if t.is_vat), self._taxes[0] if self._taxes else None)
-
+        """Create sale settings for the business (default_tax now owned by treasury-api)."""
         sale_settings, created = SaleSettings.objects.get_or_create(
             business=business,
             defaults={
                 'default_discount': 0.00,
-                'default_tax': default_tax
             }
         )
 

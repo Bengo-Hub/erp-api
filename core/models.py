@@ -4,8 +4,6 @@ from django.utils import timezone
 from django.core.validators import MinLengthValidator
 from django.contrib.auth import get_user_model
 from business.models import Bussiness,Branch
-from crm.contacts.models import Contact
-from ecommerce.stockinventory.models import StockInventory
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from decimal import Decimal

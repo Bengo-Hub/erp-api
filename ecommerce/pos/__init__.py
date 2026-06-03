@@ -1,1 +1,0 @@
-# Import payment view functions
