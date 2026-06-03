@@ -19,7 +19,7 @@ from django.utils.http import urlsafe_base64_decode,urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.response import Response
 from django.conf import settings
-from notifications.services import EmailService
+from integrations.notifications_client import EmailService
 from django.http import Http404
 #from django.contrib.sites.models import Site
 from django.shortcuts import redirect,render

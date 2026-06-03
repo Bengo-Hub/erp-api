@@ -4,8 +4,6 @@ from django.views import View
 from rest_framework import viewsets
 from rest_framework import status
 from business.models import Bussiness
-from crm.contacts.utils import ImportContacts
-from ecommerce.product.functions import ImportProducts
 from hrm.employees.utils import EmployeeDataImport
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -65,10 +63,6 @@ class UploadData(APIView):
             res=None
             if fileType =='employees':
                res = EmployeeDataImport(request,path,organisation).import_employee_data()
-            if fileType =='products':
-               res = ImportProducts(request,path,organisation).save_product()
-            if fileType =='contacts':
-               res = ImportContacts(request,path,organisation).save_contact()
 
             # Delete the file after successful import
             if os.path.exists(path):

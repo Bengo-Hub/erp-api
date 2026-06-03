@@ -81,71 +81,78 @@ INSTALLED_APPS = [
     'tinymce',
     'django_celery_beat',  # Celery Beat periodic task scheduler
     #custom apps
-    ##auth
+    ##auth (SSO client + thin CustomUser shadow)
     'authmanagement',
-    'assets',
     'core',
     'business',
-    'core_orders',
     'approvals',
     'addresses',
-    
+
     # Centralized system apps
     'task_management',
     'error_handling',
     'caching',
-    ## ecommerce
-    'ecommerce.cart',
-    'ecommerce.pos',
-    'ecommerce.product',
-    'ecommerce.order',
-    'ecommerce.stockinventory',
-    'ecommerce.vendor',
-    'ecommerce.analytics',
-    ###CRM
-    'crm.campaigns',
-    'crm.contacts',
-    'crm.leads',
-    'crm.pipeline',
-    ###Finance
-    'finance.accounts',
-    'finance.expenses',
-    'finance.taxes',
-    # 'finance.paymentApps',  # centralized into integrations + finance.payment
-    'finance.payment',
-    'finance.budgets',
-    'finance.cashflow',
-    'finance.reconciliation',
-    'finance.invoicing',  # NEW: Invoice management (Zoho-like)
-    'finance.quotations',  # NEW: Quotation to Invoice workflow
-    ###Manufacturing
-    'manufacturing',
-    ##Integrations
+    ## Integrations (generic event outbox + FX fetch + S2S client)
     'integrations',
-    'notifications',
-    ###HRM
+    ###HRM (the ERP's new identity = HR + internal-ops service)
     'hrm.appraisals',
     'hrm.employees',
     'hrm.attendance',
     'hrm.performance',
     'hrm.recruitment',
     'hrm.training',
-    #'hrm.recruitment',
     'hrm.leave',
     'hrm.payroll',
     'hrm.payroll_settings',
-    ## PROCUREMENT
-    'procurement.purchases',
-    'procurement.orders',
-    'procurement.requisitions',
-    'procurement.supplier_performance',
-    'procurement.contracts',
 
+    # ── Decomposed out of the ERP (see backup/pre-decomposition-20260603) ──
+    # products/stock/vendor/procurement/manufacturing/asset-register → inventory-api
+    # finance/payments/tax/budgets/reconciliation/asset-depreciation   → treasury-api
+    # crm (contacts/leads/pipeline/campaigns)                          → marketflow
+    # cart/order                                                       → ordering-backend
+    # pos                                                              → pos-api
+    # notifications                                                    → notifications-api
+    # core_orders (BaseOrder)                                          → retired
 ]
 
 AUTH_USER_MODEL = 'authmanagement.CustomUser'
 SCHEDULER_API_ENABLED = True
 SITE_ID = 1
+
+# ---------------------------------------------------------------------------
+# Platform microservice integration (SSO, subscription gating, S2S, events)
+# See shared-docs/{sso-integration-guide,subscription-gating-guide,
+#   microservice-architecture,event-architecture}.md. All secrets via env only.
+# ---------------------------------------------------------------------------
+# SSO: validate auth-service RS256 JWTs via JWKS and JIT-provision local users.
+SSO_ENABLED = os.getenv('SSO_ENABLED', 'false').lower() == 'true'
+SUBSCRIPTION_GATING_ENABLED = os.getenv('SUBSCRIPTION_GATING_ENABLED', 'false').lower() == 'true'
+AUTH_API_URL = os.getenv('AUTH_API_URL', 'http://auth-api.auth.svc.cluster.local:4101')
+AUTH_JWKS_URL = os.getenv('AUTH_JWKS_URL', f"{AUTH_API_URL.rstrip('/')}/.well-known/jwks.json")
+AUTH_AUDIENCE = os.getenv('AUTH_AUDIENCE', '')
+AUTH_ISSUER = os.getenv('AUTH_ISSUER', '')
+AUTH_JWKS_TTL = int(os.getenv('AUTH_JWKS_TTL', '600'))
+AUTH_JWT_LEEWAY = int(os.getenv('AUTH_JWT_LEEWAY', '30'))
+
+# Service-to-service: internal K8s DNS base URLs + shared internal key.
+INTERNAL_SERVICE_KEY = os.getenv('INTERNAL_SERVICE_KEY', '')
+SERVICE_URLS = {
+    'auth': AUTH_API_URL,
+    'treasury': os.getenv('TREASURY_API_URL', 'http://treasury-api.treasury.svc.cluster.local:4000'),
+    'inventory': os.getenv('INVENTORY_API_URL', 'http://inventory-api.inventory.svc.cluster.local:4000'),
+    'pos': os.getenv('POS_API_URL', 'http://pos-api.pos.svc.cluster.local:4000'),
+    'ordering': os.getenv('ORDERING_API_URL', 'http://ordering-backend.ordering.svc.cluster.local:4000'),
+    'notifications': os.getenv('NOTIFICATIONS_API_URL', 'http://notifications-api.notifications.svc.cluster.local:4000'),
+    'marketflow': os.getenv('MARKETFLOW_API_URL', 'http://marketflow-api.marketflow.svc.cluster.local:4000'),
+    'subscriptions': os.getenv('SUBSCRIPTIONS_API_URL', 'http://subscriptions-api.subscriptions.svc.cluster.local:4000'),
+}
+SERVICE_CLIENT_TIMEOUT = float(os.getenv('SERVICE_CLIENT_TIMEOUT', '10'))
+SERVICE_CLIENT_RETRIES = int(os.getenv('SERVICE_CLIENT_RETRIES', '2'))
+
+# Event bus (NATS JetStream) + transactional outbox.
+EVENTS_NATS_URL = os.getenv('EVENTS_NATS_URL', 'nats://nats.messaging.svc.cluster.local:4222')
+EVENTS_ENABLED = os.getenv('EVENTS_ENABLED', 'false').lower() == 'true'
+EVENTS_SOURCE_SERVICE = os.getenv('EVENTS_SOURCE_SERVICE', 'erp')
 
 # Celery settings
 CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')  # Redis as the message broker
@@ -245,6 +252,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'authmanagement.sso_middleware.SSOAuthenticationMiddleware',  # attach SSO claims (no-op unless SSO_ENABLED)
+    'authmanagement.sso_middleware.SubscriptionGatingMiddleware',  # mutations-only subscription gate
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
@@ -553,6 +562,7 @@ BACKUP_ROOT = os.getenv('BACKUP_ROOT', os.path.join(BASE_DIR, 'backups'))
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'authmanagement.sso.SSOJWTAuthentication',  # SSO JWT first (no-op unless SSO_ENABLED)
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',

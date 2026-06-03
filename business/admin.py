@@ -185,9 +185,8 @@ class ProductSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(SaleSettings)
 class SaleSettingsAdmin(admin.ModelAdmin):
-    list_display = ['business','default_discount', 'default_tax']
+    list_display = ['business','default_discount']
     search_fields = ['default_discount']
-    list_filter = ['default_tax']
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
