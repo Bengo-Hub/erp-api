@@ -108,6 +108,16 @@ performance, appraisals, training), `approvals` (generic/non-financial), `core`,
 `caching`, `integrations` (outbox + FX + S2S), `authmanagement` (SSO client + thin
 CustomUser shadow).
 
+## Microservice-conformance revamp (2026-06, implemented)
+Plan: `D:\Projects\Codevertex\.claude\plans\erp-microservice-conformance-revamp.md`.
+- ✅ WS1 (erp-api `09e393d`): Claims extended (outlet/use_case/is_hq/sub limits + service_charge/demo bypass); JIT service-role assignment; `AuthTenant`/`AuthOutlet` shadows + `integrations/tenant_sync.py` (pull + `auth.tenant.>`/`auth.outlet.>` NATS handlers); `TenantOutletContextMiddleware` (request.tenant_id w/ platform-owner `?tenantId`, request.outlet_id, JIT tenant sync); service `GET /api/v1/auth/me/`; `Employee.outlet_id`; CORS x-tenant-id/x-tenant-slug/x-outlet-id.
+- ✅ WS2/WS3 (erp-api): `Bussiness.tenant_id` (auth link); removed KRA secret fields (treasury owns KRA/eTIMS); `integrations/branding.py` fetches branding/KRA-PIN from auth-api (cached).
+- ✅ WS4 (payroll↔treasury): erp-api publishes `erp.payroll.processed` + calls treasury S2S `/payouts/disburse` + consumes `treasury.payroll.disbursed` (`POST /api/v1/hrm/payroll/disburse/`). Treasury side = BG agent (COA seed 6500/1700/5100/2200 + `erp.payroll.processed` GL subscriber).
+- ✅ WS5 (notifications-api `9d811a6`): `erp.email.requested` + `erp.notification.requested` consumers.
+- ✅ WS6 (erp-ui `01b28ce`): two-step `/auth/me`, outlet selector/filter + platform-owner tenant filter, `useSubscription` + SubscriptionBanner/Gate + inactive toast, branding from auth-api (Vue-native).
+
+**Remaining conformance follow-ups:** finish the `business` slim (drop branding display columns + `BrandingSettings`/`TaxRates`/`SaleSettings`; repoint document-gen/login/reports to `integrations.branding`); payslip emails as template+download-link (notifications pipeline can't carry inline PDF/HTML — send a link, not an attachment); ERP fetch tax RATES from treasury `/s2s/{tenant}/taxes` where a configurable rate is needed; confirm auth-api admin "list all tenants" endpoint for the platform-owner TenantFilter.
+
 ## Cross-cutting follow-ups
 - core executive/shared analytics: cross-domain figures now return 0 (owner data gone) —
   migrate cross-domain BI to Superset; reduce the ERP executive dashboard to HR/ops.
