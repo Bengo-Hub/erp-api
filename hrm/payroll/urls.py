@@ -18,9 +18,12 @@ router.register(r'claim-items', ClaimItemViewSet, basename='claim-item')
 router.register(r'approvals', PayrollApprovalViewSet, basename='payroll_approval')
 router.register(r'custom-reports', CustomReportViewSet, basename='custom-report')
 
+from .disburse_view import PayrollDisburseView
+
 urlpatterns = [
     path('', include(router.urls)),
     path('email-payslips', EmailPayslipsView.as_view(), name='email-payslips'),
+    path('disburse/', PayrollDisburseView.as_view(), name='payroll-disburse'),
     path('analytics/', payroll_analytics, name='payroll-analytics'),
     
     # Report endpoints

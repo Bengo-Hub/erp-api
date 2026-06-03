@@ -253,6 +253,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'authmanagement.sso_middleware.SSOAuthenticationMiddleware',  # attach SSO claims (no-op unless SSO_ENABLED)
+    'authmanagement.sso_middleware.TenantOutletContextMiddleware',  # resolve tenant/outlet + JIT tenant sync
     'authmanagement.sso_middleware.SubscriptionGatingMiddleware',  # mutations-only subscription gate
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -488,7 +489,10 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
-    'x-branch-id',
+    'x-tenant-id',       # auth-api tenant UUID (SSO conformance)
+    'x-tenant-slug',
+    'x-outlet-id',       # outlet/branch scoping (optional)
+    'x-branch-id',       # legacy alias for outlet (kept for back-compat)
     'x-business-id',
     'x-currency',  # Allow currency header from frontend
     'cache-control',
@@ -505,6 +509,9 @@ CORS_EXPOSE_HEADERS = [
     'content-type',
     'content-length',
     'x-csrftoken',
+    'x-tenant-id',
+    'x-tenant-slug',
+    'x-outlet-id',
     'x-branch-id',
     'x-business-id',
     'x-currency',  # Expose currency header to frontend

@@ -1,6 +1,7 @@
 from rest_framework.routers import DefaultRouter
 from django.urls import path,include
 from . views import *
+from .auth_me import AuthMeView
 from .security import (
     TwoFactorAuthView, TwoFactorVerifyView, TwoFactorDisableView,
     TwoFactorBackupCodesView, EnhancedLoginView, SecurityDashboardView,
@@ -14,6 +15,8 @@ router.register('groups', GroupViewSet, basename='groups')
 
 urlpatterns = [
     path('', include(router.urls)),
+    # Service-level RBAC profile (SSO two-step: SSO /auth/me + this endpoint)
+    path('me/', AuthMeView.as_view(), name='auth_me'),
     path("register/", RegistrationView.as_view(), name="user_create"),
     path('register/confirm-email/<str:uidb64>/<str:token>/',
          EmailConfirmView.as_view(), name='email_confirm'),
