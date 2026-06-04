@@ -73,6 +73,13 @@ def ensure_rbac_provisioned():
         # HR-focused roles
         'hr_manager': {'apps': list(hrm_labels | approvals_labels), 'actions': ['view', 'add', 'change', 'delete']},
         'hr_assistant': {'apps': list(hrm_labels), 'actions': ['view', 'add', 'change']},
+        # Operations manager: broad CRUD over HR + internal-ops modules.
+        'operations_manager': {'apps': list(hrm_labels | approvals_labels | core_labels), 'actions': ['view', 'add', 'change', 'delete']},
+        # Legacy domain managers — finance/procurement/sales moved to their own services;
+        # retained as roles with read access to core/approvals so they are not permissionless.
+        'finance_manager': {'apps': list(core_labels | approvals_labels), 'actions': ['view']},
+        'procurement_manager': {'apps': list(core_labels | approvals_labels), 'actions': ['view']},
+        'sales_manager': {'apps': list(core_labels | approvals_labels), 'actions': ['view']},
         # Front office
         'receptionist': {'apps': list({'employees', 'attendance', 'leave'} | (crm_labels & {'contacts', 'leads'})), 'actions': ['view', 'add']},
         'secretary': {'apps': list({'employees', 'attendance', 'leave'} | (crm_labels & {'contacts', 'leads'})), 'actions': ['view']},
