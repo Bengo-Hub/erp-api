@@ -79,6 +79,9 @@ class Appraisal(models.Model):
     overall_rating = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True,
                                        validators=[MinValueValidator(0), MaxValueValidator(5)])
     comments = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True, null=True, help_text="Captured when an appraisal is rejected")
+    approved_at = models.DateTimeField(blank=True, null=True)
+    rejected_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

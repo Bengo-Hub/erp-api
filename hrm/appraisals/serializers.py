@@ -60,7 +60,8 @@ class AppraisalSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'cycle', 'employee', 'evaluator', 'template',
             'status', 'status_display', 'overall_rating',
-            'comments', 'created_at', 'updated_at', 'responses_count'
+            'comments', 'rejection_reason', 'approved_at', 'rejected_at',
+            'created_at', 'updated_at', 'responses_count'
         ]
 
     def get_responses_count(self, obj):

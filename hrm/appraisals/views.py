@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from .models import (
@@ -79,22 +80,35 @@ class AppraisalViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def submit(self, request, pk=None):
         appraisal = self.get_object()
+        # Guard: only draft/in-progress appraisals may be submitted for review.
+        if appraisal.status not in ('draft', 'in_progress'):
+            return Response({'error': f'Cannot submit an appraisal in {appraisal.status} status.'},
+                            status=status.HTTP_400_BAD_REQUEST)
         appraisal.status = 'completed'
-        appraisal.save()
+        appraisal.save(update_fields=['status', 'updated_at'])
         return Response({'status': 'appraisal submitted'})
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         appraisal = self.get_object()
+        if appraisal.status != 'completed':
+            return Response({'error': 'Only completed appraisals can be approved.'},
+                            status=status.HTTP_400_BAD_REQUEST)
         appraisal.status = 'approved'
-        appraisal.save()
+        appraisal.approved_at = timezone.now()
+        appraisal.save(update_fields=['status', 'approved_at', 'updated_at'])
         return Response({'status': 'appraisal approved'})
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
         appraisal = self.get_object()
+        if appraisal.status != 'completed':
+            return Response({'error': 'Only completed appraisals can be rejected.'},
+                            status=status.HTTP_400_BAD_REQUEST)
         appraisal.status = 'rejected'
-        appraisal.save()
+        appraisal.rejected_at = timezone.now()
+        appraisal.rejection_reason = (request.data.get('rejection_reason') or '').strip() or None
+        appraisal.save(update_fields=['status', 'rejected_at', 'rejection_reason', 'updated_at'])
         return Response({'status': 'appraisal rejected'})
 
 class AppraisalResponseViewSet(viewsets.ModelViewSet):
