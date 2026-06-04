@@ -236,36 +236,52 @@ def get_or_provision_user(claims: Claims):
     return user
 
 
-# Map global JWT roles → ERP-local Django group (Layer-3 service role) per Trinity §JIT.
-_GLOBAL_TO_ERP_ROLE = {
-    "superuser": "erp_admin",
-    "admin": "erp_admin",
-    "manager": "erp_manager",
-    "staff": "erp_staff",
-    "member": "erp_staff",
+# ERP service-level roles (Django groups). These are the canonical HR/ops roles the ERP
+# defines (core/security.py + seed_initial). auth-api issues the SAME names as global
+# JWT roles for ERP users, so the JIT mapping is 1:1 by name (Trinity §JIT).
+ERP_SERVICE_ROLES = {
+    "superusers", "staff", "hr_manager", "hr_assistant", "ceo",
+    "ict_manager", "ict_officer", "operations_manager", "finance_manager",
+    "procurement_manager", "sales_manager", "receptionist", "secretary",
+}
+
+# Fallback mapping for the generic global roles that don't already match an ERP role.
+_GENERIC_GLOBAL_TO_ERP_ROLE = {
+    "superuser": "superusers",
+    "admin": "superusers",
+    "manager": "operations_manager",
+    "member": "staff",
 }
 
 
 def _assign_service_roles(user, claims: "Claims") -> None:
-    """Ensure the SSO user has at least one ERP service-level role (Django group).
+    """Ensure the SSO user has the matching ERP service-level role(s) (Django groups).
 
-    Idempotent; only adds a default role when the user has no ERP group yet, so manual
-    role changes by an admin are not overwritten on every request.
+    Maps the global JWT roles to ERP roles: any role whose name matches an ERP role is
+    assigned 1:1; superuser/admin/platform-owner get ``superusers``; otherwise the
+    generic fallback (or ``staff``). Idempotent — skips if the user already has a group
+    so manual admin role changes are not overwritten on every request.
     """
     try:
         from django.contrib.auth.models import Group
 
         if user.groups.exists():
             return
-        target = "erp_admin" if (claims.is_superuser or claims.is_platform_owner) else None
-        if target is None:
-            for r in claims.roles:
-                if r in _GLOBAL_TO_ERP_ROLE:
-                    target = _GLOBAL_TO_ERP_ROLE[r]
-                    break
-        target = target or "erp_staff"
-        group, _ = Group.objects.get_or_create(name=target)
-        user.groups.add(group)
+
+        targets: list[str] = []
+        if claims.is_superuser or claims.is_platform_owner:
+            targets.append("superusers")
+        for r in claims.roles:
+            if r in ERP_SERVICE_ROLES:          # 1:1 name match (e.g. hr_manager)
+                targets.append(r)
+            elif r in _GENERIC_GLOBAL_TO_ERP_ROLE:
+                targets.append(_GENERIC_GLOBAL_TO_ERP_ROLE[r])
+        if not targets:
+            targets.append("staff")
+
+        for name in dict.fromkeys(targets):     # de-dupe, preserve order
+            group, _ = Group.objects.get_or_create(name=name)
+            user.groups.add(group)
     except Exception as exc:  # never block auth on role assignment
         logger.warning("JIT role assignment failed for %s: %s", getattr(user, "email", "?"), exc)
 
