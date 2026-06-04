@@ -127,9 +127,36 @@ class AttendanceRecord(models.Model):
     gps_longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, help_text="GPS longitude at check-in/out")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="present")
     total_seconds_worked = models.PositiveIntegerField(default=0)
+    regular_hours = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'), help_text="Auto-computed regular hours on check-out")
+    overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'), help_text="Auto-computed overtime hours on check-out (per AttendanceRule)")
     notes = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def compute_hours(self, rule=None):
+        """Split worked time into regular vs overtime per the active overtime AttendanceRule.
+
+        Also flags the day as half-day when worked hours fall below the rule's minimum. Returns
+        (regular_hours, overtime_hours) as Decimals; callers persist the record.
+        """
+        worked = Decimal(self.total_seconds_worked or 0) / Decimal('3600')
+        if rule is None:
+            rule = (AttendanceRule.objects
+                    .filter(is_active=True, rule_type='overtime_policy')
+                    .order_by('-priority').first())
+        threshold = rule.overtime_threshold_hours if rule else Decimal('8.00')
+        max_ot = rule.max_overtime_hours if rule else Decimal('4.00')
+        min_hours = rule.min_work_hours if rule else Decimal('6.00')
+
+        overtime = max(Decimal('0'), worked - threshold)
+        if overtime > max_ot:
+            overtime = max_ot
+        regular = worked - overtime
+        self.regular_hours = regular.quantize(Decimal('0.01'))
+        self.overtime_hours = overtime.quantize(Decimal('0.01'))
+        if worked < min_hours and self.check_out:
+            self.status = "half-day"
+        return self.regular_hours, self.overtime_hours
 
     def __str__(self) -> str:
         return f"{self.employee.pk} - {self.date}"
@@ -501,3 +528,12 @@ class TimesheetEntry(models.Model):
     def total_hours(self):
         """Calculate total hours for this entry"""
         return self.regular_hours + self.overtime_hours
+
+
+# Shift planner / roster models (POS-adapted) — kept in a focused module for modularity.
+from .shift_planner_models import (  # noqa: E402,F401
+    ShiftRoster,
+    ShiftRosterSlot,
+    ShiftAssignment,
+    StaffShiftOverride,
+)

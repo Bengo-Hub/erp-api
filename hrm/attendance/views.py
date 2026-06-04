@@ -149,7 +149,10 @@ class AttendanceRecordViewSet(BaseModelViewSet):
             # compute worked seconds
             worked = int((record.check_out - record.check_in).total_seconds()) if record.check_in else 0
             record.total_seconds_worked = max(worked, 0)
-            record.save(update_fields=["check_out", "total_seconds_worked", "updated_at"])
+            # Auto-split regular vs overtime per the active AttendanceRule (clock → payroll glue).
+            record.compute_hours()
+            record.save(update_fields=["check_out", "total_seconds_worked", "regular_hours",
+                                       "overtime_hours", "status", "updated_at"])
             
             # Log the check-out
             AuditTrail.log(
