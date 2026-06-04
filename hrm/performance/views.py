@@ -18,6 +18,7 @@ from .serializers import (
     EmployeeMetricCreateSerializer, MetricTargetCreateSerializer,
     PerformanceReviewCreateSerializer, ReviewMetricCreateSerializer
 )
+from hrm.employees.permissions import IsHRorManager
 
 class MetricCategoryViewSet(viewsets.ModelViewSet):
     queryset = MetricCategory.objects.all()
@@ -204,6 +205,13 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return PerformanceReviewCreateSerializer
         return PerformanceReviewSerializer
+
+    # Approve/reject are HR/manager-only; reads and submit stay open to all
+    # authenticated users (feedback: must not lock anyone out of read).
+    def get_permissions(self):
+        if self.action in ('approve', 'reject'):
+            return [permissions.IsAuthenticated(), IsHRorManager()]
+        return super().get_permissions()
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)

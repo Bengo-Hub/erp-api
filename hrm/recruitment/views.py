@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from .models import JobPosting, Candidate, Application
 from .serializers import JobPostingSerializer, CandidateSerializer, ApplicationSerializer
+from hrm.employees.permissions import IsHRorManager
 
 
 class JobPostingViewSet(viewsets.ModelViewSet):
@@ -52,6 +53,13 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     search_fields = ["candidate__full_name", "candidate__email", "notes"]
     ordering_fields = ["applied_at"]
     throttle_scope = "user"
+
+    # advance (offer/hire progression) and reject are HR/manager-only sensitive
+    # decisions; list/retrieve stay open to all authenticated users.
+    def get_permissions(self):
+        if self.action in ("advance", "reject"):
+            return [permissions.IsAuthenticated(), IsHRorManager()]
+        return super().get_permissions()
 
     @action(detail=True, methods=["post"], url_path="advance")
     def advance(self, request, pk=None):
