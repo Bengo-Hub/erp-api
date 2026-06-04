@@ -26,6 +26,29 @@ from core.audit import AuditTrail
 logger = logging.getLogger(__name__)
 
 
+def _notify_leave_decision(request, leave_request, approved: bool, reason: str = ""):
+    """Best-effort employee notification on a leave decision (via the outbox events pipeline)."""
+    try:
+        from integrations.notifications_client import NotificationService
+        user = getattr(leave_request.employee, "user", None)
+        if not user:
+            return
+        tenant_id = getattr(request, "tenant_id", "") or ""
+        verb = "approved" if approved else "rejected"
+        title = f"Leave {verb}"
+        msg = (f"Your {leave_request.category} leave ({leave_request.start_date} to "
+               f"{leave_request.end_date}) was {verb}.")
+        if not approved and reason:
+            msg += f" Reason: {reason}"
+        NotificationService().send_notification(
+            user=user, title=title, message=msg, notification_type="leave_decision",
+            data={"leave_request_id": leave_request.id, "status": leave_request.status},
+            tenant_id=tenant_id,
+        )
+    except Exception as exc:  # never let notification failure break the decision
+        logger.warning("leave decision notification failed: %s", exc)
+
+
 class LeaveCategoryViewSet(BaseModelViewSet):
     queryset = LeaveCategory.objects.all()
     serializer_class = LeaveCategorySerializer
@@ -234,9 +257,10 @@ class LeaveRequestViewSet(SensitiveModuleFilterMixin, BaseModelViewSet):
         )
         
         leave_balance.days_taken += leave_request.days_requested
-        leave_balance.days_remaining = leave_balance.days_entitled - leave_balance.days_taken
+        leave_balance.days_remaining = max(0, leave_balance.days_entitled - leave_balance.days_taken)
         leave_balance.save()
-        
+
+        _notify_leave_decision(request, leave_request, approved=True)
         return Response(self.get_serializer(leave_request).data)
 
     @action(detail=True, methods=['post'], url_path='reject')
@@ -269,9 +293,10 @@ class LeaveRequestViewSet(SensitiveModuleFilterMixin, BaseModelViewSet):
         except Exception as e:
             # Log the error but continue without setting approved_by
             logging.warning(f"Could not set approved_by: {str(e)}")
-        
+
         leave_request.save()
-        
+
+        _notify_leave_decision(request, leave_request, approved=False, reason=rejection_reason)
         return Response(self.get_serializer(leave_request).data)
 
     @action(detail=False, methods=['post'], url_path='bulk_delete')
