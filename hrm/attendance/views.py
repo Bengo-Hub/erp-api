@@ -97,8 +97,10 @@ class AttendanceRecordViewSet(BaseModelViewSet):
                 )
             
             record.check_in = timezone.now()
-            record.save(update_fields=["check_in", "updated_at"])
-            
+            # Flag late arrivals against the shift start + grace period.
+            record.apply_late_status()
+            record.save(update_fields=["check_in", "status", "updated_at"])
+
             # Log the check-in
             AuditTrail.log(
                 operation=AuditTrail.UPDATE,

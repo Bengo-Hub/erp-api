@@ -8,12 +8,14 @@ an outlet via the employee's outlet_id, or an explicit payslip_ids list).
 """
 from __future__ import annotations
 
+from django.utils import timezone
+
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
-from .models import Payslip
+from .models import Payslip, ExpenseClaims
 from .treasury_integration import publish_and_disburse
 
 
@@ -42,6 +44,18 @@ class PayrollDisburseView(APIView):
             qs = qs.filter(employee__outlet_id=outlet_id)
         qs = qs.select_related("employee", "employee__user")
 
-        result = publish_and_disburse(list(qs), tenant_id, outlet_id, period, request=request)
+        payslips = list(qs)
+        result = publish_and_disburse(payslips, tenant_id, outlet_id, period, request=request)
+
+        # Once disbursed, mark the payroll-scheduled expense claims that fed these payslips as paid,
+        # so a subsequent payroll run does not add them to gross again (idempotency for scheduled claims).
+        if result.get("published"):
+            employee_ids = [p.employee_id for p in payslips]
+            if employee_ids:
+                ExpenseClaims.objects.filter(
+                    employee_id__in=employee_ids, schedule_to_payroll=True,
+                    approved=True, is_paid=False, delete_status=False,
+                ).update(is_paid=True, payment_date=timezone.now().date())
+
         code = status.HTTP_200_OK if result.get("published") else status.HTTP_400_BAD_REQUEST
         return Response(result, status=code)

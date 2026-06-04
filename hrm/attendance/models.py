@@ -133,6 +133,32 @@ class AttendanceRecord(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def apply_late_status(self):
+        """Flag the record 'late' when check-in is past the shift start + grace minutes.
+
+        Uses the day-specific WorkShiftSchedule for the record's weekday, falling back to the
+        shift's legacy start_time. No-op when there is no shift/start configured.
+        """
+        if not self.check_in or not self.work_shift:
+            return
+        start = None
+        try:
+            day_name = self.date.strftime('%A')
+            sched = self.work_shift.schedule.filter(day=day_name, is_working_day=True).first()
+            start = sched.start_time if sched else self.work_shift.start_time
+        except Exception:
+            start = getattr(self.work_shift, 'start_time', None)
+        if not start:
+            return
+        from datetime import datetime, timedelta
+        grace = self.work_shift.grace_minutes or 0
+        check_in_local = timezone.localtime(self.check_in)
+        expected = datetime.combine(check_in_local.date(), start) + timedelta(minutes=int(grace))
+        if timezone.is_naive(expected):
+            expected = timezone.make_aware(expected, check_in_local.tzinfo)
+        if check_in_local > expected and self.status == 'present':
+            self.status = 'late'
+
     def compute_hours(self, rule=None):
         """Split worked time into regular vs overtime per the active overtime AttendanceRule.
 
