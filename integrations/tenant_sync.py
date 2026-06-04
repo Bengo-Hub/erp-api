@@ -105,6 +105,44 @@ def _upsert_outlet(data: dict[str, Any], tenant_id: str = ""):
     return obj
 
 
+def ensure_outlet_from_claims(claims, tenant_id: str = ""):
+    """JIT-upsert the AuthOutlet shadow for the user's CURRENT outlet from the JWT.
+
+    The access token already carries outlet_id/outlet_code/outlet_use_case/is_hq_user
+    once an outlet has been selected (sso-integration-guide step 11), so we mirror the
+    *active* outlet locally without an extra auth-api round-trip. This guarantees the
+    outlet a user is acting in always has a local shadow for HR records to reference.
+    (The full outlet list for the selector is pulled directly from auth-api by the UI.)
+
+    Best-effort: returns None and never raises so request handling is never blocked.
+    No-op when no outlet is selected (HQ/platform users before outlet selection) or
+    when the tenant is unknown (the shadow needs a tenant UUID).
+    """
+    from authmanagement.models import AuthOutlet
+
+    outlet_id = getattr(claims, "outlet_id", "") or ""
+    tid = tenant_id or getattr(claims, "tenant_id", "") or ""
+    if not outlet_id or not tid:
+        return None
+    try:
+        # `name` is intentionally omitted from defaults: it is not in the JWT, so we
+        # never clobber a richer name set by a full sync_outlets() pull.
+        obj, _ = AuthOutlet.objects.update_or_create(
+            id=outlet_id,
+            defaults={
+                "tenant_id": tid,
+                "code": getattr(claims, "outlet_code", "") or "",
+                "use_case": getattr(claims, "outlet_use_case", "") or "",
+                "is_hq": bool(getattr(claims, "is_hq_user", False)),
+                "status": "active",
+            },
+        )
+        return obj
+    except Exception as exc:  # pragma: no cover - best-effort
+        logger.warning("ensure_outlet_from_claims(%s) failed: %s", outlet_id, exc)
+        return None
+
+
 # ---------------------------------------------------------------------------
 # NATS event handlers (registered in integrations.events.run_consumers)
 # ---------------------------------------------------------------------------

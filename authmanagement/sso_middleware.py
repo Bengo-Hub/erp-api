@@ -88,11 +88,18 @@ class TenantOutletContextMiddleware:
                 tenant_id = claims.tenant_id or request.META.get("HTTP_X_TENANT_ID", "")
         request.tenant_id = tenant_id
 
-        # JIT tenant shadow (best-effort, gated by SSO; never blocks the request)
+        # JIT tenant + outlet shadows (best-effort, gated by SSO; never blocks the
+        # request). ensure_tenant pulls the tenant from auth-api if missing;
+        # ensure_outlet_from_claims mirrors the active outlet straight from the JWT
+        # (no extra round-trip) so HR records always have a local outlet to FK to.
         if claims is not None and getattr(settings, "SSO_ENABLED", False) and (claims.tenant_slug or tenant_id):
             try:
-                from integrations.tenant_sync import ensure_tenant
-                ensure_tenant(slug=claims.tenant_slug, tenant_id=tenant_id, request=request)
+                from integrations.tenant_sync import ensure_tenant, ensure_outlet_from_claims
+                tenant = ensure_tenant(slug=claims.tenant_slug, tenant_id=tenant_id, request=request)
+                # Prefer the resolved tenant's UUID for the outlet's FK when the
+                # claim only carried a slug.
+                resolved_tid = tenant_id or (str(tenant.id) if tenant else "")
+                ensure_outlet_from_claims(claims, tenant_id=resolved_tid)
             except Exception:  # pragma: no cover - sync is best-effort
                 pass
         return self.get_response(request)
