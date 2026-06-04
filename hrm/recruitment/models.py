@@ -66,3 +66,7 @@ class Application(models.Model):
             models.Index(fields=["job", "status"], name="idx_app_job_status"),
         ]
 
+
+
+# Onboarding workflow models (kept modular)
+from .onboarding_models import EmployeeOnboarding, OnboardingTask, DEFAULT_ONBOARDING_TASKS  # noqa: E402,F401
