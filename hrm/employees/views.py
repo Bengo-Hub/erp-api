@@ -1076,6 +1076,18 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response({"status": "Contract terminated successfully."})
         return Response({"error": "Contract is already terminated."}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['get'], url_path='pdf')
+    def pdf(self, request, pk=None):
+        """
+        Return a branding-aware PDF of this employment contract.
+
+        Reuses the repo's reportlab document stack and pulls tenant branding
+        from auth-api (integrations.branding) — see hrm/employees/contract_pdf.py.
+        """
+        from .contract_pdf import render_contract_pdf_response
+        contract = self.get_object()
+        return render_contract_pdf_response(contract, request=request)
+
     @action(detail=True, methods=['patch','post'], url_path='renew')
     def renew(self, request, pk=None):
         """
