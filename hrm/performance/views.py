@@ -19,6 +19,7 @@ from .serializers import (
     PerformanceReviewCreateSerializer, ReviewMetricCreateSerializer
 )
 from hrm.employees.permissions import IsHRorManager
+from approvals.integration import start_approval, record_decision
 
 class MetricCategoryViewSet(viewsets.ModelViewSet):
     queryset = MetricCategory.objects.all()
@@ -235,6 +236,10 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
         review = self.get_object()
         review.status = 'completed'
         review.save()
+        # Raise a centralized ApprovalRequest if a workflow is configured;
+        # otherwise this is a no-op and the direct status update stands.
+        start_approval(review, 'performance_review', request.user,
+                       title=f"Performance Review #{review.pk}")
         return Response({'status': 'review submitted'})
 
     @action(detail=True, methods=['post'])
@@ -243,6 +248,7 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
         review = self.get_object()
         review.status = 'approved'
         review.save()
+        record_decision(review, request.user, approved=True)
         return Response({'status': 'review approved'})
 
     @action(detail=True, methods=['post'])
@@ -251,6 +257,8 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
         review = self.get_object()
         review.status = 'rejected'
         review.save()
+        record_decision(review, request.user, approved=False,
+                        notes=(request.data.get('rejection_reason') or '').strip() or None)
         return Response({'status': 'review rejected'})
 
 class ReviewMetricViewSet(viewsets.ModelViewSet):

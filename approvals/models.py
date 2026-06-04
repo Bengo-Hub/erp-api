@@ -22,6 +22,9 @@ class ApprovalWorkflow(models.Model):
         ('payroll', 'Payroll'),
         ('contract', 'Contract'),
         ('requisition', 'Requisition'),
+        ('appraisal', 'Appraisal'),
+        ('performance_review', 'Performance Review'),
+        ('recruitment_offer', 'Recruitment Offer'),
         ('general', 'General'),
     ]
     
