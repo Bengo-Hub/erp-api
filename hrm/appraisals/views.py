@@ -14,6 +14,7 @@ from .serializers import (
     AppraisalResponseSerializer, GoalSerializer,
     GoalProgressSerializer
 )
+from hrm.employees.permissions import IsHRorManager
 
 class AppraisalCycleViewSet(viewsets.ModelViewSet):
     queryset = AppraisalCycle.objects.all()
@@ -76,6 +77,13 @@ class AppraisalViewSet(viewsets.ModelViewSet):
     filterset_fields = ['cycle', 'employee', 'evaluator', 'template', 'status']
     search_fields = ['employee__user__first_name', 'employee__user__last_name']
     ordering_fields = ['created_at', 'updated_at', 'overall_rating']
+
+    # Approve/reject are HR/manager-only sensitive actions; list/retrieve/submit
+    # stay open to any authenticated user (feedback: must not lock anyone out of read).
+    def get_permissions(self):
+        if self.action in ('approve', 'reject'):
+            return [permissions.IsAuthenticated(), IsHRorManager()]
+        return super().get_permissions()
 
     @action(detail=True, methods=['post'])
     def submit(self, request, pk=None):
