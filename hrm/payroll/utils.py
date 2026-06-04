@@ -4,6 +4,7 @@ Main orchestrator for all payroll operations with clean, unified workflow
 """
 
 import calendar
+import logging
 from decimal import Decimal
 from datetime import date, datetime, timedelta
 from django.db import transaction
@@ -13,10 +14,12 @@ from django.contrib.contenttypes.models import ContentType
 
 from hrm.employees.models import Employee, SalaryDetails
 from hrm.attendance.models import AttendanceRecord
-from .models import Payslip, Benefits
+from .models import Payslip, Benefits, Earnings, ExpenseClaims
 from .services.core_calculations import PayrollCalculationEngine
 from .services.dynamic_deduction_engine import DynamicDeductionEngine
 from .services.payroll_notification_service import PayrollNotificationService
+
+logger = logging.getLogger(__name__)
 
 
 class PayrollGenerator:
@@ -80,8 +83,8 @@ class PayrollGenerator:
             self.deduct_nssf = True
     
     def should_use_nhif(self):
-        """Determine whether to use NHIF or SHIF based on payroll date"""
-        return self.payment_period < date(2025, 1, 1)
+        """Use NHIF vs SHIF based on which health formula is effective for the period (config-driven)."""
+        return self.calculation_engine.use_nhif_for_period()
     
     def get_effective_formula(self, formula_type, category=None):
         """Get effective formula using centralized engine"""
@@ -207,12 +210,13 @@ class PayrollGenerator:
             income_formula = self.get_effective_formula('income', 'primary')
             
             if income_formula and income_formula.version and income_formula.deduction_order:
-                print(f"✅ Using Dynamic Deduction Engine (v{income_formula.version})")
-                
+                logger.info("Using dynamic deduction engine (v%s)", income_formula.version)
+
                 deduction_engine = DynamicDeductionEngine(
                     formula_version=income_formula.version,
                     payroll_date=self.payment_period,
-                    formula_overrides=self.formula_overrides
+                    formula_overrides=self.formula_overrides,
+                    recover_advances=self.recover_advances
                 )
                 
                 engine_deductions = deduction_engine.calculate_deductions_in_order(
@@ -224,11 +228,11 @@ class PayrollGenerator:
                 
                 return self._convert_engine_results(engine_deductions)
             else:
-                print("🔄 Using fallback deduction calculation")
+                logger.info("Using fallback deduction calculation")
                 return self._apply_deductions_fallback(gross_pay)
-                
+
         except Exception as e:
-            print(f"❌ Dynamic deduction engine failed: {e}")
+            logger.warning("Dynamic deduction engine failed, using fallback: %s", e)
             return self._apply_deductions_fallback(gross_pay)
     
     def _convert_engine_results(self, engine_deductions):
@@ -257,8 +261,11 @@ class PayrollGenerator:
                 for component_name, component_data in phase_deductions.items():
                     if isinstance(component_data, dict):
                         amount = component_data.get('amount', Decimal('0'))
-                        deductions_by_phase[phase] += amount
-                        
+                        # PAYE is represented separately (paye field + paye_after_relief in net pay),
+                        # so it is not folded into the phase deduction totals to avoid double counting.
+                        if component_name != 'paye':
+                            deductions_by_phase[phase] += amount
+
                         if component_name == 'nssf':
                             component_values['tier_1_nssf'] = component_data.get('tier_1_employee', Decimal('0'))
                             component_values['tier_2_nssf'] = component_data.get('tier_2_employee', Decimal('0'))
@@ -322,22 +329,94 @@ class PayrollGenerator:
         component_values['hslevy_employee_contribution'] = levy_data['employee_contribution']
         component_values['hslevy_employer_contribution'] = levy_data['employer_contribution']
         deductions_by_phase['before_tax'] += levy_data['employee_contribution']
-        
+
+        # Personal recoverables (loans, salary advances, loss/damages) and non-cash benefits —
+        # parity with the dynamic engine so they actually reduce net pay in the fallback path too.
+        emp_deductions = self.calculation_engine.calculate_employee_deductions(
+            self.employee_instance or self.employee, gross_pay, recover_advances=self.recover_advances)
+        deductions_by_phase['after_paye'] += (
+            emp_deductions['loans'] + emp_deductions['advances'] + emp_deductions['loss_damages'])
+        deductions_by_phase['final'] += emp_deductions['non_cash_benefits']
+
         return deductions_by_phase, component_values
     
-    def _calculate_gross_pay(self):
-        """Calculate gross pay and total earnings for regular employees"""
-        try:
-            if self.salary_details.pay_type == "gross_pay":
-                gross_pay = self.salary_details.monthly_salary
-                total_earnings = Decimal('0')
-            elif self.salary_details.pay_type == "net_pay":
-                gross_pay = self.salary_details.monthly_salary
-                total_earnings = Decimal('0')
+    def _sum_active_earnings(self):
+        """Sum the employee's recurring earnings/allowances effective for the period."""
+        emp = self.employee_instance or self.employee
+        qs = Earnings.objects.filter(employee=emp, is_active=True)
+        qs = qs.filter(Q(effective_date__lte=self.payment_period) | Q(effective_date__isnull=True))
+        qs = qs.filter(Q(end_date__gte=self.payment_period) | Q(end_date__isnull=True))
+        return sum((e.amount or Decimal('0') for e in qs), Decimal('0'))
+
+    def _sum_scheduled_expense_claims(self):
+        """Sum approved, unpaid expense claims flagged to be paid through payroll."""
+        emp = self.employee_instance or self.employee
+        qs = ExpenseClaims.objects.filter(
+            employee=emp, schedule_to_payroll=True, approved=True,
+            is_paid=False, delete_status=False,
+        )
+        return sum((c.amount or Decimal('0') for c in qs), Decimal('0'))
+
+    def _statutory_net_for_gross(self, gross):
+        """Net pay considering only statutory deductions + PAYE for a candidate gross (gross-up helper)."""
+        nssf = self.calculation_engine.calculate_nssf_contribution(gross)['total_employee'] if self.deduct_nssf else Decimal('0')
+        statutory_health = Decimal('0')
+        if self.deduct_shif_or_nhif:
+            if self.should_use_nhif():
+                statutory_health = self.calculation_engine.calculate_nhif_contribution(gross)['employee_contribution']
             else:
-                gross_pay = self.salary_details.monthly_salary
-                total_earnings = Decimal('0')
-            
+                statutory_health = self.calculation_engine.calculate_shif_contribution(gross)['employee_contribution']
+        levy = self.calculation_engine.calculate_housing_levy(gross)['employee_contribution']
+        before_tax = nssf + statutory_health + levy
+        taxable = gross - before_tax
+        category = getattr(self.salary_details, 'income_tax', 'primary') or 'primary'
+        if category == 'secondary':
+            paye = taxable
+        else:
+            paye = self.calculation_engine.calculate_income_tax(taxable, category)
+        relief = self.calculation_engine.resolve_personal_relief(category)
+        paye_after = max(Decimal('0'), paye - relief)
+        return gross - before_tax - paye_after
+
+    def _gross_up_from_net(self, net_target):
+        """Solve for the gross salary whose statutory+PAYE net equals ``net_target`` (bisection)."""
+        net_target = Decimal(net_target or 0)
+        if net_target <= 0:
+            return Decimal('0')
+        low = net_target
+        high = net_target * Decimal('3')
+        # Expand the upper bound until it brackets the target.
+        for _ in range(20):
+            if self._statutory_net_for_gross(high) >= net_target:
+                break
+            high *= Decimal('2')
+        mid = high
+        for _ in range(80):
+            mid = (low + high) / Decimal('2')
+            net = self._statutory_net_for_gross(mid)
+            if abs(net - net_target) <= Decimal('0.01'):
+                break
+            if net < net_target:
+                low = mid
+            else:
+                high = mid
+        return mid.quantize(Decimal('0.01'))
+
+    def _calculate_gross_pay(self):
+        """Calculate gross pay and total earnings for regular employees.
+
+        ``monthly_salary`` is interpreted per ``pay_type``: as the gross basic for "gross_pay"
+        (default), or as a take-home target for "net_pay" (grossed up over statutory + PAYE).
+        Recurring earnings/allowances and payroll-scheduled expense claims are added on top.
+        """
+        try:
+            base = self.salary_details.monthly_salary or Decimal('0')
+            total_earnings = self._sum_active_earnings() + self._sum_scheduled_expense_claims()
+
+            pay_type = getattr(self.salary_details, 'pay_type', 'gross_pay')
+            base_gross = self._gross_up_from_net(base) if pay_type == 'net_pay' else base
+
+            gross_pay = base_gross + total_earnings
             return gross_pay, total_earnings
         except Exception as e:
             print(f"Error calculating gross pay: {e}")
@@ -378,7 +457,7 @@ class PayrollGenerator:
         try:
             if self.salary_details.income_tax == "primary":
                 paye = self.calculation_engine.calculate_income_tax(taxable_income, "primary")
-                tax_relief = Decimal('2400')
+                tax_relief = self.calculation_engine.resolve_personal_relief("primary")
             elif self.salary_details.income_tax == "secondary":
                 paye = taxable_income
                 tax_relief = Decimal('0')
@@ -404,11 +483,28 @@ class PayrollGenerator:
         try:
             # Calculate PAYE after relief
             paye_after_reliefs = max(Decimal('0'), paye_data['paye'] - paye_data['reliefs'])
-            
-            # Net Pay = Gross Pay - NSSF - SHIF - Housing Levy - PAYE (after relief)
-            # This matches PNA.co.ke calculation methodology
-            net_pay = gross_pay - deductions_by_phase['before_tax'] - paye_after_reliefs
-            
+
+            # Net Pay = Gross - before-tax statutory (NSSF/SHIF/Housing) - PAYE(after relief)
+            #           - after-PAYE recoverables (loans, salary advances, loss/damages).
+            # PAYE represents the `after_tax` phase, so it is not subtracted twice. Non-cash
+            # benefits (`final`) raise taxable income but are not a cash deduction, so they are
+            # intentionally excluded from cash net pay.
+            net_pay = (
+                gross_pay
+                - deductions_by_phase['before_tax']
+                - paye_after_reliefs
+                - deductions_by_phase['after_paye']
+            )
+
+            # Guard: deductions must never produce a negative payable. Floor at 0 and flag the
+            # shortfall so it is visible (and excluded from disbursement, which only pays net > 0).
+            if net_pay < 0:
+                logger.warning(
+                    "Negative net pay floored to 0 for employee=%s period=%s (computed=%s)",
+                    getattr(self, 'employee', None), self.payment_period, net_pay,
+                )
+                net_pay = Decimal('0')
+
             return net_pay
         except Exception as e:
             print(f"Error calculating net pay: {e}")
@@ -446,49 +542,34 @@ class PayrollGenerator:
                 raise ValueError("Employee context is required to generate a payslip.")
 
             created_by_user = getattr(self.request, 'user', None)
+            payslip_defaults["created_by"] = created_by_user
 
+            # Idempotency: a payslip is uniquely identified by (employee, period). Keying on
+            # created_by too let different users create duplicate payslips for the same period.
             payslip, created = Payslip.objects.update_or_create(
                 employee=employee_instance,
-                created_by=created_by_user,
                 payment_period=self.payment_period,
+                delete_status=False,
                 defaults=payslip_defaults
             )
-            
+
             return payslip
         except Exception as e:
             print(f"Error creating payslip: {e}")
             raise
     
     def _calculate_consultant_additional_payments(self):
-        """Calculate additional payments for consultants"""
+        """Additional consultant payments = their active earnings/allowances for the period."""
         try:
-            additional_payments = Decimal('0')
-            employee = self.employee_instance or self.employee
-            if hasattr(employee, 'consultant_benefits'):
-                consultant_benefits = employee.consultant_benefits.filter(
-                    benefit__is_active=True,
-                    is_active=True,
-                    effective_from__lte=self.payment_period
-                )
-                additional_payments = sum(benefit.amount for benefit in consultant_benefits)
-            return additional_payments
+            return self._sum_active_earnings()
         except Exception as e:
             print(f"Error calculating consultant additional payments: {e}")
             return Decimal('0')
-    
+
     def _calculate_casual_allowances(self):
-        """Calculate allowances for casual employees"""
+        """Casual allowances = their active earnings/allowances for the period (on top of day-rate pay)."""
         try:
-            casual_allowances = Decimal('0')
-            employee = self.employee_instance or self.employee
-            if hasattr(employee, 'casual_allowances'):
-                casual_allowances = sum(
-                    allowance.amount for allowance in employee.casual_allowances.filter(
-                        is_active=True,
-                        effective_from__lte=self.payment_period
-                    )
-                )
-            return casual_allowances
+            return self._sum_active_earnings()
         except Exception as e:
             print(f"Error calculating casual allowances: {e}")
             return Decimal('0')
@@ -535,14 +616,16 @@ class PayrollGenerator:
                 raise ValueError("Employee context is required to queue payroll.")
 
             created_by_user = getattr(self.request, 'user', None)
+            payslip_defaults["created_by"] = created_by_user
 
+            # Idempotency: key on (employee, period) only — see _create_payslip.
             payslip, created = Payslip.objects.update_or_create(
                 employee=employee_instance,
-                created_by=created_by_user,
                 payment_period=self.payment_period,
+                delete_status=False,
                 defaults=payslip_defaults
             )
-            
+
             return {
                 "success": True,
                 "payslip_id": payslip.id,

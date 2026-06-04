@@ -56,11 +56,11 @@ class FormulaSeederService:
                 # Seed payroll components
                 self.seed_payroll_components()
                 
-                print("✅ All formulas seeded successfully")
+                print("All formulas seeded successfully")
                 return True
                 
         except Exception as e:
-            print(f"❌ Error seeding formulas: {e}")
+            print(f"Error seeding formulas: {e}")
             return False
     
     def _formulas_exist(self):
@@ -78,7 +78,7 @@ class FormulaSeederService:
     
     def seed_paye_formulas(self):
         """Seed all PAYE formulas from 2018 to 2025"""
-        print("🌱 Seeding PAYE formulas...")
+        print("Seeding PAYE formulas...")
         
         # PAYE 2018-2020 (5 brackets, KES 1,408 relief)
         self._create_paye_formula(
@@ -182,7 +182,7 @@ class FormulaSeederService:
     
     def seed_nhif_formulas(self):
         """Seed NHIF formulas (2018-Sep 2024) - now deprecated"""
-        print("🌱 Seeding NHIF formulas...")
+        print("Seeding NHIF formulas...")
         
         # NHIF 2018-Sep 2024 (fixed amounts)
         nhif_formula = self._create_deduction_formula(
@@ -251,7 +251,7 @@ class FormulaSeederService:
     
     def seed_shif_formulas(self):
         """Seed SHIF formulas (Oct 2024 onwards)"""
-        print("🌱 Seeding SHIF formulas...")
+        print("Seeding SHIF formulas...")
         
         # SHIF Oct 2024 onwards (2.75% of gross)
         shif_formula = self._create_deduction_formula(
@@ -310,7 +310,7 @@ class FormulaSeederService:
     
     def seed_nssf_formulas(self):
         """Seed NSSF formulas with all historical rates"""
-        print("🌱 Seeding NSSF formulas...")
+        print("Seeding NSSF formulas...")
         
         # NSSF 2018-Jan 2023 (flat KES 200/month)
         nssf_2018 = self._create_deduction_formula(
@@ -412,7 +412,7 @@ class FormulaSeederService:
     
     def seed_housing_levy_formulas(self):
         """Seed Housing Levy formulas (Mar 2024 onwards)"""
-        print("🌱 Seeding Housing Levy formulas...")
+        print("Seeding Housing Levy formulas...")
         
         # Housing Levy Mar 2024 onwards (1.5% of gross)
         housing_formula = self._create_deduction_formula(
@@ -471,7 +471,7 @@ class FormulaSeederService:
     
     def seed_fbt_formulas(self):
         """Seed Fringe Benefit Tax formulas"""
-        print("🌱 Seeding FBT formulas...")
+        print("Seeding FBT formulas...")
         
         # FBT 2021 onwards (30% on benefits)
         fbt_formula = self._create_deduction_formula(
@@ -503,7 +503,7 @@ class FormulaSeederService:
     
     def seed_relief_formulas(self):
         """Seed relief formulas - Updated for 2025 changes"""
-        print("🌱 Seeding relief formulas...")
+        print("Seeding relief formulas...")
         
         # Personal Relief (KES 2,400 only as of Dec 2024)
         Relief.objects.update_or_create(
@@ -542,7 +542,7 @@ class FormulaSeederService:
     
     def seed_payroll_components(self):
         """Seed basic payroll components"""
-        print("🌱 Seeding payroll components...")
+        print("Seeding payroll components...")
         
         # Deductions
         deductions = [
@@ -657,9 +657,9 @@ class FormulaSeederService:
             formula.save()
         
         if created:
-            print(f"✅ Created formula: {formula.title}")
+            print(f"Created formula: {formula.title}")
         else:
-            print(f"🔄 Updated formula: {formula.title}")
+            print(f"Updated formula: {formula.title}")
         
         return formula
     
