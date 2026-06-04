@@ -5,7 +5,8 @@ from hrm.employees.serializers import *
 class LeaveCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = LeaveCategory
-        fields = ['id', 'name', 'description', 'is_active', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'description', 'is_active', 'default_annual_days',
+                  'allow_carryover', 'max_carryover_days', 'created_at', 'updated_at']
 
 class LeaveEntitlementSerializer(serializers.ModelSerializer):
     employee = EmployeeSerializer(read_only=True)
