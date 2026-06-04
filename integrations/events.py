@@ -47,6 +47,12 @@ def publish_event(
     """
     from .models import EventOutbox  # local import to avoid app-loading cycles
 
+    # No-op when events are disabled, otherwise outbox rows accumulate forever with no drainer
+    # to publish them. When the pipeline is enabled (prod), rows are written and drained normally.
+    if not getattr(settings, "EVENTS_ENABLED", False):
+        logger.debug("EVENTS_ENABLED is false; skipping outbox enqueue for %s", event_type)
+        return None
+
     agg = aggregate_type or getattr(settings, "EVENTS_SOURCE_SERVICE", "erp")
     subject = f"{agg}.{event_type}"
     row = EventOutbox.objects.create(

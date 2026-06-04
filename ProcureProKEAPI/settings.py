@@ -153,6 +153,8 @@ SERVICE_CLIENT_RETRIES = int(os.getenv('SERVICE_CLIENT_RETRIES', '2'))
 EVENTS_NATS_URL = os.getenv('EVENTS_NATS_URL', 'nats://nats.messaging.svc.cluster.local:4222')
 EVENTS_ENABLED = os.getenv('EVENTS_ENABLED', 'false').lower() == 'true'
 EVENTS_SOURCE_SERVICE = os.getenv('EVENTS_SOURCE_SERVICE', 'erp')
+# Max publish attempts before an outbox row is parked as failed (drain_outbox retry budget).
+EVENTS_MAX_ATTEMPTS = int(os.getenv('EVENTS_MAX_ATTEMPTS', '10'))
 
 # Celery settings
 CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')  # Redis as the message broker

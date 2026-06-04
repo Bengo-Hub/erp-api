@@ -368,7 +368,7 @@ class Payslip(models.Model):
     deductions_final = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Final deductions (non-cash benefits, etc.)")
     payment_period = models.DateField(null=True, blank=True)
     payroll_status=models.CharField(max_length=100,choices=payrollstatuses,default="queued")
-    approval_status=models.CharField(max_length=100,choices=payrollstatuses,default="draft")
+    approval_status=models.CharField(max_length=100,choices=approvalstatuses,default="draft")
     approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,related_name='payslip_approver')
     published=models.BooleanField(default=False)
     payroll_date = models.DateField(auto_now=True)

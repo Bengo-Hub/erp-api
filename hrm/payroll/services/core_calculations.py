@@ -4,6 +4,7 @@ This module contains all core payroll calculation logic, eliminating duplication
 and providing a single source of truth for all payroll computations.
 """
 
+import logging
 from decimal import Decimal
 from datetime import date
 from django.db.models import Q
@@ -11,16 +12,57 @@ from hrm.payroll_settings.models import Formulas, FormulaItems, SplitRatio, Reli
 from hrm.employees.models import SalaryDetails
 from ..models import EmployeLoans, Advances, LossesAndDamages, Benefits
 
+logger = logging.getLogger(__name__)
+
+# Last-resort personal relief if neither the effective income formula nor a Relief row is configured.
+# Kept only as a safety net; the resolver below prefers data-driven config so rate changes need no deploy.
+DEFAULT_PERSONAL_RELIEF = Decimal('2400')
+
 
 class PayrollCalculationEngine:
     """
     Centralized engine for all payroll calculations
     Eliminates duplication and provides consistent calculation logic
     """
-    
+
     def __init__(self, payment_period: date, formula_overrides: dict = None):
         self.payment_period = payment_period
         self.formula_overrides = formula_overrides or {}
+
+    def resolve_personal_relief(self, category: str = 'primary') -> Decimal:
+        """Personal (PAYE) relief for the period, sourced from config (no hardcoded amount).
+
+        Priority: effective income formula's ``personal_relief`` → active ``Relief`` row → safe default.
+        """
+        try:
+            formula = self.get_effective_formula('income', category)
+            if formula and formula.personal_relief and formula.personal_relief > 0:
+                return Decimal(formula.personal_relief)
+            relief = Relief.objects.filter(type='Personal', is_active=True).order_by('-id').first()
+            if relief and relief.fixed_limit and relief.fixed_limit > 0:
+                return Decimal(relief.fixed_limit)
+        except Exception as e:
+            logger.warning("resolve_personal_relief failed, using default: %s", e)
+        logger.info("No configured personal relief for %s; using default %s", self.payment_period, DEFAULT_PERSONAL_RELIEF)
+        return DEFAULT_PERSONAL_RELIEF
+
+    def use_nhif_for_period(self) -> bool:
+        """Whether legacy NHIF (vs SHIF) applies, driven by which health formula is effective.
+
+        SHIF if an effective SHIF formula exists for the period; otherwise NHIF. This replaces the
+        previously hardcoded 2025-01-01 cutover so future transitions are configuration-only.
+        """
+        try:
+            shif = Formulas.objects.filter(type='deduction', category='shif')
+            if any(f.is_effective_for_date(self.payment_period) for f in shif):
+                return False
+            nhif = Formulas.objects.filter(type='deduction', category='nhif')
+            if any(f.is_effective_for_date(self.payment_period) for f in nhif):
+                return True
+        except Exception as e:
+            logger.warning("use_nhif_for_period failed, defaulting by date: %s", e)
+        # Fallback to the historical cutover only if nothing is configured.
+        return self.payment_period < date(2025, 1, 1)
     
     def get_effective_formula(self, formula_type: str, category: str = None, title: str = None):
         """
@@ -221,13 +263,19 @@ class PayrollCalculationEngine:
                     
                     employee_contribution = contribution * employee_percentage
                     employer_contribution = contribution * employer_percentage
-                    
-                    # NHIF relief was repealed Dec 2024
-                    if self.payment_period < date(2024, 12, 1):
+
+                    # Relief applies only while the configured insurance relief is active (data-driven,
+                    # so a repeal is a config change rather than a code change).
+                    if insurance_relief:
                         relief = insurance_relief * employee_contribution
                     break
         else:
-            # Fallback to legacy NHIF rates
+            # No configured NHIF rates — fall back to the legacy statutory table, but make it loud
+            # so operators know the configuration is missing and the rates may be stale.
+            logger.warning(
+                "No NHIF FormulaItems configured for %s; using legacy hardcoded NHIF table.",
+                self.payment_period,
+            )
             employee_contribution = self._get_legacy_nhif_rate(salary)
             employer_contribution = employee_contribution
         
@@ -269,60 +317,73 @@ class PayrollCalculationEngine:
             'relief': relief
         }
     
-    def calculate_employee_deductions(self, employee, gross_pay: Decimal):
+    @staticmethod
+    def _period_active(qs, period, start_field=None, end_field=None):
+        """Restrict a queryset to rows effective for ``period`` (open-ended bounds count as active)."""
+        if start_field:
+            qs = qs.filter(Q(**{f"{start_field}__lte": period}) | Q(**{f"{start_field}__isnull": True}))
+        if end_field:
+            qs = qs.filter(Q(**{f"{end_field}__gte": period}) | Q(**{f"{end_field}__isnull": True}))
+        return qs
+
+    def calculate_employee_deductions(self, employee, gross_pay: Decimal, recover_advances: bool = True):
         """
-        Calculate all employee-specific deductions (loans, advances, etc.)
+        Calculate all employee-specific recoverables (loans, advances, loss/damages, non-cash
+        benefits) effective for the payment period. Never recovers more than the outstanding
+        balance, and only recovers salary advances when ``recover_advances`` is set for the run.
         """
+        period = self.payment_period
         total_loans = Decimal('0')
         total_advances = Decimal('0')
         total_loss_damages = Decimal('0')
         total_benefits = Decimal('0')
-        
+
         try:
-            # Calculate loans
-            active_loans = EmployeLoans.objects.filter(
-                employee=employee,
-                is_active=True
+            # Loans — only while effective for the period and not yet fully repaid.
+            active_loans = self._period_active(
+                EmployeLoans.objects.filter(employee=employee, is_active=True),
+                period, 'start_date', 'end_date',
             )
             for loan in active_loans:
-                if loan.monthly_installment:
-                    total_loans += loan.monthly_installment
-            
-            # Calculate advances
-            active_advances = Advances.objects.filter(
-                employee=employee,
-                is_active=True
-            )
-            for advance in active_advances:
-                # Calculate monthly deduction based on repay_option
-                if advance.repay_option and advance.repay_option.no_of_installments > 0:
-                    monthly_deduction = advance.repay_option.amount / advance.repay_option.no_of_installments
-                    total_advances += monthly_deduction
-            
-            # Calculate loss/damages
+                outstanding = (loan.principal_amount or Decimal('0')) - (loan.amount_repaid or Decimal('0'))
+                if loan.monthly_installment and outstanding > 0:
+                    total_loans += min(loan.monthly_installment, outstanding)
+
+            # Salary advances — gated by the run's recover_advances flag; capped at outstanding.
+            if recover_advances:
+                active_advances = Advances.objects.filter(
+                    employee=employee, is_active=True, issue_date__lte=period,
+                )
+                for advance in active_advances:
+                    if advance.repay_option and advance.repay_option.no_of_installments > 0:
+                        monthly_deduction = advance.repay_option.amount / advance.repay_option.no_of_installments
+                        outstanding = (advance.amount_issued or Decimal('0')) - (advance.amount_repaid or Decimal('0'))
+                        if outstanding > 0:
+                            total_advances += min(monthly_deduction, outstanding)
+
+            # Loss/damages — capped at outstanding.
             active_loss_damages = LossesAndDamages.objects.filter(
-                employee=employee,
-                is_active=True
+                employee=employee, is_active=True, issue_date__lte=period,
             )
             for loss_damage in active_loss_damages:
-                # Calculate monthly deduction based on repay_option
                 if loss_damage.repay_option and loss_damage.repay_option.no_of_installments > 0:
                     monthly_deduction = loss_damage.repay_option.amount / loss_damage.repay_option.no_of_installments
-                    total_loss_damages += monthly_deduction
-            
-            # Calculate non-cash benefits
-            active_benefits = Benefits.objects.filter(
-                employee=employee,
-                is_active=True,
-                benefit__non_cash=True
+                    outstanding = (loss_damage.damage_amount or Decimal('0')) - (loss_damage.amount_repaid or Decimal('0'))
+                    if outstanding > 0:
+                        total_loss_damages += min(monthly_deduction, outstanding)
+
+            # Non-cash benefits — effective for the period.
+            active_benefits = self._period_active(
+                Benefits.objects.filter(employee=employee, is_active=True, benefit__non_cash=True),
+                period, 'effective_date', 'end_date',
             )
             for benefit in active_benefits:
                 if benefit.amount:
                     total_benefits += benefit.amount
-        
+
         except Exception as e:
             print(f"Error calculating employee deductions: {e}")
-        
+
         return {
             'loans': total_loans,
             'advances': total_advances,

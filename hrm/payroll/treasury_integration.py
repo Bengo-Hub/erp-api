@@ -120,7 +120,10 @@ def handle_payroll_disbursed(envelope: dict) -> None:
         return
     try:
         qs = Payslip.objects.filter(payment_period__startswith=period[:7]) if len(period) >= 7 else Payslip.objects.none()
+        # Tenant isolation: never mark another tenant's payslips paid from one tenant's event.
+        if tenant_id:
+            qs = qs.filter(employee__organisation__tenant_id=tenant_id)
         updated = qs.update(published=True)
-        logger.info("payroll.disbursed: marked %s payslips published (period=%s)", updated, period)
+        logger.info("payroll.disbursed: marked %s payslips published (period=%s, tenant=%s)", updated, period, tenant_id)
     except Exception as exc:  # pragma: no cover
         logger.warning("handle_payroll_disbursed error: %s", exc)

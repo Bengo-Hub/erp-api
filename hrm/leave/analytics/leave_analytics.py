@@ -180,38 +180,38 @@ class LeaveAnalyticsService:
             if business_id:
                 queryset = queryset.filter(employee__organisation__id=business_id)
             
-            # Leave balance statistics
+            # Leave balance statistics (LeaveBalance model fields are days_entitled/days_taken/days_remaining)
             total_entitled_days = queryset.aggregate(
-                total=Sum('entitled_days')
+                total=Sum('days_entitled')
             )['total'] or 0
-            
+
             total_taken_days = queryset.aggregate(
-                total=Sum('taken_days')
+                total=Sum('days_taken')
             )['total'] or 0
-            
+
             total_remaining_days = queryset.aggregate(
-                total=Sum('remaining_days')
+                total=Sum('days_remaining')
             )['total'] or 0
-            
-            # Leave balances by category
+
+            # Leave balances by category (FK is `category`; alias output keys to keep the API contract stable)
             balances_by_category = queryset.values(
-                'leave_category__name'
+                leave_category__name=F('category__name')
             ).annotate(
-                entitled_days=Sum('entitled_days'),
-                taken_days=Sum('taken_days'),
-                remaining_days=Sum('remaining_days'),
+                entitled_days=Sum('days_entitled'),
+                taken_days=Sum('days_taken'),
+                remaining_days=Sum('days_remaining'),
                 employee_count=Count('employee', distinct=True)
             ).order_by('-entitled_days')
-            
+
             # Employees with low leave balance (less than 5 days)
             low_balance_employees = queryset.filter(
-                remaining_days__lt=5
+                days_remaining__lt=5
             ).values(
                 'employee__user__first_name',
                 'employee__user__last_name',
-                'leave_category__name',
-                'remaining_days'
-            ).order_by('remaining_days')[:10]
+                leave_category__name=F('category__name'),
+                remaining_days=F('days_remaining'),
+            ).order_by('days_remaining')[:10]
             
             return {
                 'total_entitled_days': total_entitled_days,
@@ -299,7 +299,7 @@ class LeaveAnalyticsService:
                 queryset = queryset.filter(employee__organisation__id=business_id)
             
             leave_by_category = queryset.values(
-                'leave_category__name'
+                leave_category__name=F('category__name')
             ).annotate(
                 total_requests=Count('id'),
                 approved_requests=Count('id', filter=Q(status='approved')),

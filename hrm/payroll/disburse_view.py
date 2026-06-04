@@ -27,7 +27,13 @@ class PayrollDisburseView(APIView):
         if not period and not payslip_ids:
             return Response({"error": "period or payslip_ids is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+        tenant_id = getattr(request, "tenant_id", "") or ""
+
         qs = Payslip.objects.filter(approval_status="approved", payroll_status="complete", delete_status=False)
+        # Tenant isolation: only ever disburse the requesting tenant's payslips. Guarded so legacy
+        # single-tenant deployments (no tenant_id on the request) keep working unchanged.
+        if tenant_id:
+            qs = qs.filter(employee__organisation__tenant_id=tenant_id)
         if payslip_ids:
             qs = qs.filter(id__in=payslip_ids)
         if period:
@@ -36,7 +42,6 @@ class PayrollDisburseView(APIView):
             qs = qs.filter(employee__outlet_id=outlet_id)
         qs = qs.select_related("employee", "employee__user")
 
-        tenant_id = getattr(request, "tenant_id", "") or ""
         result = publish_and_disburse(list(qs), tenant_id, outlet_id, period, request=request)
         code = status.HTTP_200_OK if result.get("published") else status.HTTP_400_BAD_REQUEST
         return Response(result, status=code)

@@ -18,10 +18,11 @@ class DynamicDeductionEngine:
     Engine for calculating deductions in the order specified by formula versions
     """
     
-    def __init__(self, formula_version, payroll_date, formula_overrides=None):
+    def __init__(self, formula_version, payroll_date, formula_overrides=None, recover_advances=True):
         self.formula_version = formula_version
         self.payroll_date = payroll_date
         self.formula_overrides = formula_overrides or {}
+        self.recover_advances = recover_advances
         self.deduction_order = self._load_deduction_order()
         self.calculation_engine = PayrollCalculationEngine(payroll_date, formula_overrides)
     
@@ -188,7 +189,7 @@ class DynamicDeductionEngine:
                 paye = self.calculation_engine.calculate_income_tax(taxable_income, "primary")
                 return {
                     'amount': paye,
-                    'personal_relief': Decimal('2400')
+                    'personal_relief': self.calculation_engine.resolve_personal_relief("primary")
                 }
             elif salary_details and salary_details.income_tax == "secondary":
                 return {
@@ -219,7 +220,8 @@ class DynamicDeductionEngine:
     def _calculate_advances(self, employee, payment_period, gross_pay):
         """Calculate advance deductions using centralized engine"""
         try:
-            deductions = self.calculation_engine.calculate_employee_deductions(employee, gross_pay)
+            deductions = self.calculation_engine.calculate_employee_deductions(
+                employee, gross_pay, recover_advances=self.recover_advances)
             return {'amount': deductions.get('advances', Decimal('0'))}
         except Exception as e:
             print(f"Error calculating advances: {e}")
