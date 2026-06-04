@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from rest_framework import status
 
 from .models import TrainingCourse, TrainingEnrollment, TrainingEvaluation
@@ -29,6 +30,15 @@ class TrainingEnrollmentViewSet(viewsets.ModelViewSet):
     search_fields = ["employee__user__email", "course__title"]
     ordering_fields = ["enrolled_at"]
     throttle_scope = "user"
+
+    def perform_create(self, serializer):
+        """Enforce course capacity (active enrollments must not exceed it)."""
+        course = serializer.validated_data.get("course")
+        if course and getattr(course, "capacity", 0):
+            active = TrainingEnrollment.objects.filter(course=course, status="enrolled").count()
+            if active >= course.capacity:
+                raise ValidationError({"course": f"Course is full (capacity {course.capacity})."})
+        serializer.save()
 
     @action(detail=True, methods=["post"], url_path="complete")
     def complete(self, request, pk=None):

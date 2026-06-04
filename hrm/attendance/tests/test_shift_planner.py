@@ -98,3 +98,28 @@ class OvertimeComputationTest(TestCase):
         rec2 = AttendanceRecord(employee=emp, date=date(2026, 6, 3), total_seconds_worked=4 * 3600, check_out=date(2026, 6, 3))
         rec2.compute_hours()
         self.assertEqual(rec2.status, "half-day")
+
+
+class LateDetectionTest(TestCase):
+    def test_late_status_applied_with_grace(self):
+        from datetime import time, datetime, timezone as dttz
+        from decimal import Decimal
+        from django.utils import timezone
+        from hrm.attendance.models import AttendanceRecord, WorkShift, WorkShiftSchedule
+        user = CustomUser.objects.create_user(email="late@example.com", password="x", first_name="La", last_name="Te")
+        emp = Employee.objects.create(
+            user=user, gender="Male", date_of_birth=date(1990, 1, 1), residential_status="Resident",
+            national_id="ID-LATE", pin_no="P-LT", shif_or_nhif_number="SH-LT", nssf_no="NS-LT")
+        shift = WorkShift.objects.create(name="Day", start_time=time(8, 0), grace_minutes=15)
+        # 2026-06-01 is a Monday
+        WorkShiftSchedule.objects.create(work_shift=shift, day="Monday", start_time=time(8, 0), end_time=time(17, 0))
+        # Check-in at 08:30 local (past 08:15 grace) -> late
+        ci = timezone.make_aware(datetime(2026, 6, 1, 8, 30))
+        rec = AttendanceRecord(employee=emp, work_shift=shift, date=date(2026, 6, 1), check_in=ci, status="present")
+        rec.apply_late_status()
+        self.assertEqual(rec.status, "late")
+        # Within grace (08:10) -> stays present
+        ci2 = timezone.make_aware(datetime(2026, 6, 1, 8, 10))
+        rec2 = AttendanceRecord(employee=emp, work_shift=shift, date=date(2026, 6, 1), check_in=ci2, status="present")
+        rec2.apply_late_status()
+        self.assertEqual(rec2.status, "present")
