@@ -11,6 +11,12 @@ class LeaveCategory(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    # Accrual / carry-over configuration (drives the accrue_leave command).
+    default_annual_days = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'),
+                                              help_text="Default yearly entitlement for this category")
+    allow_carryover = models.BooleanField(default=False, help_text="Carry unused balance into the next year")
+    max_carryover_days = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'),
+                                             help_text="Cap on days carried over (0 = unlimited when allow_carryover)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
