@@ -15,6 +15,7 @@ from .serializers import (
     GoalProgressSerializer
 )
 from hrm.employees.permissions import IsHRorManager
+from approvals.integration import start_approval, record_decision
 
 class AppraisalCycleViewSet(viewsets.ModelViewSet):
     queryset = AppraisalCycle.objects.all()
@@ -94,6 +95,10 @@ class AppraisalViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
         appraisal.status = 'completed'
         appraisal.save(update_fields=['status', 'updated_at'])
+        # Optionally raise a centralized ApprovalRequest if a workflow is
+        # configured; no-op fallback keeps the direct status update authoritative.
+        start_approval(appraisal, 'appraisal', request.user,
+                       title=f"Appraisal #{appraisal.pk}")
         return Response({'status': 'appraisal submitted'})
 
     @action(detail=True, methods=['post'])
@@ -105,6 +110,7 @@ class AppraisalViewSet(viewsets.ModelViewSet):
         appraisal.status = 'approved'
         appraisal.approved_at = timezone.now()
         appraisal.save(update_fields=['status', 'approved_at', 'updated_at'])
+        record_decision(appraisal, request.user, approved=True)
         return Response({'status': 'appraisal approved'})
 
     @action(detail=True, methods=['post'])
@@ -117,6 +123,8 @@ class AppraisalViewSet(viewsets.ModelViewSet):
         appraisal.rejected_at = timezone.now()
         appraisal.rejection_reason = (request.data.get('rejection_reason') or '').strip() or None
         appraisal.save(update_fields=['status', 'rejected_at', 'rejection_reason', 'updated_at'])
+        record_decision(appraisal, request.user, approved=False,
+                        notes=appraisal.rejection_reason)
         return Response({'status': 'appraisal rejected'})
 
 class AppraisalResponseViewSet(viewsets.ModelViewSet):
