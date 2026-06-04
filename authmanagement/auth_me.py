@@ -28,7 +28,10 @@ class AuthMeView(APIView):
         if user.is_superuser:
             permissions = ["*"]  # superuser bypass marker (frontend treats as all)
         else:
-            permissions = sorted(user.get_all_permissions())
+            # Return BARE codenames (e.g. "view_employee"), not Django's "app_label.codename".
+            # The erp-ui gates sidebar/buttons on bare codenames, so returning the prefixed form
+            # made every non-superuser permission check fail (users denied despite having roles).
+            permissions = sorted({p.split(".")[-1] for p in user.get_all_permissions()})
 
         global_roles = claims.roles if claims else []
         return Response({
