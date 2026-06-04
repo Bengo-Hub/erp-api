@@ -156,10 +156,13 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
             "gps_longitude",
             "status",
             "total_seconds_worked",
+            "regular_hours",
+            "overtime_hours",
             "notes",
             "created_at",
             "updated_at",
         ]
+        read_only_fields = ["regular_hours", "overtime_hours"]
 
 
 class AttendanceRuleSerializer(serializers.ModelSerializer):

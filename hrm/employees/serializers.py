@@ -330,8 +330,8 @@ class ContractSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contract
         fields = [
-            "id", "employee", "status", "contract_start_date", "contract_end_date",
-            "salary", "pay_type", "contract_duration", "notes"
+            "id", "employee", "contract_type", "status", "contract_start_date", "contract_end_date",
+            "salary", "pay_type", "contract_duration", "probation_end_date", "termination_reason", "notes"
         ]
 
     def get_employee(self, obj):

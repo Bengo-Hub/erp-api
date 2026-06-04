@@ -426,13 +426,24 @@ class Contract(models.Model):
         ("terminated","Terminated"),
         ("expired","Expired")
     )
+    contract_types=(
+        ("permanent","Permanent"),
+        ("fixed_term","Fixed-term"),
+        ("intern","Intern"),
+        ("probation","Probation"),
+        ("consultant","Consultant"),
+        ("casual","Casual"),
+    )
     employee=models.ForeignKey(Employee,on_delete=models.CASCADE,related_name='contracts')
+    contract_type=models.CharField(max_length=30,choices=contract_types,default="permanent")
     contract_start_date=models.DateField()
     contract_end_date=models.DateField()
     status=models.CharField(max_length=100,choices=statuses,default="active")
     salary = models.DecimalField(max_digits=14, decimal_places=2)
     pay_type=models.CharField(max_length=100,choices=pay_choices)
     contract_duration=models.DecimalField(max_digits=10,decimal_places=2,blank=True, null=True,help_text="Duration In Days. This is an auto calculated field. DO NOT FILL!")
+    probation_end_date=models.DateField(blank=True,null=True,help_text="End of probation period, if applicable")
+    termination_reason=models.TextField(blank=True,null=True,help_text="Reason captured when a contract is terminated")
     notes=models.TextField(blank=True,null=True)
 
     def save(self, *args, **kwargs):

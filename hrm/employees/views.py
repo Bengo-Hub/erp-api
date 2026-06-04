@@ -1069,6 +1069,9 @@ class ContractViewSet(viewsets.ModelViewSet):
         if contract.status != 'terminated':
             contract.status = 'terminated'
             contract.contract_end_date = datetime.now().date()  # Set end date to now
+            reason = (request.data.get('termination_reason') or '').strip()
+            if reason:
+                contract.termination_reason = reason
             contract.save()
             return Response({"status": "Contract terminated successfully."})
         return Response({"error": "Contract is already terminated."}, status=status.HTTP_400_BAD_REQUEST)
