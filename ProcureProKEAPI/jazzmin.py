@@ -119,12 +119,7 @@ JAZZMIN_SETTINGS = {
             "icon": "fas fa-money-bill-wave",
             "permissions": ["payroll.view_payroll"]
         }],
-        "pos": [{
-            "name": "POS Dashboard",
-            "url": "/admin/pos/order/",
-            "icon": "fas fa-cash-register",
-            "permissions": ["pos.view_order"]
-        }],
+        # POS admin link removed — POS is decomposed to pos-service.
     },
 
     # Custom icons for side menu apps/models
