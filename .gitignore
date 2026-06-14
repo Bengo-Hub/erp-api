@@ -30,3 +30,13 @@ KubeSecrets/
 
 # Certificates
 *.pem
+*.key
+*-key.pem
+credentials.json
+
+# Go build artifacts
+*.exe
+/bin/
+api
+migrate
+seed
