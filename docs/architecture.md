@@ -296,11 +296,12 @@ erp-service/erp-api/
 | `hrm.leave` | `modules/leave` | accrual job → cron/consumer |
 | `hrm.attendance` (+ shift planner) | `modules/attendance` | WorkShift, AttendanceRecord, rules, rosters, ESS settings, timesheets |
 | `hrm.appraisals` / `performance` / `recruitment` / `training` | `modules/{appraisals,performance,recruitment,training}` | mostly CRUD |
-| `approvals` | `modules/approvals` | reuse inventory-api's `ApprovalRule/Request/Step/Action` Ent schema (already exists!) |
-| `business` | `modules/business` | Business config, Branch, branding cache, PrefixSettings, DocumentSequence (use inventory-api `documentsequence` pattern) |
-| `addresses` | `modules/addresses` | CRUD |
-| `core` | `modules/core` | reference data (Regions/Departments/Projects/Banks), ExchangeRate, settings |
-| `task_management` | `modules/tasks` | replace Celery task-tracker with Go job records + worker goroutines / NATS |
+| `approvals` | `modules/approvals` | DONE — typed tenant-scoped engine (ApprovalWorkflow/Step/Request/StepAction), approver resolution vs Employee/HRDetails, wired into leave+appraisals |
+| `business` | `modules/business` | DONE (slim) — CompanySettings + DocumentSequence (inventory-api CAS numbering). NO branding (auth-api SoT), NO tax rates (payroll tables), NO ServiceTypes/PickupStations (ordering-service) |
+| `addresses` | — | NOT built — address_book/delivery-region belong to ordering-service (plan §0a); HR-owned employee contact address lives on ContactDetails |
+| `core` reference | `modules/business` + `modules/fx` + reference schemas | Regions/Departments + ExchangeRate(+ExchangeRateAPISettings FX cron) + AppSetting. NO Projects (projects-service), NO Bank masters (treasury/payment-rail) |
+| `reports` | `modules/reports` | DONE — P9/P10A/SHIF/NHIF/NSSF/NITA/WHT/statutory/bank-schedule/variance + headcount/leave/payroll summaries |
+| `task_management` | `modules/tasks` | DONE — Task+TaskComment+TaskLog, status FSM/progress/assignment; internal tracker (distinct from projects-service) |
 | `error_handling` | `modules/errors` or platform middleware | prefer structured logging + Sentry/OTLP; keep table only if UI needs it |
 | `authmanagement` | `modules/rbac` + `platform/auth` + `services/usersync` | service-role RBAC (Ent roles/perms like inventory-api `inventoryrole`/`inventorypermission`), `GET /auth/me`, tenant/outlet shadows |
 | `integrations` | `platform/events` + `platform/treasury` + `platform/auth` + cron | outbox via shared-events; FX fetch via cron goroutine |
