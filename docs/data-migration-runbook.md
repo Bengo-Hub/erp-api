@@ -28,17 +28,34 @@
 | 10 | `employees_contract` | `contract` | `duration_months` recomputed by service |
 | 11 | `payslips` | `payslip` | **golden-master parity table** — exact decimals |
 | 12 | `leave_leaverequest` | `leave_request` | status → Ent enum; remaps category/approver |
+| 13 | `regions` | `region` | global ref (tenant NULL); self-ref `parent_region` remapped |
+| 14 | `payroll_settings_relief` | `payroll_relief` | global ref → needs `--default-tenant`; before components |
+| 15 | `payroll_settings_payrollcomponents` | `payroll_component` | global ref; remaps `applicable_relief`/`applicable_tax_formula` |
+| 16 | `payroll_settings_formulas` | `payroll_formula` | exact-decimal rates; remaps `deduction`→`component_id`; eff-dates |
+| 17 | `payroll_settings_formulaitems` | `payroll_formula_item` | tax brackets; remaps `formula`; exact decimals |
+| 18 | `taxes_tax` | `withholding_tax` | **best-effort** — only if column shape matches (title+rate); else skip+flag |
+| 19 | `appraisals_appraisalcycle` | `appraisal_cycle` | global ref → needs `--default-tenant`; status → Ent enum |
+
+> **Intentionally skipped — `appraisals_appraisalcycle_locations`** (cycle↔`core.Regions` M2M):
+> the Ent `AppraisalCycle` schema has **no locations/region edge**, so there is no destination
+> to write the link rows into. They are left for manual reconciliation rather than mis-mapped.
+> Likewise `taxes_tax` is **not in the reference Django source tree** (the only reference tax
+> model is `business.TaxRates`→`taxrates`, a VAT/sales rate owned by inventory/pos, not HR). The
+> migrator therefore introspects the prod `taxes_tax` columns and only maps to `withholding_tax`
+> when it finds a withholding-tax shape (`title|name` + `rate|percentage`); otherwise it records
+> a skip line for manual reconciliation.
 
 **Deliberately NOT moved** (see `data-migration.md §4`): decomposed-domain tables
 (finance/inventory/ordering/projects/CRM/assets), `auth_*` RBAC (re-seeded via `cmd/seed`,
 not copied), `CustomUser` rows (SSO JIT recreates from the JWT `sub`), `published` outbox
 rows, Fernet FX ciphertext (re-key), and bank_institution/bank_branch masters.
 
-> The migrator covers the **core HR/payroll chain** that the parity gate validates. Additional
-> KEPT tables (attendance, recruitment, training, appraisals, performance, tasks, approvals,
-> loans/advances/deductions/benefits/earnings) follow the **same per-table pattern** in
-> `cmd/migrate-data/migrate_*.go` — extend there before the real run if those tables hold prod
-> rows (confirm via the per-table counts in step 1).
+> The migrator covers the **core HR/payroll chain** that the parity gate validates, plus the
+> reference/config tables that hold prod data (regions, payroll-settings formulas/items/
+> components/relief, appraisal cycles). Remaining KEPT tables (attendance, recruitment,
+> training, performance, tasks, approvals, loans/advances/deductions/benefits/earnings) follow
+> the **same per-table pattern** in `cmd/migrate-data/migrate_*.go` — extend there before the
+> real run if those tables hold prod rows (confirm via the per-table counts in step 1).
 
 ## Transform guarantees
 

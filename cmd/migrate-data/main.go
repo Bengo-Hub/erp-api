@@ -119,11 +119,20 @@ func main() {
 // a per-table error never aborts the whole run — the reconcile report surfaces the outcome.
 func (m *Migrator) run() {
 	// 2-3. reference + business config (no HR FKs).
+	m.migrateRegions()
 	m.migrateDepartments()
 	m.migrateJobTitles()
 	m.migrateCompanySettings()
 	m.migrateDocumentSequences()
 	m.migrateLeaveCategories()
+
+	// 7. payroll settings (config; before payroll txns). FK order: relief -> components
+	// (FK relief + benefittaxes) -> formulas (FK components) -> formula items (FK formulas).
+	m.migratePayrollReliefs()
+	m.migratePayrollComponents()
+	m.migratePayrollFormulas()
+	m.migratePayrollFormulaItems()
+	m.migrateTaxesTax()
 
 	// 5. HR core (employees first — everything else FKs to it).
 	m.migrateEmployees()
@@ -135,4 +144,8 @@ func (m *Migrator) run() {
 	// 8-9. payroll txns + leave (depend on employees).
 	m.migratePayslips()
 	m.migrateLeaveRequests()
+
+	// 10. appraisals (tenant-scoped; the appraisalcycle_locations M2M is intentionally not
+	// migrated — no destination edge in the Ent AppraisalCycle schema).
+	m.migrateAppraisalCycles()
 }

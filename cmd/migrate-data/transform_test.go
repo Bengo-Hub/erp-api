@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalcycle"
 )
 
 // TestParseDecimal verifies money/decimal transform: exact (no float drift), NULL -> zero,
@@ -80,5 +82,33 @@ func TestMonthAbbrevToInt(t *testing.T) {
 		if got := monthAbbrevToInt(in); got != want {
 			t.Errorf("monthAbbrevToInt(%q) = %d, want %d", in, got, want)
 		}
+	}
+}
+
+// TestAppraisalCycleStatus covers the legacy appraisals_appraisalcycle.status -> Ent enum map,
+// including the unknown -> "created" (safe initial state) default.
+func TestAppraisalCycleStatus(t *testing.T) {
+	cases := map[string]appraisalcycle.Status{
+		"created":   appraisalcycle.StatusCreated,
+		"activated": appraisalcycle.StatusActivated,
+		"closed":    appraisalcycle.StatusClosed,
+		"reopened":  appraisalcycle.StatusReopened,
+		"":          appraisalcycle.StatusCreated,
+		"garbage":   appraisalcycle.StatusCreated,
+	}
+	for in, want := range cases {
+		if got := appraisalCycleStatus(in); got != want {
+			t.Errorf("appraisalCycleStatus(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// TestPayrollFormulaItemDecimals is a focused guard that the formula-bracket money columns go
+// through the exact-decimal path (never float) — the same invariant payslips rely on.
+func TestPayrollFormulaItemDecimals(t *testing.T) {
+	in := sql.NullString{String: "24000.0001", Valid: true}
+	got := parseDecimal(in)
+	if !got.Equal(decimal.RequireFromString("24000.0001")) {
+		t.Fatalf("formula-item decimal drift: got %s", got)
 	}
 }
