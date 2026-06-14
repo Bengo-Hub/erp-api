@@ -12,6 +12,8 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// Advance is the client for interacting with the Advance builders.
+	Advance *AdvanceClient
 	// ApiRequestMetric is the client for interacting with the ApiRequestMetric builders.
 	ApiRequestMetric *ApiRequestMetricClient
 	// AppSetting is the client for interacting with the AppSetting builders.
@@ -24,26 +26,82 @@ type Tx struct {
 	BankBranch *BankBranchClient
 	// BankInstitution is the client for interacting with the BankInstitution builders.
 	BankInstitution *BankInstitutionClient
+	// BenefitTax is the client for interacting with the BenefitTax builders.
+	BenefitTax *BenefitTaxClient
+	// ClaimItem is the client for interacting with the ClaimItem builders.
+	ClaimItem *ClaimItemClient
+	// ContactDetails is the client for interacting with the ContactDetails builders.
+	ContactDetails *ContactDetailsClient
+	// Contract is the client for interacting with the Contract builders.
+	Contract *ContractClient
 	// CustomUser is the client for interacting with the CustomUser builders.
 	CustomUser *CustomUserClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// Employee is the client for interacting with the Employee builders.
+	Employee *EmployeeClient
+	// EmployeeBankAccount is the client for interacting with the EmployeeBankAccount builders.
+	EmployeeBankAccount *EmployeeBankAccountClient
+	// EmployeeBenefit is the client for interacting with the EmployeeBenefit builders.
+	EmployeeBenefit *EmployeeBenefitClient
+	// EmployeeDocument is the client for interacting with the EmployeeDocument builders.
+	EmployeeDocument *EmployeeDocumentClient
+	// EmployeeLoan is the client for interacting with the EmployeeLoan builders.
+	EmployeeLoan *EmployeeLoanClient
+	// ExpenseClaim is the client for interacting with the ExpenseClaim builders.
+	ExpenseClaim *ExpenseClaimClient
+	// GeneralHRSettings is the client for interacting with the GeneralHRSettings builders.
+	GeneralHRSettings *GeneralHRSettingsClient
+	// HRDetails is the client for interacting with the HRDetails builders.
+	HRDetails *HRDetailsClient
 	// IdempotencyKey is the client for interacting with the IdempotencyKey builders.
 	IdempotencyKey *IdempotencyKeyClient
+	// JobGroup is the client for interacting with the JobGroup builders.
+	JobGroup *JobGroupClient
+	// JobTitle is the client for interacting with the JobTitle builders.
+	JobTitle *JobTitleClient
+	// LoanType is the client for interacting with the LoanType builders.
+	LoanType *LoanTypeClient
+	// LossAndDamage is the client for interacting with the LossAndDamage builders.
+	LossAndDamage *LossAndDamageClient
+	// NextOfKin is the client for interacting with the NextOfKin builders.
+	NextOfKin *NextOfKinClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
+	// PayrollComponent is the client for interacting with the PayrollComponent builders.
+	PayrollComponent *PayrollComponentClient
+	// PayrollFormula is the client for interacting with the PayrollFormula builders.
+	PayrollFormula *PayrollFormulaClient
+	// PayrollFormulaItem is the client for interacting with the PayrollFormulaItem builders.
+	PayrollFormulaItem *PayrollFormulaItemClient
+	// PayrollRelief is the client for interacting with the PayrollRelief builders.
+	PayrollRelief *PayrollReliefClient
+	// PayrollSplitRatio is the client for interacting with the PayrollSplitRatio builders.
+	PayrollSplitRatio *PayrollSplitRatioClient
+	// Payslip is the client for interacting with the Payslip builders.
+	Payslip *PayslipClient
+	// PayslipAudit is the client for interacting with the PayslipAudit builders.
+	PayslipAudit *PayslipAuditClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
 	// Region is the client for interacting with the Region builders.
 	Region *RegionClient
+	// RepayOption is the client for interacting with the RepayOption builders.
+	RepayOption *RepayOptionClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
 	// RolePermission is the client for interacting with the RolePermission builders.
 	RolePermission *RolePermissionClient
+	// SalaryDetails is the client for interacting with the SalaryDetails builders.
+	SalaryDetails *SalaryDetailsClient
 	// UserRoleAssignment is the client for interacting with the UserRoleAssignment builders.
 	UserRoleAssignment *UserRoleAssignmentClient
+	// WithHoldingTax is the client for interacting with the WithHoldingTax builders.
+	WithHoldingTax *WithHoldingTaxClient
+	// WorkersUnion is the client for interacting with the WorkersUnion builders.
+	WorkersUnion *WorkersUnionClient
 
 	// lazily loaded.
 	client     *Client
@@ -175,22 +233,51 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.Advance = NewAdvanceClient(tx.config)
 	tx.ApiRequestMetric = NewApiRequestMetricClient(tx.config)
 	tx.AppSetting = NewAppSettingClient(tx.config)
 	tx.AuthOutlet = NewAuthOutletClient(tx.config)
 	tx.AuthTenant = NewAuthTenantClient(tx.config)
 	tx.BankBranch = NewBankBranchClient(tx.config)
 	tx.BankInstitution = NewBankInstitutionClient(tx.config)
+	tx.BenefitTax = NewBenefitTaxClient(tx.config)
+	tx.ClaimItem = NewClaimItemClient(tx.config)
+	tx.ContactDetails = NewContactDetailsClient(tx.config)
+	tx.Contract = NewContractClient(tx.config)
 	tx.CustomUser = NewCustomUserClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
+	tx.Employee = NewEmployeeClient(tx.config)
+	tx.EmployeeBankAccount = NewEmployeeBankAccountClient(tx.config)
+	tx.EmployeeBenefit = NewEmployeeBenefitClient(tx.config)
+	tx.EmployeeDocument = NewEmployeeDocumentClient(tx.config)
+	tx.EmployeeLoan = NewEmployeeLoanClient(tx.config)
+	tx.ExpenseClaim = NewExpenseClaimClient(tx.config)
+	tx.GeneralHRSettings = NewGeneralHRSettingsClient(tx.config)
+	tx.HRDetails = NewHRDetailsClient(tx.config)
 	tx.IdempotencyKey = NewIdempotencyKeyClient(tx.config)
+	tx.JobGroup = NewJobGroupClient(tx.config)
+	tx.JobTitle = NewJobTitleClient(tx.config)
+	tx.LoanType = NewLoanTypeClient(tx.config)
+	tx.LossAndDamage = NewLossAndDamageClient(tx.config)
+	tx.NextOfKin = NewNextOfKinClient(tx.config)
 	tx.OutboxEvent = NewOutboxEventClient(tx.config)
+	tx.PayrollComponent = NewPayrollComponentClient(tx.config)
+	tx.PayrollFormula = NewPayrollFormulaClient(tx.config)
+	tx.PayrollFormulaItem = NewPayrollFormulaItemClient(tx.config)
+	tx.PayrollRelief = NewPayrollReliefClient(tx.config)
+	tx.PayrollSplitRatio = NewPayrollSplitRatioClient(tx.config)
+	tx.Payslip = NewPayslipClient(tx.config)
+	tx.PayslipAudit = NewPayslipAuditClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
 	tx.Region = NewRegionClient(tx.config)
+	tx.RepayOption = NewRepayOptionClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
+	tx.SalaryDetails = NewSalaryDetailsClient(tx.config)
 	tx.UserRoleAssignment = NewUserRoleAssignmentClient(tx.config)
+	tx.WithHoldingTax = NewWithHoldingTaxClient(tx.config)
+	tx.WorkersUnion = NewWorkersUnionClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.
@@ -200,7 +287,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: ApiRequestMetric.QueryXXX(), the query will be executed
+// applies a query, for example: Advance.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

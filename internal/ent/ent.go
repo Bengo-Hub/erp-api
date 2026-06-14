@@ -12,22 +12,51 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/apirequestmetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
 	"github.com/Bengo-Hub/erp-api/internal/ent/bankbranch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/bankinstitution"
+	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
+	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
+	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
+	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeedocument"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
+	"github.com/Bengo-Hub/erp-api/internal/ent/expenseclaim"
+	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/idempotencykey"
+	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
+	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
+	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
+	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
+	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
 	"github.com/Bengo-Hub/erp-api/internal/ent/outboxevent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollrelief"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/project"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
+	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
 	"github.com/Bengo-Hub/erp-api/internal/ent/rolepermission"
+	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/userroleassignment"
+	"github.com/Bengo-Hub/erp-api/internal/ent/withholdingtax"
+	"github.com/Bengo-Hub/erp-api/internal/ent/workersunion"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -88,22 +117,51 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			apirequestmetric.Table:   apirequestmetric.ValidColumn,
-			appsetting.Table:         appsetting.ValidColumn,
-			authoutlet.Table:         authoutlet.ValidColumn,
-			authtenant.Table:         authtenant.ValidColumn,
-			bankbranch.Table:         bankbranch.ValidColumn,
-			bankinstitution.Table:    bankinstitution.ValidColumn,
-			customuser.Table:         customuser.ValidColumn,
-			department.Table:         department.ValidColumn,
-			idempotencykey.Table:     idempotencykey.ValidColumn,
-			outboxevent.Table:        outboxevent.ValidColumn,
-			permission.Table:         permission.ValidColumn,
-			project.Table:            project.ValidColumn,
-			region.Table:             region.ValidColumn,
-			role.Table:               role.ValidColumn,
-			rolepermission.Table:     rolepermission.ValidColumn,
-			userroleassignment.Table: userroleassignment.ValidColumn,
+			advance.Table:             advance.ValidColumn,
+			apirequestmetric.Table:    apirequestmetric.ValidColumn,
+			appsetting.Table:          appsetting.ValidColumn,
+			authoutlet.Table:          authoutlet.ValidColumn,
+			authtenant.Table:          authtenant.ValidColumn,
+			bankbranch.Table:          bankbranch.ValidColumn,
+			bankinstitution.Table:     bankinstitution.ValidColumn,
+			benefittax.Table:          benefittax.ValidColumn,
+			claimitem.Table:           claimitem.ValidColumn,
+			contactdetails.Table:      contactdetails.ValidColumn,
+			contract.Table:            contract.ValidColumn,
+			customuser.Table:          customuser.ValidColumn,
+			department.Table:          department.ValidColumn,
+			employee.Table:            employee.ValidColumn,
+			employeebankaccount.Table: employeebankaccount.ValidColumn,
+			employeebenefit.Table:     employeebenefit.ValidColumn,
+			employeedocument.Table:    employeedocument.ValidColumn,
+			employeeloan.Table:        employeeloan.ValidColumn,
+			expenseclaim.Table:        expenseclaim.ValidColumn,
+			generalhrsettings.Table:   generalhrsettings.ValidColumn,
+			hrdetails.Table:           hrdetails.ValidColumn,
+			idempotencykey.Table:      idempotencykey.ValidColumn,
+			jobgroup.Table:            jobgroup.ValidColumn,
+			jobtitle.Table:            jobtitle.ValidColumn,
+			loantype.Table:            loantype.ValidColumn,
+			lossanddamage.Table:       lossanddamage.ValidColumn,
+			nextofkin.Table:           nextofkin.ValidColumn,
+			outboxevent.Table:         outboxevent.ValidColumn,
+			payrollcomponent.Table:    payrollcomponent.ValidColumn,
+			payrollformula.Table:      payrollformula.ValidColumn,
+			payrollformulaitem.Table:  payrollformulaitem.ValidColumn,
+			payrollrelief.Table:       payrollrelief.ValidColumn,
+			payrollsplitratio.Table:   payrollsplitratio.ValidColumn,
+			payslip.Table:             payslip.ValidColumn,
+			payslipaudit.Table:        payslipaudit.ValidColumn,
+			permission.Table:          permission.ValidColumn,
+			project.Table:             project.ValidColumn,
+			region.Table:              region.ValidColumn,
+			repayoption.Table:         repayoption.ValidColumn,
+			role.Table:                role.ValidColumn,
+			rolepermission.Table:      rolepermission.ValidColumn,
+			salarydetails.Table:       salarydetails.ValidColumn,
+			userroleassignment.Table:  userroleassignment.ValidColumn,
+			withholdingtax.Table:      withholdingtax.ValidColumn,
+			workersunion.Table:        workersunion.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

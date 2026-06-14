@@ -5,29 +5,91 @@ package ent
 import (
 	"time"
 
+	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/apirequestmetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
 	"github.com/Bengo-Hub/erp-api/internal/ent/bankbranch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/bankinstitution"
+	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
+	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
+	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
+	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeedocument"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
+	"github.com/Bengo-Hub/erp-api/internal/ent/expenseclaim"
+	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/idempotencykey"
+	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
+	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
+	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
+	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
+	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
 	"github.com/Bengo-Hub/erp-api/internal/ent/outboxevent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollrelief"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/project"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
+	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
+	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/schema"
 	"github.com/Bengo-Hub/erp-api/internal/ent/userroleassignment"
+	"github.com/Bengo-Hub/erp-api/internal/ent/withholdingtax"
+	"github.com/Bengo-Hub/erp-api/internal/ent/workersunion"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	advanceFields := schema.Advance{}.Fields()
+	_ = advanceFields
+	// advanceDescApproved is the schema descriptor for approved field.
+	advanceDescApproved := advanceFields[5].Descriptor()
+	// advance.DefaultApproved holds the default value on creation for the approved field.
+	advance.DefaultApproved = advanceDescApproved.Default.(bool)
+	// advanceDescAmountIssued is the schema descriptor for amount_issued field.
+	advanceDescAmountIssued := advanceFields[9].Descriptor()
+	// advance.DefaultAmountIssued holds the default value on creation for the amount_issued field.
+	advance.DefaultAmountIssued = advanceDescAmountIssued.Default.(decimal.Decimal)
+	// advanceDescAmountRepaid is the schema descriptor for amount_repaid field.
+	advanceDescAmountRepaid := advanceFields[10].Descriptor()
+	// advance.DefaultAmountRepaid holds the default value on creation for the amount_repaid field.
+	advance.DefaultAmountRepaid = advanceDescAmountRepaid.Default.(decimal.Decimal)
+	// advanceDescIsActive is the schema descriptor for is_active field.
+	advanceDescIsActive := advanceFields[11].Descriptor()
+	// advance.DefaultIsActive holds the default value on creation for the is_active field.
+	advance.DefaultIsActive = advanceDescIsActive.Default.(bool)
+	// advanceDescCreatedAt is the schema descriptor for created_at field.
+	advanceDescCreatedAt := advanceFields[12].Descriptor()
+	// advance.DefaultCreatedAt holds the default value on creation for the created_at field.
+	advance.DefaultCreatedAt = advanceDescCreatedAt.Default.(func() time.Time)
+	// advanceDescUpdatedAt is the schema descriptor for updated_at field.
+	advanceDescUpdatedAt := advanceFields[13].Descriptor()
+	// advance.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	advance.DefaultUpdatedAt = advanceDescUpdatedAt.Default.(func() time.Time)
+	// advance.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	advance.UpdateDefaultUpdatedAt = advanceDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// advanceDescID is the schema descriptor for id field.
+	advanceDescID := advanceFields[0].Descriptor()
+	// advance.DefaultID holds the default value on creation for the id field.
+	advance.DefaultID = advanceDescID.Default.(func() uuid.UUID)
 	apirequestmetricFields := schema.ApiRequestMetric{}.Fields()
 	_ = apirequestmetricFields
 	// apirequestmetricDescMethod is the schema descriptor for method field.
@@ -146,6 +208,106 @@ func init() {
 	bankinstitutionDescID := bankinstitutionFields[0].Descriptor()
 	// bankinstitution.DefaultID holds the default value on creation for the id field.
 	bankinstitution.DefaultID = bankinstitutionDescID.Default.(func() uuid.UUID)
+	benefittaxFields := schema.BenefitTax{}.Fields()
+	_ = benefittaxFields
+	// benefittaxDescTitle is the schema descriptor for title field.
+	benefittaxDescTitle := benefittaxFields[2].Descriptor()
+	// benefittax.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	benefittax.TitleValidator = benefittaxDescTitle.Validators[0].(func(string) error)
+	// benefittaxDescActualAmount is the schema descriptor for actual_amount field.
+	benefittaxDescActualAmount := benefittaxFields[3].Descriptor()
+	// benefittax.DefaultActualAmount holds the default value on creation for the actual_amount field.
+	benefittax.DefaultActualAmount = benefittaxDescActualAmount.Default.(bool)
+	// benefittaxDescFixedLimit is the schema descriptor for fixed_limit field.
+	benefittaxDescFixedLimit := benefittaxFields[4].Descriptor()
+	// benefittax.DefaultFixedLimit holds the default value on creation for the fixed_limit field.
+	benefittax.DefaultFixedLimit = benefittaxDescFixedLimit.Default.(decimal.Decimal)
+	// benefittaxDescPercentage is the schema descriptor for percentage field.
+	benefittaxDescPercentage := benefittaxFields[5].Descriptor()
+	// benefittax.DefaultPercentage holds the default value on creation for the percentage field.
+	benefittax.DefaultPercentage = benefittaxDescPercentage.Default.(decimal.Decimal)
+	// benefittaxDescAmountsGreaterThan is the schema descriptor for amounts_greater_than field.
+	benefittaxDescAmountsGreaterThan := benefittaxFields[7].Descriptor()
+	// benefittax.DefaultAmountsGreaterThan holds the default value on creation for the amounts_greater_than field.
+	benefittax.DefaultAmountsGreaterThan = benefittaxDescAmountsGreaterThan.Default.(decimal.Decimal)
+	// benefittaxDescMinTaxableAggregate is the schema descriptor for min_taxable_aggregate field.
+	benefittaxDescMinTaxableAggregate := benefittaxFields[8].Descriptor()
+	// benefittax.DefaultMinTaxableAggregate holds the default value on creation for the min_taxable_aggregate field.
+	benefittax.DefaultMinTaxableAggregate = benefittaxDescMinTaxableAggregate.Default.(decimal.Decimal)
+	// benefittaxDescCreatedAt is the schema descriptor for created_at field.
+	benefittaxDescCreatedAt := benefittaxFields[9].Descriptor()
+	// benefittax.DefaultCreatedAt holds the default value on creation for the created_at field.
+	benefittax.DefaultCreatedAt = benefittaxDescCreatedAt.Default.(func() time.Time)
+	// benefittaxDescUpdatedAt is the schema descriptor for updated_at field.
+	benefittaxDescUpdatedAt := benefittaxFields[10].Descriptor()
+	// benefittax.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	benefittax.DefaultUpdatedAt = benefittaxDescUpdatedAt.Default.(func() time.Time)
+	// benefittax.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	benefittax.UpdateDefaultUpdatedAt = benefittaxDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// benefittaxDescID is the schema descriptor for id field.
+	benefittaxDescID := benefittaxFields[0].Descriptor()
+	// benefittax.DefaultID holds the default value on creation for the id field.
+	benefittax.DefaultID = benefittaxDescID.Default.(func() uuid.UUID)
+	claimitemFields := schema.ClaimItem{}.Fields()
+	_ = claimitemFields
+	// claimitemDescAmount is the schema descriptor for amount field.
+	claimitemDescAmount := claimitemFields[5].Descriptor()
+	// claimitem.DefaultAmount holds the default value on creation for the amount field.
+	claimitem.DefaultAmount = claimitemDescAmount.Default.(decimal.Decimal)
+	// claimitemDescCreatedAt is the schema descriptor for created_at field.
+	claimitemDescCreatedAt := claimitemFields[6].Descriptor()
+	// claimitem.DefaultCreatedAt holds the default value on creation for the created_at field.
+	claimitem.DefaultCreatedAt = claimitemDescCreatedAt.Default.(func() time.Time)
+	// claimitemDescUpdatedAt is the schema descriptor for updated_at field.
+	claimitemDescUpdatedAt := claimitemFields[7].Descriptor()
+	// claimitem.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	claimitem.DefaultUpdatedAt = claimitemDescUpdatedAt.Default.(func() time.Time)
+	// claimitem.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	claimitem.UpdateDefaultUpdatedAt = claimitemDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// claimitemDescID is the schema descriptor for id field.
+	claimitemDescID := claimitemFields[0].Descriptor()
+	// claimitem.DefaultID holds the default value on creation for the id field.
+	claimitem.DefaultID = claimitemDescID.Default.(func() uuid.UUID)
+	contactdetailsFields := schema.ContactDetails{}.Fields()
+	_ = contactdetailsFields
+	// contactdetailsDescCreatedAt is the schema descriptor for created_at field.
+	contactdetailsDescCreatedAt := contactdetailsFields[10].Descriptor()
+	// contactdetails.DefaultCreatedAt holds the default value on creation for the created_at field.
+	contactdetails.DefaultCreatedAt = contactdetailsDescCreatedAt.Default.(func() time.Time)
+	// contactdetailsDescUpdatedAt is the schema descriptor for updated_at field.
+	contactdetailsDescUpdatedAt := contactdetailsFields[11].Descriptor()
+	// contactdetails.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	contactdetails.DefaultUpdatedAt = contactdetailsDescUpdatedAt.Default.(func() time.Time)
+	// contactdetails.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	contactdetails.UpdateDefaultUpdatedAt = contactdetailsDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// contactdetailsDescID is the schema descriptor for id field.
+	contactdetailsDescID := contactdetailsFields[0].Descriptor()
+	// contactdetails.DefaultID holds the default value on creation for the id field.
+	contactdetails.DefaultID = contactdetailsDescID.Default.(func() uuid.UUID)
+	contractFields := schema.Contract{}.Fields()
+	_ = contractFields
+	// contractDescSalary is the schema descriptor for salary field.
+	contractDescSalary := contractFields[7].Descriptor()
+	// contract.DefaultSalary holds the default value on creation for the salary field.
+	contract.DefaultSalary = contractDescSalary.Default.(decimal.Decimal)
+	// contractDescStatus is the schema descriptor for status field.
+	contractDescStatus := contractFields[8].Descriptor()
+	// contract.DefaultStatus holds the default value on creation for the status field.
+	contract.DefaultStatus = contractDescStatus.Default.(string)
+	// contractDescCreatedAt is the schema descriptor for created_at field.
+	contractDescCreatedAt := contractFields[9].Descriptor()
+	// contract.DefaultCreatedAt holds the default value on creation for the created_at field.
+	contract.DefaultCreatedAt = contractDescCreatedAt.Default.(func() time.Time)
+	// contractDescUpdatedAt is the schema descriptor for updated_at field.
+	contractDescUpdatedAt := contractFields[10].Descriptor()
+	// contract.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	contract.DefaultUpdatedAt = contractDescUpdatedAt.Default.(func() time.Time)
+	// contract.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	contract.UpdateDefaultUpdatedAt = contractDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// contractDescID is the schema descriptor for id field.
+	contractDescID := contractFields[0].Descriptor()
+	// contract.DefaultID holds the default value on creation for the id field.
+	contract.DefaultID = contractDescID.Default.(func() uuid.UUID)
 	customuserFields := schema.CustomUser{}.Fields()
 	_ = customuserFields
 	// customuserDescExternalID is the schema descriptor for external_id field.
@@ -200,6 +362,262 @@ func init() {
 	departmentDescID := departmentFields[0].Descriptor()
 	// department.DefaultID holds the default value on creation for the id field.
 	department.DefaultID = departmentDescID.Default.(func() uuid.UUID)
+	employeeFields := schema.Employee{}.Fields()
+	_ = employeeFields
+	// employeeDescTerminated is the schema descriptor for terminated field.
+	employeeDescTerminated := employeeFields[15].Descriptor()
+	// employee.DefaultTerminated holds the default value on creation for the terminated field.
+	employee.DefaultTerminated = employeeDescTerminated.Default.(bool)
+	// employeeDescDeleted is the schema descriptor for deleted field.
+	employeeDescDeleted := employeeFields[16].Descriptor()
+	// employee.DefaultDeleted holds the default value on creation for the deleted field.
+	employee.DefaultDeleted = employeeDescDeleted.Default.(bool)
+	// employeeDescCreatedAt is the schema descriptor for created_at field.
+	employeeDescCreatedAt := employeeFields[17].Descriptor()
+	// employee.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employee.DefaultCreatedAt = employeeDescCreatedAt.Default.(func() time.Time)
+	// employeeDescUpdatedAt is the schema descriptor for updated_at field.
+	employeeDescUpdatedAt := employeeFields[18].Descriptor()
+	// employee.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employee.DefaultUpdatedAt = employeeDescUpdatedAt.Default.(func() time.Time)
+	// employee.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employee.UpdateDefaultUpdatedAt = employeeDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employeeDescID is the schema descriptor for id field.
+	employeeDescID := employeeFields[0].Descriptor()
+	// employee.DefaultID holds the default value on creation for the id field.
+	employee.DefaultID = employeeDescID.Default.(func() uuid.UUID)
+	employeebankaccountFields := schema.EmployeeBankAccount{}.Fields()
+	_ = employeebankaccountFields
+	// employeebankaccountDescAccountName is the schema descriptor for account_name field.
+	employeebankaccountDescAccountName := employeebankaccountFields[5].Descriptor()
+	// employeebankaccount.AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
+	employeebankaccount.AccountNameValidator = employeebankaccountDescAccountName.Validators[0].(func(string) error)
+	// employeebankaccountDescAccountNumber is the schema descriptor for account_number field.
+	employeebankaccountDescAccountNumber := employeebankaccountFields[6].Descriptor()
+	// employeebankaccount.AccountNumberValidator is a validator for the "account_number" field. It is called by the builders before save.
+	employeebankaccount.AccountNumberValidator = employeebankaccountDescAccountNumber.Validators[0].(func(string) error)
+	// employeebankaccountDescAccountType is the schema descriptor for account_type field.
+	employeebankaccountDescAccountType := employeebankaccountFields[7].Descriptor()
+	// employeebankaccount.DefaultAccountType holds the default value on creation for the account_type field.
+	employeebankaccount.DefaultAccountType = employeebankaccountDescAccountType.Default.(string)
+	// employeebankaccountDescIsPrimary is the schema descriptor for is_primary field.
+	employeebankaccountDescIsPrimary := employeebankaccountFields[8].Descriptor()
+	// employeebankaccount.DefaultIsPrimary holds the default value on creation for the is_primary field.
+	employeebankaccount.DefaultIsPrimary = employeebankaccountDescIsPrimary.Default.(bool)
+	// employeebankaccountDescStatus is the schema descriptor for status field.
+	employeebankaccountDescStatus := employeebankaccountFields[9].Descriptor()
+	// employeebankaccount.DefaultStatus holds the default value on creation for the status field.
+	employeebankaccount.DefaultStatus = employeebankaccountDescStatus.Default.(string)
+	// employeebankaccountDescIsVerified is the schema descriptor for is_verified field.
+	employeebankaccountDescIsVerified := employeebankaccountFields[10].Descriptor()
+	// employeebankaccount.DefaultIsVerified holds the default value on creation for the is_verified field.
+	employeebankaccount.DefaultIsVerified = employeebankaccountDescIsVerified.Default.(bool)
+	// employeebankaccountDescCreatedAt is the schema descriptor for created_at field.
+	employeebankaccountDescCreatedAt := employeebankaccountFields[12].Descriptor()
+	// employeebankaccount.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employeebankaccount.DefaultCreatedAt = employeebankaccountDescCreatedAt.Default.(func() time.Time)
+	// employeebankaccountDescUpdatedAt is the schema descriptor for updated_at field.
+	employeebankaccountDescUpdatedAt := employeebankaccountFields[13].Descriptor()
+	// employeebankaccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employeebankaccount.DefaultUpdatedAt = employeebankaccountDescUpdatedAt.Default.(func() time.Time)
+	// employeebankaccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employeebankaccount.UpdateDefaultUpdatedAt = employeebankaccountDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employeebankaccountDescID is the schema descriptor for id field.
+	employeebankaccountDescID := employeebankaccountFields[0].Descriptor()
+	// employeebankaccount.DefaultID holds the default value on creation for the id field.
+	employeebankaccount.DefaultID = employeebankaccountDescID.Default.(func() uuid.UUID)
+	employeebenefitFields := schema.EmployeeBenefit{}.Fields()
+	_ = employeebenefitFields
+	// employeebenefitDescAmount is the schema descriptor for amount field.
+	employeebenefitDescAmount := employeebenefitFields[4].Descriptor()
+	// employeebenefit.DefaultAmount holds the default value on creation for the amount field.
+	employeebenefit.DefaultAmount = employeebenefitDescAmount.Default.(decimal.Decimal)
+	// employeebenefitDescNonCash is the schema descriptor for non_cash field.
+	employeebenefitDescNonCash := employeebenefitFields[5].Descriptor()
+	// employeebenefit.DefaultNonCash holds the default value on creation for the non_cash field.
+	employeebenefit.DefaultNonCash = employeebenefitDescNonCash.Default.(bool)
+	// employeebenefitDescIsActive is the schema descriptor for is_active field.
+	employeebenefitDescIsActive := employeebenefitFields[6].Descriptor()
+	// employeebenefit.DefaultIsActive holds the default value on creation for the is_active field.
+	employeebenefit.DefaultIsActive = employeebenefitDescIsActive.Default.(bool)
+	// employeebenefitDescCreatedAt is the schema descriptor for created_at field.
+	employeebenefitDescCreatedAt := employeebenefitFields[9].Descriptor()
+	// employeebenefit.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employeebenefit.DefaultCreatedAt = employeebenefitDescCreatedAt.Default.(func() time.Time)
+	// employeebenefitDescUpdatedAt is the schema descriptor for updated_at field.
+	employeebenefitDescUpdatedAt := employeebenefitFields[10].Descriptor()
+	// employeebenefit.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employeebenefit.DefaultUpdatedAt = employeebenefitDescUpdatedAt.Default.(func() time.Time)
+	// employeebenefit.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employeebenefit.UpdateDefaultUpdatedAt = employeebenefitDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employeebenefitDescID is the schema descriptor for id field.
+	employeebenefitDescID := employeebenefitFields[0].Descriptor()
+	// employeebenefit.DefaultID holds the default value on creation for the id field.
+	employeebenefit.DefaultID = employeebenefitDescID.Default.(func() uuid.UUID)
+	employeedocumentFields := schema.EmployeeDocument{}.Fields()
+	_ = employeedocumentFields
+	// employeedocumentDescTitle is the schema descriptor for title field.
+	employeedocumentDescTitle := employeedocumentFields[3].Descriptor()
+	// employeedocument.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	employeedocument.TitleValidator = employeedocumentDescTitle.Validators[0].(func(string) error)
+	// employeedocumentDescCreatedAt is the schema descriptor for created_at field.
+	employeedocumentDescCreatedAt := employeedocumentFields[7].Descriptor()
+	// employeedocument.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employeedocument.DefaultCreatedAt = employeedocumentDescCreatedAt.Default.(func() time.Time)
+	// employeedocumentDescUpdatedAt is the schema descriptor for updated_at field.
+	employeedocumentDescUpdatedAt := employeedocumentFields[8].Descriptor()
+	// employeedocument.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employeedocument.DefaultUpdatedAt = employeedocumentDescUpdatedAt.Default.(func() time.Time)
+	// employeedocument.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employeedocument.UpdateDefaultUpdatedAt = employeedocumentDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employeedocumentDescID is the schema descriptor for id field.
+	employeedocumentDescID := employeedocumentFields[0].Descriptor()
+	// employeedocument.DefaultID holds the default value on creation for the id field.
+	employeedocument.DefaultID = employeedocumentDescID.Default.(func() uuid.UUID)
+	employeeloanFields := schema.EmployeeLoan{}.Fields()
+	_ = employeeloanFields
+	// employeeloanDescPrincipalAmount is the schema descriptor for principal_amount field.
+	employeeloanDescPrincipalAmount := employeeloanFields[4].Descriptor()
+	// employeeloan.DefaultPrincipalAmount holds the default value on creation for the principal_amount field.
+	employeeloan.DefaultPrincipalAmount = employeeloanDescPrincipalAmount.Default.(decimal.Decimal)
+	// employeeloanDescAmountRepaid is the schema descriptor for amount_repaid field.
+	employeeloanDescAmountRepaid := employeeloanFields[5].Descriptor()
+	// employeeloan.DefaultAmountRepaid holds the default value on creation for the amount_repaid field.
+	employeeloan.DefaultAmountRepaid = employeeloanDescAmountRepaid.Default.(decimal.Decimal)
+	// employeeloanDescInterestPaid is the schema descriptor for interest_paid field.
+	employeeloanDescInterestPaid := employeeloanFields[6].Descriptor()
+	// employeeloan.DefaultInterestPaid holds the default value on creation for the interest_paid field.
+	employeeloan.DefaultInterestPaid = employeeloanDescInterestPaid.Default.(decimal.Decimal)
+	// employeeloanDescNoOfInstallmentsPaid is the schema descriptor for no_of_installments_paid field.
+	employeeloanDescNoOfInstallmentsPaid := employeeloanFields[7].Descriptor()
+	// employeeloan.DefaultNoOfInstallmentsPaid holds the default value on creation for the no_of_installments_paid field.
+	employeeloan.DefaultNoOfInstallmentsPaid = employeeloanDescNoOfInstallmentsPaid.Default.(int)
+	// employeeloanDescMonthlyInstallment is the schema descriptor for monthly_installment field.
+	employeeloanDescMonthlyInstallment := employeeloanFields[8].Descriptor()
+	// employeeloan.DefaultMonthlyInstallment holds the default value on creation for the monthly_installment field.
+	employeeloan.DefaultMonthlyInstallment = employeeloanDescMonthlyInstallment.Default.(decimal.Decimal)
+	// employeeloanDescInterestRate is the schema descriptor for interest_rate field.
+	employeeloanDescInterestRate := employeeloanFields[9].Descriptor()
+	// employeeloan.DefaultInterestRate holds the default value on creation for the interest_rate field.
+	employeeloan.DefaultInterestRate = employeeloanDescInterestRate.Default.(decimal.Decimal)
+	// employeeloanDescIsActive is the schema descriptor for is_active field.
+	employeeloanDescIsActive := employeeloanFields[11].Descriptor()
+	// employeeloan.DefaultIsActive holds the default value on creation for the is_active field.
+	employeeloan.DefaultIsActive = employeeloanDescIsActive.Default.(bool)
+	// employeeloanDescCreatedAt is the schema descriptor for created_at field.
+	employeeloanDescCreatedAt := employeeloanFields[14].Descriptor()
+	// employeeloan.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employeeloan.DefaultCreatedAt = employeeloanDescCreatedAt.Default.(func() time.Time)
+	// employeeloanDescUpdatedAt is the schema descriptor for updated_at field.
+	employeeloanDescUpdatedAt := employeeloanFields[15].Descriptor()
+	// employeeloan.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employeeloan.DefaultUpdatedAt = employeeloanDescUpdatedAt.Default.(func() time.Time)
+	// employeeloan.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employeeloan.UpdateDefaultUpdatedAt = employeeloanDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employeeloanDescID is the schema descriptor for id field.
+	employeeloanDescID := employeeloanFields[0].Descriptor()
+	// employeeloan.DefaultID holds the default value on creation for the id field.
+	employeeloan.DefaultID = employeeloanDescID.Default.(func() uuid.UUID)
+	expenseclaimFields := schema.ExpenseClaim{}.Fields()
+	_ = expenseclaimFields
+	// expenseclaimDescApproved is the schema descriptor for approved field.
+	expenseclaimDescApproved := expenseclaimFields[4].Descriptor()
+	// expenseclaim.DefaultApproved holds the default value on creation for the approved field.
+	expenseclaim.DefaultApproved = expenseclaimDescApproved.Default.(bool)
+	// expenseclaimDescAmount is the schema descriptor for amount field.
+	expenseclaimDescAmount := expenseclaimFields[9].Descriptor()
+	// expenseclaim.DefaultAmount holds the default value on creation for the amount field.
+	expenseclaim.DefaultAmount = expenseclaimDescAmount.Default.(decimal.Decimal)
+	// expenseclaimDescIsActive is the schema descriptor for is_active field.
+	expenseclaimDescIsActive := expenseclaimFields[10].Descriptor()
+	// expenseclaim.DefaultIsActive holds the default value on creation for the is_active field.
+	expenseclaim.DefaultIsActive = expenseclaimDescIsActive.Default.(bool)
+	// expenseclaimDescIsPaid is the schema descriptor for is_paid field.
+	expenseclaimDescIsPaid := expenseclaimFields[11].Descriptor()
+	// expenseclaim.DefaultIsPaid holds the default value on creation for the is_paid field.
+	expenseclaim.DefaultIsPaid = expenseclaimDescIsPaid.Default.(bool)
+	// expenseclaimDescScheduleToPayroll is the schema descriptor for schedule_to_payroll field.
+	expenseclaimDescScheduleToPayroll := expenseclaimFields[12].Descriptor()
+	// expenseclaim.DefaultScheduleToPayroll holds the default value on creation for the schedule_to_payroll field.
+	expenseclaim.DefaultScheduleToPayroll = expenseclaimDescScheduleToPayroll.Default.(bool)
+	// expenseclaimDescDeleteStatus is the schema descriptor for delete_status field.
+	expenseclaimDescDeleteStatus := expenseclaimFields[13].Descriptor()
+	// expenseclaim.DefaultDeleteStatus holds the default value on creation for the delete_status field.
+	expenseclaim.DefaultDeleteStatus = expenseclaimDescDeleteStatus.Default.(bool)
+	// expenseclaimDescCreatedAt is the schema descriptor for created_at field.
+	expenseclaimDescCreatedAt := expenseclaimFields[14].Descriptor()
+	// expenseclaim.DefaultCreatedAt holds the default value on creation for the created_at field.
+	expenseclaim.DefaultCreatedAt = expenseclaimDescCreatedAt.Default.(func() time.Time)
+	// expenseclaimDescUpdatedAt is the schema descriptor for updated_at field.
+	expenseclaimDescUpdatedAt := expenseclaimFields[15].Descriptor()
+	// expenseclaim.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	expenseclaim.DefaultUpdatedAt = expenseclaimDescUpdatedAt.Default.(func() time.Time)
+	// expenseclaim.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	expenseclaim.UpdateDefaultUpdatedAt = expenseclaimDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// expenseclaimDescID is the schema descriptor for id field.
+	expenseclaimDescID := expenseclaimFields[0].Descriptor()
+	// expenseclaim.DefaultID holds the default value on creation for the id field.
+	expenseclaim.DefaultID = expenseclaimDescID.Default.(func() uuid.UUID)
+	generalhrsettingsFields := schema.GeneralHRSettings{}.Fields()
+	_ = generalhrsettingsFields
+	// generalhrsettingsDescOvertimeNormalDays is the schema descriptor for overtime_normal_days field.
+	generalhrsettingsDescOvertimeNormalDays := generalhrsettingsFields[2].Descriptor()
+	// generalhrsettings.DefaultOvertimeNormalDays holds the default value on creation for the overtime_normal_days field.
+	generalhrsettings.DefaultOvertimeNormalDays = generalhrsettingsDescOvertimeNormalDays.Default.(decimal.Decimal)
+	// generalhrsettingsDescOvertimeNonWorkingDays is the schema descriptor for overtime_non_working_days field.
+	generalhrsettingsDescOvertimeNonWorkingDays := generalhrsettingsFields[3].Descriptor()
+	// generalhrsettings.DefaultOvertimeNonWorkingDays holds the default value on creation for the overtime_non_working_days field.
+	generalhrsettings.DefaultOvertimeNonWorkingDays = generalhrsettingsDescOvertimeNonWorkingDays.Default.(decimal.Decimal)
+	// generalhrsettingsDescOvertimeHolidays is the schema descriptor for overtime_holidays field.
+	generalhrsettingsDescOvertimeHolidays := generalhrsettingsFields[4].Descriptor()
+	// generalhrsettings.DefaultOvertimeHolidays holds the default value on creation for the overtime_holidays field.
+	generalhrsettings.DefaultOvertimeHolidays = generalhrsettingsDescOvertimeHolidays.Default.(decimal.Decimal)
+	// generalhrsettingsDescPartialMonths is the schema descriptor for partial_months field.
+	generalhrsettingsDescPartialMonths := generalhrsettingsFields[5].Descriptor()
+	// generalhrsettings.DefaultPartialMonths holds the default value on creation for the partial_months field.
+	generalhrsettings.DefaultPartialMonths = generalhrsettingsDescPartialMonths.Default.(string)
+	// generalhrsettingsDescRoundOffCurrency is the schema descriptor for round_off_currency field.
+	generalhrsettingsDescRoundOffCurrency := generalhrsettingsFields[6].Descriptor()
+	// generalhrsettings.DefaultRoundOffCurrency holds the default value on creation for the round_off_currency field.
+	generalhrsettings.DefaultRoundOffCurrency = generalhrsettingsDescRoundOffCurrency.Default.(string)
+	// generalhrsettingsDescRoundOffAmount is the schema descriptor for round_off_amount field.
+	generalhrsettingsDescRoundOffAmount := generalhrsettingsFields[7].Descriptor()
+	// generalhrsettings.DefaultRoundOffAmount holds the default value on creation for the round_off_amount field.
+	generalhrsettings.DefaultRoundOffAmount = generalhrsettingsDescRoundOffAmount.Default.(decimal.Decimal)
+	// generalhrsettingsDescAllowBackwardsPayroll is the schema descriptor for allow_backwards_payroll field.
+	generalhrsettingsDescAllowBackwardsPayroll := generalhrsettingsFields[8].Descriptor()
+	// generalhrsettings.DefaultAllowBackwardsPayroll holds the default value on creation for the allow_backwards_payroll field.
+	generalhrsettings.DefaultAllowBackwardsPayroll = generalhrsettingsDescAllowBackwardsPayroll.Default.(bool)
+	// generalhrsettingsDescCreatedAt is the schema descriptor for created_at field.
+	generalhrsettingsDescCreatedAt := generalhrsettingsFields[9].Descriptor()
+	// generalhrsettings.DefaultCreatedAt holds the default value on creation for the created_at field.
+	generalhrsettings.DefaultCreatedAt = generalhrsettingsDescCreatedAt.Default.(func() time.Time)
+	// generalhrsettingsDescUpdatedAt is the schema descriptor for updated_at field.
+	generalhrsettingsDescUpdatedAt := generalhrsettingsFields[10].Descriptor()
+	// generalhrsettings.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	generalhrsettings.DefaultUpdatedAt = generalhrsettingsDescUpdatedAt.Default.(func() time.Time)
+	// generalhrsettings.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	generalhrsettings.UpdateDefaultUpdatedAt = generalhrsettingsDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// generalhrsettingsDescID is the schema descriptor for id field.
+	generalhrsettingsDescID := generalhrsettingsFields[0].Descriptor()
+	// generalhrsettings.DefaultID holds the default value on creation for the id field.
+	generalhrsettings.DefaultID = generalhrsettingsDescID.Default.(func() uuid.UUID)
+	hrdetailsFields := schema.HRDetails{}.Fields()
+	_ = hrdetailsFields
+	// hrdetailsDescCreatedAt is the schema descriptor for created_at field.
+	hrdetailsDescCreatedAt := hrdetailsFields[11].Descriptor()
+	// hrdetails.DefaultCreatedAt holds the default value on creation for the created_at field.
+	hrdetails.DefaultCreatedAt = hrdetailsDescCreatedAt.Default.(func() time.Time)
+	// hrdetailsDescUpdatedAt is the schema descriptor for updated_at field.
+	hrdetailsDescUpdatedAt := hrdetailsFields[12].Descriptor()
+	// hrdetails.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	hrdetails.DefaultUpdatedAt = hrdetailsDescUpdatedAt.Default.(func() time.Time)
+	// hrdetails.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	hrdetails.UpdateDefaultUpdatedAt = hrdetailsDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// hrdetailsDescID is the schema descriptor for id field.
+	hrdetailsDescID := hrdetailsFields[0].Descriptor()
+	// hrdetails.DefaultID holds the default value on creation for the id field.
+	hrdetails.DefaultID = hrdetailsDescID.Default.(func() uuid.UUID)
 	idempotencykeyFields := schema.IdempotencyKey{}.Fields()
 	_ = idempotencykeyFields
 	// idempotencykeyDescKey is the schema descriptor for key field.
@@ -222,6 +640,126 @@ func init() {
 	idempotencykeyDescID := idempotencykeyFields[0].Descriptor()
 	// idempotencykey.DefaultID holds the default value on creation for the id field.
 	idempotencykey.DefaultID = idempotencykeyDescID.Default.(func() uuid.UUID)
+	jobgroupFields := schema.JobGroup{}.Fields()
+	_ = jobgroupFields
+	// jobgroupDescTitle is the schema descriptor for title field.
+	jobgroupDescTitle := jobgroupFields[2].Descriptor()
+	// jobgroup.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	jobgroup.TitleValidator = jobgroupDescTitle.Validators[0].(func(string) error)
+	// jobgroupDescCreatedAt is the schema descriptor for created_at field.
+	jobgroupDescCreatedAt := jobgroupFields[4].Descriptor()
+	// jobgroup.DefaultCreatedAt holds the default value on creation for the created_at field.
+	jobgroup.DefaultCreatedAt = jobgroupDescCreatedAt.Default.(func() time.Time)
+	// jobgroupDescUpdatedAt is the schema descriptor for updated_at field.
+	jobgroupDescUpdatedAt := jobgroupFields[5].Descriptor()
+	// jobgroup.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	jobgroup.DefaultUpdatedAt = jobgroupDescUpdatedAt.Default.(func() time.Time)
+	// jobgroup.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	jobgroup.UpdateDefaultUpdatedAt = jobgroupDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// jobgroupDescID is the schema descriptor for id field.
+	jobgroupDescID := jobgroupFields[0].Descriptor()
+	// jobgroup.DefaultID holds the default value on creation for the id field.
+	jobgroup.DefaultID = jobgroupDescID.Default.(func() uuid.UUID)
+	jobtitleFields := schema.JobTitle{}.Fields()
+	_ = jobtitleFields
+	// jobtitleDescTitle is the schema descriptor for title field.
+	jobtitleDescTitle := jobtitleFields[2].Descriptor()
+	// jobtitle.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	jobtitle.TitleValidator = jobtitleDescTitle.Validators[0].(func(string) error)
+	// jobtitleDescCreatedAt is the schema descriptor for created_at field.
+	jobtitleDescCreatedAt := jobtitleFields[4].Descriptor()
+	// jobtitle.DefaultCreatedAt holds the default value on creation for the created_at field.
+	jobtitle.DefaultCreatedAt = jobtitleDescCreatedAt.Default.(func() time.Time)
+	// jobtitleDescUpdatedAt is the schema descriptor for updated_at field.
+	jobtitleDescUpdatedAt := jobtitleFields[5].Descriptor()
+	// jobtitle.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	jobtitle.DefaultUpdatedAt = jobtitleDescUpdatedAt.Default.(func() time.Time)
+	// jobtitle.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	jobtitle.UpdateDefaultUpdatedAt = jobtitleDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// jobtitleDescID is the schema descriptor for id field.
+	jobtitleDescID := jobtitleFields[0].Descriptor()
+	// jobtitle.DefaultID holds the default value on creation for the id field.
+	jobtitle.DefaultID = jobtitleDescID.Default.(func() uuid.UUID)
+	loantypeFields := schema.LoanType{}.Fields()
+	_ = loantypeFields
+	// loantypeDescTitle is the schema descriptor for title field.
+	loantypeDescTitle := loantypeFields[4].Descriptor()
+	// loantype.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	loantype.TitleValidator = loantypeDescTitle.Validators[0].(func(string) error)
+	// loantypeDescIsActive is the schema descriptor for is_active field.
+	loantypeDescIsActive := loantypeFields[5].Descriptor()
+	// loantype.DefaultIsActive holds the default value on creation for the is_active field.
+	loantype.DefaultIsActive = loantypeDescIsActive.Default.(bool)
+	// loantypeDescRoundOff is the schema descriptor for round_off field.
+	loantypeDescRoundOff := loantypeFields[6].Descriptor()
+	// loantype.DefaultRoundOff holds the default value on creation for the round_off field.
+	loantype.DefaultRoundOff = loantypeDescRoundOff.Default.(decimal.Decimal)
+	// loantypeDescCreatedAt is the schema descriptor for created_at field.
+	loantypeDescCreatedAt := loantypeFields[7].Descriptor()
+	// loantype.DefaultCreatedAt holds the default value on creation for the created_at field.
+	loantype.DefaultCreatedAt = loantypeDescCreatedAt.Default.(func() time.Time)
+	// loantypeDescUpdatedAt is the schema descriptor for updated_at field.
+	loantypeDescUpdatedAt := loantypeFields[8].Descriptor()
+	// loantype.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	loantype.DefaultUpdatedAt = loantypeDescUpdatedAt.Default.(func() time.Time)
+	// loantype.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	loantype.UpdateDefaultUpdatedAt = loantypeDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// loantypeDescID is the schema descriptor for id field.
+	loantypeDescID := loantypeFields[0].Descriptor()
+	// loantype.DefaultID holds the default value on creation for the id field.
+	loantype.DefaultID = loantypeDescID.Default.(func() uuid.UUID)
+	lossanddamageFields := schema.LossAndDamage{}.Fields()
+	_ = lossanddamageFields
+	// lossanddamageDescApproved is the schema descriptor for approved field.
+	lossanddamageDescApproved := lossanddamageFields[6].Descriptor()
+	// lossanddamage.DefaultApproved holds the default value on creation for the approved field.
+	lossanddamage.DefaultApproved = lossanddamageDescApproved.Default.(bool)
+	// lossanddamageDescDamageAmount is the schema descriptor for damage_amount field.
+	lossanddamageDescDamageAmount := lossanddamageFields[10].Descriptor()
+	// lossanddamage.DefaultDamageAmount holds the default value on creation for the damage_amount field.
+	lossanddamage.DefaultDamageAmount = lossanddamageDescDamageAmount.Default.(decimal.Decimal)
+	// lossanddamageDescAmountRepaid is the schema descriptor for amount_repaid field.
+	lossanddamageDescAmountRepaid := lossanddamageFields[11].Descriptor()
+	// lossanddamage.DefaultAmountRepaid holds the default value on creation for the amount_repaid field.
+	lossanddamage.DefaultAmountRepaid = lossanddamageDescAmountRepaid.Default.(decimal.Decimal)
+	// lossanddamageDescIsActive is the schema descriptor for is_active field.
+	lossanddamageDescIsActive := lossanddamageFields[12].Descriptor()
+	// lossanddamage.DefaultIsActive holds the default value on creation for the is_active field.
+	lossanddamage.DefaultIsActive = lossanddamageDescIsActive.Default.(bool)
+	// lossanddamageDescCreatedAt is the schema descriptor for created_at field.
+	lossanddamageDescCreatedAt := lossanddamageFields[13].Descriptor()
+	// lossanddamage.DefaultCreatedAt holds the default value on creation for the created_at field.
+	lossanddamage.DefaultCreatedAt = lossanddamageDescCreatedAt.Default.(func() time.Time)
+	// lossanddamageDescUpdatedAt is the schema descriptor for updated_at field.
+	lossanddamageDescUpdatedAt := lossanddamageFields[14].Descriptor()
+	// lossanddamage.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	lossanddamage.DefaultUpdatedAt = lossanddamageDescUpdatedAt.Default.(func() time.Time)
+	// lossanddamage.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	lossanddamage.UpdateDefaultUpdatedAt = lossanddamageDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// lossanddamageDescID is the schema descriptor for id field.
+	lossanddamageDescID := lossanddamageFields[0].Descriptor()
+	// lossanddamage.DefaultID holds the default value on creation for the id field.
+	lossanddamage.DefaultID = lossanddamageDescID.Default.(func() uuid.UUID)
+	nextofkinFields := schema.NextOfKin{}.Fields()
+	_ = nextofkinFields
+	// nextofkinDescFullName is the schema descriptor for full_name field.
+	nextofkinDescFullName := nextofkinFields[3].Descriptor()
+	// nextofkin.FullNameValidator is a validator for the "full_name" field. It is called by the builders before save.
+	nextofkin.FullNameValidator = nextofkinDescFullName.Validators[0].(func(string) error)
+	// nextofkinDescCreatedAt is the schema descriptor for created_at field.
+	nextofkinDescCreatedAt := nextofkinFields[8].Descriptor()
+	// nextofkin.DefaultCreatedAt holds the default value on creation for the created_at field.
+	nextofkin.DefaultCreatedAt = nextofkinDescCreatedAt.Default.(func() time.Time)
+	// nextofkinDescUpdatedAt is the schema descriptor for updated_at field.
+	nextofkinDescUpdatedAt := nextofkinFields[9].Descriptor()
+	// nextofkin.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	nextofkin.DefaultUpdatedAt = nextofkinDescUpdatedAt.Default.(func() time.Time)
+	// nextofkin.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	nextofkin.UpdateDefaultUpdatedAt = nextofkinDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// nextofkinDescID is the schema descriptor for id field.
+	nextofkinDescID := nextofkinFields[0].Descriptor()
+	// nextofkin.DefaultID holds the default value on creation for the id field.
+	nextofkin.DefaultID = nextofkinDescID.Default.(func() uuid.UUID)
 	outboxeventFields := schema.OutboxEvent{}.Fields()
 	_ = outboxeventFields
 	// outboxeventDescAggregateType is the schema descriptor for aggregate_type field.
@@ -252,6 +790,300 @@ func init() {
 	outboxeventDescID := outboxeventFields[0].Descriptor()
 	// outboxevent.DefaultID holds the default value on creation for the id field.
 	outboxevent.DefaultID = outboxeventDescID.Default.(func() uuid.UUID)
+	payrollcomponentFields := schema.PayrollComponent{}.Fields()
+	_ = payrollcomponentFields
+	// payrollcomponentDescTitle is the schema descriptor for title field.
+	payrollcomponentDescTitle := payrollcomponentFields[4].Descriptor()
+	// payrollcomponent.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	payrollcomponent.TitleValidator = payrollcomponentDescTitle.Validators[0].(func(string) error)
+	// payrollcomponentDescNonCash is the schema descriptor for non_cash field.
+	payrollcomponentDescNonCash := payrollcomponentFields[8].Descriptor()
+	// payrollcomponent.DefaultNonCash holds the default value on creation for the non_cash field.
+	payrollcomponent.DefaultNonCash = payrollcomponentDescNonCash.Default.(bool)
+	// payrollcomponentDescDeductAfterTaxing is the schema descriptor for deduct_after_taxing field.
+	payrollcomponentDescDeductAfterTaxing := payrollcomponentFields[9].Descriptor()
+	// payrollcomponent.DefaultDeductAfterTaxing holds the default value on creation for the deduct_after_taxing field.
+	payrollcomponent.DefaultDeductAfterTaxing = payrollcomponentDescDeductAfterTaxing.Default.(bool)
+	// payrollcomponentDescCheckoff is the schema descriptor for checkoff field.
+	payrollcomponentDescCheckoff := payrollcomponentFields[12].Descriptor()
+	// payrollcomponent.DefaultCheckoff holds the default value on creation for the checkoff field.
+	payrollcomponent.DefaultCheckoff = payrollcomponentDescCheckoff.Default.(bool)
+	// payrollcomponentDescConstant is the schema descriptor for constant field.
+	payrollcomponentDescConstant := payrollcomponentFields[13].Descriptor()
+	// payrollcomponent.DefaultConstant holds the default value on creation for the constant field.
+	payrollcomponent.DefaultConstant = payrollcomponentDescConstant.Default.(bool)
+	// payrollcomponentDescStatutory is the schema descriptor for statutory field.
+	payrollcomponentDescStatutory := payrollcomponentFields[14].Descriptor()
+	// payrollcomponent.DefaultStatutory holds the default value on creation for the statutory field.
+	payrollcomponent.DefaultStatutory = payrollcomponentDescStatutory.Default.(bool)
+	// payrollcomponentDescIsActive is the schema descriptor for is_active field.
+	payrollcomponentDescIsActive := payrollcomponentFields[15].Descriptor()
+	// payrollcomponent.DefaultIsActive holds the default value on creation for the is_active field.
+	payrollcomponent.DefaultIsActive = payrollcomponentDescIsActive.Default.(bool)
+	// payrollcomponentDescDeductionPhase is the schema descriptor for deduction_phase field.
+	payrollcomponentDescDeductionPhase := payrollcomponentFields[17].Descriptor()
+	// payrollcomponent.DefaultDeductionPhase holds the default value on creation for the deduction_phase field.
+	payrollcomponent.DefaultDeductionPhase = payrollcomponentDescDeductionPhase.Default.(string)
+	// payrollcomponentDescDeductionPriority is the schema descriptor for deduction_priority field.
+	payrollcomponentDescDeductionPriority := payrollcomponentFields[18].Descriptor()
+	// payrollcomponent.DefaultDeductionPriority holds the default value on creation for the deduction_priority field.
+	payrollcomponent.DefaultDeductionPriority = payrollcomponentDescDeductionPriority.Default.(int)
+	// payrollcomponentDescCreatedAt is the schema descriptor for created_at field.
+	payrollcomponentDescCreatedAt := payrollcomponentFields[19].Descriptor()
+	// payrollcomponent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	payrollcomponent.DefaultCreatedAt = payrollcomponentDescCreatedAt.Default.(func() time.Time)
+	// payrollcomponentDescUpdatedAt is the schema descriptor for updated_at field.
+	payrollcomponentDescUpdatedAt := payrollcomponentFields[20].Descriptor()
+	// payrollcomponent.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	payrollcomponent.DefaultUpdatedAt = payrollcomponentDescUpdatedAt.Default.(func() time.Time)
+	// payrollcomponent.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	payrollcomponent.UpdateDefaultUpdatedAt = payrollcomponentDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// payrollcomponentDescID is the schema descriptor for id field.
+	payrollcomponentDescID := payrollcomponentFields[0].Descriptor()
+	// payrollcomponent.DefaultID holds the default value on creation for the id field.
+	payrollcomponent.DefaultID = payrollcomponentDescID.Default.(func() uuid.UUID)
+	payrollformulaFields := schema.PayrollFormula{}.Fields()
+	_ = payrollformulaFields
+	// payrollformulaDescTitle is the schema descriptor for title field.
+	payrollformulaDescTitle := payrollformulaFields[4].Descriptor()
+	// payrollformula.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	payrollformula.TitleValidator = payrollformulaDescTitle.Validators[0].(func(string) error)
+	// payrollformulaDescUnit is the schema descriptor for unit field.
+	payrollformulaDescUnit := payrollformulaFields[5].Descriptor()
+	// payrollformula.DefaultUnit holds the default value on creation for the unit field.
+	payrollformula.DefaultUnit = payrollformulaDescUnit.Default.(string)
+	// payrollformulaDescUpperLimit is the schema descriptor for upper_limit field.
+	payrollformulaDescUpperLimit := payrollformulaFields[8].Descriptor()
+	// payrollformula.DefaultUpperLimit holds the default value on creation for the upper_limit field.
+	payrollformula.DefaultUpperLimit = payrollformulaDescUpperLimit.Default.(decimal.Decimal)
+	// payrollformulaDescUpperLimitAmount is the schema descriptor for upper_limit_amount field.
+	payrollformulaDescUpperLimitAmount := payrollformulaFields[9].Descriptor()
+	// payrollformula.DefaultUpperLimitAmount holds the default value on creation for the upper_limit_amount field.
+	payrollformula.DefaultUpperLimitAmount = payrollformulaDescUpperLimitAmount.Default.(decimal.Decimal)
+	// payrollformulaDescUpperLimitPercentage is the schema descriptor for upper_limit_percentage field.
+	payrollformulaDescUpperLimitPercentage := payrollformulaFields[10].Descriptor()
+	// payrollformula.DefaultUpperLimitPercentage holds the default value on creation for the upper_limit_percentage field.
+	payrollformula.DefaultUpperLimitPercentage = payrollformulaDescUpperLimitPercentage.Default.(decimal.Decimal)
+	// payrollformulaDescPersonalRelief is the schema descriptor for personal_relief field.
+	payrollformulaDescPersonalRelief := payrollformulaFields[11].Descriptor()
+	// payrollformula.DefaultPersonalRelief holds the default value on creation for the personal_relief field.
+	payrollformula.DefaultPersonalRelief = payrollformulaDescPersonalRelief.Default.(decimal.Decimal)
+	// payrollformulaDescReliefCarryForward is the schema descriptor for relief_carry_forward field.
+	payrollformulaDescReliefCarryForward := payrollformulaFields[12].Descriptor()
+	// payrollformula.DefaultReliefCarryForward holds the default value on creation for the relief_carry_forward field.
+	payrollformula.DefaultReliefCarryForward = payrollformulaDescReliefCarryForward.Default.(bool)
+	// payrollformulaDescMinTaxableIncome is the schema descriptor for min_taxable_income field.
+	payrollformulaDescMinTaxableIncome := payrollformulaFields[13].Descriptor()
+	// payrollformula.DefaultMinTaxableIncome holds the default value on creation for the min_taxable_income field.
+	payrollformula.DefaultMinTaxableIncome = payrollformulaDescMinTaxableIncome.Default.(decimal.Decimal)
+	// payrollformulaDescProgressive is the schema descriptor for progressive field.
+	payrollformulaDescProgressive := payrollformulaFields[14].Descriptor()
+	// payrollformula.DefaultProgressive holds the default value on creation for the progressive field.
+	payrollformula.DefaultProgressive = payrollformulaDescProgressive.Default.(bool)
+	// payrollformulaDescVersion is the schema descriptor for version field.
+	payrollformulaDescVersion := payrollformulaFields[16].Descriptor()
+	// payrollformula.DefaultVersion holds the default value on creation for the version field.
+	payrollformula.DefaultVersion = payrollformulaDescVersion.Default.(string)
+	// payrollformulaDescIsCurrent is the schema descriptor for is_current field.
+	payrollformulaDescIsCurrent := payrollformulaFields[20].Descriptor()
+	// payrollformula.DefaultIsCurrent holds the default value on creation for the is_current field.
+	payrollformula.DefaultIsCurrent = payrollformulaDescIsCurrent.Default.(bool)
+	// payrollformulaDescCreatedAt is the schema descriptor for created_at field.
+	payrollformulaDescCreatedAt := payrollformulaFields[21].Descriptor()
+	// payrollformula.DefaultCreatedAt holds the default value on creation for the created_at field.
+	payrollformula.DefaultCreatedAt = payrollformulaDescCreatedAt.Default.(func() time.Time)
+	// payrollformulaDescUpdatedAt is the schema descriptor for updated_at field.
+	payrollformulaDescUpdatedAt := payrollformulaFields[22].Descriptor()
+	// payrollformula.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	payrollformula.DefaultUpdatedAt = payrollformulaDescUpdatedAt.Default.(func() time.Time)
+	// payrollformula.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	payrollformula.UpdateDefaultUpdatedAt = payrollformulaDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// payrollformulaDescID is the schema descriptor for id field.
+	payrollformulaDescID := payrollformulaFields[0].Descriptor()
+	// payrollformula.DefaultID holds the default value on creation for the id field.
+	payrollformula.DefaultID = payrollformulaDescID.Default.(func() uuid.UUID)
+	payrollformulaitemFields := schema.PayrollFormulaItem{}.Fields()
+	_ = payrollformulaitemFields
+	// payrollformulaitemDescAmountFrom is the schema descriptor for amount_from field.
+	payrollformulaitemDescAmountFrom := payrollformulaitemFields[3].Descriptor()
+	// payrollformulaitem.DefaultAmountFrom holds the default value on creation for the amount_from field.
+	payrollformulaitem.DefaultAmountFrom = payrollformulaitemDescAmountFrom.Default.(decimal.Decimal)
+	// payrollformulaitemDescAmountTo is the schema descriptor for amount_to field.
+	payrollformulaitemDescAmountTo := payrollformulaitemFields[4].Descriptor()
+	// payrollformulaitem.DefaultAmountTo holds the default value on creation for the amount_to field.
+	payrollformulaitem.DefaultAmountTo = payrollformulaitemDescAmountTo.Default.(decimal.Decimal)
+	// payrollformulaitemDescDeductAmount is the schema descriptor for deduct_amount field.
+	payrollformulaitemDescDeductAmount := payrollformulaitemFields[5].Descriptor()
+	// payrollformulaitem.DefaultDeductAmount holds the default value on creation for the deduct_amount field.
+	payrollformulaitem.DefaultDeductAmount = payrollformulaitemDescDeductAmount.Default.(decimal.Decimal)
+	// payrollformulaitemDescDeductPercentage is the schema descriptor for deduct_percentage field.
+	payrollformulaitemDescDeductPercentage := payrollformulaitemFields[6].Descriptor()
+	// payrollformulaitem.DefaultDeductPercentage holds the default value on creation for the deduct_percentage field.
+	payrollformulaitem.DefaultDeductPercentage = payrollformulaitemDescDeductPercentage.Default.(decimal.Decimal)
+	// payrollformulaitemDescID is the schema descriptor for id field.
+	payrollformulaitemDescID := payrollformulaitemFields[0].Descriptor()
+	// payrollformulaitem.DefaultID holds the default value on creation for the id field.
+	payrollformulaitem.DefaultID = payrollformulaitemDescID.Default.(func() uuid.UUID)
+	payrollreliefFields := schema.PayrollRelief{}.Fields()
+	_ = payrollreliefFields
+	// payrollreliefDescTitle is the schema descriptor for title field.
+	payrollreliefDescTitle := payrollreliefFields[3].Descriptor()
+	// payrollrelief.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	payrollrelief.TitleValidator = payrollreliefDescTitle.Validators[0].(func(string) error)
+	// payrollreliefDescActualAmount is the schema descriptor for actual_amount field.
+	payrollreliefDescActualAmount := payrollreliefFields[4].Descriptor()
+	// payrollrelief.DefaultActualAmount holds the default value on creation for the actual_amount field.
+	payrollrelief.DefaultActualAmount = payrollreliefDescActualAmount.Default.(bool)
+	// payrollreliefDescFixedLimit is the schema descriptor for fixed_limit field.
+	payrollreliefDescFixedLimit := payrollreliefFields[5].Descriptor()
+	// payrollrelief.DefaultFixedLimit holds the default value on creation for the fixed_limit field.
+	payrollrelief.DefaultFixedLimit = payrollreliefDescFixedLimit.Default.(decimal.Decimal)
+	// payrollreliefDescPercentage is the schema descriptor for percentage field.
+	payrollreliefDescPercentage := payrollreliefFields[6].Descriptor()
+	// payrollrelief.DefaultPercentage holds the default value on creation for the percentage field.
+	payrollrelief.DefaultPercentage = payrollreliefDescPercentage.Default.(decimal.Decimal)
+	// payrollreliefDescIsActive is the schema descriptor for is_active field.
+	payrollreliefDescIsActive := payrollreliefFields[8].Descriptor()
+	// payrollrelief.DefaultIsActive holds the default value on creation for the is_active field.
+	payrollrelief.DefaultIsActive = payrollreliefDescIsActive.Default.(bool)
+	// payrollreliefDescCreatedAt is the schema descriptor for created_at field.
+	payrollreliefDescCreatedAt := payrollreliefFields[9].Descriptor()
+	// payrollrelief.DefaultCreatedAt holds the default value on creation for the created_at field.
+	payrollrelief.DefaultCreatedAt = payrollreliefDescCreatedAt.Default.(func() time.Time)
+	// payrollreliefDescUpdatedAt is the schema descriptor for updated_at field.
+	payrollreliefDescUpdatedAt := payrollreliefFields[10].Descriptor()
+	// payrollrelief.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	payrollrelief.DefaultUpdatedAt = payrollreliefDescUpdatedAt.Default.(func() time.Time)
+	// payrollrelief.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	payrollrelief.UpdateDefaultUpdatedAt = payrollreliefDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// payrollreliefDescID is the schema descriptor for id field.
+	payrollreliefDescID := payrollreliefFields[0].Descriptor()
+	// payrollrelief.DefaultID holds the default value on creation for the id field.
+	payrollrelief.DefaultID = payrollreliefDescID.Default.(func() uuid.UUID)
+	payrollsplitratioFields := schema.PayrollSplitRatio{}.Fields()
+	_ = payrollsplitratioFields
+	// payrollsplitratioDescEmployeePercentage is the schema descriptor for employee_percentage field.
+	payrollsplitratioDescEmployeePercentage := payrollsplitratioFields[3].Descriptor()
+	// payrollsplitratio.DefaultEmployeePercentage holds the default value on creation for the employee_percentage field.
+	payrollsplitratio.DefaultEmployeePercentage = payrollsplitratioDescEmployeePercentage.Default.(decimal.Decimal)
+	// payrollsplitratioDescEmployerPercentage is the schema descriptor for employer_percentage field.
+	payrollsplitratioDescEmployerPercentage := payrollsplitratioFields[4].Descriptor()
+	// payrollsplitratio.DefaultEmployerPercentage holds the default value on creation for the employer_percentage field.
+	payrollsplitratio.DefaultEmployerPercentage = payrollsplitratioDescEmployerPercentage.Default.(decimal.Decimal)
+	// payrollsplitratioDescID is the schema descriptor for id field.
+	payrollsplitratioDescID := payrollsplitratioFields[0].Descriptor()
+	// payrollsplitratio.DefaultID holds the default value on creation for the id field.
+	payrollsplitratio.DefaultID = payrollsplitratioDescID.Default.(func() uuid.UUID)
+	payslipFields := schema.Payslip{}.Fields()
+	_ = payslipFields
+	// payslipDescGrossPay is the schema descriptor for gross_pay field.
+	payslipDescGrossPay := payslipFields[6].Descriptor()
+	// payslip.DefaultGrossPay holds the default value on creation for the gross_pay field.
+	payslip.DefaultGrossPay = payslipDescGrossPay.Default.(decimal.Decimal)
+	// payslipDescTotalEarnings is the schema descriptor for total_earnings field.
+	payslipDescTotalEarnings := payslipFields[7].Descriptor()
+	// payslip.DefaultTotalEarnings holds the default value on creation for the total_earnings field.
+	payslip.DefaultTotalEarnings = payslipDescTotalEarnings.Default.(decimal.Decimal)
+	// payslipDescNetPay is the schema descriptor for net_pay field.
+	payslipDescNetPay := payslipFields[8].Descriptor()
+	// payslip.DefaultNetPay holds the default value on creation for the net_pay field.
+	payslip.DefaultNetPay = payslipDescNetPay.Default.(decimal.Decimal)
+	// payslipDescTaxablePay is the schema descriptor for taxable_pay field.
+	payslipDescTaxablePay := payslipFields[9].Descriptor()
+	// payslip.DefaultTaxablePay holds the default value on creation for the taxable_pay field.
+	payslip.DefaultTaxablePay = payslipDescTaxablePay.Default.(decimal.Decimal)
+	// payslipDescPaye is the schema descriptor for paye field.
+	payslipDescPaye := payslipFields[10].Descriptor()
+	// payslip.DefaultPaye holds the default value on creation for the paye field.
+	payslip.DefaultPaye = payslipDescPaye.Default.(decimal.Decimal)
+	// payslipDescTaxRelief is the schema descriptor for tax_relief field.
+	payslipDescTaxRelief := payslipFields[11].Descriptor()
+	// payslip.DefaultTaxRelief holds the default value on creation for the tax_relief field.
+	payslip.DefaultTaxRelief = payslipDescTaxRelief.Default.(decimal.Decimal)
+	// payslipDescReliefs is the schema descriptor for reliefs field.
+	payslipDescReliefs := payslipFields[12].Descriptor()
+	// payslip.DefaultReliefs holds the default value on creation for the reliefs field.
+	payslip.DefaultReliefs = payslipDescReliefs.Default.(decimal.Decimal)
+	// payslipDescGrossPayAfterTax is the schema descriptor for gross_pay_after_tax field.
+	payslipDescGrossPayAfterTax := payslipFields[13].Descriptor()
+	// payslip.DefaultGrossPayAfterTax holds the default value on creation for the gross_pay_after_tax field.
+	payslip.DefaultGrossPayAfterTax = payslipDescGrossPayAfterTax.Default.(decimal.Decimal)
+	// payslipDescShifOrNhifContribution is the schema descriptor for shif_or_nhif_contribution field.
+	payslipDescShifOrNhifContribution := payslipFields[14].Descriptor()
+	// payslip.DefaultShifOrNhifContribution holds the default value on creation for the shif_or_nhif_contribution field.
+	payslip.DefaultShifOrNhifContribution = payslipDescShifOrNhifContribution.Default.(decimal.Decimal)
+	// payslipDescHousingLevy is the schema descriptor for housing_levy field.
+	payslipDescHousingLevy := payslipFields[15].Descriptor()
+	// payslip.DefaultHousingLevy holds the default value on creation for the housing_levy field.
+	payslip.DefaultHousingLevy = payslipDescHousingLevy.Default.(decimal.Decimal)
+	// payslipDescNssfEmployeeTier1 is the schema descriptor for nssf_employee_tier_1 field.
+	payslipDescNssfEmployeeTier1 := payslipFields[16].Descriptor()
+	// payslip.DefaultNssfEmployeeTier1 holds the default value on creation for the nssf_employee_tier_1 field.
+	payslip.DefaultNssfEmployeeTier1 = payslipDescNssfEmployeeTier1.Default.(decimal.Decimal)
+	// payslipDescNssfEmployeeTier2 is the schema descriptor for nssf_employee_tier_2 field.
+	payslipDescNssfEmployeeTier2 := payslipFields[17].Descriptor()
+	// payslip.DefaultNssfEmployeeTier2 holds the default value on creation for the nssf_employee_tier_2 field.
+	payslip.DefaultNssfEmployeeTier2 = payslipDescNssfEmployeeTier2.Default.(decimal.Decimal)
+	// payslipDescNssfEmployerContribution is the schema descriptor for nssf_employer_contribution field.
+	payslipDescNssfEmployerContribution := payslipFields[18].Descriptor()
+	// payslip.DefaultNssfEmployerContribution holds the default value on creation for the nssf_employer_contribution field.
+	payslip.DefaultNssfEmployerContribution = payslipDescNssfEmployerContribution.Default.(decimal.Decimal)
+	// payslipDescDeductionsBeforeTax is the schema descriptor for deductions_before_tax field.
+	payslipDescDeductionsBeforeTax := payslipFields[19].Descriptor()
+	// payslip.DefaultDeductionsBeforeTax holds the default value on creation for the deductions_before_tax field.
+	payslip.DefaultDeductionsBeforeTax = payslipDescDeductionsBeforeTax.Default.(decimal.Decimal)
+	// payslipDescDeductionsAfterTax is the schema descriptor for deductions_after_tax field.
+	payslipDescDeductionsAfterTax := payslipFields[20].Descriptor()
+	// payslip.DefaultDeductionsAfterTax holds the default value on creation for the deductions_after_tax field.
+	payslip.DefaultDeductionsAfterTax = payslipDescDeductionsAfterTax.Default.(decimal.Decimal)
+	// payslipDescDeductionsAfterPaye is the schema descriptor for deductions_after_paye field.
+	payslipDescDeductionsAfterPaye := payslipFields[21].Descriptor()
+	// payslip.DefaultDeductionsAfterPaye holds the default value on creation for the deductions_after_paye field.
+	payslip.DefaultDeductionsAfterPaye = payslipDescDeductionsAfterPaye.Default.(decimal.Decimal)
+	// payslipDescDeductionsFinal is the schema descriptor for deductions_final field.
+	payslipDescDeductionsFinal := payslipFields[22].Descriptor()
+	// payslip.DefaultDeductionsFinal holds the default value on creation for the deductions_final field.
+	payslip.DefaultDeductionsFinal = payslipDescDeductionsFinal.Default.(decimal.Decimal)
+	// payslipDescPayrollStatus is the schema descriptor for payroll_status field.
+	payslipDescPayrollStatus := payslipFields[26].Descriptor()
+	// payslip.DefaultPayrollStatus holds the default value on creation for the payroll_status field.
+	payslip.DefaultPayrollStatus = payslipDescPayrollStatus.Default.(string)
+	// payslipDescApprovalStatus is the schema descriptor for approval_status field.
+	payslipDescApprovalStatus := payslipFields[27].Descriptor()
+	// payslip.DefaultApprovalStatus holds the default value on creation for the approval_status field.
+	payslip.DefaultApprovalStatus = payslipDescApprovalStatus.Default.(string)
+	// payslipDescPublished is the schema descriptor for published field.
+	payslipDescPublished := payslipFields[28].Descriptor()
+	// payslip.DefaultPublished holds the default value on creation for the published field.
+	payslip.DefaultPublished = payslipDescPublished.Default.(bool)
+	// payslipDescDeleteStatus is the schema descriptor for delete_status field.
+	payslipDescDeleteStatus := payslipFields[32].Descriptor()
+	// payslip.DefaultDeleteStatus holds the default value on creation for the delete_status field.
+	payslip.DefaultDeleteStatus = payslipDescDeleteStatus.Default.(bool)
+	// payslipDescCreatedAt is the schema descriptor for created_at field.
+	payslipDescCreatedAt := payslipFields[33].Descriptor()
+	// payslip.DefaultCreatedAt holds the default value on creation for the created_at field.
+	payslip.DefaultCreatedAt = payslipDescCreatedAt.Default.(func() time.Time)
+	// payslipDescUpdatedAt is the schema descriptor for updated_at field.
+	payslipDescUpdatedAt := payslipFields[34].Descriptor()
+	// payslip.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	payslip.DefaultUpdatedAt = payslipDescUpdatedAt.Default.(func() time.Time)
+	// payslip.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	payslip.UpdateDefaultUpdatedAt = payslipDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// payslipDescID is the schema descriptor for id field.
+	payslipDescID := payslipFields[0].Descriptor()
+	// payslip.DefaultID holds the default value on creation for the id field.
+	payslip.DefaultID = payslipDescID.Default.(func() uuid.UUID)
+	payslipauditFields := schema.PayslipAudit{}.Fields()
+	_ = payslipauditFields
+	// payslipauditDescActionDate is the schema descriptor for action_date field.
+	payslipauditDescActionDate := payslipauditFields[6].Descriptor()
+	// payslipaudit.DefaultActionDate holds the default value on creation for the action_date field.
+	payslipaudit.DefaultActionDate = payslipauditDescActionDate.Default.(func() time.Time)
+	// payslipauditDescID is the schema descriptor for id field.
+	payslipauditDescID := payslipauditFields[0].Descriptor()
+	// payslipaudit.DefaultID holds the default value on creation for the id field.
+	payslipaudit.DefaultID = payslipauditDescID.Default.(func() uuid.UUID)
 	permissionFields := schema.Permission{}.Fields()
 	_ = permissionFields
 	// permissionDescPermissionCode is the schema descriptor for permission_code field.
@@ -306,6 +1138,34 @@ func init() {
 	regionDescID := regionFields[0].Descriptor()
 	// region.DefaultID holds the default value on creation for the id field.
 	region.DefaultID = regionDescID.Default.(func() uuid.UUID)
+	repayoptionFields := schema.RepayOption{}.Fields()
+	_ = repayoptionFields
+	// repayoptionDescAmount is the schema descriptor for amount field.
+	repayoptionDescAmount := repayoptionFields[2].Descriptor()
+	// repayoption.DefaultAmount holds the default value on creation for the amount field.
+	repayoption.DefaultAmount = repayoptionDescAmount.Default.(decimal.Decimal)
+	// repayoptionDescNoOfInstallments is the schema descriptor for no_of_installments field.
+	repayoptionDescNoOfInstallments := repayoptionFields[3].Descriptor()
+	// repayoption.DefaultNoOfInstallments holds the default value on creation for the no_of_installments field.
+	repayoption.DefaultNoOfInstallments = repayoptionDescNoOfInstallments.Default.(int)
+	// repayoptionDescInstallmentAmount is the schema descriptor for installment_amount field.
+	repayoptionDescInstallmentAmount := repayoptionFields[4].Descriptor()
+	// repayoption.DefaultInstallmentAmount holds the default value on creation for the installment_amount field.
+	repayoption.DefaultInstallmentAmount = repayoptionDescInstallmentAmount.Default.(decimal.Decimal)
+	// repayoptionDescCreatedAt is the schema descriptor for created_at field.
+	repayoptionDescCreatedAt := repayoptionFields[5].Descriptor()
+	// repayoption.DefaultCreatedAt holds the default value on creation for the created_at field.
+	repayoption.DefaultCreatedAt = repayoptionDescCreatedAt.Default.(func() time.Time)
+	// repayoptionDescUpdatedAt is the schema descriptor for updated_at field.
+	repayoptionDescUpdatedAt := repayoptionFields[6].Descriptor()
+	// repayoption.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	repayoption.DefaultUpdatedAt = repayoptionDescUpdatedAt.Default.(func() time.Time)
+	// repayoption.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	repayoption.UpdateDefaultUpdatedAt = repayoptionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// repayoptionDescID is the schema descriptor for id field.
+	repayoptionDescID := repayoptionFields[0].Descriptor()
+	// repayoption.DefaultID holds the default value on creation for the id field.
+	repayoption.DefaultID = repayoptionDescID.Default.(func() uuid.UUID)
 	roleFields := schema.Role{}.Fields()
 	_ = roleFields
 	// roleDescRoleCode is the schema descriptor for role_code field.
@@ -334,6 +1194,46 @@ func init() {
 	roleDescID := roleFields[0].Descriptor()
 	// role.DefaultID holds the default value on creation for the id field.
 	role.DefaultID = roleDescID.Default.(func() uuid.UUID)
+	salarydetailsFields := schema.SalaryDetails{}.Fields()
+	_ = salarydetailsFields
+	// salarydetailsDescMonthlySalary is the schema descriptor for monthly_salary field.
+	salarydetailsDescMonthlySalary := salarydetailsFields[3].Descriptor()
+	// salarydetails.DefaultMonthlySalary holds the default value on creation for the monthly_salary field.
+	salarydetails.DefaultMonthlySalary = salarydetailsDescMonthlySalary.Default.(decimal.Decimal)
+	// salarydetailsDescIncomeTax is the schema descriptor for income_tax field.
+	salarydetailsDescIncomeTax := salarydetailsFields[5].Descriptor()
+	// salarydetails.DefaultIncomeTax holds the default value on creation for the income_tax field.
+	salarydetails.DefaultIncomeTax = salarydetailsDescIncomeTax.Default.(string)
+	// salarydetailsDescCurrency is the schema descriptor for currency field.
+	salarydetailsDescCurrency := salarydetailsFields[6].Descriptor()
+	// salarydetails.DefaultCurrency holds the default value on creation for the currency field.
+	salarydetails.DefaultCurrency = salarydetailsDescCurrency.Default.(string)
+	// salarydetailsDescHourlyRate is the schema descriptor for hourly_rate field.
+	salarydetailsDescHourlyRate := salarydetailsFields[7].Descriptor()
+	// salarydetails.DefaultHourlyRate holds the default value on creation for the hourly_rate field.
+	salarydetails.DefaultHourlyRate = salarydetailsDescHourlyRate.Default.(decimal.Decimal)
+	// salarydetailsDescDailyRate is the schema descriptor for daily_rate field.
+	salarydetailsDescDailyRate := salarydetailsFields[8].Descriptor()
+	// salarydetails.DefaultDailyRate holds the default value on creation for the daily_rate field.
+	salarydetails.DefaultDailyRate = salarydetailsDescDailyRate.Default.(decimal.Decimal)
+	// salarydetailsDescIsActive is the schema descriptor for is_active field.
+	salarydetailsDescIsActive := salarydetailsFields[12].Descriptor()
+	// salarydetails.DefaultIsActive holds the default value on creation for the is_active field.
+	salarydetails.DefaultIsActive = salarydetailsDescIsActive.Default.(bool)
+	// salarydetailsDescCreatedAt is the schema descriptor for created_at field.
+	salarydetailsDescCreatedAt := salarydetailsFields[13].Descriptor()
+	// salarydetails.DefaultCreatedAt holds the default value on creation for the created_at field.
+	salarydetails.DefaultCreatedAt = salarydetailsDescCreatedAt.Default.(func() time.Time)
+	// salarydetailsDescUpdatedAt is the schema descriptor for updated_at field.
+	salarydetailsDescUpdatedAt := salarydetailsFields[14].Descriptor()
+	// salarydetails.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	salarydetails.DefaultUpdatedAt = salarydetailsDescUpdatedAt.Default.(func() time.Time)
+	// salarydetails.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	salarydetails.UpdateDefaultUpdatedAt = salarydetailsDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// salarydetailsDescID is the schema descriptor for id field.
+	salarydetailsDescID := salarydetailsFields[0].Descriptor()
+	// salarydetails.DefaultID holds the default value on creation for the id field.
+	salarydetails.DefaultID = salarydetailsDescID.Default.(func() uuid.UUID)
 	userroleassignmentFields := schema.UserRoleAssignment{}.Fields()
 	_ = userroleassignmentFields
 	// userroleassignmentDescAssignedAt is the schema descriptor for assigned_at field.
@@ -344,4 +1244,60 @@ func init() {
 	userroleassignmentDescID := userroleassignmentFields[0].Descriptor()
 	// userroleassignment.DefaultID holds the default value on creation for the id field.
 	userroleassignment.DefaultID = userroleassignmentDescID.Default.(func() uuid.UUID)
+	withholdingtaxFields := schema.WithHoldingTax{}.Fields()
+	_ = withholdingtaxFields
+	// withholdingtaxDescTitle is the schema descriptor for title field.
+	withholdingtaxDescTitle := withholdingtaxFields[2].Descriptor()
+	// withholdingtax.DefaultTitle holds the default value on creation for the title field.
+	withholdingtax.DefaultTitle = withholdingtaxDescTitle.Default.(string)
+	// withholdingtaxDescRate is the schema descriptor for rate field.
+	withholdingtaxDescRate := withholdingtaxFields[3].Descriptor()
+	// withholdingtax.DefaultRate holds the default value on creation for the rate field.
+	withholdingtax.DefaultRate = withholdingtaxDescRate.Default.(decimal.Decimal)
+	// withholdingtaxDescThreshold is the schema descriptor for threshold field.
+	withholdingtaxDescThreshold := withholdingtaxFields[4].Descriptor()
+	// withholdingtax.DefaultThreshold holds the default value on creation for the threshold field.
+	withholdingtax.DefaultThreshold = withholdingtaxDescThreshold.Default.(decimal.Decimal)
+	// withholdingtaxDescIsActive is the schema descriptor for is_active field.
+	withholdingtaxDescIsActive := withholdingtaxFields[5].Descriptor()
+	// withholdingtax.DefaultIsActive holds the default value on creation for the is_active field.
+	withholdingtax.DefaultIsActive = withholdingtaxDescIsActive.Default.(bool)
+	// withholdingtaxDescCreatedAt is the schema descriptor for created_at field.
+	withholdingtaxDescCreatedAt := withholdingtaxFields[8].Descriptor()
+	// withholdingtax.DefaultCreatedAt holds the default value on creation for the created_at field.
+	withholdingtax.DefaultCreatedAt = withholdingtaxDescCreatedAt.Default.(func() time.Time)
+	// withholdingtaxDescUpdatedAt is the schema descriptor for updated_at field.
+	withholdingtaxDescUpdatedAt := withholdingtaxFields[9].Descriptor()
+	// withholdingtax.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	withholdingtax.DefaultUpdatedAt = withholdingtaxDescUpdatedAt.Default.(func() time.Time)
+	// withholdingtax.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	withholdingtax.UpdateDefaultUpdatedAt = withholdingtaxDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// withholdingtaxDescID is the schema descriptor for id field.
+	withholdingtaxDescID := withholdingtaxFields[0].Descriptor()
+	// withholdingtax.DefaultID holds the default value on creation for the id field.
+	withholdingtax.DefaultID = withholdingtaxDescID.Default.(func() uuid.UUID)
+	workersunionFields := schema.WorkersUnion{}.Fields()
+	_ = workersunionFields
+	// workersunionDescName is the schema descriptor for name field.
+	workersunionDescName := workersunionFields[2].Descriptor()
+	// workersunion.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	workersunion.NameValidator = workersunionDescName.Validators[0].(func(string) error)
+	// workersunionDescCode is the schema descriptor for code field.
+	workersunionDescCode := workersunionFields[3].Descriptor()
+	// workersunion.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	workersunion.CodeValidator = workersunionDescCode.Validators[0].(func(string) error)
+	// workersunionDescCreatedAt is the schema descriptor for created_at field.
+	workersunionDescCreatedAt := workersunionFields[9].Descriptor()
+	// workersunion.DefaultCreatedAt holds the default value on creation for the created_at field.
+	workersunion.DefaultCreatedAt = workersunionDescCreatedAt.Default.(func() time.Time)
+	// workersunionDescUpdatedAt is the schema descriptor for updated_at field.
+	workersunionDescUpdatedAt := workersunionFields[10].Descriptor()
+	// workersunion.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	workersunion.DefaultUpdatedAt = workersunionDescUpdatedAt.Default.(func() time.Time)
+	// workersunion.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	workersunion.UpdateDefaultUpdatedAt = workersunionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// workersunionDescID is the schema descriptor for id field.
+	workersunionDescID := workersunionFields[0].Descriptor()
+	// workersunion.DefaultID holds the default value on creation for the id field.
+	workersunion.DefaultID = workersunionDescID.Default.(func() uuid.UUID)
 }
