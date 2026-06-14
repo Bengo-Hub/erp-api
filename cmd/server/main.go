@@ -24,6 +24,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
+	httpware "github.com/Bengo-Hub/httpware"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	eventslib "github.com/Bengo-Hub/shared-events"
 
@@ -189,10 +190,20 @@ func run() error {
 		return err
 	}
 
-	// --- Router ---
+	// --- Router (shared httpware middleware: request-id, structured logging,
+	// panic recovery, CORS — replaces the hand-rolled chi/CORS stack). ---
 	r := chi.NewRouter()
-	r.Use(chimw.RequestID, chimw.RealIP, chimw.Recoverer)
-	r.Use(mw.CORS(cfg.HTTP.AllowedOrigins))
+	r.Use(chimw.RealIP)
+	r.Use(httpware.RequestID)
+	r.Use(httpware.Logging(log))
+	r.Use(httpware.Recover(log))
+	r.Use(httpware.CORS(httpware.CORSConfig{
+		AllowedOrigins:   cfg.HTTP.AllowedOrigins,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type", "X-API-Key", "X-Tenant-ID", "X-Tenant-Slug", "X-Outlet-ID", "X-Request-ID", "X-Requested-With"},
+		AllowCredentials: true,
+		MaxAge:           600,
+	}))
 
 	// Public (no auth): health/metrics + login-page branding.
 	r.Get("/healthz", healthHandler.Liveness)
