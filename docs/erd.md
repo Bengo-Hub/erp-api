@@ -1,589 +1,295 @@
-# erp-api Entity-Relationship Documentation
+# erp-api Entity-Relationship Documentation (Go / Ent)
 
-> Reconstructed from Django models + live `bengo_erp` schema (158 tables, PostgreSQL 17).
-> Grouped by app. FKs and key fields shown. Statutory amounts use `DecimalField`.
-> Django adds an implicit `id BIGSERIAL` PK unless noted (UUID PKs called out).
+> Authoritative ERD for the **Go rebuild** — generated from the Ent schemas in
+> `internal/ent/schema/*.go`. The ERP is **HR/Ops only**: all decomposed domains
+> (finance/treasury, inventory/products/stock, crm, ordering/cart, pos, notifications
+> templates, auth identity, **projects/tenders**, **address_book/pickup_station/service_type**,
+> **bank masters**) live in their owning services and are **not** modeled here (plan §0a).
+>
+> Conventions: every business table has a `uuid id` PK and (where tenant-owned) a
+> `tenant_id uuid` for isolation; money is `decimal` (numeric), never float; timestamps are
+> `timestamptz`. auth identity/tenants/outlets are shadows synced from auth-api.
 
-Cross-app FK hubs:
-- `authmanagement.CustomUser` (auth user shadow) — referenced everywhere as creator/approver/owner.
-- `hrm.employees.Employee` — the HR aggregate root; most HR tables FK to it.
-- `business.Bussiness` — tenant/business config root (`tenant_id` → auth-api).
-- `core.{Departments,Regions,Projects,BankInstitution,BankBranches}` — reference data.
+Cross-cutting FK hubs:
+- `Employee` — the HR aggregate root; most HR tables reference it by `employee_id`.
+- `AuthTenant` / `AuthOutlet` — auth-api shadows (NATS-synced); everything is scoped by `tenant_id`.
+- `CustomUser` — thin SSO user shadow (creator/approver/assignee references).
 
 ---
 
-## 1. authmanagement (identity, RBAC shadow, security, backups)
+## 1. Auth shadows + RBAC (`custom_user`, `auth_tenant`, `auth_outlet`, `role`, `permission`, `role_permission`, `user_role_assignment`)
 
 ```mermaid
 erDiagram
-  CustomUser ||--o| UserPreferences : has
-  CustomUser ||--o{ UserLog : logs
-  CustomUser ||--o{ Backup : created
-  CustomUser ||--o{ TwoFactorAuth : has
-  CustomUser ||--o{ SecurityAuditLog : audited
   AuthTenant ||--o{ AuthOutlet : "tenant_id"
+  Role ||--o{ RolePermission : grants
+  Permission ||--o{ RolePermission : in
+  Role ||--o{ UserRoleAssignment : assigned
+  CustomUser ||--o{ UserRoleAssignment : holds
 
-  CustomUser {
-    bigint id PK
-    string external_id "JWT sub (SSO), unique"
-    string email UK
-    string first_name
-    string last_name
-    string middle_name
-    string phone
-    image pic
-    image signature "for doc approvals"
-    string timezone
-    datetime password_changed_at
-    bool must_change_password
-    bool is_active
-    bool is_staff
-    bool is_superuser
-  }
-  AuthTenant {
-    uuid id PK "auth-api tenant UUID"
-    string slug UK
-    string name
-    bool is_platform
-    string status
-    datetime synced_at
-  }
-  AuthOutlet {
-    uuid id PK "auth-api outlet UUID"
-    uuid tenant_id FK
-    string code
-    string name
-    string use_case
-    bool is_hq
-    string status
-    string timezone
-  }
-  PasswordPolicy { int min_length; int password_expiry_days; int max_login_attempts }
-  Backup { string type; string path; bigint size; string status; string storage_type }
-  BackupConfig { string storage_type; string s3_bucket; int retention_days }
-  BackupSchedule { string frequency; string cron_expression; datetime next_run; bool is_active }
-  UserPreferences { json theme_settings; json notification_settings; json dashboard_layout; string language }
-  AccountRequest { string email; string status }
-  TwoFactorAuth { string secret; bool is_enabled; json backup_codes }
-  AccountLockout { int failed_attempts; datetime locked_until }
-  SecurityAuditLog { string event_type; string ip_address; datetime created_at }
-  SecuritySettings { bool enforce_2fa; int session_timeout }
+  CustomUser { uuid id PK; string external_id "JWT sub"; string email; string first_name; string last_name; uuid tenant_id }
+  AuthTenant { uuid id PK "auth-api UUID"; string slug; string name; bool is_platform; string status }
+  AuthOutlet { uuid id PK "auth-api UUID"; uuid tenant_id FK; string code; string name; bool is_hq; string status }
+  Role { uuid id PK; uuid tenant_id "NULL=global"; string role_code; string name; bool is_system_role }
+  Permission { uuid id PK; string permission_code UK; string module; string action }
+  RolePermission { uuid role_id FK; uuid permission_id FK }
+  UserRoleAssignment { uuid id PK; uuid tenant_id; uuid user_id FK; uuid role_id FK }
 ```
-> Django built-ins: `auth_group` (= ERP service roles), `auth_permission`,
-> `auth_group_permissions`, `authmanagement_customuser_groups`,
-> `authmanagement_customuser_user_permissions`, `authtoken_token`, `django_content_type`,
-> `django_session`, `django_admin_log`, `django_site`, `django_celery_beat_*`.
+
+RBAC permission codes + system roles are seeded by `cmd/seed` (`erp_admin`, `hr_manager`,
+`payroll_manager`, `hr_viewer`); per-tenant assignment is derived from auth-api JWT roles
+via `/auth/me` sync.
 
 ---
 
-## 2. business (tenant/business config)
+## 2. Employees (the HR FK hub)
 
 ```mermaid
 erDiagram
-  BusinessLocation ||--o{ Bussiness : location
-  CustomUser ||--o{ Bussiness : owner
-  Bussiness ||--o{ Branch : branches
-  BusinessLocation ||--o{ Branch : location
-  Bussiness ||--o| BrandingSettings : branding
-  Bussiness ||--o{ TaxRates : taxrates
-  Bussiness ||--o{ ProductSettings : settings
-  Bussiness ||--o{ SaleSettings : settings
-  Bussiness ||--o{ PrefixSettings : prefixes
-  Bussiness ||--o{ ServiceTypes : services
-  Bussiness ||--o{ PickupStations : stations
-  Bussiness ||--o{ DocumentSequence : sequences
+  Employee ||--o| HRDetails : has
+  Employee ||--o| SalaryDetails : has
+  Employee ||--o| ContactDetails : has
+  Employee ||--o{ NextOfKin : has
+  Employee ||--o{ EmployeeDocument : has
+  Employee ||--o{ EmployeeBankAccount : has
+  Employee ||--o| Contract : has
+  JobTitle ||--o{ HRDetails : titles
+  JobGroup ||--o{ SalaryDetails : grades
+  Department ||--o{ HRDetails : org
+  WorkersUnion ||--o{ Employee : member
 
-  Bussiness {
-    bigint id PK
-    uuid tenant_id UK "auth-api tenant UUID"
-    string name
-    date start_date
-    string currency
-    string finacial_year_start_month
-    string stock_accounting_method
-    decimal default_profit_margin
-    image logo
-    image business_stamp
-    string kra_number "display cache; treasury is SoT"
-    string business_type
-    string county
-    string tax_compliance_status
-  }
-  Branch {
-    bigint id PK
-    bigint business_id FK
-    bigint location_id FK
-    string name
-    string branch_code UK
-    string email
-    bool is_main_branch
-    bool is_active
-  }
-  BrandingSettings { bigint business_id FK; string primary_color_name; string surface_name; bool dark_mode }
-  TaxRates { bigint business_id FK; string tax_name; string tax_number UK; decimal percentage }
-  PrefixSettings { bigint business_id FK; string invoice; string quotation; string purchase_order }
-  DocumentSequence { bigint business_id FK; string document_type; int current_sequence }
-  PickupStations { bigint business_id FK; bigint region_id FK; string pickup_location; decimal shipping_charge }
-  ServiceTypes { bigint business_id FK; string name; string packing_charge_type }
+  Employee { uuid id PK; uuid tenant_id; uuid outlet_id; uuid user_id; string employee_number; string first_name; string last_name; string national_id; string pin_no "KRA PIN"; string shif_or_nhif_number; string nssf_no; bool terminated; bool deleted }
+  HRDetails { uuid id PK; uuid tenant_id; uuid employee_id FK; uuid job_title_id; uuid department_id; uuid head_of_department_id "dept-head approver"; uuid reports_to_id "manager approver"; uuid region_id; string employment_type }
+  SalaryDetails { uuid id PK; uuid tenant_id; uuid employee_id FK; decimal monthly_salary; decimal hourly_rate; decimal daily_rate; string pay_mode; string currency }
+  ContactDetails { uuid id PK; uuid tenant_id; uuid employee_id FK; string phone; string email; string physical_address "HR-owned employee address" }
+  NextOfKin { uuid id PK; uuid tenant_id; uuid employee_id FK; string name; string relationship; string phone }
+  EmployeeDocument { uuid id PK; uuid tenant_id; uuid employee_id FK; string doc_type; string file_url }
+  EmployeeBankAccount { uuid id PK; uuid tenant_id; uuid employee_id FK; string bank_name; string bank_code; string branch_name; string branch_code; string account_number; bool is_primary }
+  Contract { uuid id PK; uuid tenant_id; uuid employee_id FK; string contract_type; date start_date; date end_date }
+  JobTitle { uuid id PK; uuid tenant_id; string title }
+  JobGroup { uuid id PK; uuid tenant_id; string name }
+  Department { uuid id PK; uuid tenant_id; string title; uuid parent_department_id }
+  WorkersUnion { uuid id PK; uuid tenant_id; string name }
 ```
-> `DocumentSequence` uses SELECT FOR UPDATE row locking; unique `(business, document_type)`.
+
+> Bank details are **plain fields** on `EmployeeBankAccount` — there is **no** ERP-owned
+> bank_institution/bank_branch master (banks = treasury/payment-rail reference, plan §0a).
+> `HRDetails` has **no** `project_id` (projects-service owns projects).
 
 ---
 
-## 3. core (reference data + settings)
+## 3. Payroll + payroll settings (ERP-owned Kenyan statutory engine)
 
 ```mermaid
 erDiagram
-  Regions ||--o{ Regions : parent
-  Departments ||--o{ Departments : parent
-  ProjectCategory ||--o{ Projects : projects
-  BankInstitution ||--o{ BankBranches : branches
-  Bussiness ||--o{ ExchangeRate : "business (null=system-wide)"
-  CustomUser ||--o{ ExchangeRate : created_by
+  Employee ||--o{ Payslip : earns
+  Payslip ||--o{ PayslipAudit : audited
+  Employee ||--o{ EmployeeLoan : owes
+  Employee ||--o{ Advance : owes
+  Employee ||--o{ LossAndDamage : owes
+  Employee ||--o{ EmployeeBenefit : receives
+  Employee ||--o{ ExpenseClaim : files
+  ExpenseClaim ||--o{ ClaimItem : lines
+  EmployeeLoan ||--o{ RepayOption : repays
+  LoanType ||--o{ EmployeeLoan : typed
+  PayrollFormula ||--o{ PayrollFormulaItem : bands
+  PayrollFormula ||--o{ PayrollSplitRatio : tiers
 
-  Regions { bigint id PK; string code; string name; bigint parent_region_id FK }
-  Departments { bigint id PK; string code; string title; bigint parent_departyment_id FK }
-  Projects { bigint id PK; bigint category_id FK; string code; string title }
-  ProjectCategory { bigint id PK; string title }
-  BankInstitution { bigint id PK; string name; string code UK; string short_code UK; string swift_code }
-  BankBranches { bigint id PK; bigint bank_id FK; string name; string code "uniq per bank" }
-  ExchangeRate {
-    bigint id PK
-    string from_currency
-    string to_currency
-    decimal rate "18,6"
-    date effective_date
-    string source "manual|api|bank"
-    bigint business_id FK
-  }
-  RegionalSettings { string timezone; string date_format; string currency_symbol "singleton pk=1" }
-  AppSettings { string app_key; string cypher_key }
-  Location { string name; string code UK; bigint region_id FK "LEGACY - use Branch" }
-  Blog ||--o{ Post : posts
-  Post ||--o{ Comments : comments
-  ApiRequestMetric { string method; string path; int status_code; decimal duration_ms }
-  QueryPerformanceMetric { string operation; decimal duration_ms; int query_count }
-  ContractSetting { email emai_to; int duration "contract expiry notice" }
+  Payslip { uuid id PK; uuid tenant_id; uuid outlet_id; uuid employee_id FK; decimal gross_pay; decimal taxable_pay; decimal paye; decimal tax_relief; decimal shif_or_nhif_contribution; decimal housing_levy; decimal nssf_employee_tier_1; decimal nssf_employee_tier_2; decimal nssf_employer_contribution; decimal net_pay; date payment_period; string payroll_status; string approval_status; bool published; string batch_ref }
+  PayslipAudit { uuid id PK; uuid tenant_id; uuid payslip_id FK; string action; json snapshot }
+  PayrollComponent { uuid id PK; uuid tenant_id; string name; string deduction_phase; int priority }
+  PayrollFormula { uuid id PK; uuid tenant_id; string name; date effective_from; json deduction_order }
+  PayrollFormulaItem { uuid id PK; uuid formula_id FK; decimal lower; decimal upper; decimal rate }
+  PayrollSplitRatio { uuid id PK; uuid formula_id FK; decimal threshold; decimal rate }
+  PayrollRelief { uuid id PK; uuid tenant_id; string name; decimal amount; date effective_from }
+  WithholdingTax { uuid id PK; uuid tenant_id; decimal rate }
+  BenefitTax { uuid id PK; uuid tenant_id; string name; decimal rate }
+  GeneralHRSettings { uuid id PK; uuid tenant_id; json settings }
+  EmployeeLoan { uuid id PK; uuid tenant_id; uuid employee_id FK; uuid loan_type_id; decimal principal; decimal outstanding; string method }
+  LoanType { uuid id PK; uuid tenant_id; string name }
+  RepayOption { uuid id PK; uuid loan_id FK; decimal amount }
+  Advance { uuid id PK; uuid tenant_id; uuid employee_id FK; decimal amount; decimal outstanding }
+  LossAndDamage { uuid id PK; uuid tenant_id; uuid employee_id FK; decimal amount; decimal outstanding }
+  EmployeeBenefit { uuid id PK; uuid tenant_id; uuid employee_id FK; decimal value; bool is_cash }
+  ExpenseClaim { uuid id PK; uuid tenant_id; uuid employee_id FK; decimal total; string status }
+  ClaimItem { uuid id PK; uuid claim_id FK; string description; decimal amount }
 ```
+
+Payroll taxes (PAYE bands/relief, NSSF tiers, SHIF/NHIF, housing levy) are **ERP-owned**
+(plan §7.3), data-driven via `PayrollFormula`/`PayrollFormulaItem`/`PayrollSplitRatio`.
 
 ---
 
-## 4. hrm.employees (HR aggregate root)
+## 4. Leave (`leave_category`, `leave_entitlement`, `leave_balance`, `leave_request`, `leave_log`, `public_holiday`)
 
 ```mermaid
 erDiagram
-  CustomUser ||--|| Employee : user
-  Bussiness ||--o{ Employee : organisation
-  Employee ||--o{ SalaryDetails : salary_details
-  Employee ||--o{ HRDetails : hr_details
-  Employee ||--o{ Contract : contracts
-  Employee ||--o{ ContactDetails : contacts
-  Employee ||--o{ NextOfKin : kins
-  Employee ||--o{ Documents : documents
-  Employee ||--o{ EmployeeBankAccount : bank_accounts
-  BankInstitution ||--o{ EmployeeBankAccount : bank
-  BankBranches ||--o{ EmployeeBankAccount : branch
-  EmployeeBankAccount ||--o{ SalaryDetails : bank_account
-  JobTitle ||--o{ HRDetails : job_title
-  Departments ||--o{ HRDetails : department
-  Employee ||--o{ HRDetails : reports_to
-  WorkShift ||--o{ SalaryDetails : work_shift
+  LeaveCategory ||--o{ LeaveEntitlement : grants
+  LeaveCategory ||--o{ LeaveBalance : tracks
+  LeaveCategory ||--o{ LeaveRequest : files
+  LeaveRequest ||--o{ LeaveLog : audited
+  Employee ||--o{ LeaveRequest : files
 
-  Employee {
-    bigint id PK
-    bigint user_id FK "OneToOne"
-    bigint organisation_id FK "Bussiness"
-    uuid outlet_id "auth-api outlet scoping"
-    string gender
-    date date_of_birth
-    string national_id UK
-    string pin_no "KRA PIN"
-    string shif_or_nhif_number
-    string nssf_no
-    bool deleted
-    bool terminated
-    bool allow_ess
-    bool ess_unrestricted_access
-  }
-  SalaryDetails {
-    bigint id PK
-    bigint employee_id FK
-    string employment_type
-    decimal monthly_salary "14,2"
-    string pay_type "basic|gross|consolidated|net_pay"
-    int work_hours
-    bigint work_shift_id FK
-    decimal hourly_rate "auto"
-    decimal daily_rate "auto"
-    string income_tax "primary|secondary"
-    bool deduct_shif_or_nhif
-    bool deduct_nssf
-    string payment_type "bank|mobile|cash|cheque"
-    bigint bank_account_id FK
-  }
-  HRDetails {
-    bigint id PK
-    bigint employee_id FK
-    string job_or_staff_number
-    bigint job_title_id FK
-    bigint department_id FK
-    bigint reports_to_id FK "Employee"
-    bigint branch_id FK "business.Branch"
-    bigint region_id FK
-    bigint project_id FK
-    date date_of_employment
-    bool board_director
-  }
-  Contract {
-    bigint id PK
-    bigint employee_id FK
-    string contract_type
-    date contract_start_date
-    date contract_end_date
-    string status "active|suspended|terminated|expired"
-    decimal salary
-    decimal contract_duration "auto days"
-    date probation_end_date
-  }
-  EmployeeBankAccount { bigint employee_id FK; bigint bank_institution_id FK; string account_number; bool is_primary }
-  ContactDetails { bigint employee_id FK; email personal_email UK; string county; string city; phone mobile_phone }
-  NextOfKin { bigint employee_id FK; string name; string relation; phone phone; email email UK }
-  Documents { bigint employee_id FK; file document }
-  JobTitle { bigint id PK; string title }
-  JobGroup { bigint id PK; string title }
-  WorkersUnion { bigint id PK; string name; string code UK }
+  LeaveCategory { uuid id PK; uuid tenant_id; string name; decimal default_annual_days; bool allow_carryover; decimal max_carryover_days }
+  LeaveEntitlement { uuid id PK; uuid tenant_id; uuid employee_id; uuid category_id FK; int year; decimal days_entitled }
+  LeaveBalance { uuid id PK; uuid tenant_id; uuid employee_id; uuid category_id FK; int year; decimal days_entitled; decimal days_taken; decimal days_remaining }
+  LeaveRequest { uuid id PK; uuid tenant_id; uuid employee_id FK; uuid category_id FK; date start_date; date end_date; decimal days_requested; enum status }
+  LeaveLog { uuid id PK; uuid tenant_id; uuid leave_request_id FK; enum action; string description }
+  PublicHoliday { uuid id PK; uuid tenant_id; string name; date date; bool is_national; string county }
 ```
+
+Leave decisions route through the **approvals engine** when a `leave_request` workflow is
+configured (else direct pending→approved/rejected).
 
 ---
 
-## 5. hrm.payroll_settings (payroll rules engine config)
+## 5. Attendance + shifts (`work_shift`(+`work_shift_schedule`), `attendance_record`, `attendance_rule`, `shift_rotation`, `shift_roster`(+`shift_roster_slot`), `shift_assignment`, `staff_shift_override`, `off_day`, `timesheet`(+`timesheet_entry`), `ess_settings`)
 
 ```mermaid
 erDiagram
-  PayrollComponents ||--o{ Formulas : deduction
-  Formulas ||--o{ FormulaItems : formulaitems
-  Formulas ||--o{ SplitRatio : sliptrations
-  Formulas ||--o{ Formulas : replaces_formula
-  Relief ||--o{ PayrollComponents : applicable_relief
-  BenefitTaxes ||--o{ PayrollComponents : applicable_tax_formula
-  DefaultPayrollSettings }o--o{ PayrollComponents : "default earnings/deductions/benefits (M2M)"
-  ScheduledPayslip }o--o{ Employee : recipients
-
-  Formulas {
-    bigint id PK
-    string type "income|deduction|earning|fbt|levy|relief_allowance"
-    bigint deduction_id FK "PayrollComponents"
-    string category "primary|secondary|fbt|housing_levy|social_security_fund|nhif|shif"
-    string title
-    date effective_from
-    date effective_to
-    decimal upper_limit "14,4"
-    decimal upper_limit_amount
-    decimal upper_limit_percentage
-    decimal personal_relief
-    bool progressive
-    bool is_current
-    string version
-    json deduction_order
-  }
-  FormulaItems { bigint formula_id FK; decimal amount_from; decimal amount_to; decimal deduct_amount; decimal deduct_percentage }
-  SplitRatio { bigint formula_id FK; decimal employee_percentage; decimal employer_percentage }
-  Relief { string type "Personal|Deductible"; string title; decimal fixed_limit; decimal percentage; bool is_active }
-  PayrollComponents {
-    bigint id PK
-    string title
-    string category "Benefits|Earnings|Deductions"
-    string mode "monthly|perhour|perday|..."
-    bool non_cash
-    bool statutory
-    bool checkoff
-    string taxable_status
-    string deduction_phase "before_tax|after_tax|after_paye|final"
-    int deduction_priority
-  }
-  Loans { bigint id PK; string wb_code; string title; bool is_active }
-  WithHoldingtax { string title; decimal rate; decimal threshold; date effective_from }
-  BenefitTaxes { string title; money fixed_limit; decimal percentage; money min_taxable_aggregate }
-  GeneralHRSettings { decimal overtime_normal_days; decimal overtime_holidays; string partial_months "singleton pk=1" }
-  RepayOption { decimal amount; int no_of_installments; decimal installment_amount "auto" }
-  SeverancePay { int no_of_days_per_complete_employment_year }
-  ScheduledPayslip { date payroll_period; datetime scheduled_time; string status }
-```
-
----
-
-## 6. hrm.payroll (payroll transactions)
-
-```mermaid
-erDiagram
-  Employee ||--o{ Payslip : payslips
-  Payslip ||--o{ PayslipAudit : audits
-  Employee ||--o{ EmployeLoans : loans
-  Loans ||--o{ EmployeLoans : loan
-  Employee ||--o{ Advances : advances
-  Employee ||--o{ LossesAndDamages : loss_damages
-  Employee ||--o{ Deductions : deductions
-  Employee ||--o{ Benefits : benefits
-  Employee ||--o{ Earnings : earnings
-  Employee ||--o{ ExpenseClaims : expense_claims
-  ExpenseClaims ||--o{ ClaimItems : items
-  PayrollComponents ||--o{ Deductions : deduction
-  PayrollComponents ||--o{ Benefits : benefit
-  PayrollComponents ||--o{ Earnings : earning
-  RepayOption ||--o{ Advances : repay_option
-  CustomUser ||--o{ CustomReport : created_by
-
-  Payslip {
-    bigint id PK
-    bigint employee_id FK
-    bigint created_by_id FK
-    decimal gross_pay
-    decimal total_earnings
-    decimal net_pay
-    decimal taxable_pay
-    decimal paye
-    decimal tax_relief
-    decimal shif_or_nhif_contribution
-    decimal housing_levy
-    decimal nssf_employee_tier_1
-    decimal nssf_employee_tier_2
-    decimal deductions_before_tax
-    decimal deductions_after_tax
-    decimal deductions_after_paye
-    date payment_period
-    string payroll_status "queued|processing|complete|expired"
-    string approval_status "draft|pending|approved|rejected"
-    bigint approver_id FK
-    bool published
-    string kra_paye_reference
-    bool delete_status
-  }
-  PayslipAudit { bigint payslip_id FK; string action; bigint action_by_id FK; datetime action_date }
-  EmployeLoans { bigint employee_id FK; bigint loan_id FK; decimal principal_amount; decimal amount_repaid; decimal monthly_installment; string interest_formula; date start_date; date end_date }
-  Advances { bigint employee_id FK; bigint repay_option_id FK; date issue_date; date next_payment_date; decimal amount_issued; decimal amount_repaid; bool approved }
-  LossesAndDamages { bigint employee_id FK; bigint repay_option_id FK; decimal damage_amount; decimal amount_repaid; bool approved }
-  Deductions { bigint employee_id FK; bigint deduction_id FK; decimal amount "14,4"; decimal employer_amount; date effective_date }
-  Benefits { bigint employee_id FK; bigint benefit_id FK; decimal amount; bool is_active }
-  Earnings { bigint employee_id FK; bigint earning_id FK; decimal quantity; decimal rate; decimal amount }
-  ExpenseClaims { bigint employee_id FK; string category; decimal amount; bool approved; bool is_paid; bool schedule_to_payroll }
-  ClaimItems { bigint claim_id FK; string expense_type; decimal amount "qty*rate" }
-  CustomReport { string name; string report_type "p9|p10a|statutory|..."; json params; bigint created_by_id FK }
-  ExpenseCode { string code UK; string title }
-  ExpenseClaimSettings { string payment_method; decimal mileage_rate_amount "singleton pk=1" }
-```
-
----
-
-## 7. hrm.attendance
-
-```mermaid
-erDiagram
-  WorkShift ||--o{ WorkShiftSchedule : schedule
-  Employee ||--o{ OffDay : off_days
-  Employee ||--o{ AttendanceRecord : attendance_records
-  WorkShift ||--o{ AttendanceRecord : work_shift
-  WorkShift }o--o{ ShiftRotation : shifts
-  Bussiness ||--o{ AttendanceRule : rules
-  Employee ||--o{ Timesheet : timesheets
-  Timesheet ||--o{ TimesheetEntry : entries
+  WorkShift ||--o{ WorkShiftSchedule : days
+  WorkShift ||--o{ ShiftAssignment : assigns
+  Employee ||--o{ AttendanceRecord : clocks
+  Employee ||--o{ Timesheet : submits
+  Timesheet ||--o{ TimesheetEntry : lines
   ShiftRoster ||--o{ ShiftRosterSlot : slots
-  ShiftRosterSlot ||--o{ ShiftAssignment : assignments
-  Employee ||--o{ ShiftAssignment : assigned
-  Employee ||--o{ StaffShiftOverride : overrides
 
-  WorkShift { bigint id PK; string name; time start_time; time end_time; int grace_minutes; decimal total_hours_per_week }
-  WorkShiftSchedule { bigint work_shift_id FK; string day; time start_time; time end_time; bool is_working_day }
-  AttendanceRecord {
-    bigint id PK
-    bigint employee_id FK
-    bigint work_shift_id FK
-    date date
-    datetime check_in
-    datetime check_out
-    string biometric_id
-    decimal gps_latitude
-    decimal gps_longitude
-    string status "present|absent|late|half-day"
-    int total_seconds_worked
-    decimal regular_hours
-    decimal overtime_hours
-  }
-  AttendanceRule {
-    bigint id PK
-    string rule_type "late|overtime|absenteeism|work_hours|break|holiday _policy"
-    int priority
-    decimal overtime_threshold_hours
-    decimal overtime_rate_multiplier
-    decimal max_overtime_hours
-    decimal min_work_hours
-    json public_holidays
-    bigint business_id FK
-    bigint branch_id FK
-    bigint department_id FK
-  }
-  ShiftRotation { string title; bigint current_active_shift_id FK; int run_duration; string run_unit; datetime next_change_date }
-  ESSSettings { bool enable_shift_based_restrictions; bool allow_payslip_view; int session_timeout_minutes "singleton pk=1" }
-  Timesheet { bigint employee_id FK; date period_start; date period_end; string status; decimal total_hours; bigint approver_id FK }
-  TimesheetEntry { bigint timesheet_id FK; date date; bigint project_id FK; decimal regular_hours; decimal overtime_hours }
-  OffDay { bigint employee_id FK; date date; string reason }
-  ShiftRoster { string name; date period_start; date period_end }
-  ShiftAssignment { bigint employee_id FK; bigint slot_id FK }
-  StaffShiftOverride { bigint employee_id FK; date date }
+  WorkShift { uuid id PK; uuid tenant_id; string name; time start_time; time end_time }
+  WorkShiftSchedule { uuid id PK; uuid shift_id FK; int weekday; bool working }
+  AttendanceRecord { uuid id PK; uuid tenant_id; uuid employee_id FK; date date; datetime clock_in; datetime clock_out; string status }
+  AttendanceRule { uuid id PK; uuid tenant_id; int grace_minutes; decimal overtime_rate }
+  ShiftRotation { uuid id PK; uuid tenant_id; string name; json pattern }
+  ShiftRoster { uuid id PK; uuid tenant_id; date period_start; date period_end }
+  ShiftRosterSlot { uuid id PK; uuid roster_id FK; uuid employee_id; uuid shift_id; date date }
+  ShiftAssignment { uuid id PK; uuid tenant_id; uuid employee_id; uuid shift_id FK }
+  StaffShiftOverride { uuid id PK; uuid tenant_id; uuid employee_id; date date; uuid shift_id }
+  OffDay { uuid id PK; uuid tenant_id; uuid employee_id; date date }
+  Timesheet { uuid id PK; uuid tenant_id; uuid employee_id FK; date period_start; string status }
+  TimesheetEntry { uuid id PK; uuid timesheet_id FK; date date; decimal hours; uuid project_id "free-form time tag" }
+  ESSSettings { uuid id PK; uuid tenant_id; json self_service_settings }
 ```
 
 ---
 
-## 8. hrm.leave
+## 6. Recruitment + onboarding + training (`job_posting`, `candidate`, `application`, `employee_onboarding`, `onboarding_task`, `training_course`, `training_enrollment`, `training_evaluation`)
 
 ```mermaid
 erDiagram
-  LeaveCategory ||--o{ LeaveEntitlement : entitlements
-  LeaveCategory ||--o{ LeaveRequest : requests
-  LeaveCategory ||--o{ LeaveBalance : balances
-  Employee ||--o{ LeaveEntitlement : entitlements
-  Employee ||--o{ LeaveRequest : leave_requests
-  Employee ||--o{ LeaveBalance : leave_balances
-  Employee ||--o{ LeaveRequest : approved_by
-  LeaveRequest ||--o{ LeaveLog : logs
+  JobPosting ||--o{ Application : receives
+  Candidate ||--o{ Application : applies
+  Application ||--o| Employee : hires
+  Employee ||--o| EmployeeOnboarding : onboards
+  EmployeeOnboarding ||--o{ OnboardingTask : tasks
+  TrainingCourse ||--o{ TrainingEnrollment : enrolls
+  TrainingEnrollment ||--o| TrainingEvaluation : evaluated
 
-  LeaveCategory { bigint id PK; string name; decimal default_annual_days; bool allow_carryover; decimal max_carryover_days }
-  LeaveEntitlement { bigint employee_id FK; bigint category_id FK; decimal days_entitled; int year "uniq(emp,cat,year)" }
-  LeaveRequest { bigint employee_id FK; bigint category_id FK; date start_date; date end_date; decimal days_requested; string status; bigint approved_by_id FK }
-  LeaveBalance { bigint employee_id FK; bigint category_id FK; int year; decimal days_entitled; decimal days_taken; decimal days_remaining }
-  LeaveLog { bigint leave_request_id FK; string action; bigint user_id FK }
-  PublicHoliday { bigint id PK; string name; date date; bool is_national; string county "uniq(date,county)" }
+  JobPosting { uuid id PK; uuid tenant_id; string title; string status }
+  Candidate { uuid id PK; uuid tenant_id; string full_name; string email; string resume_url "relative media path" }
+  Application { uuid id PK; uuid tenant_id; uuid job_id FK; uuid candidate_id FK; string status; uuid hired_employee_id }
+  EmployeeOnboarding { uuid id PK; uuid tenant_id; uuid employee_id FK; string status }
+  OnboardingTask { uuid id PK; uuid tenant_id; uuid onboarding_id FK; string title; bool done }
+  TrainingCourse { uuid id PK; uuid tenant_id; string name }
+  TrainingEnrollment { uuid id PK; uuid tenant_id; uuid course_id FK; uuid employee_id; string status }
+  TrainingEvaluation { uuid id PK; uuid enrollment_id FK; decimal score }
 ```
 
 ---
 
-## 9. hrm.appraisals / performance / recruitment / training
+## 7. Appraisals + performance (`appraisal_cycle`, `appraisal_template`(+`appraisal_question`), `appraisal`(+`appraisal_response`), `goal`(+`goal_progress`), `metric_category`, `performance_metric`, `employee_metric`, `metric_target`, `performance_review`, `review_metric`)
 
 ```mermaid
 erDiagram
-  AppraisalCycle ||--o{ Appraisal : appraisals
-  AppraisalTemplate ||--o{ AppraisalQuestion : questions
-  AppraisalTemplate ||--o{ Appraisal : template
-  Appraisal ||--o{ AppraisalResponse : responses
-  AppraisalQuestion ||--o{ AppraisalResponse : question
-  Employee ||--o{ Appraisal : employee
-  Employee ||--o{ Goal : goals
-  Goal ||--o{ GoalProgress : progress_updates
+  AppraisalCycle ||--o{ Appraisal : groups
+  AppraisalTemplate ||--o{ AppraisalQuestion : has
+  Appraisal ||--o{ AppraisalResponse : answers
+  Employee ||--o{ Appraisal : reviewed
+  Employee ||--o{ Goal : owns
+  Goal ||--o{ GoalProgress : updates
+  MetricCategory ||--o{ PerformanceMetric : groups
+  PerformanceMetric ||--o{ EmployeeMetric : measures
+  PerformanceReview ||--o{ ReviewMetric : scores
 
-  MetricCategory ||--o{ PerformanceMetric : metrics
-  PerformanceMetric ||--o{ EmployeeMetric : employee_metrics
-  PerformanceMetric ||--o{ MetricTarget : targets
-  Employee ||--o{ EmployeeMetric : metrics
-  Employee ||--o{ PerformanceReview : reviews
-  PerformanceReview ||--o{ ReviewMetric : review_metrics
-
-  JobPosting ||--o{ Application : applications
-  Candidate ||--o{ Application : applications
-  TrainingCourse ||--o{ TrainingEnrollment : enrollments
-  TrainingCourse ||--o{ TrainingEvaluation : evaluations
-  Employee ||--o{ TrainingEnrollment : enrollments
-
-  AppraisalCycle { string name; date start_date; date end_date; string status }
-  Appraisal { bigint cycle_id FK; bigint employee_id FK; bigint evaluator_id FK; string status; decimal overall_rating "0-5" }
-  Goal { bigint employee_id FK; string title; string status; int progress "0-100" }
-  PerformanceMetric { bigint category_id FK; string name; string metric_type; decimal target_value }
-  EmployeeMetric { bigint employee_id FK; bigint metric_id FK; text value; decimal numeric_value; date date_recorded }
-  PerformanceReview { bigint employee_id FK; string title; date review_date; string status; decimal overall_rating }
-  JobPosting { string title; text description; string status "draft|open|closed|archived" }
-  Candidate { string full_name; email email; file resume }
-  Application { bigint job_id FK; bigint candidate_id FK; string status "applied|screening|interview|offered|hired|rejected" }
-  TrainingCourse { string title; date start_date; date end_date; int capacity }
-  TrainingEnrollment { bigint course_id FK; bigint employee_id FK; string status "uniq(course,emp)" }
-  EmployeeOnboarding { bigint employee_id FK; string status }
-  OnboardingTask { bigint onboarding_id FK; string title; bool completed }
+  AppraisalCycle { uuid id PK; uuid tenant_id; string name; date start_date; date end_date; string status }
+  AppraisalTemplate { uuid id PK; uuid tenant_id; string name; bool is_active }
+  AppraisalQuestion { uuid id PK; uuid template_id FK; string question_text; enum question_type; int order }
+  Appraisal { uuid id PK; uuid tenant_id; uuid cycle_id FK; uuid employee_id FK; uuid evaluator_id; enum status; decimal overall_rating }
+  AppraisalResponse { uuid id PK; uuid tenant_id; uuid appraisal_id FK; uuid question_id; string answer; decimal score }
+  Goal { uuid id PK; uuid tenant_id; uuid employee_id FK; string title; string status }
+  GoalProgress { uuid id PK; uuid goal_id FK; int progress; string note }
+  MetricCategory { uuid id PK; uuid tenant_id; string name }
+  PerformanceMetric { uuid id PK; uuid tenant_id; uuid category_id FK; string name }
+  EmployeeMetric { uuid id PK; uuid tenant_id; uuid employee_id; uuid metric_id FK; decimal value }
+  MetricTarget { uuid id PK; uuid tenant_id; uuid metric_id FK; decimal target }
+  PerformanceReview { uuid id PK; uuid tenant_id; uuid employee_id FK; string period; string status }
+  ReviewMetric { uuid id PK; uuid review_id FK; uuid metric_id; decimal score }
 ```
+
+Appraisal completion → approval review routes through the approvals engine when configured.
 
 ---
 
-## 10. approvals (generic workflow engine)
+## 8. Approvals engine (`approval_workflow`(+`approval_workflow_step`), `approval_request`(+`approval_step_action`))
 
 ```mermaid
 erDiagram
-  ApprovalWorkflow ||--o{ ApprovalStep : steps
-  ApprovalWorkflow ||--o{ Approval : approvals
-  ApprovalWorkflow ||--o{ ApprovalRequest : requests
-  ApprovalStep ||--o{ Approval : approvals
-  ApprovalStep ||--o{ ApprovalRequest : current_step
-  CustomUser ||--o{ Approval : approver
-  CustomUser ||--o{ ApprovalRequest : requester
+  ApprovalWorkflow ||--o{ ApprovalWorkflowStep : steps
+  ApprovalRequest ||--o{ ApprovalStepAction : actions
 
-  ApprovalWorkflow { bigint id PK; string name; string workflow_type "payroll|leave_request|contract|..."; bool requires_multiple_approvals; decimal approval_threshold }
-  ApprovalStep { bigint workflow_id FK; int step_number; string approver_type "user|role|department_head|manager|owner"; bigint approver_user_id FK; string approver_role; bigint approver_department_id FK; bool can_delegate "uniq(workflow,step_number)" }
-  Approval { int content_type_id FK; int object_id; bigint workflow_id FK; bigint step_id FK; bigint approver_id FK; bigint delegated_to_id FK; string status "pending|approved|rejected|delegated|cancelled"; decimal approval_amount }
-  ApprovalRequest { int content_type_id FK; int object_id; bigint workflow_id FK; bigint requester_id FK; string status "draft|submitted|in_progress|approved|rejected|cancelled"; bigint current_step_id FK; string urgency; decimal amount; string currency }
+  ApprovalWorkflow { uuid id PK; uuid tenant_id; enum module "payroll|leave_request|contract|appraisal|performance_review|recruitment_offer|general"; string name; bool is_active }
+  ApprovalWorkflowStep { uuid id PK; uuid tenant_id; uuid workflow_id FK; int sequence; string name; enum approver_type "user|role|department_head|manager|owner"; string approver_role; uuid approver_employee_id }
+  ApprovalRequest { uuid id PK; uuid tenant_id; enum module; uuid object_id; uuid workflow_id; uuid requester_employee_id; enum status; int current_sequence }
+  ApprovalStepAction { uuid id PK; uuid tenant_id; uuid request_id FK; int sequence; enum approver_type; string approver_role; uuid approver_employee_id; enum status "pending|approved|rejected|skipped|escalated"; uuid acted_by; text comment }
 ```
-> `Approval`/`ApprovalRequest` use Django **GenericForeignKey** (`content_type_id`, `object_id`)
-> to attach to any model (e.g. `Payslip`). The Go port should make `module` an enum + typed
-> `object_id` (UUID) like inventory-api's `ApprovalRequest`.
+
+Typed `module` enum (no Django GenericForeignKey); tenant-scoped; manager/department_head
+approvers resolve against `HRDetails`. Decomposed workflow types
+(purchase_order/expense/invoice/requisition) are intentionally absent.
 
 ---
 
-## 11. addresses
+## 9. Tasks (`task`, `task_comment`, `task_log`)
 
 ```mermaid
 erDiagram
-  CustomUser ||--o{ AddressBook : addresses
-  PickupStations ||--o{ AddressBook : pickup_station
-  AddressBook ||--o{ AddressValidation : validations
-  DeliveryRegion ||--o{ PickupStations : region
-
-  AddressBook { bigint user_id FK; string address_type; string county; string street_name; string postal_code; string delivery_type "home|pickup|office"; bigint pickup_station_id FK; bool is_default_shipping; bool is_default_billing }
-  DeliveryRegion { string name; string county; decimal delivery_charge; int estimated_delivery_days; json covers_counties "uniq(name,county)" }
-  AddressValidation { bigint address_id FK; string status; string validation_method; bool is_valid; decimal confidence_score }
-```
-
----
-
-## 12. integrations / task_management / error_handling (system)
-
-```mermaid
-erDiagram
-  CustomUser ||--o{ Task : created_by
+  Task ||--o{ TaskComment : comments
   Task ||--o{ TaskLog : logs
-  CustomUser ||--o{ Error : user
-  Error ||--o{ ErrorLog : logs
 
-  EventOutbox {
-    uuid id PK
-    string subject "erp.{entity.action}"
-    string aggregate_type
-    string aggregate_id
-    string tenant_id
-    json payload
-    string status "pending|published|failed"
-    int attempts
-    text error
-    datetime created_at
-    datetime published_at
-  }
-  ExchangeRateAPISettings { string provider; url api_endpoint; string access_key "ENCRYPTED"; string source_currency; json target_currencies; time fetch_time; bool is_active }
-  Task { uuid id PK; string task_id UK "celery"; string task_type; string status; int progress; json input_data; json output_data }
-  TaskLog { bigint task_id FK; string level; text message }
-  TaskTemplate { string name UK; string task_type; json input_schema }
-  Error { uuid id PK; string error_id UK; string category; string severity; string status; string module; text error_traceback }
-  ErrorLog { bigint error_id FK; string level; text message }
-  ErrorPattern { string name UK; text pattern "regex"; string category; bool auto_resolve }
+  Task { uuid id PK; uuid tenant_id; string title; enum status "todo|in_progress|blocked|done|cancelled"; enum priority; uuid assignee_employee_id; int progress; date due_date }
+  TaskComment { uuid id PK; uuid tenant_id; uuid task_id FK; uuid author_user_id; text body }
+  TaskLog { uuid id PK; uuid tenant_id; uuid task_id FK; string action; string description }
 ```
+
+ERP-internal job tracker only — **distinct** from projects-service projects/tenders.
 
 ---
 
-## Table-name reference (Django `db_table` → model)
+## 10. Business config + reference + FX (`company_settings`, `document_sequence`, `region`, `department`, `exchange_rate`, `exchange_rate_api_settings`, `app_setting`, `api_request_metric`)
 
-Key explicit table names (others default to `<app>_<model>`):
-`employee`, `employee_salary_details`, `employee_hr_details`, `employees_contract`,
-`employee_contact_details`, `employee_kin_details`, `employee_documents`,
-`employee_bank_accounts`, `employee_loans`, `employee_advances`,
-`employee_losses_and_damages`, `employee_deductions`, `employee_benefits`,
-`employee_earnings`, `employee_expense_claims`, `payslips`, `payroll_payslipaudit`,
-`jobtitles`, `job_groups`, `workers_unions`, `hrm_work_shifts`, `hrm_work_shift_schedules`,
-`hrm_attendance_records`, `hrm_attendance_rules`, `hrm_off_days`, `hrm_shift_rotations`,
-`hrm_public_holidays`, `ess_settings`, `business_details`, `business_branches`,
-`business_location`, `business_branding_settings`, `taxrates`, `prefix_settings`,
-`document_sequences`, `pickup_stations`, `service_types`, `regions`, `departments`,
-`projects`, `project_categories`, `bank_institutions`, `bank_branches`, `locations`,
-`address_book`, `delivery_regions`, `address_validations`, `approvals`, `approval_steps`,
-`approval_workflows`, `approval_requests`, `integrations_eventoutbox`.
+```mermaid
+erDiagram
+  CompanySettings { uuid id PK; uuid tenant_id UK; string legal_name; string kra_pin; string nssf_employer_no; string shif_employer_no; int financial_year_start_month; string default_currency; string timezone }
+  DocumentSequence { uuid id PK; uuid tenant_id; string doc_type; string prefix; string separator; string date_format; int padding; string reset_freq; bigint current_val }
+  Region { uuid id PK; uuid tenant_id "NULL=system"; string code; string name; uuid parent_region_id }
+  Department { uuid id PK; uuid tenant_id; string code; string title; uuid parent_department_id }
+  ExchangeRate { uuid id PK; uuid tenant_id "NULL=platform"; string base_currency; string quote_currency; decimal rate; date rate_date; string source }
+  ExchangeRateAPISettings { uuid id PK; uuid tenant_id UK; string provider; string api_key_ref "secret-store env name, NOT ciphertext"; string base_currency; bool is_active }
+  AppSetting { uuid id PK; uuid tenant_id; string key; string value }
+  APIRequestMetric { uuid id PK; string path; int status; int duration_ms; datetime created_at }
+```
+
+`CompanySettings` has **no** branding columns (auth-api SoT), **no** tax-rate duplication
+(payroll tables own those), **no** pickup/address/service-type (ordering-service).
+
+---
+
+## 11. Eventing + idempotency (`outbox_event`, `idempotency_key`)
+
+```mermaid
+erDiagram
+  OutboxEvent { uuid id PK; uuid tenant_id; string aggregate_type; string aggregate_id; string event_type; json payload; string status "PENDING|PUBLISHED|FAILED"; datetime created_at }
+  IdempotencyKey { string key PK; datetime created_at }
+```
+
+Transactional outbox drained by the shared-events `OutboxPoller`; consumers dedupe via
+`IdempotencyKey`. Subjects: `erp.payroll.processed`, `erp.email.requested`,
+`erp.notification.requested`, and approval lifecycle events (→ `erp.notification.requested`).

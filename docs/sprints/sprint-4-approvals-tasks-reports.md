@@ -1,5 +1,19 @@
 # Sprint 4 — Approvals, Tasks, Reports, Business/Core/Addresses config, Events polish
 
+> **STATUS: DONE (revamp branch).** Delivered: data-ownership cleanup (removed `project` +
+> `bank_institution`/`bank_branch` masters; `employee_bank_account` bank fields; dropped
+> HRDetails.project_id; confirmed no address_book/pickup_station/service_type), the generic
+> tenant-scoped **approvals engine** (typed module enum, multi-step, approver resolution
+> against Employee/HRDetails, approve/reject/escalate, outbox events) wired into **leave +
+> appraisals**, **task_management**, **reports** (P9/P10A/SHIF/NHIF/NSSF/NITA/WHT/statutory/
+> bank-schedule/variance + headcount/leave/payroll summaries), **slim business config**
+> (company settings + document_sequence numbering), **integration clients/events** (branding
+> read-through, FX cron + ExchangeRateAPISettings, notification/email outbox helpers), and the
+> deferred items (`cmd/seed` RBAC permission/role seed + candidate resume upload). `go build`
+> + `go vet` green. NOTE: `addresses` is intentionally NOT built — address_book/delivery-region
+> belong to ordering-service per the data-ownership conformance; only the HR-owned employee
+> contact address (on ContactDetails) remains. NITA added beyond the original list.
+
 > The cross-cutting engines and configuration that the HR modules lean on, plus building the
 > `reports` module that is effectively un-built in Django. References: `approvals/`, `erd.md §10`,
 > `task_management/`, `hrm/payroll/services/reports_service.py`, `p10a_formatter.py`, `business/`,
