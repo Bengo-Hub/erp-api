@@ -8,6 +8,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/apirequestmetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
 	"github.com/Bengo-Hub/erp-api/internal/ent/bankbranch"
@@ -23,6 +25,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeedocument"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
+	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/expenseclaim"
 	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
@@ -37,6 +40,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
+	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/outboxevent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
@@ -53,9 +57,18 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/schema"
+	"github.com/Bengo-Hub/erp-api/internal/ent/shiftassignment"
+	"github.com/Bengo-Hub/erp-api/internal/ent/shiftroster"
+	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrosterslot"
+	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrotation"
+	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
+	"github.com/Bengo-Hub/erp-api/internal/ent/timesheet"
+	"github.com/Bengo-Hub/erp-api/internal/ent/timesheetentry"
 	"github.com/Bengo-Hub/erp-api/internal/ent/userroleassignment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/withholdingtax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workersunion"
+	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
+	"github.com/Bengo-Hub/erp-api/internal/ent/workshiftschedule"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
@@ -134,6 +147,114 @@ func init() {
 	appsettingDescID := appsettingFields[0].Descriptor()
 	// appsetting.DefaultID holds the default value on creation for the id field.
 	appsetting.DefaultID = appsettingDescID.Default.(func() uuid.UUID)
+	attendancerecordFields := schema.AttendanceRecord{}.Fields()
+	_ = attendancerecordFields
+	// attendancerecordDescTotalSecondsWorked is the schema descriptor for total_seconds_worked field.
+	attendancerecordDescTotalSecondsWorked := attendancerecordFields[12].Descriptor()
+	// attendancerecord.DefaultTotalSecondsWorked holds the default value on creation for the total_seconds_worked field.
+	attendancerecord.DefaultTotalSecondsWorked = attendancerecordDescTotalSecondsWorked.Default.(int)
+	// attendancerecordDescRegularHours is the schema descriptor for regular_hours field.
+	attendancerecordDescRegularHours := attendancerecordFields[13].Descriptor()
+	// attendancerecord.DefaultRegularHours holds the default value on creation for the regular_hours field.
+	attendancerecord.DefaultRegularHours = attendancerecordDescRegularHours.Default.(decimal.Decimal)
+	// attendancerecordDescOvertimeHours is the schema descriptor for overtime_hours field.
+	attendancerecordDescOvertimeHours := attendancerecordFields[14].Descriptor()
+	// attendancerecord.DefaultOvertimeHours holds the default value on creation for the overtime_hours field.
+	attendancerecord.DefaultOvertimeHours = attendancerecordDescOvertimeHours.Default.(decimal.Decimal)
+	// attendancerecordDescCreatedAt is the schema descriptor for created_at field.
+	attendancerecordDescCreatedAt := attendancerecordFields[16].Descriptor()
+	// attendancerecord.DefaultCreatedAt holds the default value on creation for the created_at field.
+	attendancerecord.DefaultCreatedAt = attendancerecordDescCreatedAt.Default.(func() time.Time)
+	// attendancerecordDescUpdatedAt is the schema descriptor for updated_at field.
+	attendancerecordDescUpdatedAt := attendancerecordFields[17].Descriptor()
+	// attendancerecord.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	attendancerecord.DefaultUpdatedAt = attendancerecordDescUpdatedAt.Default.(func() time.Time)
+	// attendancerecord.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	attendancerecord.UpdateDefaultUpdatedAt = attendancerecordDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// attendancerecordDescID is the schema descriptor for id field.
+	attendancerecordDescID := attendancerecordFields[0].Descriptor()
+	// attendancerecord.DefaultID holds the default value on creation for the id field.
+	attendancerecord.DefaultID = attendancerecordDescID.Default.(func() uuid.UUID)
+	attendanceruleFields := schema.AttendanceRule{}.Fields()
+	_ = attendanceruleFields
+	// attendanceruleDescIsActive is the schema descriptor for is_active field.
+	attendanceruleDescIsActive := attendanceruleFields[7].Descriptor()
+	// attendancerule.DefaultIsActive holds the default value on creation for the is_active field.
+	attendancerule.DefaultIsActive = attendanceruleDescIsActive.Default.(bool)
+	// attendanceruleDescPriority is the schema descriptor for priority field.
+	attendanceruleDescPriority := attendanceruleFields[8].Descriptor()
+	// attendancerule.DefaultPriority holds the default value on creation for the priority field.
+	attendancerule.DefaultPriority = attendanceruleDescPriority.Default.(int)
+	// attendanceruleDescLateThresholdMinutes is the schema descriptor for late_threshold_minutes field.
+	attendanceruleDescLateThresholdMinutes := attendanceruleFields[9].Descriptor()
+	// attendancerule.DefaultLateThresholdMinutes holds the default value on creation for the late_threshold_minutes field.
+	attendancerule.DefaultLateThresholdMinutes = attendanceruleDescLateThresholdMinutes.Default.(int)
+	// attendanceruleDescLatePenaltyType is the schema descriptor for late_penalty_type field.
+	attendanceruleDescLatePenaltyType := attendanceruleFields[10].Descriptor()
+	// attendancerule.DefaultLatePenaltyType holds the default value on creation for the late_penalty_type field.
+	attendancerule.DefaultLatePenaltyType = attendanceruleDescLatePenaltyType.Default.(string)
+	// attendanceruleDescLatePenaltyValue is the schema descriptor for late_penalty_value field.
+	attendanceruleDescLatePenaltyValue := attendanceruleFields[11].Descriptor()
+	// attendancerule.DefaultLatePenaltyValue holds the default value on creation for the late_penalty_value field.
+	attendancerule.DefaultLatePenaltyValue = attendanceruleDescLatePenaltyValue.Default.(decimal.Decimal)
+	// attendanceruleDescOvertimeThresholdHours is the schema descriptor for overtime_threshold_hours field.
+	attendanceruleDescOvertimeThresholdHours := attendanceruleFields[12].Descriptor()
+	// attendancerule.DefaultOvertimeThresholdHours holds the default value on creation for the overtime_threshold_hours field.
+	attendancerule.DefaultOvertimeThresholdHours = attendanceruleDescOvertimeThresholdHours.Default.(decimal.Decimal)
+	// attendanceruleDescOvertimeRateMultiplier is the schema descriptor for overtime_rate_multiplier field.
+	attendanceruleDescOvertimeRateMultiplier := attendanceruleFields[13].Descriptor()
+	// attendancerule.DefaultOvertimeRateMultiplier holds the default value on creation for the overtime_rate_multiplier field.
+	attendancerule.DefaultOvertimeRateMultiplier = attendanceruleDescOvertimeRateMultiplier.Default.(decimal.Decimal)
+	// attendanceruleDescMaxOvertimeHours is the schema descriptor for max_overtime_hours field.
+	attendanceruleDescMaxOvertimeHours := attendanceruleFields[14].Descriptor()
+	// attendancerule.DefaultMaxOvertimeHours holds the default value on creation for the max_overtime_hours field.
+	attendancerule.DefaultMaxOvertimeHours = attendanceruleDescMaxOvertimeHours.Default.(decimal.Decimal)
+	// attendanceruleDescConsecutiveAbsentThreshold is the schema descriptor for consecutive_absent_threshold field.
+	attendanceruleDescConsecutiveAbsentThreshold := attendanceruleFields[15].Descriptor()
+	// attendancerule.DefaultConsecutiveAbsentThreshold holds the default value on creation for the consecutive_absent_threshold field.
+	attendancerule.DefaultConsecutiveAbsentThreshold = attendanceruleDescConsecutiveAbsentThreshold.Default.(int)
+	// attendanceruleDescMonthlyAbsentThreshold is the schema descriptor for monthly_absent_threshold field.
+	attendanceruleDescMonthlyAbsentThreshold := attendanceruleFields[16].Descriptor()
+	// attendancerule.DefaultMonthlyAbsentThreshold holds the default value on creation for the monthly_absent_threshold field.
+	attendancerule.DefaultMonthlyAbsentThreshold = attendanceruleDescMonthlyAbsentThreshold.Default.(int)
+	// attendanceruleDescAbsenteeismAction is the schema descriptor for absenteeism_action field.
+	attendanceruleDescAbsenteeismAction := attendanceruleFields[17].Descriptor()
+	// attendancerule.DefaultAbsenteeismAction holds the default value on creation for the absenteeism_action field.
+	attendancerule.DefaultAbsenteeismAction = attendanceruleDescAbsenteeismAction.Default.(string)
+	// attendanceruleDescStandardWorkHours is the schema descriptor for standard_work_hours field.
+	attendanceruleDescStandardWorkHours := attendanceruleFields[18].Descriptor()
+	// attendancerule.DefaultStandardWorkHours holds the default value on creation for the standard_work_hours field.
+	attendancerule.DefaultStandardWorkHours = attendanceruleDescStandardWorkHours.Default.(decimal.Decimal)
+	// attendanceruleDescMinWorkHours is the schema descriptor for min_work_hours field.
+	attendanceruleDescMinWorkHours := attendanceruleFields[19].Descriptor()
+	// attendancerule.DefaultMinWorkHours holds the default value on creation for the min_work_hours field.
+	attendancerule.DefaultMinWorkHours = attendanceruleDescMinWorkHours.Default.(decimal.Decimal)
+	// attendanceruleDescMaxWorkHours is the schema descriptor for max_work_hours field.
+	attendanceruleDescMaxWorkHours := attendanceruleFields[20].Descriptor()
+	// attendancerule.DefaultMaxWorkHours holds the default value on creation for the max_work_hours field.
+	attendancerule.DefaultMaxWorkHours = attendanceruleDescMaxWorkHours.Default.(decimal.Decimal)
+	// attendanceruleDescBreakDurationMinutes is the schema descriptor for break_duration_minutes field.
+	attendanceruleDescBreakDurationMinutes := attendanceruleFields[21].Descriptor()
+	// attendancerule.DefaultBreakDurationMinutes holds the default value on creation for the break_duration_minutes field.
+	attendancerule.DefaultBreakDurationMinutes = attendanceruleDescBreakDurationMinutes.Default.(int)
+	// attendanceruleDescHolidayPayMultiplier is the schema descriptor for holiday_pay_multiplier field.
+	attendanceruleDescHolidayPayMultiplier := attendanceruleFields[22].Descriptor()
+	// attendancerule.DefaultHolidayPayMultiplier holds the default value on creation for the holiday_pay_multiplier field.
+	attendancerule.DefaultHolidayPayMultiplier = attendanceruleDescHolidayPayMultiplier.Default.(decimal.Decimal)
+	// attendanceruleDescCreatedAt is the schema descriptor for created_at field.
+	attendanceruleDescCreatedAt := attendanceruleFields[23].Descriptor()
+	// attendancerule.DefaultCreatedAt holds the default value on creation for the created_at field.
+	attendancerule.DefaultCreatedAt = attendanceruleDescCreatedAt.Default.(func() time.Time)
+	// attendanceruleDescUpdatedAt is the schema descriptor for updated_at field.
+	attendanceruleDescUpdatedAt := attendanceruleFields[24].Descriptor()
+	// attendancerule.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	attendancerule.DefaultUpdatedAt = attendanceruleDescUpdatedAt.Default.(func() time.Time)
+	// attendancerule.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	attendancerule.UpdateDefaultUpdatedAt = attendanceruleDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// attendanceruleDescID is the schema descriptor for id field.
+	attendanceruleDescID := attendanceruleFields[0].Descriptor()
+	// attendancerule.DefaultID holds the default value on creation for the id field.
+	attendancerule.DefaultID = attendanceruleDescID.Default.(func() uuid.UUID)
 	authoutletFields := schema.AuthOutlet{}.Fields()
 	_ = authoutletFields
 	// authoutletDescName is the schema descriptor for name field.
@@ -368,6 +489,74 @@ func init() {
 	departmentDescID := departmentFields[0].Descriptor()
 	// department.DefaultID holds the default value on creation for the id field.
 	department.DefaultID = departmentDescID.Default.(func() uuid.UUID)
+	esssettingsFields := schema.ESSSettings{}.Fields()
+	_ = esssettingsFields
+	// esssettingsDescEnableShiftBasedRestrictions is the schema descriptor for enable_shift_based_restrictions field.
+	esssettingsDescEnableShiftBasedRestrictions := esssettingsFields[2].Descriptor()
+	// esssettings.DefaultEnableShiftBasedRestrictions holds the default value on creation for the enable_shift_based_restrictions field.
+	esssettings.DefaultEnableShiftBasedRestrictions = esssettingsDescEnableShiftBasedRestrictions.Default.(bool)
+	// esssettingsDescAllowPayslipView is the schema descriptor for allow_payslip_view field.
+	esssettingsDescAllowPayslipView := esssettingsFields[3].Descriptor()
+	// esssettings.DefaultAllowPayslipView holds the default value on creation for the allow_payslip_view field.
+	esssettings.DefaultAllowPayslipView = esssettingsDescAllowPayslipView.Default.(bool)
+	// esssettingsDescAllowLeaveApplication is the schema descriptor for allow_leave_application field.
+	esssettingsDescAllowLeaveApplication := esssettingsFields[4].Descriptor()
+	// esssettings.DefaultAllowLeaveApplication holds the default value on creation for the allow_leave_application field.
+	esssettings.DefaultAllowLeaveApplication = esssettingsDescAllowLeaveApplication.Default.(bool)
+	// esssettingsDescAllowTimesheetApplication is the schema descriptor for allow_timesheet_application field.
+	esssettingsDescAllowTimesheetApplication := esssettingsFields[5].Descriptor()
+	// esssettings.DefaultAllowTimesheetApplication holds the default value on creation for the allow_timesheet_application field.
+	esssettings.DefaultAllowTimesheetApplication = esssettingsDescAllowTimesheetApplication.Default.(bool)
+	// esssettingsDescAllowOvertimeApplication is the schema descriptor for allow_overtime_application field.
+	esssettingsDescAllowOvertimeApplication := esssettingsFields[6].Descriptor()
+	// esssettings.DefaultAllowOvertimeApplication holds the default value on creation for the allow_overtime_application field.
+	esssettings.DefaultAllowOvertimeApplication = esssettingsDescAllowOvertimeApplication.Default.(bool)
+	// esssettingsDescAllowAdvanceSalaryApplication is the schema descriptor for allow_advance_salary_application field.
+	esssettingsDescAllowAdvanceSalaryApplication := esssettingsFields[7].Descriptor()
+	// esssettings.DefaultAllowAdvanceSalaryApplication holds the default value on creation for the allow_advance_salary_application field.
+	esssettings.DefaultAllowAdvanceSalaryApplication = esssettingsDescAllowAdvanceSalaryApplication.Default.(bool)
+	// esssettingsDescAllowLossesDamageSubmission is the schema descriptor for allow_losses_damage_submission field.
+	esssettingsDescAllowLossesDamageSubmission := esssettingsFields[8].Descriptor()
+	// esssettings.DefaultAllowLossesDamageSubmission holds the default value on creation for the allow_losses_damage_submission field.
+	esssettings.DefaultAllowLossesDamageSubmission = esssettingsDescAllowLossesDamageSubmission.Default.(bool)
+	// esssettingsDescAllowExpenseClaimsApplication is the schema descriptor for allow_expense_claims_application field.
+	esssettingsDescAllowExpenseClaimsApplication := esssettingsFields[9].Descriptor()
+	// esssettings.DefaultAllowExpenseClaimsApplication holds the default value on creation for the allow_expense_claims_application field.
+	esssettings.DefaultAllowExpenseClaimsApplication = esssettingsDescAllowExpenseClaimsApplication.Default.(bool)
+	// esssettingsDescRequirePasswordChangeOnFirstLogin is the schema descriptor for require_password_change_on_first_login field.
+	esssettingsDescRequirePasswordChangeOnFirstLogin := esssettingsFields[10].Descriptor()
+	// esssettings.DefaultRequirePasswordChangeOnFirstLogin holds the default value on creation for the require_password_change_on_first_login field.
+	esssettings.DefaultRequirePasswordChangeOnFirstLogin = esssettingsDescRequirePasswordChangeOnFirstLogin.Default.(bool)
+	// esssettingsDescSessionTimeoutMinutes is the schema descriptor for session_timeout_minutes field.
+	esssettingsDescSessionTimeoutMinutes := esssettingsFields[11].Descriptor()
+	// esssettings.DefaultSessionTimeoutMinutes holds the default value on creation for the session_timeout_minutes field.
+	esssettings.DefaultSessionTimeoutMinutes = esssettingsDescSessionTimeoutMinutes.Default.(int)
+	// esssettingsDescAllowWeekendLogin is the schema descriptor for allow_weekend_login field.
+	esssettingsDescAllowWeekendLogin := esssettingsFields[12].Descriptor()
+	// esssettings.DefaultAllowWeekendLogin holds the default value on creation for the allow_weekend_login field.
+	esssettings.DefaultAllowWeekendLogin = esssettingsDescAllowWeekendLogin.Default.(bool)
+	// esssettingsDescMaxFailedLoginAttempts is the schema descriptor for max_failed_login_attempts field.
+	esssettingsDescMaxFailedLoginAttempts := esssettingsFields[13].Descriptor()
+	// esssettings.DefaultMaxFailedLoginAttempts holds the default value on creation for the max_failed_login_attempts field.
+	esssettings.DefaultMaxFailedLoginAttempts = esssettingsDescMaxFailedLoginAttempts.Default.(int)
+	// esssettingsDescAccountLockoutDurationMinutes is the schema descriptor for account_lockout_duration_minutes field.
+	esssettingsDescAccountLockoutDurationMinutes := esssettingsFields[14].Descriptor()
+	// esssettings.DefaultAccountLockoutDurationMinutes holds the default value on creation for the account_lockout_duration_minutes field.
+	esssettings.DefaultAccountLockoutDurationMinutes = esssettingsDescAccountLockoutDurationMinutes.Default.(int)
+	// esssettingsDescCreatedAt is the schema descriptor for created_at field.
+	esssettingsDescCreatedAt := esssettingsFields[15].Descriptor()
+	// esssettings.DefaultCreatedAt holds the default value on creation for the created_at field.
+	esssettings.DefaultCreatedAt = esssettingsDescCreatedAt.Default.(func() time.Time)
+	// esssettingsDescUpdatedAt is the schema descriptor for updated_at field.
+	esssettingsDescUpdatedAt := esssettingsFields[16].Descriptor()
+	// esssettings.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	esssettings.DefaultUpdatedAt = esssettingsDescUpdatedAt.Default.(func() time.Time)
+	// esssettings.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	esssettings.UpdateDefaultUpdatedAt = esssettingsDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// esssettingsDescID is the schema descriptor for id field.
+	esssettingsDescID := esssettingsFields[0].Descriptor()
+	// esssettings.DefaultID holds the default value on creation for the id field.
+	esssettings.DefaultID = esssettingsDescID.Default.(func() uuid.UUID)
 	employeeFields := schema.Employee{}.Fields()
 	_ = employeeFields
 	// employeeDescTerminated is the schema descriptor for terminated field.
@@ -876,6 +1065,16 @@ func init() {
 	nextofkinDescID := nextofkinFields[0].Descriptor()
 	// nextofkin.DefaultID holds the default value on creation for the id field.
 	nextofkin.DefaultID = nextofkinDescID.Default.(func() uuid.UUID)
+	offdayFields := schema.OffDay{}.Fields()
+	_ = offdayFields
+	// offdayDescCreatedAt is the schema descriptor for created_at field.
+	offdayDescCreatedAt := offdayFields[5].Descriptor()
+	// offday.DefaultCreatedAt holds the default value on creation for the created_at field.
+	offday.DefaultCreatedAt = offdayDescCreatedAt.Default.(func() time.Time)
+	// offdayDescID is the schema descriptor for id field.
+	offdayDescID := offdayFields[0].Descriptor()
+	// offday.DefaultID holds the default value on creation for the id field.
+	offday.DefaultID = offdayDescID.Default.(func() uuid.UUID)
 	outboxeventFields := schema.OutboxEvent{}.Fields()
 	_ = outboxeventFields
 	// outboxeventDescAggregateType is the schema descriptor for aggregate_type field.
@@ -1370,6 +1569,166 @@ func init() {
 	salarydetailsDescID := salarydetailsFields[0].Descriptor()
 	// salarydetails.DefaultID holds the default value on creation for the id field.
 	salarydetails.DefaultID = salarydetailsDescID.Default.(func() uuid.UUID)
+	shiftassignmentFields := schema.ShiftAssignment{}.Fields()
+	_ = shiftassignmentFields
+	// shiftassignmentDescIsActive is the schema descriptor for is_active field.
+	shiftassignmentDescIsActive := shiftassignmentFields[6].Descriptor()
+	// shiftassignment.DefaultIsActive holds the default value on creation for the is_active field.
+	shiftassignment.DefaultIsActive = shiftassignmentDescIsActive.Default.(bool)
+	// shiftassignmentDescCreatedAt is the schema descriptor for created_at field.
+	shiftassignmentDescCreatedAt := shiftassignmentFields[7].Descriptor()
+	// shiftassignment.DefaultCreatedAt holds the default value on creation for the created_at field.
+	shiftassignment.DefaultCreatedAt = shiftassignmentDescCreatedAt.Default.(func() time.Time)
+	// shiftassignmentDescUpdatedAt is the schema descriptor for updated_at field.
+	shiftassignmentDescUpdatedAt := shiftassignmentFields[8].Descriptor()
+	// shiftassignment.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	shiftassignment.DefaultUpdatedAt = shiftassignmentDescUpdatedAt.Default.(func() time.Time)
+	// shiftassignment.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	shiftassignment.UpdateDefaultUpdatedAt = shiftassignmentDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// shiftassignmentDescID is the schema descriptor for id field.
+	shiftassignmentDescID := shiftassignmentFields[0].Descriptor()
+	// shiftassignment.DefaultID holds the default value on creation for the id field.
+	shiftassignment.DefaultID = shiftassignmentDescID.Default.(func() uuid.UUID)
+	shiftrosterFields := schema.ShiftRoster{}.Fields()
+	_ = shiftrosterFields
+	// shiftrosterDescCycleDays is the schema descriptor for cycle_days field.
+	shiftrosterDescCycleDays := shiftrosterFields[4].Descriptor()
+	// shiftroster.DefaultCycleDays holds the default value on creation for the cycle_days field.
+	shiftroster.DefaultCycleDays = shiftrosterDescCycleDays.Default.(int)
+	// shiftrosterDescIsActive is the schema descriptor for is_active field.
+	shiftrosterDescIsActive := shiftrosterFields[6].Descriptor()
+	// shiftroster.DefaultIsActive holds the default value on creation for the is_active field.
+	shiftroster.DefaultIsActive = shiftrosterDescIsActive.Default.(bool)
+	// shiftrosterDescCreatedAt is the schema descriptor for created_at field.
+	shiftrosterDescCreatedAt := shiftrosterFields[7].Descriptor()
+	// shiftroster.DefaultCreatedAt holds the default value on creation for the created_at field.
+	shiftroster.DefaultCreatedAt = shiftrosterDescCreatedAt.Default.(func() time.Time)
+	// shiftrosterDescUpdatedAt is the schema descriptor for updated_at field.
+	shiftrosterDescUpdatedAt := shiftrosterFields[8].Descriptor()
+	// shiftroster.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	shiftroster.DefaultUpdatedAt = shiftrosterDescUpdatedAt.Default.(func() time.Time)
+	// shiftroster.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	shiftroster.UpdateDefaultUpdatedAt = shiftrosterDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// shiftrosterDescID is the schema descriptor for id field.
+	shiftrosterDescID := shiftrosterFields[0].Descriptor()
+	// shiftroster.DefaultID holds the default value on creation for the id field.
+	shiftroster.DefaultID = shiftrosterDescID.Default.(func() uuid.UUID)
+	shiftrosterslotFields := schema.ShiftRosterSlot{}.Fields()
+	_ = shiftrosterslotFields
+	// shiftrosterslotDescIsOffDay is the schema descriptor for is_off_day field.
+	shiftrosterslotDescIsOffDay := shiftrosterslotFields[7].Descriptor()
+	// shiftrosterslot.DefaultIsOffDay holds the default value on creation for the is_off_day field.
+	shiftrosterslot.DefaultIsOffDay = shiftrosterslotDescIsOffDay.Default.(bool)
+	// shiftrosterslotDescCreatedAt is the schema descriptor for created_at field.
+	shiftrosterslotDescCreatedAt := shiftrosterslotFields[8].Descriptor()
+	// shiftrosterslot.DefaultCreatedAt holds the default value on creation for the created_at field.
+	shiftrosterslot.DefaultCreatedAt = shiftrosterslotDescCreatedAt.Default.(func() time.Time)
+	// shiftrosterslotDescID is the schema descriptor for id field.
+	shiftrosterslotDescID := shiftrosterslotFields[0].Descriptor()
+	// shiftrosterslot.DefaultID holds the default value on creation for the id field.
+	shiftrosterslot.DefaultID = shiftrosterslotDescID.Default.(func() uuid.UUID)
+	shiftrotationFields := schema.ShiftRotation{}.Fields()
+	_ = shiftrotationFields
+	// shiftrotationDescRunDuration is the schema descriptor for run_duration field.
+	shiftrotationDescRunDuration := shiftrotationFields[6].Descriptor()
+	// shiftrotation.DefaultRunDuration holds the default value on creation for the run_duration field.
+	shiftrotation.DefaultRunDuration = shiftrotationDescRunDuration.Default.(int)
+	// shiftrotationDescRunUnit is the schema descriptor for run_unit field.
+	shiftrotationDescRunUnit := shiftrotationFields[7].Descriptor()
+	// shiftrotation.DefaultRunUnit holds the default value on creation for the run_unit field.
+	shiftrotation.DefaultRunUnit = shiftrotationDescRunUnit.Default.(string)
+	// shiftrotationDescBreakDuration is the schema descriptor for break_duration field.
+	shiftrotationDescBreakDuration := shiftrotationFields[8].Descriptor()
+	// shiftrotation.DefaultBreakDuration holds the default value on creation for the break_duration field.
+	shiftrotation.DefaultBreakDuration = shiftrotationDescBreakDuration.Default.(int)
+	// shiftrotationDescBreakUnit is the schema descriptor for break_unit field.
+	shiftrotationDescBreakUnit := shiftrotationFields[9].Descriptor()
+	// shiftrotation.DefaultBreakUnit holds the default value on creation for the break_unit field.
+	shiftrotation.DefaultBreakUnit = shiftrotationDescBreakUnit.Default.(string)
+	// shiftrotationDescIsActive is the schema descriptor for is_active field.
+	shiftrotationDescIsActive := shiftrotationFields[11].Descriptor()
+	// shiftrotation.DefaultIsActive holds the default value on creation for the is_active field.
+	shiftrotation.DefaultIsActive = shiftrotationDescIsActive.Default.(bool)
+	// shiftrotationDescCreatedAt is the schema descriptor for created_at field.
+	shiftrotationDescCreatedAt := shiftrotationFields[12].Descriptor()
+	// shiftrotation.DefaultCreatedAt holds the default value on creation for the created_at field.
+	shiftrotation.DefaultCreatedAt = shiftrotationDescCreatedAt.Default.(func() time.Time)
+	// shiftrotationDescUpdatedAt is the schema descriptor for updated_at field.
+	shiftrotationDescUpdatedAt := shiftrotationFields[13].Descriptor()
+	// shiftrotation.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	shiftrotation.DefaultUpdatedAt = shiftrotationDescUpdatedAt.Default.(func() time.Time)
+	// shiftrotation.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	shiftrotation.UpdateDefaultUpdatedAt = shiftrotationDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// shiftrotationDescID is the schema descriptor for id field.
+	shiftrotationDescID := shiftrotationFields[0].Descriptor()
+	// shiftrotation.DefaultID holds the default value on creation for the id field.
+	shiftrotation.DefaultID = shiftrotationDescID.Default.(func() uuid.UUID)
+	staffshiftoverrideFields := schema.StaffShiftOverride{}.Fields()
+	_ = staffshiftoverrideFields
+	// staffshiftoverrideDescCreatedAt is the schema descriptor for created_at field.
+	staffshiftoverrideDescCreatedAt := staffshiftoverrideFields[12].Descriptor()
+	// staffshiftoverride.DefaultCreatedAt holds the default value on creation for the created_at field.
+	staffshiftoverride.DefaultCreatedAt = staffshiftoverrideDescCreatedAt.Default.(func() time.Time)
+	// staffshiftoverrideDescUpdatedAt is the schema descriptor for updated_at field.
+	staffshiftoverrideDescUpdatedAt := staffshiftoverrideFields[13].Descriptor()
+	// staffshiftoverride.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	staffshiftoverride.DefaultUpdatedAt = staffshiftoverrideDescUpdatedAt.Default.(func() time.Time)
+	// staffshiftoverride.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	staffshiftoverride.UpdateDefaultUpdatedAt = staffshiftoverrideDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// staffshiftoverrideDescID is the schema descriptor for id field.
+	staffshiftoverrideDescID := staffshiftoverrideFields[0].Descriptor()
+	// staffshiftoverride.DefaultID holds the default value on creation for the id field.
+	staffshiftoverride.DefaultID = staffshiftoverrideDescID.Default.(func() uuid.UUID)
+	timesheetFields := schema.Timesheet{}.Fields()
+	_ = timesheetFields
+	// timesheetDescTotalHours is the schema descriptor for total_hours field.
+	timesheetDescTotalHours := timesheetFields[10].Descriptor()
+	// timesheet.DefaultTotalHours holds the default value on creation for the total_hours field.
+	timesheet.DefaultTotalHours = timesheetDescTotalHours.Default.(decimal.Decimal)
+	// timesheetDescTotalOvertimeHours is the schema descriptor for total_overtime_hours field.
+	timesheetDescTotalOvertimeHours := timesheetFields[11].Descriptor()
+	// timesheet.DefaultTotalOvertimeHours holds the default value on creation for the total_overtime_hours field.
+	timesheet.DefaultTotalOvertimeHours = timesheetDescTotalOvertimeHours.Default.(decimal.Decimal)
+	// timesheetDescIsActive is the schema descriptor for is_active field.
+	timesheetDescIsActive := timesheetFields[13].Descriptor()
+	// timesheet.DefaultIsActive holds the default value on creation for the is_active field.
+	timesheet.DefaultIsActive = timesheetDescIsActive.Default.(bool)
+	// timesheetDescCreatedAt is the schema descriptor for created_at field.
+	timesheetDescCreatedAt := timesheetFields[14].Descriptor()
+	// timesheet.DefaultCreatedAt holds the default value on creation for the created_at field.
+	timesheet.DefaultCreatedAt = timesheetDescCreatedAt.Default.(func() time.Time)
+	// timesheetDescUpdatedAt is the schema descriptor for updated_at field.
+	timesheetDescUpdatedAt := timesheetFields[15].Descriptor()
+	// timesheet.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	timesheet.DefaultUpdatedAt = timesheetDescUpdatedAt.Default.(func() time.Time)
+	// timesheet.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	timesheet.UpdateDefaultUpdatedAt = timesheetDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// timesheetDescID is the schema descriptor for id field.
+	timesheetDescID := timesheetFields[0].Descriptor()
+	// timesheet.DefaultID holds the default value on creation for the id field.
+	timesheet.DefaultID = timesheetDescID.Default.(func() uuid.UUID)
+	timesheetentryFields := schema.TimesheetEntry{}.Fields()
+	_ = timesheetentryFields
+	// timesheetentryDescRegularHours is the schema descriptor for regular_hours field.
+	timesheetentryDescRegularHours := timesheetentryFields[6].Descriptor()
+	// timesheetentry.DefaultRegularHours holds the default value on creation for the regular_hours field.
+	timesheetentry.DefaultRegularHours = timesheetentryDescRegularHours.Default.(decimal.Decimal)
+	// timesheetentryDescOvertimeHours is the schema descriptor for overtime_hours field.
+	timesheetentryDescOvertimeHours := timesheetentryFields[7].Descriptor()
+	// timesheetentry.DefaultOvertimeHours holds the default value on creation for the overtime_hours field.
+	timesheetentry.DefaultOvertimeHours = timesheetentryDescOvertimeHours.Default.(decimal.Decimal)
+	// timesheetentryDescBreakHours is the schema descriptor for break_hours field.
+	timesheetentryDescBreakHours := timesheetentryFields[8].Descriptor()
+	// timesheetentry.DefaultBreakHours holds the default value on creation for the break_hours field.
+	timesheetentry.DefaultBreakHours = timesheetentryDescBreakHours.Default.(decimal.Decimal)
+	// timesheetentryDescCreatedAt is the schema descriptor for created_at field.
+	timesheetentryDescCreatedAt := timesheetentryFields[10].Descriptor()
+	// timesheetentry.DefaultCreatedAt holds the default value on creation for the created_at field.
+	timesheetentry.DefaultCreatedAt = timesheetentryDescCreatedAt.Default.(func() time.Time)
+	// timesheetentryDescID is the schema descriptor for id field.
+	timesheetentryDescID := timesheetentryFields[0].Descriptor()
+	// timesheetentry.DefaultID holds the default value on creation for the id field.
+	timesheetentry.DefaultID = timesheetentryDescID.Default.(func() uuid.UUID)
 	userroleassignmentFields := schema.UserRoleAssignment{}.Fields()
 	_ = userroleassignmentFields
 	// userroleassignmentDescAssignedAt is the schema descriptor for assigned_at field.
@@ -1412,6 +1771,58 @@ func init() {
 	withholdingtaxDescID := withholdingtaxFields[0].Descriptor()
 	// withholdingtax.DefaultID holds the default value on creation for the id field.
 	withholdingtax.DefaultID = withholdingtaxDescID.Default.(func() uuid.UUID)
+	workshiftFields := schema.WorkShift{}.Fields()
+	_ = workshiftFields
+	// workshiftDescGraceMinutes is the schema descriptor for grace_minutes field.
+	workshiftDescGraceMinutes := workshiftFields[6].Descriptor()
+	// workshift.DefaultGraceMinutes holds the default value on creation for the grace_minutes field.
+	workshift.DefaultGraceMinutes = workshiftDescGraceMinutes.Default.(int)
+	// workshiftDescTotalHoursPerWeek is the schema descriptor for total_hours_per_week field.
+	workshiftDescTotalHoursPerWeek := workshiftFields[7].Descriptor()
+	// workshift.DefaultTotalHoursPerWeek holds the default value on creation for the total_hours_per_week field.
+	workshift.DefaultTotalHoursPerWeek = workshiftDescTotalHoursPerWeek.Default.(decimal.Decimal)
+	// workshiftDescIsDefault is the schema descriptor for is_default field.
+	workshiftDescIsDefault := workshiftFields[8].Descriptor()
+	// workshift.DefaultIsDefault holds the default value on creation for the is_default field.
+	workshift.DefaultIsDefault = workshiftDescIsDefault.Default.(bool)
+	// workshiftDescCreatedAt is the schema descriptor for created_at field.
+	workshiftDescCreatedAt := workshiftFields[9].Descriptor()
+	// workshift.DefaultCreatedAt holds the default value on creation for the created_at field.
+	workshift.DefaultCreatedAt = workshiftDescCreatedAt.Default.(func() time.Time)
+	// workshiftDescUpdatedAt is the schema descriptor for updated_at field.
+	workshiftDescUpdatedAt := workshiftFields[10].Descriptor()
+	// workshift.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	workshift.DefaultUpdatedAt = workshiftDescUpdatedAt.Default.(func() time.Time)
+	// workshift.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	workshift.UpdateDefaultUpdatedAt = workshiftDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// workshiftDescID is the schema descriptor for id field.
+	workshiftDescID := workshiftFields[0].Descriptor()
+	// workshift.DefaultID holds the default value on creation for the id field.
+	workshift.DefaultID = workshiftDescID.Default.(func() uuid.UUID)
+	workshiftscheduleFields := schema.WorkShiftSchedule{}.Fields()
+	_ = workshiftscheduleFields
+	// workshiftscheduleDescBreakHours is the schema descriptor for break_hours field.
+	workshiftscheduleDescBreakHours := workshiftscheduleFields[6].Descriptor()
+	// workshiftschedule.DefaultBreakHours holds the default value on creation for the break_hours field.
+	workshiftschedule.DefaultBreakHours = workshiftscheduleDescBreakHours.Default.(decimal.Decimal)
+	// workshiftscheduleDescIsWorkingDay is the schema descriptor for is_working_day field.
+	workshiftscheduleDescIsWorkingDay := workshiftscheduleFields[7].Descriptor()
+	// workshiftschedule.DefaultIsWorkingDay holds the default value on creation for the is_working_day field.
+	workshiftschedule.DefaultIsWorkingDay = workshiftscheduleDescIsWorkingDay.Default.(bool)
+	// workshiftscheduleDescCreatedAt is the schema descriptor for created_at field.
+	workshiftscheduleDescCreatedAt := workshiftscheduleFields[8].Descriptor()
+	// workshiftschedule.DefaultCreatedAt holds the default value on creation for the created_at field.
+	workshiftschedule.DefaultCreatedAt = workshiftscheduleDescCreatedAt.Default.(func() time.Time)
+	// workshiftscheduleDescUpdatedAt is the schema descriptor for updated_at field.
+	workshiftscheduleDescUpdatedAt := workshiftscheduleFields[9].Descriptor()
+	// workshiftschedule.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	workshiftschedule.DefaultUpdatedAt = workshiftscheduleDescUpdatedAt.Default.(func() time.Time)
+	// workshiftschedule.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	workshiftschedule.UpdateDefaultUpdatedAt = workshiftscheduleDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// workshiftscheduleDescID is the schema descriptor for id field.
+	workshiftscheduleDescID := workshiftscheduleFields[0].Descriptor()
+	// workshiftschedule.DefaultID holds the default value on creation for the id field.
+	workshiftschedule.DefaultID = workshiftscheduleDescID.Default.(func() uuid.UUID)
 	workersunionFields := schema.WorkersUnion{}.Fields()
 	_ = workersunionFields
 	// workersunionDescName is the schema descriptor for name field.

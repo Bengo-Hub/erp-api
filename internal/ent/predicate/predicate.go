@@ -15,6 +15,12 @@ type ApiRequestMetric func(*sql.Selector)
 // AppSetting is the predicate function for appsetting builders.
 type AppSetting func(*sql.Selector)
 
+// AttendanceRecord is the predicate function for attendancerecord builders.
+type AttendanceRecord func(*sql.Selector)
+
+// AttendanceRule is the predicate function for attendancerule builders.
+type AttendanceRule func(*sql.Selector)
+
 // AuthOutlet is the predicate function for authoutlet builders.
 type AuthOutlet func(*sql.Selector)
 
@@ -44,6 +50,9 @@ type CustomUser func(*sql.Selector)
 
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
+
+// ESSSettings is the predicate function for esssettings builders.
+type ESSSettings func(*sql.Selector)
 
 // Employee is the predicate function for employee builders.
 type Employee func(*sql.Selector)
@@ -102,6 +111,9 @@ type LossAndDamage func(*sql.Selector)
 // NextOfKin is the predicate function for nextofkin builders.
 type NextOfKin func(*sql.Selector)
 
+// OffDay is the predicate function for offday builders.
+type OffDay func(*sql.Selector)
+
 // OutboxEvent is the predicate function for outboxevent builders.
 type OutboxEvent func(*sql.Selector)
 
@@ -150,11 +162,38 @@ type RolePermission func(*sql.Selector)
 // SalaryDetails is the predicate function for salarydetails builders.
 type SalaryDetails func(*sql.Selector)
 
+// ShiftAssignment is the predicate function for shiftassignment builders.
+type ShiftAssignment func(*sql.Selector)
+
+// ShiftRoster is the predicate function for shiftroster builders.
+type ShiftRoster func(*sql.Selector)
+
+// ShiftRosterSlot is the predicate function for shiftrosterslot builders.
+type ShiftRosterSlot func(*sql.Selector)
+
+// ShiftRotation is the predicate function for shiftrotation builders.
+type ShiftRotation func(*sql.Selector)
+
+// StaffShiftOverride is the predicate function for staffshiftoverride builders.
+type StaffShiftOverride func(*sql.Selector)
+
+// Timesheet is the predicate function for timesheet builders.
+type Timesheet func(*sql.Selector)
+
+// TimesheetEntry is the predicate function for timesheetentry builders.
+type TimesheetEntry func(*sql.Selector)
+
 // UserRoleAssignment is the predicate function for userroleassignment builders.
 type UserRoleAssignment func(*sql.Selector)
 
 // WithHoldingTax is the predicate function for withholdingtax builders.
 type WithHoldingTax func(*sql.Selector)
+
+// WorkShift is the predicate function for workshift builders.
+type WorkShift func(*sql.Selector)
+
+// WorkShiftSchedule is the predicate function for workshiftschedule builders.
+type WorkShiftSchedule func(*sql.Selector)
 
 // WorkersUnion is the predicate function for workersunion builders.
 type WorkersUnion func(*sql.Selector)

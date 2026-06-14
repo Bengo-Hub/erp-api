@@ -31,6 +31,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/http/handlers"
 	mw "github.com/Bengo-Hub/erp-api/internal/http/middleware"
+	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/consumers"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
@@ -137,6 +138,7 @@ func run() error {
 	employeesHandler := handlers.NewEmployeesHandler(log, employeesSvc)
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher))
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
+	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
 
 	// Leave accrual cron (Go replacement for the accrue_leave management command).
 	leave.NewAccrualCron(leaveSvc, log, cfg.Events.LeaveAccrualInterval).Start(ctx)
@@ -165,6 +167,7 @@ func run() error {
 			authHandler.RegisterRoutes(priv)
 			employeesHandler.RegisterRoutes(priv)
 			leaveHandler.RegisterRoutes(priv)
+			attendanceHandler.RegisterRoutes(priv)
 		})
 	})
 
