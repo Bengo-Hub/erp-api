@@ -5,6 +5,33 @@
 > against a **prod snapshot**. Full table mapping and gotchas live in `data-migration.md` — this
 > sprint executes it. References: `data-migration.md`, `erd.md`, `revamp-plan.md §6`.
 
+## Status — 🟡 MIGRATOR BUILT (prod run pending, coordinated step)
+
+**DONE (build + verify without prod):**
+- `cmd/migrate-data` — one-shot Django→Ent ETL in the SAME DB (plan §0c). Idempotent
+  (deterministic UUIDv5(`table:id`) PKs + skip-if-exists/upsert-by-natural-key), FK-ordered,
+  tenant backfill via `employee.organisation → business_details.tenant_id` (un-resolvable rows
+  skipped, never guessed). Decimal money (never float), datetimes → `Africa/Nairobi`,
+  month-abbrev typo fix, `user_id` not carried (SSO JIT). Degrades cleanly on missing
+  source table/column.
+- Flags: `--dry-run`, `--only=<table>`, `--verbose`, `--default-tenant`; end-of-run
+  source-vs-written **reconciliation report** with a parity check.
+- Tables migrated: departments, jobtitles→job_titles, business_details→company_settings,
+  document_sequences (carries `current_sequence`), leave_leavecategory→leave_categories,
+  employee, employee_bank_accounts, employee_hr_details→hr_details,
+  employee_salary_details→salary_details, employees_contract→contract, payslips→payslip
+  (golden-master), leave_leaverequest→leave_request. (Other KEPT tables follow the same
+  per-table pattern in `migrate_*.go` — extend before prod run if they hold rows.)
+- Unit tests: decimal (no float drift), legacy-id→UUID determinism/namespacing, month mapping.
+- **Local dry-run green** against `bengo_erp` (Django schema, zero business rows): all tables
+  `read=0`, `parity: OK`, no writes.
+- Operator runbook: [`../data-migration-runbook.md`](../data-migration-runbook.md).
+
+**PENDING (coordinated prod step — needs prod DB access):**
+- Prod assessment (per-table counts), dry-run on a restored prod copy, parity gate
+  (row counts + FK integrity + non-null tenant + payroll golden-master), final delta,
+  flip ingress, drop legacy tables. **NOT run** — no prod connection used during build.
+
 ## Goals
 - A reliable, idempotent, FK-ordered `cmd/migrate-data` that copies prod rows into Ent, assigns UUIDv7
   PKs, backfills `tenant_id` on every HR row, and verifies parity — then an offline cutover.
