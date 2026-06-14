@@ -297,6 +297,66 @@ func (f JobTitleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, er
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.JobTitleMutation", m)
 }
 
+// The LeaveBalanceFunc type is an adapter to allow the use of ordinary
+// function as LeaveBalance mutator.
+type LeaveBalanceFunc func(context.Context, *ent.LeaveBalanceMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LeaveBalanceFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LeaveBalanceMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LeaveBalanceMutation", m)
+}
+
+// The LeaveCategoryFunc type is an adapter to allow the use of ordinary
+// function as LeaveCategory mutator.
+type LeaveCategoryFunc func(context.Context, *ent.LeaveCategoryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LeaveCategoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LeaveCategoryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LeaveCategoryMutation", m)
+}
+
+// The LeaveEntitlementFunc type is an adapter to allow the use of ordinary
+// function as LeaveEntitlement mutator.
+type LeaveEntitlementFunc func(context.Context, *ent.LeaveEntitlementMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LeaveEntitlementFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LeaveEntitlementMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LeaveEntitlementMutation", m)
+}
+
+// The LeaveLogFunc type is an adapter to allow the use of ordinary
+// function as LeaveLog mutator.
+type LeaveLogFunc func(context.Context, *ent.LeaveLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LeaveLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LeaveLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LeaveLogMutation", m)
+}
+
+// The LeaveRequestFunc type is an adapter to allow the use of ordinary
+// function as LeaveRequest mutator.
+type LeaveRequestFunc func(context.Context, *ent.LeaveRequestMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LeaveRequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LeaveRequestMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LeaveRequestMutation", m)
+}
+
 // The LoanTypeFunc type is an adapter to allow the use of ordinary
 // function as LoanType mutator.
 type LoanTypeFunc func(context.Context, *ent.LoanTypeMutation) (ent.Value, error)
@@ -451,6 +511,18 @@ func (f ProjectFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProjectMutation", m)
+}
+
+// The PublicHolidayFunc type is an adapter to allow the use of ordinary
+// function as PublicHoliday mutator.
+type PublicHolidayFunc func(context.Context, *ent.PublicHolidayMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PublicHolidayFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PublicHolidayMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PublicHolidayMutation", m)
 }
 
 // The RegionFunc type is an adapter to allow the use of ordinary

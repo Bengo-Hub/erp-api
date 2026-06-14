@@ -78,6 +78,21 @@ type JobGroup func(*sql.Selector)
 // JobTitle is the predicate function for jobtitle builders.
 type JobTitle func(*sql.Selector)
 
+// LeaveBalance is the predicate function for leavebalance builders.
+type LeaveBalance func(*sql.Selector)
+
+// LeaveCategory is the predicate function for leavecategory builders.
+type LeaveCategory func(*sql.Selector)
+
+// LeaveEntitlement is the predicate function for leaveentitlement builders.
+type LeaveEntitlement func(*sql.Selector)
+
+// LeaveLog is the predicate function for leavelog builders.
+type LeaveLog func(*sql.Selector)
+
+// LeaveRequest is the predicate function for leaverequest builders.
+type LeaveRequest func(*sql.Selector)
+
 // LoanType is the predicate function for loantype builders.
 type LoanType func(*sql.Selector)
 
@@ -116,6 +131,9 @@ type Permission func(*sql.Selector)
 
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
+
+// PublicHoliday is the predicate function for publicholiday builders.
+type PublicHoliday func(*sql.Selector)
 
 // Region is the predicate function for region builders.
 type Region func(*sql.Selector)

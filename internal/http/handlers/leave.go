@@ -1,0 +1,486 @@
+package handlers
+
+import (
+	"encoding/json"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
+
+	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
+)
+
+// Leave RBAC permission codes.
+const (
+	permLeaveView    = "hrm.leave.view"
+	permLeaveManage  = "hrm.leave.manage"
+	permLeaveApprove = "hrm.leave.approve"
+)
+
+// LeaveHandler serves /api/v1/hrm/leave/*.
+type LeaveHandler struct {
+	log *zap.Logger
+	svc *leave.Service
+}
+
+func NewLeaveHandler(log *zap.Logger, svc *leave.Service) *LeaveHandler {
+	return &LeaveHandler{log: log.Named("hrm.leave"), svc: svc}
+}
+
+func (h *LeaveHandler) RegisterRoutes(r chi.Router) {
+	r.Route("/hrm/leave", func(lr chi.Router) {
+		lr.Get("/categories", h.ListCategories)
+		lr.Post("/categories", h.CreateCategory)
+		lr.Put("/categories/{id}", h.UpdateCategory)
+		lr.Delete("/categories/{id}", h.DeleteCategory)
+
+		lr.Get("/entitlements", h.ListEntitlements)
+		lr.Post("/entitlements", h.UpsertEntitlement)
+
+		lr.Get("/balances", h.ListBalances)
+		lr.Post("/accrue", h.Accrue)
+
+		lr.Get("/holidays", h.ListHolidays)
+		lr.Post("/holidays", h.CreateHoliday)
+		lr.Delete("/holidays/{id}", h.DeleteHoliday)
+
+		lr.Get("/requests", h.ListRequests)
+		lr.Post("/requests", h.CreateRequest)
+		lr.Get("/requests/{id}", h.GetRequest)
+		lr.Post("/requests/{id}/approve", h.ApproveRequest)
+		lr.Post("/requests/{id}/reject", h.RejectRequest)
+		lr.Post("/requests/{id}/cancel", h.CancelRequest)
+	})
+}
+
+// ---- Categories ----
+
+func (h *LeaveHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveView) {
+		return
+	}
+	rows, err := h.svc.ListCategories(r.Context(), scope.TenantID)
+	if err != nil {
+		h.log.Error("list categories", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list leave categories")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+}
+
+type categoryBody struct {
+	Name              string `json:"name"`
+	Description       string `json:"description"`
+	IsActive          *bool  `json:"is_active"`
+	DefaultAnnualDays string `json:"default_annual_days"`
+	AllowCarryover    bool   `json:"allow_carryover"`
+	MaxCarryoverDays  string `json:"max_carryover_days"`
+}
+
+func (b categoryBody) toInput() (leave.CategoryInput, error) {
+	in := leave.CategoryInput{
+		Name:           b.Name,
+		Description:    b.Description,
+		IsActive:       b.IsActive == nil || *b.IsActive,
+		AllowCarryover: b.AllowCarryover,
+	}
+	d, err := parseDecimalDefault(b.DefaultAnnualDays)
+	if err != nil {
+		return in, err
+	}
+	in.DefaultAnnualDays = d
+	m, err := parseDecimalDefault(b.MaxCarryoverDays)
+	if err != nil {
+		return in, err
+	}
+	in.MaxCarryoverDays = m
+	return in, nil
+}
+
+func (h *LeaveHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	var body categoryBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	in, err := body.toInput()
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	row, err := h.svc.CreateCategory(r.Context(), scope.TenantID, in)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, row)
+}
+
+func (h *LeaveHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var body categoryBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	in, err := body.toInput()
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	row, err := h.svc.UpdateCategory(r.Context(), scope.TenantID, id, in)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+func (h *LeaveHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	if err := h.svc.DeleteCategory(r.Context(), scope.TenantID, id); err != nil {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ---- Entitlements / balances / accrual ----
+
+func (h *LeaveHandler) ListEntitlements(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveView) {
+		return
+	}
+	empID := optionalUUIDParam(r, "employee_id")
+	year, _ := strconv.Atoi(r.URL.Query().Get("year"))
+	rows, err := h.svc.ListEntitlements(r.Context(), scope.TenantID, empID, year)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list entitlements")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+}
+
+type entitlementBody struct {
+	EmployeeID string `json:"employee_id"`
+	CategoryID string `json:"category_id"`
+	Year       int    `json:"year"`
+	Days       string `json:"days_entitled"`
+}
+
+func (h *LeaveHandler) UpsertEntitlement(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	var body entitlementBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	empID, err := uuid.Parse(body.EmployeeID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
+		return
+	}
+	catID, err := uuid.Parse(body.CategoryID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid category_id")
+		return
+	}
+	days, err := decimal.NewFromString(body.Days)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid days_entitled")
+		return
+	}
+	if body.Year == 0 {
+		body.Year = time.Now().UTC().Year()
+	}
+	row, err := h.svc.UpsertEntitlement(r.Context(), scope.TenantID, empID, catID, body.Year, days)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "upsert_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+func (h *LeaveHandler) ListBalances(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveView) {
+		return
+	}
+	empID := optionalUUIDParam(r, "employee_id")
+	year, _ := strconv.Atoi(r.URL.Query().Get("year"))
+	rows, err := h.svc.ListBalances(r.Context(), scope.TenantID, empID, year)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list balances")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+}
+
+func (h *LeaveHandler) Accrue(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	year, _ := strconv.Atoi(r.URL.Query().Get("year"))
+	if year == 0 {
+		year = time.Now().UTC().Year()
+	}
+	res, err := h.svc.AccrueYear(r.Context(), scope.TenantID, year)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "accrual_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"year": res.Year, "processed": res.Processed})
+}
+
+// ---- Holidays ----
+
+func (h *LeaveHandler) ListHolidays(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveView) {
+		return
+	}
+	year, _ := strconv.Atoi(r.URL.Query().Get("year"))
+	rows, err := h.svc.ListHolidays(r.Context(), scope.TenantID, year)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list holidays")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+}
+
+type holidayBody struct {
+	Name       string `json:"name"`
+	Date       string `json:"date"`
+	IsNational *bool  `json:"is_national"`
+	County     string `json:"county"`
+}
+
+func (h *LeaveHandler) CreateHoliday(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	var body holidayBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	date, err := parseDate(body.Date)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid date (want YYYY-MM-DD)")
+		return
+	}
+	national := body.IsNational == nil || *body.IsNational
+	row, err := h.svc.CreateHoliday(r.Context(), scope.TenantID, body.Name, date, national, body.County)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, row)
+}
+
+func (h *LeaveHandler) DeleteHoliday(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	if err := h.svc.DeleteHoliday(r.Context(), scope.TenantID, id); err != nil {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ---- Requests ----
+
+func (h *LeaveHandler) ListRequests(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveView) {
+		return
+	}
+	empID := optionalUUIDParam(r, "employee_id")
+	status := r.URL.Query().Get("status")
+	rows, err := h.svc.ListRequests(r.Context(), scope.TenantID, empID, status)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list requests")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+}
+
+func (h *LeaveHandler) GetRequest(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveView) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	row, err := h.svc.Get(r.Context(), scope.TenantID, id)
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "leave request not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to fetch request")
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+type createRequestBody struct {
+	EmployeeID string `json:"employee_id"`
+	CategoryID string `json:"category_id"`
+	StartDate  string `json:"start_date"`
+	EndDate    string `json:"end_date"`
+	Days       string `json:"days_requested"`
+	Reason     string `json:"reason"`
+}
+
+func (h *LeaveHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	var body createRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	empID, err := uuid.Parse(body.EmployeeID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
+		return
+	}
+	catID, err := uuid.Parse(body.CategoryID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid category_id")
+		return
+	}
+	start, err := parseDate(body.StartDate)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid start_date")
+		return
+	}
+	end, err := parseDate(body.EndDate)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid end_date")
+		return
+	}
+	days, err := decimal.NewFromString(body.Days)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid days_requested")
+		return
+	}
+	uid := scope.UserID
+	row, err := h.svc.CreateRequest(r.Context(), scope.TenantID, leave.CreateRequestInput{
+		EmployeeID: empID, CategoryID: catID, StartDate: start, EndDate: end,
+		DaysRequested: days, Reason: body.Reason, ActingUserID: &uid,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, row)
+}
+
+func (h *LeaveHandler) ApproveRequest(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveApprove) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	uid := scope.UserID
+	row, err := h.svc.Approve(r.Context(), scope.TenantID, id, nil, &uid)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "approve_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+type rejectBody struct {
+	Reason string `json:"reason"`
+}
+
+func (h *LeaveHandler) RejectRequest(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveApprove) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var body rejectBody
+	_ = json.NewDecoder(r.Body).Decode(&body)
+	uid := scope.UserID
+	row, err := h.svc.Reject(r.Context(), scope.TenantID, id, body.Reason, &uid)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "reject_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+func (h *LeaveHandler) CancelRequest(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	uid := scope.UserID
+	row, err := h.svc.Cancel(r.Context(), scope.TenantID, id, &uid)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "cancel_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}

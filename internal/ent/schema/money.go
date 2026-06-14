@@ -34,3 +34,19 @@ func rateField(name string) ent.Field {
 		SchemaType(map[string]string{"postgres": "numeric(10,4)"}).
 		Default(decimal.Zero)
 }
+
+// daysField builds a decimal column for leave/work day quantities (numeric(7,2)) —
+// entitlements, balances, days requested/taken. Decimal (never float) per gaps §2.1.
+func daysField(name string) ent.Field {
+	return field.Other(name, decimal.Decimal{}).
+		SchemaType(map[string]string{"postgres": "numeric(7,2)"}).
+		Default(decimal.Zero)
+}
+
+// hoursField builds a decimal column for worked/overtime hours (numeric(8,2)) —
+// attendance records and timesheets. Decimal (never float).
+func hoursField(name string) ent.Field {
+	return field.Other(name, decimal.Decimal{}).
+		SchemaType(map[string]string{"postgres": "numeric(8,2)"}).
+		Default(decimal.Zero)
+}
