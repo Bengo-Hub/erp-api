@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -52,7 +53,7 @@ func (h *TrainingHandler) ListCourses(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list courses")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type courseBody struct {
@@ -121,7 +122,7 @@ func (h *TrainingHandler) ListEnrollments(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list enrollments")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type enrollBody struct {
@@ -191,7 +192,7 @@ func (h *TrainingHandler) ListEvaluations(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list evaluations")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type trainingEvalBody struct {

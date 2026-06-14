@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
@@ -103,7 +104,7 @@ func (h *BusinessHandler) ListSequences(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list sequences")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type prefixBody struct {

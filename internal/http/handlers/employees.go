@@ -3,8 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -49,23 +49,19 @@ func (h *EmployeesHandler) List(w http.ResponseWriter, r *http.Request) {
 	if !requirePermission(w, scope, permEmployeeView) {
 		return
 	}
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	p := pagination.Parse(r)
 	rows, total, err := h.svc.List(r.Context(), employees.ListParams{
 		TenantID: scope.TenantID,
 		OutletID: scope.OutletID,
-		Limit:    limit,
-		Offset:   offset,
+		Limit:    p.Limit,
+		Offset:   p.Offset,
 	})
 	if err != nil {
 		h.log.Error("list employees", zap.Error(err))
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list employees")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"data":  rows,
-		"count": total,
-	})
+	writePaginated(w, rows, total, p)
 }
 
 func (h *EmployeesHandler) Get(w http.ResponseWriter, r *http.Request) {

@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
@@ -11,7 +12,7 @@ import (
 
 const permFxView = "fx.view"
 
-// FXHandler serves /api/v1/fx/* — stored exchange rates + an on-demand refresh.
+// FXHandler serves /api/v1/fx/* â€” stored exchange rates + an on-demand refresh.
 type FXHandler struct {
 	log *zap.Logger
 	svc *fx.Service
@@ -38,7 +39,7 @@ func (h *FXHandler) ListRates(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list rates")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 func (h *FXHandler) Refresh(w http.ResponseWriter, r *http.Request) {

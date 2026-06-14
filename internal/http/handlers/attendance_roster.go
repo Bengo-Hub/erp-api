@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
@@ -35,7 +36,7 @@ func (h *AttendanceHandler) ListRosters(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list rosters")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type rosterBody struct {
@@ -99,7 +100,7 @@ func (h *AttendanceHandler) ListSlots(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list slots")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type slotBody struct {
@@ -154,7 +155,7 @@ func (h *AttendanceHandler) ListAssignments(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list assignments")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type assignBody struct {
@@ -214,7 +215,7 @@ func (h *AttendanceHandler) ListOverrides(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list overrides")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type overrideBody struct {

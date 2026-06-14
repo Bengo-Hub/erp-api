@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -71,7 +72,7 @@ func (h *LeaveHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list leave categories")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type categoryBody struct {
@@ -185,7 +186,7 @@ func (h *LeaveHandler) ListEntitlements(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list entitlements")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type entitlementBody struct {
@@ -243,7 +244,7 @@ func (h *LeaveHandler) ListBalances(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list balances")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 func (h *LeaveHandler) Accrue(w http.ResponseWriter, r *http.Request) {
@@ -276,7 +277,7 @@ func (h *LeaveHandler) ListHolidays(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list holidays")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type holidayBody struct {
@@ -341,7 +342,7 @@ func (h *LeaveHandler) ListRequests(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list requests")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 func (h *LeaveHandler) GetRequest(w http.ResponseWriter, r *http.Request) {
