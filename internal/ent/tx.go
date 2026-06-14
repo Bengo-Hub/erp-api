@@ -30,6 +30,14 @@ type Tx struct {
 	AppraisalResponse *AppraisalResponseClient
 	// AppraisalTemplate is the client for interacting with the AppraisalTemplate builders.
 	AppraisalTemplate *AppraisalTemplateClient
+	// ApprovalRequest is the client for interacting with the ApprovalRequest builders.
+	ApprovalRequest *ApprovalRequestClient
+	// ApprovalStepAction is the client for interacting with the ApprovalStepAction builders.
+	ApprovalStepAction *ApprovalStepActionClient
+	// ApprovalWorkflow is the client for interacting with the ApprovalWorkflow builders.
+	ApprovalWorkflow *ApprovalWorkflowClient
+	// ApprovalWorkflowStep is the client for interacting with the ApprovalWorkflowStep builders.
+	ApprovalWorkflowStep *ApprovalWorkflowStepClient
 	// AttendanceRecord is the client for interacting with the AttendanceRecord builders.
 	AttendanceRecord *AttendanceRecordClient
 	// AttendanceRule is the client for interacting with the AttendanceRule builders.
@@ -156,6 +164,12 @@ type Tx struct {
 	ShiftRotation *ShiftRotationClient
 	// StaffShiftOverride is the client for interacting with the StaffShiftOverride builders.
 	StaffShiftOverride *StaffShiftOverrideClient
+	// Task is the client for interacting with the Task builders.
+	Task *TaskClient
+	// TaskComment is the client for interacting with the TaskComment builders.
+	TaskComment *TaskCommentClient
+	// TaskLog is the client for interacting with the TaskLog builders.
+	TaskLog *TaskLogClient
 	// Timesheet is the client for interacting with the Timesheet builders.
 	Timesheet *TimesheetClient
 	// TimesheetEntry is the client for interacting with the TimesheetEntry builders.
@@ -316,6 +330,10 @@ func (tx *Tx) init() {
 	tx.AppraisalQuestion = NewAppraisalQuestionClient(tx.config)
 	tx.AppraisalResponse = NewAppraisalResponseClient(tx.config)
 	tx.AppraisalTemplate = NewAppraisalTemplateClient(tx.config)
+	tx.ApprovalRequest = NewApprovalRequestClient(tx.config)
+	tx.ApprovalStepAction = NewApprovalStepActionClient(tx.config)
+	tx.ApprovalWorkflow = NewApprovalWorkflowClient(tx.config)
+	tx.ApprovalWorkflowStep = NewApprovalWorkflowStepClient(tx.config)
 	tx.AttendanceRecord = NewAttendanceRecordClient(tx.config)
 	tx.AttendanceRule = NewAttendanceRuleClient(tx.config)
 	tx.AuthOutlet = NewAuthOutletClient(tx.config)
@@ -379,6 +397,9 @@ func (tx *Tx) init() {
 	tx.ShiftRosterSlot = NewShiftRosterSlotClient(tx.config)
 	tx.ShiftRotation = NewShiftRotationClient(tx.config)
 	tx.StaffShiftOverride = NewStaffShiftOverrideClient(tx.config)
+	tx.Task = NewTaskClient(tx.config)
+	tx.TaskComment = NewTaskCommentClient(tx.config)
+	tx.TaskLog = NewTaskLogClient(tx.config)
 	tx.Timesheet = NewTimesheetClient(tx.config)
 	tx.TimesheetEntry = NewTimesheetEntryClient(tx.config)
 	tx.TrainingCourse = NewTrainingCourseClient(tx.config)

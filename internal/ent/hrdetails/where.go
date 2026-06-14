@@ -90,11 +90,6 @@ func RegionID(v uuid.UUID) predicate.HRDetails {
 	return predicate.HRDetails(sql.FieldEQ(FieldRegionID, v))
 }
 
-// ProjectID applies equality check predicate on the "project_id" field. It's identical to ProjectIDEQ.
-func ProjectID(v uuid.UUID) predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldEQ(FieldProjectID, v))
-}
-
 // EmploymentType applies equality check predicate on the "employment_type" field. It's identical to EmploymentTypeEQ.
 func EmploymentType(v string) predicate.HRDetails {
 	return predicate.HRDetails(sql.FieldEQ(FieldEmploymentType, v))
@@ -443,56 +438,6 @@ func RegionIDIsNil() predicate.HRDetails {
 // RegionIDNotNil applies the NotNil predicate on the "region_id" field.
 func RegionIDNotNil() predicate.HRDetails {
 	return predicate.HRDetails(sql.FieldNotNull(FieldRegionID))
-}
-
-// ProjectIDEQ applies the EQ predicate on the "project_id" field.
-func ProjectIDEQ(v uuid.UUID) predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldEQ(FieldProjectID, v))
-}
-
-// ProjectIDNEQ applies the NEQ predicate on the "project_id" field.
-func ProjectIDNEQ(v uuid.UUID) predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldNEQ(FieldProjectID, v))
-}
-
-// ProjectIDIn applies the In predicate on the "project_id" field.
-func ProjectIDIn(vs ...uuid.UUID) predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldIn(FieldProjectID, vs...))
-}
-
-// ProjectIDNotIn applies the NotIn predicate on the "project_id" field.
-func ProjectIDNotIn(vs ...uuid.UUID) predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldNotIn(FieldProjectID, vs...))
-}
-
-// ProjectIDGT applies the GT predicate on the "project_id" field.
-func ProjectIDGT(v uuid.UUID) predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldGT(FieldProjectID, v))
-}
-
-// ProjectIDGTE applies the GTE predicate on the "project_id" field.
-func ProjectIDGTE(v uuid.UUID) predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldGTE(FieldProjectID, v))
-}
-
-// ProjectIDLT applies the LT predicate on the "project_id" field.
-func ProjectIDLT(v uuid.UUID) predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldLT(FieldProjectID, v))
-}
-
-// ProjectIDLTE applies the LTE predicate on the "project_id" field.
-func ProjectIDLTE(v uuid.UUID) predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldLTE(FieldProjectID, v))
-}
-
-// ProjectIDIsNil applies the IsNil predicate on the "project_id" field.
-func ProjectIDIsNil() predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldIsNull(FieldProjectID))
-}
-
-// ProjectIDNotNil applies the NotNil predicate on the "project_id" field.
-func ProjectIDNotNil() predicate.HRDetails {
-	return predicate.HRDetails(sql.FieldNotNull(FieldProjectID))
 }
 
 // EmploymentTypeEQ applies the EQ predicate on the "employment_type" field.

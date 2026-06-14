@@ -24,6 +24,10 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalquestion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalresponse"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
+	"github.com/Bengo-Hub/erp-api/internal/ent/approvalrequest"
+	"github.com/Bengo-Hub/erp-api/internal/ent/approvalstepaction"
+	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflow"
+	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflowstep"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
@@ -88,6 +92,9 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrosterslot"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrotation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
+	"github.com/Bengo-Hub/erp-api/internal/ent/task"
+	"github.com/Bengo-Hub/erp-api/internal/ent/taskcomment"
+	"github.com/Bengo-Hub/erp-api/internal/ent/tasklog"
 	"github.com/Bengo-Hub/erp-api/internal/ent/timesheet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/timesheetentry"
 	"github.com/Bengo-Hub/erp-api/internal/ent/trainingcourse"
@@ -123,6 +130,14 @@ type Client struct {
 	AppraisalResponse *AppraisalResponseClient
 	// AppraisalTemplate is the client for interacting with the AppraisalTemplate builders.
 	AppraisalTemplate *AppraisalTemplateClient
+	// ApprovalRequest is the client for interacting with the ApprovalRequest builders.
+	ApprovalRequest *ApprovalRequestClient
+	// ApprovalStepAction is the client for interacting with the ApprovalStepAction builders.
+	ApprovalStepAction *ApprovalStepActionClient
+	// ApprovalWorkflow is the client for interacting with the ApprovalWorkflow builders.
+	ApprovalWorkflow *ApprovalWorkflowClient
+	// ApprovalWorkflowStep is the client for interacting with the ApprovalWorkflowStep builders.
+	ApprovalWorkflowStep *ApprovalWorkflowStepClient
 	// AttendanceRecord is the client for interacting with the AttendanceRecord builders.
 	AttendanceRecord *AttendanceRecordClient
 	// AttendanceRule is the client for interacting with the AttendanceRule builders.
@@ -249,6 +264,12 @@ type Client struct {
 	ShiftRotation *ShiftRotationClient
 	// StaffShiftOverride is the client for interacting with the StaffShiftOverride builders.
 	StaffShiftOverride *StaffShiftOverrideClient
+	// Task is the client for interacting with the Task builders.
+	Task *TaskClient
+	// TaskComment is the client for interacting with the TaskComment builders.
+	TaskComment *TaskCommentClient
+	// TaskLog is the client for interacting with the TaskLog builders.
+	TaskLog *TaskLogClient
 	// Timesheet is the client for interacting with the Timesheet builders.
 	Timesheet *TimesheetClient
 	// TimesheetEntry is the client for interacting with the TimesheetEntry builders.
@@ -289,6 +310,10 @@ func (c *Client) init() {
 	c.AppraisalQuestion = NewAppraisalQuestionClient(c.config)
 	c.AppraisalResponse = NewAppraisalResponseClient(c.config)
 	c.AppraisalTemplate = NewAppraisalTemplateClient(c.config)
+	c.ApprovalRequest = NewApprovalRequestClient(c.config)
+	c.ApprovalStepAction = NewApprovalStepActionClient(c.config)
+	c.ApprovalWorkflow = NewApprovalWorkflowClient(c.config)
+	c.ApprovalWorkflowStep = NewApprovalWorkflowStepClient(c.config)
 	c.AttendanceRecord = NewAttendanceRecordClient(c.config)
 	c.AttendanceRule = NewAttendanceRuleClient(c.config)
 	c.AuthOutlet = NewAuthOutletClient(c.config)
@@ -352,6 +377,9 @@ func (c *Client) init() {
 	c.ShiftRosterSlot = NewShiftRosterSlotClient(c.config)
 	c.ShiftRotation = NewShiftRotationClient(c.config)
 	c.StaffShiftOverride = NewStaffShiftOverrideClient(c.config)
+	c.Task = NewTaskClient(c.config)
+	c.TaskComment = NewTaskCommentClient(c.config)
+	c.TaskLog = NewTaskLogClient(c.config)
 	c.Timesheet = NewTimesheetClient(c.config)
 	c.TimesheetEntry = NewTimesheetEntryClient(c.config)
 	c.TrainingCourse = NewTrainingCourseClient(c.config)
@@ -452,90 +480,97 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                 ctx,
-		config:              cfg,
-		Advance:             NewAdvanceClient(cfg),
-		ApiRequestMetric:    NewApiRequestMetricClient(cfg),
-		AppSetting:          NewAppSettingClient(cfg),
-		Application:         NewApplicationClient(cfg),
-		Appraisal:           NewAppraisalClient(cfg),
-		AppraisalCycle:      NewAppraisalCycleClient(cfg),
-		AppraisalQuestion:   NewAppraisalQuestionClient(cfg),
-		AppraisalResponse:   NewAppraisalResponseClient(cfg),
-		AppraisalTemplate:   NewAppraisalTemplateClient(cfg),
-		AttendanceRecord:    NewAttendanceRecordClient(cfg),
-		AttendanceRule:      NewAttendanceRuleClient(cfg),
-		AuthOutlet:          NewAuthOutletClient(cfg),
-		AuthTenant:          NewAuthTenantClient(cfg),
-		BenefitTax:          NewBenefitTaxClient(cfg),
-		Candidate:           NewCandidateClient(cfg),
-		ClaimItem:           NewClaimItemClient(cfg),
-		ContactDetails:      NewContactDetailsClient(cfg),
-		Contract:            NewContractClient(cfg),
-		CustomUser:          NewCustomUserClient(cfg),
-		Department:          NewDepartmentClient(cfg),
-		ESSSettings:         NewESSSettingsClient(cfg),
-		Employee:            NewEmployeeClient(cfg),
-		EmployeeBankAccount: NewEmployeeBankAccountClient(cfg),
-		EmployeeBenefit:     NewEmployeeBenefitClient(cfg),
-		EmployeeDocument:    NewEmployeeDocumentClient(cfg),
-		EmployeeLoan:        NewEmployeeLoanClient(cfg),
-		EmployeeMetric:      NewEmployeeMetricClient(cfg),
-		EmployeeOnboarding:  NewEmployeeOnboardingClient(cfg),
-		ExpenseClaim:        NewExpenseClaimClient(cfg),
-		GeneralHRSettings:   NewGeneralHRSettingsClient(cfg),
-		Goal:                NewGoalClient(cfg),
-		GoalProgress:        NewGoalProgressClient(cfg),
-		HRDetails:           NewHRDetailsClient(cfg),
-		IdempotencyKey:      NewIdempotencyKeyClient(cfg),
-		JobGroup:            NewJobGroupClient(cfg),
-		JobPosting:          NewJobPostingClient(cfg),
-		JobTitle:            NewJobTitleClient(cfg),
-		LeaveBalance:        NewLeaveBalanceClient(cfg),
-		LeaveCategory:       NewLeaveCategoryClient(cfg),
-		LeaveEntitlement:    NewLeaveEntitlementClient(cfg),
-		LeaveLog:            NewLeaveLogClient(cfg),
-		LeaveRequest:        NewLeaveRequestClient(cfg),
-		LoanType:            NewLoanTypeClient(cfg),
-		LossAndDamage:       NewLossAndDamageClient(cfg),
-		MetricCategory:      NewMetricCategoryClient(cfg),
-		MetricTarget:        NewMetricTargetClient(cfg),
-		NextOfKin:           NewNextOfKinClient(cfg),
-		OffDay:              NewOffDayClient(cfg),
-		OnboardingTask:      NewOnboardingTaskClient(cfg),
-		OutboxEvent:         NewOutboxEventClient(cfg),
-		PayrollComponent:    NewPayrollComponentClient(cfg),
-		PayrollFormula:      NewPayrollFormulaClient(cfg),
-		PayrollFormulaItem:  NewPayrollFormulaItemClient(cfg),
-		PayrollRelief:       NewPayrollReliefClient(cfg),
-		PayrollSplitRatio:   NewPayrollSplitRatioClient(cfg),
-		Payslip:             NewPayslipClient(cfg),
-		PayslipAudit:        NewPayslipAuditClient(cfg),
-		PerformanceMetric:   NewPerformanceMetricClient(cfg),
-		PerformanceReview:   NewPerformanceReviewClient(cfg),
-		Permission:          NewPermissionClient(cfg),
-		PublicHoliday:       NewPublicHolidayClient(cfg),
-		Region:              NewRegionClient(cfg),
-		RepayOption:         NewRepayOptionClient(cfg),
-		ReviewMetric:        NewReviewMetricClient(cfg),
-		Role:                NewRoleClient(cfg),
-		RolePermission:      NewRolePermissionClient(cfg),
-		SalaryDetails:       NewSalaryDetailsClient(cfg),
-		ShiftAssignment:     NewShiftAssignmentClient(cfg),
-		ShiftRoster:         NewShiftRosterClient(cfg),
-		ShiftRosterSlot:     NewShiftRosterSlotClient(cfg),
-		ShiftRotation:       NewShiftRotationClient(cfg),
-		StaffShiftOverride:  NewStaffShiftOverrideClient(cfg),
-		Timesheet:           NewTimesheetClient(cfg),
-		TimesheetEntry:      NewTimesheetEntryClient(cfg),
-		TrainingCourse:      NewTrainingCourseClient(cfg),
-		TrainingEnrollment:  NewTrainingEnrollmentClient(cfg),
-		TrainingEvaluation:  NewTrainingEvaluationClient(cfg),
-		UserRoleAssignment:  NewUserRoleAssignmentClient(cfg),
-		WithHoldingTax:      NewWithHoldingTaxClient(cfg),
-		WorkShift:           NewWorkShiftClient(cfg),
-		WorkShiftSchedule:   NewWorkShiftScheduleClient(cfg),
-		WorkersUnion:        NewWorkersUnionClient(cfg),
+		ctx:                  ctx,
+		config:               cfg,
+		Advance:              NewAdvanceClient(cfg),
+		ApiRequestMetric:     NewApiRequestMetricClient(cfg),
+		AppSetting:           NewAppSettingClient(cfg),
+		Application:          NewApplicationClient(cfg),
+		Appraisal:            NewAppraisalClient(cfg),
+		AppraisalCycle:       NewAppraisalCycleClient(cfg),
+		AppraisalQuestion:    NewAppraisalQuestionClient(cfg),
+		AppraisalResponse:    NewAppraisalResponseClient(cfg),
+		AppraisalTemplate:    NewAppraisalTemplateClient(cfg),
+		ApprovalRequest:      NewApprovalRequestClient(cfg),
+		ApprovalStepAction:   NewApprovalStepActionClient(cfg),
+		ApprovalWorkflow:     NewApprovalWorkflowClient(cfg),
+		ApprovalWorkflowStep: NewApprovalWorkflowStepClient(cfg),
+		AttendanceRecord:     NewAttendanceRecordClient(cfg),
+		AttendanceRule:       NewAttendanceRuleClient(cfg),
+		AuthOutlet:           NewAuthOutletClient(cfg),
+		AuthTenant:           NewAuthTenantClient(cfg),
+		BenefitTax:           NewBenefitTaxClient(cfg),
+		Candidate:            NewCandidateClient(cfg),
+		ClaimItem:            NewClaimItemClient(cfg),
+		ContactDetails:       NewContactDetailsClient(cfg),
+		Contract:             NewContractClient(cfg),
+		CustomUser:           NewCustomUserClient(cfg),
+		Department:           NewDepartmentClient(cfg),
+		ESSSettings:          NewESSSettingsClient(cfg),
+		Employee:             NewEmployeeClient(cfg),
+		EmployeeBankAccount:  NewEmployeeBankAccountClient(cfg),
+		EmployeeBenefit:      NewEmployeeBenefitClient(cfg),
+		EmployeeDocument:     NewEmployeeDocumentClient(cfg),
+		EmployeeLoan:         NewEmployeeLoanClient(cfg),
+		EmployeeMetric:       NewEmployeeMetricClient(cfg),
+		EmployeeOnboarding:   NewEmployeeOnboardingClient(cfg),
+		ExpenseClaim:         NewExpenseClaimClient(cfg),
+		GeneralHRSettings:    NewGeneralHRSettingsClient(cfg),
+		Goal:                 NewGoalClient(cfg),
+		GoalProgress:         NewGoalProgressClient(cfg),
+		HRDetails:            NewHRDetailsClient(cfg),
+		IdempotencyKey:       NewIdempotencyKeyClient(cfg),
+		JobGroup:             NewJobGroupClient(cfg),
+		JobPosting:           NewJobPostingClient(cfg),
+		JobTitle:             NewJobTitleClient(cfg),
+		LeaveBalance:         NewLeaveBalanceClient(cfg),
+		LeaveCategory:        NewLeaveCategoryClient(cfg),
+		LeaveEntitlement:     NewLeaveEntitlementClient(cfg),
+		LeaveLog:             NewLeaveLogClient(cfg),
+		LeaveRequest:         NewLeaveRequestClient(cfg),
+		LoanType:             NewLoanTypeClient(cfg),
+		LossAndDamage:        NewLossAndDamageClient(cfg),
+		MetricCategory:       NewMetricCategoryClient(cfg),
+		MetricTarget:         NewMetricTargetClient(cfg),
+		NextOfKin:            NewNextOfKinClient(cfg),
+		OffDay:               NewOffDayClient(cfg),
+		OnboardingTask:       NewOnboardingTaskClient(cfg),
+		OutboxEvent:          NewOutboxEventClient(cfg),
+		PayrollComponent:     NewPayrollComponentClient(cfg),
+		PayrollFormula:       NewPayrollFormulaClient(cfg),
+		PayrollFormulaItem:   NewPayrollFormulaItemClient(cfg),
+		PayrollRelief:        NewPayrollReliefClient(cfg),
+		PayrollSplitRatio:    NewPayrollSplitRatioClient(cfg),
+		Payslip:              NewPayslipClient(cfg),
+		PayslipAudit:         NewPayslipAuditClient(cfg),
+		PerformanceMetric:    NewPerformanceMetricClient(cfg),
+		PerformanceReview:    NewPerformanceReviewClient(cfg),
+		Permission:           NewPermissionClient(cfg),
+		PublicHoliday:        NewPublicHolidayClient(cfg),
+		Region:               NewRegionClient(cfg),
+		RepayOption:          NewRepayOptionClient(cfg),
+		ReviewMetric:         NewReviewMetricClient(cfg),
+		Role:                 NewRoleClient(cfg),
+		RolePermission:       NewRolePermissionClient(cfg),
+		SalaryDetails:        NewSalaryDetailsClient(cfg),
+		ShiftAssignment:      NewShiftAssignmentClient(cfg),
+		ShiftRoster:          NewShiftRosterClient(cfg),
+		ShiftRosterSlot:      NewShiftRosterSlotClient(cfg),
+		ShiftRotation:        NewShiftRotationClient(cfg),
+		StaffShiftOverride:   NewStaffShiftOverrideClient(cfg),
+		Task:                 NewTaskClient(cfg),
+		TaskComment:          NewTaskCommentClient(cfg),
+		TaskLog:              NewTaskLogClient(cfg),
+		Timesheet:            NewTimesheetClient(cfg),
+		TimesheetEntry:       NewTimesheetEntryClient(cfg),
+		TrainingCourse:       NewTrainingCourseClient(cfg),
+		TrainingEnrollment:   NewTrainingEnrollmentClient(cfg),
+		TrainingEvaluation:   NewTrainingEvaluationClient(cfg),
+		UserRoleAssignment:   NewUserRoleAssignmentClient(cfg),
+		WithHoldingTax:       NewWithHoldingTaxClient(cfg),
+		WorkShift:            NewWorkShiftClient(cfg),
+		WorkShiftSchedule:    NewWorkShiftScheduleClient(cfg),
+		WorkersUnion:         NewWorkersUnionClient(cfg),
 	}, nil
 }
 
@@ -553,90 +588,97 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                 ctx,
-		config:              cfg,
-		Advance:             NewAdvanceClient(cfg),
-		ApiRequestMetric:    NewApiRequestMetricClient(cfg),
-		AppSetting:          NewAppSettingClient(cfg),
-		Application:         NewApplicationClient(cfg),
-		Appraisal:           NewAppraisalClient(cfg),
-		AppraisalCycle:      NewAppraisalCycleClient(cfg),
-		AppraisalQuestion:   NewAppraisalQuestionClient(cfg),
-		AppraisalResponse:   NewAppraisalResponseClient(cfg),
-		AppraisalTemplate:   NewAppraisalTemplateClient(cfg),
-		AttendanceRecord:    NewAttendanceRecordClient(cfg),
-		AttendanceRule:      NewAttendanceRuleClient(cfg),
-		AuthOutlet:          NewAuthOutletClient(cfg),
-		AuthTenant:          NewAuthTenantClient(cfg),
-		BenefitTax:          NewBenefitTaxClient(cfg),
-		Candidate:           NewCandidateClient(cfg),
-		ClaimItem:           NewClaimItemClient(cfg),
-		ContactDetails:      NewContactDetailsClient(cfg),
-		Contract:            NewContractClient(cfg),
-		CustomUser:          NewCustomUserClient(cfg),
-		Department:          NewDepartmentClient(cfg),
-		ESSSettings:         NewESSSettingsClient(cfg),
-		Employee:            NewEmployeeClient(cfg),
-		EmployeeBankAccount: NewEmployeeBankAccountClient(cfg),
-		EmployeeBenefit:     NewEmployeeBenefitClient(cfg),
-		EmployeeDocument:    NewEmployeeDocumentClient(cfg),
-		EmployeeLoan:        NewEmployeeLoanClient(cfg),
-		EmployeeMetric:      NewEmployeeMetricClient(cfg),
-		EmployeeOnboarding:  NewEmployeeOnboardingClient(cfg),
-		ExpenseClaim:        NewExpenseClaimClient(cfg),
-		GeneralHRSettings:   NewGeneralHRSettingsClient(cfg),
-		Goal:                NewGoalClient(cfg),
-		GoalProgress:        NewGoalProgressClient(cfg),
-		HRDetails:           NewHRDetailsClient(cfg),
-		IdempotencyKey:      NewIdempotencyKeyClient(cfg),
-		JobGroup:            NewJobGroupClient(cfg),
-		JobPosting:          NewJobPostingClient(cfg),
-		JobTitle:            NewJobTitleClient(cfg),
-		LeaveBalance:        NewLeaveBalanceClient(cfg),
-		LeaveCategory:       NewLeaveCategoryClient(cfg),
-		LeaveEntitlement:    NewLeaveEntitlementClient(cfg),
-		LeaveLog:            NewLeaveLogClient(cfg),
-		LeaveRequest:        NewLeaveRequestClient(cfg),
-		LoanType:            NewLoanTypeClient(cfg),
-		LossAndDamage:       NewLossAndDamageClient(cfg),
-		MetricCategory:      NewMetricCategoryClient(cfg),
-		MetricTarget:        NewMetricTargetClient(cfg),
-		NextOfKin:           NewNextOfKinClient(cfg),
-		OffDay:              NewOffDayClient(cfg),
-		OnboardingTask:      NewOnboardingTaskClient(cfg),
-		OutboxEvent:         NewOutboxEventClient(cfg),
-		PayrollComponent:    NewPayrollComponentClient(cfg),
-		PayrollFormula:      NewPayrollFormulaClient(cfg),
-		PayrollFormulaItem:  NewPayrollFormulaItemClient(cfg),
-		PayrollRelief:       NewPayrollReliefClient(cfg),
-		PayrollSplitRatio:   NewPayrollSplitRatioClient(cfg),
-		Payslip:             NewPayslipClient(cfg),
-		PayslipAudit:        NewPayslipAuditClient(cfg),
-		PerformanceMetric:   NewPerformanceMetricClient(cfg),
-		PerformanceReview:   NewPerformanceReviewClient(cfg),
-		Permission:          NewPermissionClient(cfg),
-		PublicHoliday:       NewPublicHolidayClient(cfg),
-		Region:              NewRegionClient(cfg),
-		RepayOption:         NewRepayOptionClient(cfg),
-		ReviewMetric:        NewReviewMetricClient(cfg),
-		Role:                NewRoleClient(cfg),
-		RolePermission:      NewRolePermissionClient(cfg),
-		SalaryDetails:       NewSalaryDetailsClient(cfg),
-		ShiftAssignment:     NewShiftAssignmentClient(cfg),
-		ShiftRoster:         NewShiftRosterClient(cfg),
-		ShiftRosterSlot:     NewShiftRosterSlotClient(cfg),
-		ShiftRotation:       NewShiftRotationClient(cfg),
-		StaffShiftOverride:  NewStaffShiftOverrideClient(cfg),
-		Timesheet:           NewTimesheetClient(cfg),
-		TimesheetEntry:      NewTimesheetEntryClient(cfg),
-		TrainingCourse:      NewTrainingCourseClient(cfg),
-		TrainingEnrollment:  NewTrainingEnrollmentClient(cfg),
-		TrainingEvaluation:  NewTrainingEvaluationClient(cfg),
-		UserRoleAssignment:  NewUserRoleAssignmentClient(cfg),
-		WithHoldingTax:      NewWithHoldingTaxClient(cfg),
-		WorkShift:           NewWorkShiftClient(cfg),
-		WorkShiftSchedule:   NewWorkShiftScheduleClient(cfg),
-		WorkersUnion:        NewWorkersUnionClient(cfg),
+		ctx:                  ctx,
+		config:               cfg,
+		Advance:              NewAdvanceClient(cfg),
+		ApiRequestMetric:     NewApiRequestMetricClient(cfg),
+		AppSetting:           NewAppSettingClient(cfg),
+		Application:          NewApplicationClient(cfg),
+		Appraisal:            NewAppraisalClient(cfg),
+		AppraisalCycle:       NewAppraisalCycleClient(cfg),
+		AppraisalQuestion:    NewAppraisalQuestionClient(cfg),
+		AppraisalResponse:    NewAppraisalResponseClient(cfg),
+		AppraisalTemplate:    NewAppraisalTemplateClient(cfg),
+		ApprovalRequest:      NewApprovalRequestClient(cfg),
+		ApprovalStepAction:   NewApprovalStepActionClient(cfg),
+		ApprovalWorkflow:     NewApprovalWorkflowClient(cfg),
+		ApprovalWorkflowStep: NewApprovalWorkflowStepClient(cfg),
+		AttendanceRecord:     NewAttendanceRecordClient(cfg),
+		AttendanceRule:       NewAttendanceRuleClient(cfg),
+		AuthOutlet:           NewAuthOutletClient(cfg),
+		AuthTenant:           NewAuthTenantClient(cfg),
+		BenefitTax:           NewBenefitTaxClient(cfg),
+		Candidate:            NewCandidateClient(cfg),
+		ClaimItem:            NewClaimItemClient(cfg),
+		ContactDetails:       NewContactDetailsClient(cfg),
+		Contract:             NewContractClient(cfg),
+		CustomUser:           NewCustomUserClient(cfg),
+		Department:           NewDepartmentClient(cfg),
+		ESSSettings:          NewESSSettingsClient(cfg),
+		Employee:             NewEmployeeClient(cfg),
+		EmployeeBankAccount:  NewEmployeeBankAccountClient(cfg),
+		EmployeeBenefit:      NewEmployeeBenefitClient(cfg),
+		EmployeeDocument:     NewEmployeeDocumentClient(cfg),
+		EmployeeLoan:         NewEmployeeLoanClient(cfg),
+		EmployeeMetric:       NewEmployeeMetricClient(cfg),
+		EmployeeOnboarding:   NewEmployeeOnboardingClient(cfg),
+		ExpenseClaim:         NewExpenseClaimClient(cfg),
+		GeneralHRSettings:    NewGeneralHRSettingsClient(cfg),
+		Goal:                 NewGoalClient(cfg),
+		GoalProgress:         NewGoalProgressClient(cfg),
+		HRDetails:            NewHRDetailsClient(cfg),
+		IdempotencyKey:       NewIdempotencyKeyClient(cfg),
+		JobGroup:             NewJobGroupClient(cfg),
+		JobPosting:           NewJobPostingClient(cfg),
+		JobTitle:             NewJobTitleClient(cfg),
+		LeaveBalance:         NewLeaveBalanceClient(cfg),
+		LeaveCategory:        NewLeaveCategoryClient(cfg),
+		LeaveEntitlement:     NewLeaveEntitlementClient(cfg),
+		LeaveLog:             NewLeaveLogClient(cfg),
+		LeaveRequest:         NewLeaveRequestClient(cfg),
+		LoanType:             NewLoanTypeClient(cfg),
+		LossAndDamage:        NewLossAndDamageClient(cfg),
+		MetricCategory:       NewMetricCategoryClient(cfg),
+		MetricTarget:         NewMetricTargetClient(cfg),
+		NextOfKin:            NewNextOfKinClient(cfg),
+		OffDay:               NewOffDayClient(cfg),
+		OnboardingTask:       NewOnboardingTaskClient(cfg),
+		OutboxEvent:          NewOutboxEventClient(cfg),
+		PayrollComponent:     NewPayrollComponentClient(cfg),
+		PayrollFormula:       NewPayrollFormulaClient(cfg),
+		PayrollFormulaItem:   NewPayrollFormulaItemClient(cfg),
+		PayrollRelief:        NewPayrollReliefClient(cfg),
+		PayrollSplitRatio:    NewPayrollSplitRatioClient(cfg),
+		Payslip:              NewPayslipClient(cfg),
+		PayslipAudit:         NewPayslipAuditClient(cfg),
+		PerformanceMetric:    NewPerformanceMetricClient(cfg),
+		PerformanceReview:    NewPerformanceReviewClient(cfg),
+		Permission:           NewPermissionClient(cfg),
+		PublicHoliday:        NewPublicHolidayClient(cfg),
+		Region:               NewRegionClient(cfg),
+		RepayOption:          NewRepayOptionClient(cfg),
+		ReviewMetric:         NewReviewMetricClient(cfg),
+		Role:                 NewRoleClient(cfg),
+		RolePermission:       NewRolePermissionClient(cfg),
+		SalaryDetails:        NewSalaryDetailsClient(cfg),
+		ShiftAssignment:      NewShiftAssignmentClient(cfg),
+		ShiftRoster:          NewShiftRosterClient(cfg),
+		ShiftRosterSlot:      NewShiftRosterSlotClient(cfg),
+		ShiftRotation:        NewShiftRotationClient(cfg),
+		StaffShiftOverride:   NewStaffShiftOverrideClient(cfg),
+		Task:                 NewTaskClient(cfg),
+		TaskComment:          NewTaskCommentClient(cfg),
+		TaskLog:              NewTaskLogClient(cfg),
+		Timesheet:            NewTimesheetClient(cfg),
+		TimesheetEntry:       NewTimesheetEntryClient(cfg),
+		TrainingCourse:       NewTrainingCourseClient(cfg),
+		TrainingEnrollment:   NewTrainingEnrollmentClient(cfg),
+		TrainingEvaluation:   NewTrainingEvaluationClient(cfg),
+		UserRoleAssignment:   NewUserRoleAssignmentClient(cfg),
+		WithHoldingTax:       NewWithHoldingTaxClient(cfg),
+		WorkShift:            NewWorkShiftClient(cfg),
+		WorkShiftSchedule:    NewWorkShiftScheduleClient(cfg),
+		WorkersUnion:         NewWorkersUnionClient(cfg),
 	}, nil
 }
 
@@ -668,23 +710,25 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Advance, c.ApiRequestMetric, c.AppSetting, c.Application, c.Appraisal,
 		c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
-		c.AppraisalTemplate, c.AttendanceRecord, c.AttendanceRule, c.AuthOutlet,
-		c.AuthTenant, c.BenefitTax, c.Candidate, c.ClaimItem, c.ContactDetails,
-		c.Contract, c.CustomUser, c.Department, c.ESSSettings, c.Employee,
-		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan,
-		c.EmployeeMetric, c.EmployeeOnboarding, c.ExpenseClaim, c.GeneralHRSettings,
-		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
-		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
-		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
-		c.MetricTarget, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
-		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
-		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PerformanceMetric,
-		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
-		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
-		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
-		c.Timesheet, c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment,
-		c.TrainingEvaluation, c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift,
-		c.WorkShiftSchedule, c.WorkersUnion,
+		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
+		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
+		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.BenefitTax, c.Candidate,
+		c.ClaimItem, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
+		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
+		c.EmployeeDocument, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
+		c.ExpenseClaim, c.GeneralHRSettings, c.Goal, c.GoalProgress, c.HRDetails,
+		c.IdempotencyKey, c.JobGroup, c.JobPosting, c.JobTitle, c.LeaveBalance,
+		c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog, c.LeaveRequest, c.LoanType,
+		c.LossAndDamage, c.MetricCategory, c.MetricTarget, c.NextOfKin, c.OffDay,
+		c.OnboardingTask, c.OutboxEvent, c.PayrollComponent, c.PayrollFormula,
+		c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio, c.Payslip,
+		c.PayslipAudit, c.PerformanceMetric, c.PerformanceReview, c.Permission,
+		c.PublicHoliday, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
+		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
+		c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride, c.Task,
+		c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry, c.TrainingCourse,
+		c.TrainingEnrollment, c.TrainingEvaluation, c.UserRoleAssignment,
+		c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule, c.WorkersUnion,
 	} {
 		n.Use(hooks...)
 	}
@@ -696,23 +740,25 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Advance, c.ApiRequestMetric, c.AppSetting, c.Application, c.Appraisal,
 		c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
-		c.AppraisalTemplate, c.AttendanceRecord, c.AttendanceRule, c.AuthOutlet,
-		c.AuthTenant, c.BenefitTax, c.Candidate, c.ClaimItem, c.ContactDetails,
-		c.Contract, c.CustomUser, c.Department, c.ESSSettings, c.Employee,
-		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan,
-		c.EmployeeMetric, c.EmployeeOnboarding, c.ExpenseClaim, c.GeneralHRSettings,
-		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
-		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
-		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
-		c.MetricTarget, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
-		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
-		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PerformanceMetric,
-		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
-		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
-		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
-		c.Timesheet, c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment,
-		c.TrainingEvaluation, c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift,
-		c.WorkShiftSchedule, c.WorkersUnion,
+		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
+		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
+		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.BenefitTax, c.Candidate,
+		c.ClaimItem, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
+		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
+		c.EmployeeDocument, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
+		c.ExpenseClaim, c.GeneralHRSettings, c.Goal, c.GoalProgress, c.HRDetails,
+		c.IdempotencyKey, c.JobGroup, c.JobPosting, c.JobTitle, c.LeaveBalance,
+		c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog, c.LeaveRequest, c.LoanType,
+		c.LossAndDamage, c.MetricCategory, c.MetricTarget, c.NextOfKin, c.OffDay,
+		c.OnboardingTask, c.OutboxEvent, c.PayrollComponent, c.PayrollFormula,
+		c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio, c.Payslip,
+		c.PayslipAudit, c.PerformanceMetric, c.PerformanceReview, c.Permission,
+		c.PublicHoliday, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
+		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
+		c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride, c.Task,
+		c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry, c.TrainingCourse,
+		c.TrainingEnrollment, c.TrainingEvaluation, c.UserRoleAssignment,
+		c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule, c.WorkersUnion,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -739,6 +785,14 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.AppraisalResponse.mutate(ctx, m)
 	case *AppraisalTemplateMutation:
 		return c.AppraisalTemplate.mutate(ctx, m)
+	case *ApprovalRequestMutation:
+		return c.ApprovalRequest.mutate(ctx, m)
+	case *ApprovalStepActionMutation:
+		return c.ApprovalStepAction.mutate(ctx, m)
+	case *ApprovalWorkflowMutation:
+		return c.ApprovalWorkflow.mutate(ctx, m)
+	case *ApprovalWorkflowStepMutation:
+		return c.ApprovalWorkflowStep.mutate(ctx, m)
 	case *AttendanceRecordMutation:
 		return c.AttendanceRecord.mutate(ctx, m)
 	case *AttendanceRuleMutation:
@@ -865,6 +919,12 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ShiftRotation.mutate(ctx, m)
 	case *StaffShiftOverrideMutation:
 		return c.StaffShiftOverride.mutate(ctx, m)
+	case *TaskMutation:
+		return c.Task.mutate(ctx, m)
+	case *TaskCommentMutation:
+		return c.TaskComment.mutate(ctx, m)
+	case *TaskLogMutation:
+		return c.TaskLog.mutate(ctx, m)
 	case *TimesheetMutation:
 		return c.Timesheet.mutate(ctx, m)
 	case *TimesheetEntryMutation:
@@ -2084,6 +2144,602 @@ func (c *AppraisalTemplateClient) mutate(ctx context.Context, m *AppraisalTempla
 		return (&AppraisalTemplateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown AppraisalTemplate mutation op: %q", m.Op())
+	}
+}
+
+// ApprovalRequestClient is a client for the ApprovalRequest schema.
+type ApprovalRequestClient struct {
+	config
+}
+
+// NewApprovalRequestClient returns a client for the ApprovalRequest from the given config.
+func NewApprovalRequestClient(c config) *ApprovalRequestClient {
+	return &ApprovalRequestClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `approvalrequest.Hooks(f(g(h())))`.
+func (c *ApprovalRequestClient) Use(hooks ...Hook) {
+	c.hooks.ApprovalRequest = append(c.hooks.ApprovalRequest, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `approvalrequest.Intercept(f(g(h())))`.
+func (c *ApprovalRequestClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ApprovalRequest = append(c.inters.ApprovalRequest, interceptors...)
+}
+
+// Create returns a builder for creating a ApprovalRequest entity.
+func (c *ApprovalRequestClient) Create() *ApprovalRequestCreate {
+	mutation := newApprovalRequestMutation(c.config, OpCreate)
+	return &ApprovalRequestCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ApprovalRequest entities.
+func (c *ApprovalRequestClient) CreateBulk(builders ...*ApprovalRequestCreate) *ApprovalRequestCreateBulk {
+	return &ApprovalRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ApprovalRequestClient) MapCreateBulk(slice any, setFunc func(*ApprovalRequestCreate, int)) *ApprovalRequestCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ApprovalRequestCreateBulk{err: fmt.Errorf("calling to ApprovalRequestClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ApprovalRequestCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ApprovalRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ApprovalRequest.
+func (c *ApprovalRequestClient) Update() *ApprovalRequestUpdate {
+	mutation := newApprovalRequestMutation(c.config, OpUpdate)
+	return &ApprovalRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ApprovalRequestClient) UpdateOne(_m *ApprovalRequest) *ApprovalRequestUpdateOne {
+	mutation := newApprovalRequestMutation(c.config, OpUpdateOne, withApprovalRequest(_m))
+	return &ApprovalRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ApprovalRequestClient) UpdateOneID(id uuid.UUID) *ApprovalRequestUpdateOne {
+	mutation := newApprovalRequestMutation(c.config, OpUpdateOne, withApprovalRequestID(id))
+	return &ApprovalRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ApprovalRequest.
+func (c *ApprovalRequestClient) Delete() *ApprovalRequestDelete {
+	mutation := newApprovalRequestMutation(c.config, OpDelete)
+	return &ApprovalRequestDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ApprovalRequestClient) DeleteOne(_m *ApprovalRequest) *ApprovalRequestDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ApprovalRequestClient) DeleteOneID(id uuid.UUID) *ApprovalRequestDeleteOne {
+	builder := c.Delete().Where(approvalrequest.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ApprovalRequestDeleteOne{builder}
+}
+
+// Query returns a query builder for ApprovalRequest.
+func (c *ApprovalRequestClient) Query() *ApprovalRequestQuery {
+	return &ApprovalRequestQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeApprovalRequest},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ApprovalRequest entity by its id.
+func (c *ApprovalRequestClient) Get(ctx context.Context, id uuid.UUID) (*ApprovalRequest, error) {
+	return c.Query().Where(approvalrequest.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ApprovalRequestClient) GetX(ctx context.Context, id uuid.UUID) *ApprovalRequest {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryActions queries the actions edge of a ApprovalRequest.
+func (c *ApprovalRequestClient) QueryActions(_m *ApprovalRequest) *ApprovalStepActionQuery {
+	query := (&ApprovalStepActionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(approvalrequest.Table, approvalrequest.FieldID, id),
+			sqlgraph.To(approvalstepaction.Table, approvalstepaction.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, approvalrequest.ActionsTable, approvalrequest.ActionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ApprovalRequestClient) Hooks() []Hook {
+	return c.hooks.ApprovalRequest
+}
+
+// Interceptors returns the client interceptors.
+func (c *ApprovalRequestClient) Interceptors() []Interceptor {
+	return c.inters.ApprovalRequest
+}
+
+func (c *ApprovalRequestClient) mutate(ctx context.Context, m *ApprovalRequestMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ApprovalRequestCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ApprovalRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ApprovalRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ApprovalRequestDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ApprovalRequest mutation op: %q", m.Op())
+	}
+}
+
+// ApprovalStepActionClient is a client for the ApprovalStepAction schema.
+type ApprovalStepActionClient struct {
+	config
+}
+
+// NewApprovalStepActionClient returns a client for the ApprovalStepAction from the given config.
+func NewApprovalStepActionClient(c config) *ApprovalStepActionClient {
+	return &ApprovalStepActionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `approvalstepaction.Hooks(f(g(h())))`.
+func (c *ApprovalStepActionClient) Use(hooks ...Hook) {
+	c.hooks.ApprovalStepAction = append(c.hooks.ApprovalStepAction, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `approvalstepaction.Intercept(f(g(h())))`.
+func (c *ApprovalStepActionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ApprovalStepAction = append(c.inters.ApprovalStepAction, interceptors...)
+}
+
+// Create returns a builder for creating a ApprovalStepAction entity.
+func (c *ApprovalStepActionClient) Create() *ApprovalStepActionCreate {
+	mutation := newApprovalStepActionMutation(c.config, OpCreate)
+	return &ApprovalStepActionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ApprovalStepAction entities.
+func (c *ApprovalStepActionClient) CreateBulk(builders ...*ApprovalStepActionCreate) *ApprovalStepActionCreateBulk {
+	return &ApprovalStepActionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ApprovalStepActionClient) MapCreateBulk(slice any, setFunc func(*ApprovalStepActionCreate, int)) *ApprovalStepActionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ApprovalStepActionCreateBulk{err: fmt.Errorf("calling to ApprovalStepActionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ApprovalStepActionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ApprovalStepActionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ApprovalStepAction.
+func (c *ApprovalStepActionClient) Update() *ApprovalStepActionUpdate {
+	mutation := newApprovalStepActionMutation(c.config, OpUpdate)
+	return &ApprovalStepActionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ApprovalStepActionClient) UpdateOne(_m *ApprovalStepAction) *ApprovalStepActionUpdateOne {
+	mutation := newApprovalStepActionMutation(c.config, OpUpdateOne, withApprovalStepAction(_m))
+	return &ApprovalStepActionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ApprovalStepActionClient) UpdateOneID(id uuid.UUID) *ApprovalStepActionUpdateOne {
+	mutation := newApprovalStepActionMutation(c.config, OpUpdateOne, withApprovalStepActionID(id))
+	return &ApprovalStepActionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ApprovalStepAction.
+func (c *ApprovalStepActionClient) Delete() *ApprovalStepActionDelete {
+	mutation := newApprovalStepActionMutation(c.config, OpDelete)
+	return &ApprovalStepActionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ApprovalStepActionClient) DeleteOne(_m *ApprovalStepAction) *ApprovalStepActionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ApprovalStepActionClient) DeleteOneID(id uuid.UUID) *ApprovalStepActionDeleteOne {
+	builder := c.Delete().Where(approvalstepaction.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ApprovalStepActionDeleteOne{builder}
+}
+
+// Query returns a query builder for ApprovalStepAction.
+func (c *ApprovalStepActionClient) Query() *ApprovalStepActionQuery {
+	return &ApprovalStepActionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeApprovalStepAction},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ApprovalStepAction entity by its id.
+func (c *ApprovalStepActionClient) Get(ctx context.Context, id uuid.UUID) (*ApprovalStepAction, error) {
+	return c.Query().Where(approvalstepaction.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ApprovalStepActionClient) GetX(ctx context.Context, id uuid.UUID) *ApprovalStepAction {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryRequest queries the request edge of a ApprovalStepAction.
+func (c *ApprovalStepActionClient) QueryRequest(_m *ApprovalStepAction) *ApprovalRequestQuery {
+	query := (&ApprovalRequestClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(approvalstepaction.Table, approvalstepaction.FieldID, id),
+			sqlgraph.To(approvalrequest.Table, approvalrequest.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, approvalstepaction.RequestTable, approvalstepaction.RequestColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ApprovalStepActionClient) Hooks() []Hook {
+	return c.hooks.ApprovalStepAction
+}
+
+// Interceptors returns the client interceptors.
+func (c *ApprovalStepActionClient) Interceptors() []Interceptor {
+	return c.inters.ApprovalStepAction
+}
+
+func (c *ApprovalStepActionClient) mutate(ctx context.Context, m *ApprovalStepActionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ApprovalStepActionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ApprovalStepActionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ApprovalStepActionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ApprovalStepActionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ApprovalStepAction mutation op: %q", m.Op())
+	}
+}
+
+// ApprovalWorkflowClient is a client for the ApprovalWorkflow schema.
+type ApprovalWorkflowClient struct {
+	config
+}
+
+// NewApprovalWorkflowClient returns a client for the ApprovalWorkflow from the given config.
+func NewApprovalWorkflowClient(c config) *ApprovalWorkflowClient {
+	return &ApprovalWorkflowClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `approvalworkflow.Hooks(f(g(h())))`.
+func (c *ApprovalWorkflowClient) Use(hooks ...Hook) {
+	c.hooks.ApprovalWorkflow = append(c.hooks.ApprovalWorkflow, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `approvalworkflow.Intercept(f(g(h())))`.
+func (c *ApprovalWorkflowClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ApprovalWorkflow = append(c.inters.ApprovalWorkflow, interceptors...)
+}
+
+// Create returns a builder for creating a ApprovalWorkflow entity.
+func (c *ApprovalWorkflowClient) Create() *ApprovalWorkflowCreate {
+	mutation := newApprovalWorkflowMutation(c.config, OpCreate)
+	return &ApprovalWorkflowCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ApprovalWorkflow entities.
+func (c *ApprovalWorkflowClient) CreateBulk(builders ...*ApprovalWorkflowCreate) *ApprovalWorkflowCreateBulk {
+	return &ApprovalWorkflowCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ApprovalWorkflowClient) MapCreateBulk(slice any, setFunc func(*ApprovalWorkflowCreate, int)) *ApprovalWorkflowCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ApprovalWorkflowCreateBulk{err: fmt.Errorf("calling to ApprovalWorkflowClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ApprovalWorkflowCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ApprovalWorkflowCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ApprovalWorkflow.
+func (c *ApprovalWorkflowClient) Update() *ApprovalWorkflowUpdate {
+	mutation := newApprovalWorkflowMutation(c.config, OpUpdate)
+	return &ApprovalWorkflowUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ApprovalWorkflowClient) UpdateOne(_m *ApprovalWorkflow) *ApprovalWorkflowUpdateOne {
+	mutation := newApprovalWorkflowMutation(c.config, OpUpdateOne, withApprovalWorkflow(_m))
+	return &ApprovalWorkflowUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ApprovalWorkflowClient) UpdateOneID(id uuid.UUID) *ApprovalWorkflowUpdateOne {
+	mutation := newApprovalWorkflowMutation(c.config, OpUpdateOne, withApprovalWorkflowID(id))
+	return &ApprovalWorkflowUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ApprovalWorkflow.
+func (c *ApprovalWorkflowClient) Delete() *ApprovalWorkflowDelete {
+	mutation := newApprovalWorkflowMutation(c.config, OpDelete)
+	return &ApprovalWorkflowDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ApprovalWorkflowClient) DeleteOne(_m *ApprovalWorkflow) *ApprovalWorkflowDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ApprovalWorkflowClient) DeleteOneID(id uuid.UUID) *ApprovalWorkflowDeleteOne {
+	builder := c.Delete().Where(approvalworkflow.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ApprovalWorkflowDeleteOne{builder}
+}
+
+// Query returns a query builder for ApprovalWorkflow.
+func (c *ApprovalWorkflowClient) Query() *ApprovalWorkflowQuery {
+	return &ApprovalWorkflowQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeApprovalWorkflow},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ApprovalWorkflow entity by its id.
+func (c *ApprovalWorkflowClient) Get(ctx context.Context, id uuid.UUID) (*ApprovalWorkflow, error) {
+	return c.Query().Where(approvalworkflow.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ApprovalWorkflowClient) GetX(ctx context.Context, id uuid.UUID) *ApprovalWorkflow {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QuerySteps queries the steps edge of a ApprovalWorkflow.
+func (c *ApprovalWorkflowClient) QuerySteps(_m *ApprovalWorkflow) *ApprovalWorkflowStepQuery {
+	query := (&ApprovalWorkflowStepClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(approvalworkflow.Table, approvalworkflow.FieldID, id),
+			sqlgraph.To(approvalworkflowstep.Table, approvalworkflowstep.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, approvalworkflow.StepsTable, approvalworkflow.StepsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ApprovalWorkflowClient) Hooks() []Hook {
+	return c.hooks.ApprovalWorkflow
+}
+
+// Interceptors returns the client interceptors.
+func (c *ApprovalWorkflowClient) Interceptors() []Interceptor {
+	return c.inters.ApprovalWorkflow
+}
+
+func (c *ApprovalWorkflowClient) mutate(ctx context.Context, m *ApprovalWorkflowMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ApprovalWorkflowCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ApprovalWorkflowUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ApprovalWorkflowUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ApprovalWorkflowDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ApprovalWorkflow mutation op: %q", m.Op())
+	}
+}
+
+// ApprovalWorkflowStepClient is a client for the ApprovalWorkflowStep schema.
+type ApprovalWorkflowStepClient struct {
+	config
+}
+
+// NewApprovalWorkflowStepClient returns a client for the ApprovalWorkflowStep from the given config.
+func NewApprovalWorkflowStepClient(c config) *ApprovalWorkflowStepClient {
+	return &ApprovalWorkflowStepClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `approvalworkflowstep.Hooks(f(g(h())))`.
+func (c *ApprovalWorkflowStepClient) Use(hooks ...Hook) {
+	c.hooks.ApprovalWorkflowStep = append(c.hooks.ApprovalWorkflowStep, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `approvalworkflowstep.Intercept(f(g(h())))`.
+func (c *ApprovalWorkflowStepClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ApprovalWorkflowStep = append(c.inters.ApprovalWorkflowStep, interceptors...)
+}
+
+// Create returns a builder for creating a ApprovalWorkflowStep entity.
+func (c *ApprovalWorkflowStepClient) Create() *ApprovalWorkflowStepCreate {
+	mutation := newApprovalWorkflowStepMutation(c.config, OpCreate)
+	return &ApprovalWorkflowStepCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ApprovalWorkflowStep entities.
+func (c *ApprovalWorkflowStepClient) CreateBulk(builders ...*ApprovalWorkflowStepCreate) *ApprovalWorkflowStepCreateBulk {
+	return &ApprovalWorkflowStepCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ApprovalWorkflowStepClient) MapCreateBulk(slice any, setFunc func(*ApprovalWorkflowStepCreate, int)) *ApprovalWorkflowStepCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ApprovalWorkflowStepCreateBulk{err: fmt.Errorf("calling to ApprovalWorkflowStepClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ApprovalWorkflowStepCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ApprovalWorkflowStepCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ApprovalWorkflowStep.
+func (c *ApprovalWorkflowStepClient) Update() *ApprovalWorkflowStepUpdate {
+	mutation := newApprovalWorkflowStepMutation(c.config, OpUpdate)
+	return &ApprovalWorkflowStepUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ApprovalWorkflowStepClient) UpdateOne(_m *ApprovalWorkflowStep) *ApprovalWorkflowStepUpdateOne {
+	mutation := newApprovalWorkflowStepMutation(c.config, OpUpdateOne, withApprovalWorkflowStep(_m))
+	return &ApprovalWorkflowStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ApprovalWorkflowStepClient) UpdateOneID(id uuid.UUID) *ApprovalWorkflowStepUpdateOne {
+	mutation := newApprovalWorkflowStepMutation(c.config, OpUpdateOne, withApprovalWorkflowStepID(id))
+	return &ApprovalWorkflowStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ApprovalWorkflowStep.
+func (c *ApprovalWorkflowStepClient) Delete() *ApprovalWorkflowStepDelete {
+	mutation := newApprovalWorkflowStepMutation(c.config, OpDelete)
+	return &ApprovalWorkflowStepDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ApprovalWorkflowStepClient) DeleteOne(_m *ApprovalWorkflowStep) *ApprovalWorkflowStepDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ApprovalWorkflowStepClient) DeleteOneID(id uuid.UUID) *ApprovalWorkflowStepDeleteOne {
+	builder := c.Delete().Where(approvalworkflowstep.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ApprovalWorkflowStepDeleteOne{builder}
+}
+
+// Query returns a query builder for ApprovalWorkflowStep.
+func (c *ApprovalWorkflowStepClient) Query() *ApprovalWorkflowStepQuery {
+	return &ApprovalWorkflowStepQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeApprovalWorkflowStep},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ApprovalWorkflowStep entity by its id.
+func (c *ApprovalWorkflowStepClient) Get(ctx context.Context, id uuid.UUID) (*ApprovalWorkflowStep, error) {
+	return c.Query().Where(approvalworkflowstep.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ApprovalWorkflowStepClient) GetX(ctx context.Context, id uuid.UUID) *ApprovalWorkflowStep {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryWorkflow queries the workflow edge of a ApprovalWorkflowStep.
+func (c *ApprovalWorkflowStepClient) QueryWorkflow(_m *ApprovalWorkflowStep) *ApprovalWorkflowQuery {
+	query := (&ApprovalWorkflowClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(approvalworkflowstep.Table, approvalworkflowstep.FieldID, id),
+			sqlgraph.To(approvalworkflow.Table, approvalworkflow.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, approvalworkflowstep.WorkflowTable, approvalworkflowstep.WorkflowColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ApprovalWorkflowStepClient) Hooks() []Hook {
+	return c.hooks.ApprovalWorkflowStep
+}
+
+// Interceptors returns the client interceptors.
+func (c *ApprovalWorkflowStepClient) Interceptors() []Interceptor {
+	return c.inters.ApprovalWorkflowStep
+}
+
+func (c *ApprovalWorkflowStepClient) mutate(ctx context.Context, m *ApprovalWorkflowStepMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ApprovalWorkflowStepCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ApprovalWorkflowStepUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ApprovalWorkflowStepUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ApprovalWorkflowStepDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ApprovalWorkflowStep mutation op: %q", m.Op())
 	}
 }
 
@@ -10626,6 +11282,469 @@ func (c *StaffShiftOverrideClient) mutate(ctx context.Context, m *StaffShiftOver
 	}
 }
 
+// TaskClient is a client for the Task schema.
+type TaskClient struct {
+	config
+}
+
+// NewTaskClient returns a client for the Task from the given config.
+func NewTaskClient(c config) *TaskClient {
+	return &TaskClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `task.Hooks(f(g(h())))`.
+func (c *TaskClient) Use(hooks ...Hook) {
+	c.hooks.Task = append(c.hooks.Task, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `task.Intercept(f(g(h())))`.
+func (c *TaskClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Task = append(c.inters.Task, interceptors...)
+}
+
+// Create returns a builder for creating a Task entity.
+func (c *TaskClient) Create() *TaskCreate {
+	mutation := newTaskMutation(c.config, OpCreate)
+	return &TaskCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Task entities.
+func (c *TaskClient) CreateBulk(builders ...*TaskCreate) *TaskCreateBulk {
+	return &TaskCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskClient) MapCreateBulk(slice any, setFunc func(*TaskCreate, int)) *TaskCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskCreateBulk{err: fmt.Errorf("calling to TaskClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Task.
+func (c *TaskClient) Update() *TaskUpdate {
+	mutation := newTaskMutation(c.config, OpUpdate)
+	return &TaskUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskClient) UpdateOne(_m *Task) *TaskUpdateOne {
+	mutation := newTaskMutation(c.config, OpUpdateOne, withTask(_m))
+	return &TaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskClient) UpdateOneID(id uuid.UUID) *TaskUpdateOne {
+	mutation := newTaskMutation(c.config, OpUpdateOne, withTaskID(id))
+	return &TaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Task.
+func (c *TaskClient) Delete() *TaskDelete {
+	mutation := newTaskMutation(c.config, OpDelete)
+	return &TaskDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskClient) DeleteOne(_m *Task) *TaskDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskClient) DeleteOneID(id uuid.UUID) *TaskDeleteOne {
+	builder := c.Delete().Where(task.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskDeleteOne{builder}
+}
+
+// Query returns a query builder for Task.
+func (c *TaskClient) Query() *TaskQuery {
+	return &TaskQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTask},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Task entity by its id.
+func (c *TaskClient) Get(ctx context.Context, id uuid.UUID) (*Task, error) {
+	return c.Query().Where(task.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskClient) GetX(ctx context.Context, id uuid.UUID) *Task {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryComments queries the comments edge of a Task.
+func (c *TaskClient) QueryComments(_m *Task) *TaskCommentQuery {
+	query := (&TaskCommentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(taskcomment.Table, taskcomment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.CommentsTable, task.CommentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryLogs queries the logs edge of a Task.
+func (c *TaskClient) QueryLogs(_m *Task) *TaskLogQuery {
+	query := (&TaskLogClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(task.Table, task.FieldID, id),
+			sqlgraph.To(tasklog.Table, tasklog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, task.LogsTable, task.LogsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TaskClient) Hooks() []Hook {
+	return c.hooks.Task
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskClient) Interceptors() []Interceptor {
+	return c.inters.Task
+}
+
+func (c *TaskClient) mutate(ctx context.Context, m *TaskMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Task mutation op: %q", m.Op())
+	}
+}
+
+// TaskCommentClient is a client for the TaskComment schema.
+type TaskCommentClient struct {
+	config
+}
+
+// NewTaskCommentClient returns a client for the TaskComment from the given config.
+func NewTaskCommentClient(c config) *TaskCommentClient {
+	return &TaskCommentClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `taskcomment.Hooks(f(g(h())))`.
+func (c *TaskCommentClient) Use(hooks ...Hook) {
+	c.hooks.TaskComment = append(c.hooks.TaskComment, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `taskcomment.Intercept(f(g(h())))`.
+func (c *TaskCommentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TaskComment = append(c.inters.TaskComment, interceptors...)
+}
+
+// Create returns a builder for creating a TaskComment entity.
+func (c *TaskCommentClient) Create() *TaskCommentCreate {
+	mutation := newTaskCommentMutation(c.config, OpCreate)
+	return &TaskCommentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TaskComment entities.
+func (c *TaskCommentClient) CreateBulk(builders ...*TaskCommentCreate) *TaskCommentCreateBulk {
+	return &TaskCommentCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskCommentClient) MapCreateBulk(slice any, setFunc func(*TaskCommentCreate, int)) *TaskCommentCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskCommentCreateBulk{err: fmt.Errorf("calling to TaskCommentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskCommentCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskCommentCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TaskComment.
+func (c *TaskCommentClient) Update() *TaskCommentUpdate {
+	mutation := newTaskCommentMutation(c.config, OpUpdate)
+	return &TaskCommentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskCommentClient) UpdateOne(_m *TaskComment) *TaskCommentUpdateOne {
+	mutation := newTaskCommentMutation(c.config, OpUpdateOne, withTaskComment(_m))
+	return &TaskCommentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskCommentClient) UpdateOneID(id uuid.UUID) *TaskCommentUpdateOne {
+	mutation := newTaskCommentMutation(c.config, OpUpdateOne, withTaskCommentID(id))
+	return &TaskCommentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TaskComment.
+func (c *TaskCommentClient) Delete() *TaskCommentDelete {
+	mutation := newTaskCommentMutation(c.config, OpDelete)
+	return &TaskCommentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskCommentClient) DeleteOne(_m *TaskComment) *TaskCommentDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskCommentClient) DeleteOneID(id uuid.UUID) *TaskCommentDeleteOne {
+	builder := c.Delete().Where(taskcomment.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskCommentDeleteOne{builder}
+}
+
+// Query returns a query builder for TaskComment.
+func (c *TaskCommentClient) Query() *TaskCommentQuery {
+	return &TaskCommentQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTaskComment},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TaskComment entity by its id.
+func (c *TaskCommentClient) Get(ctx context.Context, id uuid.UUID) (*TaskComment, error) {
+	return c.Query().Where(taskcomment.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskCommentClient) GetX(ctx context.Context, id uuid.UUID) *TaskComment {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTask queries the task edge of a TaskComment.
+func (c *TaskCommentClient) QueryTask(_m *TaskComment) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(taskcomment.Table, taskcomment.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, taskcomment.TaskTable, taskcomment.TaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TaskCommentClient) Hooks() []Hook {
+	return c.hooks.TaskComment
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskCommentClient) Interceptors() []Interceptor {
+	return c.inters.TaskComment
+}
+
+func (c *TaskCommentClient) mutate(ctx context.Context, m *TaskCommentMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskCommentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskCommentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskCommentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskCommentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TaskComment mutation op: %q", m.Op())
+	}
+}
+
+// TaskLogClient is a client for the TaskLog schema.
+type TaskLogClient struct {
+	config
+}
+
+// NewTaskLogClient returns a client for the TaskLog from the given config.
+func NewTaskLogClient(c config) *TaskLogClient {
+	return &TaskLogClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `tasklog.Hooks(f(g(h())))`.
+func (c *TaskLogClient) Use(hooks ...Hook) {
+	c.hooks.TaskLog = append(c.hooks.TaskLog, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `tasklog.Intercept(f(g(h())))`.
+func (c *TaskLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TaskLog = append(c.inters.TaskLog, interceptors...)
+}
+
+// Create returns a builder for creating a TaskLog entity.
+func (c *TaskLogClient) Create() *TaskLogCreate {
+	mutation := newTaskLogMutation(c.config, OpCreate)
+	return &TaskLogCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TaskLog entities.
+func (c *TaskLogClient) CreateBulk(builders ...*TaskLogCreate) *TaskLogCreateBulk {
+	return &TaskLogCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskLogClient) MapCreateBulk(slice any, setFunc func(*TaskLogCreate, int)) *TaskLogCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskLogCreateBulk{err: fmt.Errorf("calling to TaskLogClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskLogCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskLogCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TaskLog.
+func (c *TaskLogClient) Update() *TaskLogUpdate {
+	mutation := newTaskLogMutation(c.config, OpUpdate)
+	return &TaskLogUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskLogClient) UpdateOne(_m *TaskLog) *TaskLogUpdateOne {
+	mutation := newTaskLogMutation(c.config, OpUpdateOne, withTaskLog(_m))
+	return &TaskLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskLogClient) UpdateOneID(id uuid.UUID) *TaskLogUpdateOne {
+	mutation := newTaskLogMutation(c.config, OpUpdateOne, withTaskLogID(id))
+	return &TaskLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TaskLog.
+func (c *TaskLogClient) Delete() *TaskLogDelete {
+	mutation := newTaskLogMutation(c.config, OpDelete)
+	return &TaskLogDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskLogClient) DeleteOne(_m *TaskLog) *TaskLogDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskLogClient) DeleteOneID(id uuid.UUID) *TaskLogDeleteOne {
+	builder := c.Delete().Where(tasklog.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskLogDeleteOne{builder}
+}
+
+// Query returns a query builder for TaskLog.
+func (c *TaskLogClient) Query() *TaskLogQuery {
+	return &TaskLogQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTaskLog},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TaskLog entity by its id.
+func (c *TaskLogClient) Get(ctx context.Context, id uuid.UUID) (*TaskLog, error) {
+	return c.Query().Where(tasklog.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskLogClient) GetX(ctx context.Context, id uuid.UUID) *TaskLog {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTask queries the task edge of a TaskLog.
+func (c *TaskLogClient) QueryTask(_m *TaskLog) *TaskQuery {
+	query := (&TaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tasklog.Table, tasklog.FieldID, id),
+			sqlgraph.To(task.Table, task.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, tasklog.TaskTable, tasklog.TaskColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TaskLogClient) Hooks() []Hook {
+	return c.hooks.TaskLog
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskLogClient) Interceptors() []Interceptor {
+	return c.inters.TaskLog
+}
+
+func (c *TaskLogClient) mutate(ctx context.Context, m *TaskLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskLogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskLogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskLogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TaskLog mutation op: %q", m.Op())
+	}
+}
+
 // TimesheetClient is a client for the Timesheet schema.
 type TimesheetClient struct {
 	config
@@ -11992,7 +13111,8 @@ func (c *WorkersUnionClient) mutate(ctx context.Context, m *WorkersUnionMutation
 type (
 	hooks struct {
 		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
-		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, AttendanceRecord,
+		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
+		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
 		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, ClaimItem,
 		ContactDetails, Contract, CustomUser, Department, ESSSettings, Employee,
 		EmployeeBankAccount, EmployeeBenefit, EmployeeDocument, EmployeeLoan,
@@ -12005,13 +13125,14 @@ type (
 		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
 		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
 		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
-		StaffShiftOverride, Timesheet, TimesheetEntry, TrainingCourse,
-		TrainingEnrollment, TrainingEvaluation, UserRoleAssignment, WithHoldingTax,
-		WorkShift, WorkShiftSchedule, WorkersUnion []ent.Hook
+		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
+		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
+		WithHoldingTax, WorkShift, WorkShiftSchedule, WorkersUnion []ent.Hook
 	}
 	inters struct {
 		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
-		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, AttendanceRecord,
+		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
+		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
 		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, ClaimItem,
 		ContactDetails, Contract, CustomUser, Department, ESSSettings, Employee,
 		EmployeeBankAccount, EmployeeBenefit, EmployeeDocument, EmployeeLoan,
@@ -12024,8 +13145,8 @@ type (
 		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
 		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
 		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
-		StaffShiftOverride, Timesheet, TimesheetEntry, TrainingCourse,
-		TrainingEnrollment, TrainingEvaluation, UserRoleAssignment, WithHoldingTax,
-		WorkShift, WorkShiftSchedule, WorkersUnion []ent.Interceptor
+		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
+		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
+		WithHoldingTax, WorkShift, WorkShiftSchedule, WorkersUnion []ent.Interceptor
 	}
 )

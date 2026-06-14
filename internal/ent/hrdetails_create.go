@@ -106,20 +106,6 @@ func (_c *HRDetailsCreate) SetNillableRegionID(v *uuid.UUID) *HRDetailsCreate {
 	return _c
 }
 
-// SetProjectID sets the "project_id" field.
-func (_c *HRDetailsCreate) SetProjectID(v uuid.UUID) *HRDetailsCreate {
-	_c.mutation.SetProjectID(v)
-	return _c
-}
-
-// SetNillableProjectID sets the "project_id" field if the given value is not nil.
-func (_c *HRDetailsCreate) SetNillableProjectID(v *uuid.UUID) *HRDetailsCreate {
-	if v != nil {
-		_c.SetProjectID(*v)
-	}
-	return _c
-}
-
 // SetEmploymentType sets the "employment_type" field.
 func (_c *HRDetailsCreate) SetEmploymentType(v string) *HRDetailsCreate {
 	_c.mutation.SetEmploymentType(v)
@@ -317,10 +303,6 @@ func (_c *HRDetailsCreate) createSpec() (*HRDetails, *sqlgraph.CreateSpec) {
 		_spec.SetField(hrdetails.FieldRegionID, field.TypeUUID, value)
 		_node.RegionID = &value
 	}
-	if value, ok := _c.mutation.ProjectID(); ok {
-		_spec.SetField(hrdetails.FieldProjectID, field.TypeUUID, value)
-		_node.ProjectID = &value
-	}
 	if value, ok := _c.mutation.EmploymentType(); ok {
 		_spec.SetField(hrdetails.FieldEmploymentType, field.TypeString, value)
 		_node.EmploymentType = value
@@ -500,24 +482,6 @@ func (u *HRDetailsUpsert) UpdateRegionID() *HRDetailsUpsert {
 // ClearRegionID clears the value of the "region_id" field.
 func (u *HRDetailsUpsert) ClearRegionID() *HRDetailsUpsert {
 	u.SetNull(hrdetails.FieldRegionID)
-	return u
-}
-
-// SetProjectID sets the "project_id" field.
-func (u *HRDetailsUpsert) SetProjectID(v uuid.UUID) *HRDetailsUpsert {
-	u.Set(hrdetails.FieldProjectID, v)
-	return u
-}
-
-// UpdateProjectID sets the "project_id" field to the value that was provided on create.
-func (u *HRDetailsUpsert) UpdateProjectID() *HRDetailsUpsert {
-	u.SetExcluded(hrdetails.FieldProjectID)
-	return u
-}
-
-// ClearProjectID clears the value of the "project_id" field.
-func (u *HRDetailsUpsert) ClearProjectID() *HRDetailsUpsert {
-	u.SetNull(hrdetails.FieldProjectID)
 	return u
 }
 
@@ -750,27 +714,6 @@ func (u *HRDetailsUpsertOne) UpdateRegionID() *HRDetailsUpsertOne {
 func (u *HRDetailsUpsertOne) ClearRegionID() *HRDetailsUpsertOne {
 	return u.Update(func(s *HRDetailsUpsert) {
 		s.ClearRegionID()
-	})
-}
-
-// SetProjectID sets the "project_id" field.
-func (u *HRDetailsUpsertOne) SetProjectID(v uuid.UUID) *HRDetailsUpsertOne {
-	return u.Update(func(s *HRDetailsUpsert) {
-		s.SetProjectID(v)
-	})
-}
-
-// UpdateProjectID sets the "project_id" field to the value that was provided on create.
-func (u *HRDetailsUpsertOne) UpdateProjectID() *HRDetailsUpsertOne {
-	return u.Update(func(s *HRDetailsUpsert) {
-		s.UpdateProjectID()
-	})
-}
-
-// ClearProjectID clears the value of the "project_id" field.
-func (u *HRDetailsUpsertOne) ClearProjectID() *HRDetailsUpsertOne {
-	return u.Update(func(s *HRDetailsUpsert) {
-		s.ClearProjectID()
 	})
 }
 
@@ -1178,27 +1121,6 @@ func (u *HRDetailsUpsertBulk) UpdateRegionID() *HRDetailsUpsertBulk {
 func (u *HRDetailsUpsertBulk) ClearRegionID() *HRDetailsUpsertBulk {
 	return u.Update(func(s *HRDetailsUpsert) {
 		s.ClearRegionID()
-	})
-}
-
-// SetProjectID sets the "project_id" field.
-func (u *HRDetailsUpsertBulk) SetProjectID(v uuid.UUID) *HRDetailsUpsertBulk {
-	return u.Update(func(s *HRDetailsUpsert) {
-		s.SetProjectID(v)
-	})
-}
-
-// UpdateProjectID sets the "project_id" field to the value that was provided on create.
-func (u *HRDetailsUpsertBulk) UpdateProjectID() *HRDetailsUpsertBulk {
-	return u.Update(func(s *HRDetailsUpsert) {
-		s.UpdateProjectID()
-	})
-}
-
-// ClearProjectID clears the value of the "project_id" field.
-func (u *HRDetailsUpsertBulk) ClearProjectID() *HRDetailsUpsertBulk {
-	return u.Update(func(s *HRDetailsUpsert) {
-		s.ClearProjectID()
 	})
 }
 

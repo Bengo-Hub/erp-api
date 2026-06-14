@@ -28,8 +28,6 @@ const (
 	FieldReportsToID = "reports_to_id"
 	// FieldRegionID holds the string denoting the region_id field in the database.
 	FieldRegionID = "region_id"
-	// FieldProjectID holds the string denoting the project_id field in the database.
-	FieldProjectID = "project_id"
 	// FieldEmploymentType holds the string denoting the employment_type field in the database.
 	FieldEmploymentType = "employment_type"
 	// FieldDateJoined holds the string denoting the date_joined field in the database.
@@ -52,7 +50,6 @@ var Columns = []string{
 	FieldHeadOfDepartmentID,
 	FieldReportsToID,
 	FieldRegionID,
-	FieldProjectID,
 	FieldEmploymentType,
 	FieldDateJoined,
 	FieldCreatedAt,
@@ -121,11 +118,6 @@ func ByReportsToID(opts ...sql.OrderTermOption) OrderOption {
 // ByRegionID orders the results by the region_id field.
 func ByRegionID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRegionID, opts...).ToFunc()
-}
-
-// ByProjectID orders the results by the project_id field.
-func ByProjectID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldProjectID, opts...).ToFunc()
 }
 
 // ByEmploymentType orders the results by the employment_type field.

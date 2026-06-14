@@ -25,7 +25,6 @@ func (HRDetails) Fields() []ent.Field {
 		field.UUID("head_of_department_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("reports_to_id", uuid.UUID{}).Optional().Nillable().Comment("Manager employee.id"),
 		field.UUID("region_id", uuid.UUID{}).Optional().Nillable(),
-		field.UUID("project_id", uuid.UUID{}).Optional().Nillable(),
 
 		field.String("employment_type").Optional().Comment("permanent | contract | casual | consultant"),
 		field.Time("date_joined").Optional().Nillable(),

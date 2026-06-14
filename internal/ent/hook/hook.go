@@ -117,6 +117,54 @@ func (f AppraisalTemplateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AppraisalTemplateMutation", m)
 }
 
+// The ApprovalRequestFunc type is an adapter to allow the use of ordinary
+// function as ApprovalRequest mutator.
+type ApprovalRequestFunc func(context.Context, *ent.ApprovalRequestMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ApprovalRequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ApprovalRequestMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ApprovalRequestMutation", m)
+}
+
+// The ApprovalStepActionFunc type is an adapter to allow the use of ordinary
+// function as ApprovalStepAction mutator.
+type ApprovalStepActionFunc func(context.Context, *ent.ApprovalStepActionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ApprovalStepActionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ApprovalStepActionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ApprovalStepActionMutation", m)
+}
+
+// The ApprovalWorkflowFunc type is an adapter to allow the use of ordinary
+// function as ApprovalWorkflow mutator.
+type ApprovalWorkflowFunc func(context.Context, *ent.ApprovalWorkflowMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ApprovalWorkflowFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ApprovalWorkflowMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ApprovalWorkflowMutation", m)
+}
+
+// The ApprovalWorkflowStepFunc type is an adapter to allow the use of ordinary
+// function as ApprovalWorkflowStep mutator.
+type ApprovalWorkflowStepFunc func(context.Context, *ent.ApprovalWorkflowStepMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ApprovalWorkflowStepFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ApprovalWorkflowStepMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ApprovalWorkflowStepMutation", m)
+}
+
 // The AttendanceRecordFunc type is an adapter to allow the use of ordinary
 // function as AttendanceRecord mutator.
 type AttendanceRecordFunc func(context.Context, *ent.AttendanceRecordMutation) (ent.Value, error)
@@ -871,6 +919,42 @@ func (f StaffShiftOverrideFunc) Mutate(ctx context.Context, m ent.Mutation) (ent
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.StaffShiftOverrideMutation", m)
+}
+
+// The TaskFunc type is an adapter to allow the use of ordinary
+// function as Task mutator.
+type TaskFunc func(context.Context, *ent.TaskMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskMutation", m)
+}
+
+// The TaskCommentFunc type is an adapter to allow the use of ordinary
+// function as TaskComment mutator.
+type TaskCommentFunc func(context.Context, *ent.TaskCommentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskCommentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskCommentMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskCommentMutation", m)
+}
+
+// The TaskLogFunc type is an adapter to allow the use of ordinary
+// function as TaskLog mutator.
+type TaskLogFunc func(context.Context, *ent.TaskLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskLogMutation", m)
 }
 
 // The TimesheetFunc type is an adapter to allow the use of ordinary

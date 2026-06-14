@@ -10,6 +10,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisal"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalresponse"
+	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 )
 
 // ListAppraisals returns appraisals filtered by tenant (+ optional cycle/employee).
@@ -78,6 +79,20 @@ func (s *Service) SetAppraisalStatus(ctx context.Context, tenantID, id uuid.UUID
 	if !ok {
 		return nil, fmt.Errorf("appraisals: invalid appraisal transition %s -> %s", a.Status, target)
 	}
+
+	// Sprint 4: route the completed->approved/rejected review through the approvals engine
+	// when the tenant has an open appraisal approval workflow. Intermediate steps keep the
+	// appraisal in `completed` until the chain finishes.
+	if a.Status == appraisal.StatusCompleted && (target == appraisal.StatusApproved || target == appraisal.StatusRejected) {
+		proceed, out, rerr := s.routeAppraisalDecision(ctx, tenantID, id, target == appraisal.StatusApproved, rejectionReason)
+		if rerr != nil {
+			return nil, rerr
+		}
+		if !proceed {
+			return out, nil
+		}
+	}
+
 	u := a.Update().SetStatus(target)
 	if rating, rerr := parseRating(overallRating); rerr != nil {
 		return nil, fmt.Errorf("appraisals: %w", rerr)
@@ -94,7 +109,50 @@ func (s *Service) SetAppraisalStatus(ctx context.Context, tenantID, id uuid.UUID
 	if err != nil {
 		return nil, fmt.Errorf("appraisals: transition: %w", err)
 	}
+
+	// On completion, open an approval request so the configured chain can review it.
+	if target == appraisal.StatusCompleted && s.approvals != nil {
+		empID := row.EmployeeID
+		_, _ = s.approvals.Submit(ctx, tenantID, approvals.SubmitInput{
+			Module:              moduleAppraisal,
+			ObjectID:            row.ID,
+			ObjectReference:     "appraisal:" + row.ID.String(),
+			RequesterEmployeeID: &empID,
+			SubmittedBy:         row.EvaluatorID,
+		})
+	}
 	return row, nil
+}
+
+// routeAppraisalDecision drives the approvals engine for an appraisal review. Returns
+// proceed=true when the caller should apply the FSM transition itself (no engine wired, no
+// open request, or the chain just reached a terminal state); proceed=false (with the
+// unchanged appraisal) when only an intermediate step was recorded.
+func (s *Service) routeAppraisalDecision(ctx context.Context, tenantID, id uuid.UUID, approve bool, comment string) (bool, *ent.Appraisal, error) {
+	if s.approvals == nil {
+		return true, nil, nil
+	}
+	apr, err := s.approvals.FindRequestForObject(ctx, tenantID, moduleAppraisal, id)
+	if ent.IsNotFound(err) {
+		return true, nil, nil
+	}
+	if err != nil {
+		return false, nil, fmt.Errorf("appraisals: find approval request: %w", err)
+	}
+	if apr.Status != "pending" {
+		return true, nil, nil
+	}
+	dec, err := s.approvals.Decide(ctx, tenantID, approvals.DecisionInput{
+		RequestID: apr.ID, Approve: approve, Comment: comment,
+	})
+	if err != nil {
+		return false, nil, fmt.Errorf("appraisals: approval decision: %w", err)
+	}
+	if approve && !dec.Finished {
+		cur, gerr := s.orm.Appraisal.Query().Where(appraisal.TenantID(tenantID), appraisal.ID(id)).Only(ctx)
+		return false, cur, gerr
+	}
+	return true, nil, nil
 }
 
 // ---- Responses ----

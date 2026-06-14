@@ -305,6 +305,145 @@ var (
 			},
 		},
 	}
+	// ApprovalRequestsColumns holds the columns for the "approval_requests" table.
+	ApprovalRequestsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "module", Type: field.TypeEnum, Enums: []string{"payroll", "leave_request", "contract", "appraisal", "performance_review", "recruitment_offer", "general"}},
+		{Name: "object_id", Type: field.TypeUUID},
+		{Name: "object_reference", Type: field.TypeString, Nullable: true},
+		{Name: "workflow_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "requester_employee_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "rejected", "cancelled"}, Default: "pending"},
+		{Name: "current_sequence", Type: field.TypeInt, Default: 1},
+		{Name: "submitted_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "decided_at", Type: field.TypeTime, Nullable: true},
+	}
+	// ApprovalRequestsTable holds the schema information for the "approval_requests" table.
+	ApprovalRequestsTable = &schema.Table{
+		Name:       "approval_requests",
+		Columns:    ApprovalRequestsColumns,
+		PrimaryKey: []*schema.Column{ApprovalRequestsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "approvalrequest_tenant_id_module_object_id",
+				Unique:  false,
+				Columns: []*schema.Column{ApprovalRequestsColumns[1], ApprovalRequestsColumns[2], ApprovalRequestsColumns[3]},
+			},
+			{
+				Name:    "approvalrequest_tenant_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{ApprovalRequestsColumns[1], ApprovalRequestsColumns[7]},
+			},
+		},
+	}
+	// ApprovalStepActionsColumns holds the columns for the "approval_step_actions" table.
+	ApprovalStepActionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "sequence", Type: field.TypeInt},
+		{Name: "name", Type: field.TypeString, Nullable: true},
+		{Name: "approver_type", Type: field.TypeEnum, Enums: []string{"user", "role", "department_head", "manager", "owner"}, Default: "role"},
+		{Name: "approver_role", Type: field.TypeString, Nullable: true},
+		{Name: "approver_employee_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "rejected", "skipped", "escalated"}, Default: "pending"},
+		{Name: "acted_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "acted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "comment", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "request_id", Type: field.TypeUUID},
+	}
+	// ApprovalStepActionsTable holds the schema information for the "approval_step_actions" table.
+	ApprovalStepActionsTable = &schema.Table{
+		Name:       "approval_step_actions",
+		Columns:    ApprovalStepActionsColumns,
+		PrimaryKey: []*schema.Column{ApprovalStepActionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "approval_step_actions_approval_requests_actions",
+				Columns:    []*schema.Column{ApprovalStepActionsColumns[12]},
+				RefColumns: []*schema.Column{ApprovalRequestsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "approvalstepaction_request_id_sequence",
+				Unique:  false,
+				Columns: []*schema.Column{ApprovalStepActionsColumns[12], ApprovalStepActionsColumns[2]},
+			},
+			{
+				Name:    "approvalstepaction_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{ApprovalStepActionsColumns[1]},
+			},
+		},
+	}
+	// ApprovalWorkflowsColumns holds the columns for the "approval_workflows" table.
+	ApprovalWorkflowsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "module", Type: field.TypeEnum, Enums: []string{"payroll", "leave_request", "contract", "appraisal", "performance_review", "recruitment_offer", "general"}},
+		{Name: "name", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// ApprovalWorkflowsTable holds the schema information for the "approval_workflows" table.
+	ApprovalWorkflowsTable = &schema.Table{
+		Name:       "approval_workflows",
+		Columns:    ApprovalWorkflowsColumns,
+		PrimaryKey: []*schema.Column{ApprovalWorkflowsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "approvalworkflow_tenant_id_module_is_active",
+				Unique:  false,
+				Columns: []*schema.Column{ApprovalWorkflowsColumns[1], ApprovalWorkflowsColumns[2], ApprovalWorkflowsColumns[5]},
+			},
+		},
+	}
+	// ApprovalWorkflowStepsColumns holds the columns for the "approval_workflow_steps" table.
+	ApprovalWorkflowStepsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "sequence", Type: field.TypeInt},
+		{Name: "name", Type: field.TypeString},
+		{Name: "approver_type", Type: field.TypeEnum, Enums: []string{"user", "role", "department_head", "manager", "owner"}, Default: "role"},
+		{Name: "approver_role", Type: field.TypeString, Nullable: true},
+		{Name: "approver_employee_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "is_optional", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "workflow_id", Type: field.TypeUUID},
+	}
+	// ApprovalWorkflowStepsTable holds the schema information for the "approval_workflow_steps" table.
+	ApprovalWorkflowStepsTable = &schema.Table{
+		Name:       "approval_workflow_steps",
+		Columns:    ApprovalWorkflowStepsColumns,
+		PrimaryKey: []*schema.Column{ApprovalWorkflowStepsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "approval_workflow_steps_approval_workflows_steps",
+				Columns:    []*schema.Column{ApprovalWorkflowStepsColumns[9]},
+				RefColumns: []*schema.Column{ApprovalWorkflowsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "approvalworkflowstep_workflow_id_sequence",
+				Unique:  true,
+				Columns: []*schema.Column{ApprovalWorkflowStepsColumns[9], ApprovalWorkflowStepsColumns[2]},
+			},
+			{
+				Name:    "approvalworkflowstep_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{ApprovalWorkflowStepsColumns[1]},
+			},
+		},
+	}
 	// AttendanceRecordsColumns holds the columns for the "attendance_records" table.
 	AttendanceRecordsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1142,7 +1281,6 @@ var (
 		{Name: "head_of_department_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "reports_to_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "region_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "project_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "employment_type", Type: field.TypeString, Nullable: true},
 		{Name: "date_joined", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
@@ -2507,6 +2645,117 @@ var (
 			},
 		},
 	}
+	// TasksColumns holds the columns for the "tasks" table.
+	TasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "title", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"todo", "in_progress", "blocked", "done", "cancelled"}, Default: "todo"},
+		{Name: "priority", Type: field.TypeEnum, Enums: []string{"low", "medium", "high", "urgent"}, Default: "medium"},
+		{Name: "assignee_employee_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "category", Type: field.TypeString, Nullable: true},
+		{Name: "progress", Type: field.TypeInt, Default: 0},
+		{Name: "due_date", Type: field.TypeTime, Nullable: true},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// TasksTable holds the schema information for the "tasks" table.
+	TasksTable = &schema.Table{
+		Name:       "tasks",
+		Columns:    TasksColumns,
+		PrimaryKey: []*schema.Column{TasksColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "task_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[1]},
+			},
+			{
+				Name:    "task_tenant_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[1], TasksColumns[4]},
+			},
+			{
+				Name:    "task_tenant_id_assignee_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[1], TasksColumns[6]},
+			},
+		},
+	}
+	// TaskCommentsColumns holds the columns for the "task_comments" table.
+	TaskCommentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "author_user_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "body", Type: field.TypeString, Size: 2147483647},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "task_id", Type: field.TypeUUID},
+	}
+	// TaskCommentsTable holds the schema information for the "task_comments" table.
+	TaskCommentsTable = &schema.Table{
+		Name:       "task_comments",
+		Columns:    TaskCommentsColumns,
+		PrimaryKey: []*schema.Column{TaskCommentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "task_comments_tasks_comments",
+				Columns:    []*schema.Column{TaskCommentsColumns[5]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "taskcomment_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskCommentsColumns[5]},
+			},
+			{
+				Name:    "taskcomment_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskCommentsColumns[1]},
+			},
+		},
+	}
+	// TaskLogsColumns holds the columns for the "task_logs" table.
+	TaskLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "action", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "user_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "task_id", Type: field.TypeUUID},
+	}
+	// TaskLogsTable holds the schema information for the "task_logs" table.
+	TaskLogsTable = &schema.Table{
+		Name:       "task_logs",
+		Columns:    TaskLogsColumns,
+		PrimaryKey: []*schema.Column{TaskLogsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "task_logs_tasks_logs",
+				Columns:    []*schema.Column{TaskLogsColumns[6]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "tasklog_task_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskLogsColumns[6]},
+			},
+			{
+				Name:    "tasklog_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskLogsColumns[1]},
+			},
+		},
+	}
 	// TimesheetsColumns holds the columns for the "timesheets" table.
 	TimesheetsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -2859,6 +3108,10 @@ var (
 		AppraisalQuestionsTable,
 		AppraisalResponsesTable,
 		AppraisalTemplatesTable,
+		ApprovalRequestsTable,
+		ApprovalStepActionsTable,
+		ApprovalWorkflowsTable,
+		ApprovalWorkflowStepsTable,
 		AttendanceRecordsTable,
 		AttendanceRulesTable,
 		AuthOutletsTable,
@@ -2922,6 +3175,9 @@ var (
 		ShiftRosterSlotsTable,
 		ShiftRotationsTable,
 		StaffShiftOverridesTable,
+		TasksTable,
+		TaskCommentsTable,
+		TaskLogsTable,
 		TimesheetsTable,
 		TimesheetEntriesTable,
 		TrainingCoursesTable,
@@ -2936,9 +3192,13 @@ var (
 )
 
 func init() {
+	ApprovalStepActionsTable.ForeignKeys[0].RefTable = ApprovalRequestsTable
+	ApprovalWorkflowStepsTable.ForeignKeys[0].RefTable = ApprovalWorkflowsTable
 	AuthOutletsTable.ForeignKeys[0].RefTable = AuthTenantsTable
 	RolePermissionsTable.ForeignKeys[0].RefTable = RolesTable
 	RolePermissionsTable.ForeignKeys[1].RefTable = PermissionsTable
+	TaskCommentsTable.ForeignKeys[0].RefTable = TasksTable
+	TaskLogsTable.ForeignKeys[0].RefTable = TasksTable
 	UserRoleAssignmentsTable.ForeignKeys[0].RefTable = CustomUsersTable
 	UserRoleAssignmentsTable.ForeignKeys[1].RefTable = RolesTable
 }

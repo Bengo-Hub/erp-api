@@ -14,14 +14,31 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalcycle"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalquestion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
+	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 )
+
+// moduleAppraisal is the approvals-engine module key for appraisal reviews.
+const moduleAppraisal = "appraisal"
+
+// Approver is the slice of the approvals engine the appraisals module needs. When a tenant
+// has configured an appraisal approval workflow, the completed->approved review routes
+// through it (Sprint 4); otherwise the FSM transition applies directly.
+type Approver interface {
+	Submit(ctx context.Context, tenantID uuid.UUID, in approvals.SubmitInput) (*ent.ApprovalRequest, error)
+	FindRequestForObject(ctx context.Context, tenantID uuid.UUID, module string, objectID uuid.UUID) (*ent.ApprovalRequest, error)
+	Decide(ctx context.Context, tenantID uuid.UUID, in approvals.DecisionInput) (*approvals.Decision, error)
+}
 
 // Service holds appraisal/goal CRUD + FSMs. Tenant-scoped.
 type Service struct {
-	orm *ent.Client
+	orm       *ent.Client
+	approvals Approver
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
+
+// SetApprovals wires the approval engine into the appraisals module (called at startup).
+func (s *Service) SetApprovals(a Approver) { s.approvals = a }
 
 // ---- Cycles ----
 
