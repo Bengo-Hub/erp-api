@@ -49,6 +49,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/platform/cache"
 	"github.com/Bengo-Hub/erp-api/internal/platform/database"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
+	"github.com/Bengo-Hub/erp-api/internal/platform/media"
 	"github.com/Bengo-Hub/erp-api/internal/services/usersync"
 	"github.com/Bengo-Hub/erp-api/internal/shared/logger"
 )
@@ -151,7 +152,8 @@ func run() error {
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher))
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
-	recruitmentHandler := handlers.NewRecruitmentHandler(log, recruitment.NewService(orm))
+	mediaStore := media.NewStore(cfg.Media.Root, cfg.Media.URLBase)
+	recruitmentHandler := handlers.NewRecruitmentHandler(log, recruitment.NewService(orm), mediaStore)
 	trainingHandler := handlers.NewTrainingHandler(log, training.NewService(orm))
 	appraisalsSvc := appraisals.NewService(orm)
 	appraisalsHandler := handlers.NewAppraisalsHandler(log, appraisalsSvc)

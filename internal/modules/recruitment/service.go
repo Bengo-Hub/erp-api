@@ -111,6 +111,25 @@ func (s *Service) CreateCandidate(ctx context.Context, tenantID uuid.UUID, in Ca
 	return row, nil
 }
 
+// GetCandidate loads one tenant-scoped candidate.
+func (s *Service) GetCandidate(ctx context.Context, tenantID, id uuid.UUID) (*ent.Candidate, error) {
+	return s.orm.Candidate.Query().Where(candidate.TenantID(tenantID), candidate.ID(id)).Only(ctx)
+}
+
+// SetCandidateResume stores the relative media path of an uploaded resume on a candidate.
+func (s *Service) SetCandidateResume(ctx context.Context, tenantID, id uuid.UUID, resumePath string) (*ent.Candidate, error) {
+	n, err := s.orm.Candidate.Update().
+		Where(candidate.TenantID(tenantID), candidate.ID(id)).
+		SetResumeURL(resumePath).Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("recruitment: set resume: %w", err)
+	}
+	if n == 0 {
+		return nil, fmt.Errorf("recruitment: candidate not found")
+	}
+	return s.GetCandidate(ctx, tenantID, id)
+}
+
 // ---- Applications ----
 
 // ListApplications returns applications filtered by tenant (+ optional job/status).
