@@ -18,6 +18,10 @@ type Tx struct {
 	ApiRequestMetric *ApiRequestMetricClient
 	// AppSetting is the client for interacting with the AppSetting builders.
 	AppSetting *AppSettingClient
+	// AttendanceRecord is the client for interacting with the AttendanceRecord builders.
+	AttendanceRecord *AttendanceRecordClient
+	// AttendanceRule is the client for interacting with the AttendanceRule builders.
+	AttendanceRule *AttendanceRuleClient
 	// AuthOutlet is the client for interacting with the AuthOutlet builders.
 	AuthOutlet *AuthOutletClient
 	// AuthTenant is the client for interacting with the AuthTenant builders.
@@ -38,6 +42,8 @@ type Tx struct {
 	CustomUser *CustomUserClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// ESSSettings is the client for interacting with the ESSSettings builders.
+	ESSSettings *ESSSettingsClient
 	// Employee is the client for interacting with the Employee builders.
 	Employee *EmployeeClient
 	// EmployeeBankAccount is the client for interacting with the EmployeeBankAccount builders.
@@ -76,6 +82,8 @@ type Tx struct {
 	LossAndDamage *LossAndDamageClient
 	// NextOfKin is the client for interacting with the NextOfKin builders.
 	NextOfKin *NextOfKinClient
+	// OffDay is the client for interacting with the OffDay builders.
+	OffDay *OffDayClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
 	// PayrollComponent is the client for interacting with the PayrollComponent builders.
@@ -108,10 +116,28 @@ type Tx struct {
 	RolePermission *RolePermissionClient
 	// SalaryDetails is the client for interacting with the SalaryDetails builders.
 	SalaryDetails *SalaryDetailsClient
+	// ShiftAssignment is the client for interacting with the ShiftAssignment builders.
+	ShiftAssignment *ShiftAssignmentClient
+	// ShiftRoster is the client for interacting with the ShiftRoster builders.
+	ShiftRoster *ShiftRosterClient
+	// ShiftRosterSlot is the client for interacting with the ShiftRosterSlot builders.
+	ShiftRosterSlot *ShiftRosterSlotClient
+	// ShiftRotation is the client for interacting with the ShiftRotation builders.
+	ShiftRotation *ShiftRotationClient
+	// StaffShiftOverride is the client for interacting with the StaffShiftOverride builders.
+	StaffShiftOverride *StaffShiftOverrideClient
+	// Timesheet is the client for interacting with the Timesheet builders.
+	Timesheet *TimesheetClient
+	// TimesheetEntry is the client for interacting with the TimesheetEntry builders.
+	TimesheetEntry *TimesheetEntryClient
 	// UserRoleAssignment is the client for interacting with the UserRoleAssignment builders.
 	UserRoleAssignment *UserRoleAssignmentClient
 	// WithHoldingTax is the client for interacting with the WithHoldingTax builders.
 	WithHoldingTax *WithHoldingTaxClient
+	// WorkShift is the client for interacting with the WorkShift builders.
+	WorkShift *WorkShiftClient
+	// WorkShiftSchedule is the client for interacting with the WorkShiftSchedule builders.
+	WorkShiftSchedule *WorkShiftScheduleClient
 	// WorkersUnion is the client for interacting with the WorkersUnion builders.
 	WorkersUnion *WorkersUnionClient
 
@@ -248,6 +274,8 @@ func (tx *Tx) init() {
 	tx.Advance = NewAdvanceClient(tx.config)
 	tx.ApiRequestMetric = NewApiRequestMetricClient(tx.config)
 	tx.AppSetting = NewAppSettingClient(tx.config)
+	tx.AttendanceRecord = NewAttendanceRecordClient(tx.config)
+	tx.AttendanceRule = NewAttendanceRuleClient(tx.config)
 	tx.AuthOutlet = NewAuthOutletClient(tx.config)
 	tx.AuthTenant = NewAuthTenantClient(tx.config)
 	tx.BankBranch = NewBankBranchClient(tx.config)
@@ -258,6 +286,7 @@ func (tx *Tx) init() {
 	tx.Contract = NewContractClient(tx.config)
 	tx.CustomUser = NewCustomUserClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
+	tx.ESSSettings = NewESSSettingsClient(tx.config)
 	tx.Employee = NewEmployeeClient(tx.config)
 	tx.EmployeeBankAccount = NewEmployeeBankAccountClient(tx.config)
 	tx.EmployeeBenefit = NewEmployeeBenefitClient(tx.config)
@@ -277,6 +306,7 @@ func (tx *Tx) init() {
 	tx.LoanType = NewLoanTypeClient(tx.config)
 	tx.LossAndDamage = NewLossAndDamageClient(tx.config)
 	tx.NextOfKin = NewNextOfKinClient(tx.config)
+	tx.OffDay = NewOffDayClient(tx.config)
 	tx.OutboxEvent = NewOutboxEventClient(tx.config)
 	tx.PayrollComponent = NewPayrollComponentClient(tx.config)
 	tx.PayrollFormula = NewPayrollFormulaClient(tx.config)
@@ -293,8 +323,17 @@ func (tx *Tx) init() {
 	tx.Role = NewRoleClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
 	tx.SalaryDetails = NewSalaryDetailsClient(tx.config)
+	tx.ShiftAssignment = NewShiftAssignmentClient(tx.config)
+	tx.ShiftRoster = NewShiftRosterClient(tx.config)
+	tx.ShiftRosterSlot = NewShiftRosterSlotClient(tx.config)
+	tx.ShiftRotation = NewShiftRotationClient(tx.config)
+	tx.StaffShiftOverride = NewStaffShiftOverrideClient(tx.config)
+	tx.Timesheet = NewTimesheetClient(tx.config)
+	tx.TimesheetEntry = NewTimesheetEntryClient(tx.config)
 	tx.UserRoleAssignment = NewUserRoleAssignmentClient(tx.config)
 	tx.WithHoldingTax = NewWithHoldingTaxClient(tx.config)
+	tx.WorkShift = NewWorkShiftClient(tx.config)
+	tx.WorkShiftSchedule = NewWorkShiftScheduleClient(tx.config)
 	tx.WorkersUnion = NewWorkersUnionClient(tx.config)
 }
 

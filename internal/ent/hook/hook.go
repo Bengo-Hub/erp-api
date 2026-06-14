@@ -45,6 +45,30 @@ func (f AppSettingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AppSettingMutation", m)
 }
 
+// The AttendanceRecordFunc type is an adapter to allow the use of ordinary
+// function as AttendanceRecord mutator.
+type AttendanceRecordFunc func(context.Context, *ent.AttendanceRecordMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AttendanceRecordFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AttendanceRecordMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttendanceRecordMutation", m)
+}
+
+// The AttendanceRuleFunc type is an adapter to allow the use of ordinary
+// function as AttendanceRule mutator.
+type AttendanceRuleFunc func(context.Context, *ent.AttendanceRuleMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AttendanceRuleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AttendanceRuleMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttendanceRuleMutation", m)
+}
+
 // The AuthOutletFunc type is an adapter to allow the use of ordinary
 // function as AuthOutlet mutator.
 type AuthOutletFunc func(context.Context, *ent.AuthOutletMutation) (ent.Value, error)
@@ -163,6 +187,18 @@ func (f DepartmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DepartmentMutation", m)
+}
+
+// The ESSSettingsFunc type is an adapter to allow the use of ordinary
+// function as ESSSettings mutator.
+type ESSSettingsFunc func(context.Context, *ent.ESSSettingsMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ESSSettingsFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ESSSettingsMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ESSSettingsMutation", m)
 }
 
 // The EmployeeFunc type is an adapter to allow the use of ordinary
@@ -393,6 +429,18 @@ func (f NextOfKinFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.NextOfKinMutation", m)
 }
 
+// The OffDayFunc type is an adapter to allow the use of ordinary
+// function as OffDay mutator.
+type OffDayFunc func(context.Context, *ent.OffDayMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f OffDayFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.OffDayMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OffDayMutation", m)
+}
+
 // The OutboxEventFunc type is an adapter to allow the use of ordinary
 // function as OutboxEvent mutator.
 type OutboxEventFunc func(context.Context, *ent.OutboxEventMutation) (ent.Value, error)
@@ -585,6 +633,90 @@ func (f SalaryDetailsFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Valu
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SalaryDetailsMutation", m)
 }
 
+// The ShiftAssignmentFunc type is an adapter to allow the use of ordinary
+// function as ShiftAssignment mutator.
+type ShiftAssignmentFunc func(context.Context, *ent.ShiftAssignmentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ShiftAssignmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ShiftAssignmentMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ShiftAssignmentMutation", m)
+}
+
+// The ShiftRosterFunc type is an adapter to allow the use of ordinary
+// function as ShiftRoster mutator.
+type ShiftRosterFunc func(context.Context, *ent.ShiftRosterMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ShiftRosterFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ShiftRosterMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ShiftRosterMutation", m)
+}
+
+// The ShiftRosterSlotFunc type is an adapter to allow the use of ordinary
+// function as ShiftRosterSlot mutator.
+type ShiftRosterSlotFunc func(context.Context, *ent.ShiftRosterSlotMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ShiftRosterSlotFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ShiftRosterSlotMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ShiftRosterSlotMutation", m)
+}
+
+// The ShiftRotationFunc type is an adapter to allow the use of ordinary
+// function as ShiftRotation mutator.
+type ShiftRotationFunc func(context.Context, *ent.ShiftRotationMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ShiftRotationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ShiftRotationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ShiftRotationMutation", m)
+}
+
+// The StaffShiftOverrideFunc type is an adapter to allow the use of ordinary
+// function as StaffShiftOverride mutator.
+type StaffShiftOverrideFunc func(context.Context, *ent.StaffShiftOverrideMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f StaffShiftOverrideFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.StaffShiftOverrideMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.StaffShiftOverrideMutation", m)
+}
+
+// The TimesheetFunc type is an adapter to allow the use of ordinary
+// function as Timesheet mutator.
+type TimesheetFunc func(context.Context, *ent.TimesheetMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TimesheetFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TimesheetMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TimesheetMutation", m)
+}
+
+// The TimesheetEntryFunc type is an adapter to allow the use of ordinary
+// function as TimesheetEntry mutator.
+type TimesheetEntryFunc func(context.Context, *ent.TimesheetEntryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TimesheetEntryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TimesheetEntryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TimesheetEntryMutation", m)
+}
+
 // The UserRoleAssignmentFunc type is an adapter to allow the use of ordinary
 // function as UserRoleAssignment mutator.
 type UserRoleAssignmentFunc func(context.Context, *ent.UserRoleAssignmentMutation) (ent.Value, error)
@@ -607,6 +739,30 @@ func (f WithHoldingTaxFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WithHoldingTaxMutation", m)
+}
+
+// The WorkShiftFunc type is an adapter to allow the use of ordinary
+// function as WorkShift mutator.
+type WorkShiftFunc func(context.Context, *ent.WorkShiftMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WorkShiftFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.WorkShiftMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WorkShiftMutation", m)
+}
+
+// The WorkShiftScheduleFunc type is an adapter to allow the use of ordinary
+// function as WorkShiftSchedule mutator.
+type WorkShiftScheduleFunc func(context.Context, *ent.WorkShiftScheduleMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WorkShiftScheduleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.WorkShiftScheduleMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WorkShiftScheduleMutation", m)
 }
 
 // The WorkersUnionFunc type is an adapter to allow the use of ordinary

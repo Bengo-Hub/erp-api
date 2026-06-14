@@ -15,6 +15,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/apirequestmetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
 	"github.com/Bengo-Hub/erp-api/internal/ent/bankbranch"
@@ -30,6 +32,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeedocument"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
+	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/expenseclaim"
 	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
@@ -44,6 +47,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
+	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/outboxevent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
@@ -60,9 +64,18 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
 	"github.com/Bengo-Hub/erp-api/internal/ent/rolepermission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
+	"github.com/Bengo-Hub/erp-api/internal/ent/shiftassignment"
+	"github.com/Bengo-Hub/erp-api/internal/ent/shiftroster"
+	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrosterslot"
+	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrotation"
+	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
+	"github.com/Bengo-Hub/erp-api/internal/ent/timesheet"
+	"github.com/Bengo-Hub/erp-api/internal/ent/timesheetentry"
 	"github.com/Bengo-Hub/erp-api/internal/ent/userroleassignment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/withholdingtax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workersunion"
+	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
+	"github.com/Bengo-Hub/erp-api/internal/ent/workshiftschedule"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -126,6 +139,8 @@ func checkColumn(t, c string) error {
 			advance.Table:             advance.ValidColumn,
 			apirequestmetric.Table:    apirequestmetric.ValidColumn,
 			appsetting.Table:          appsetting.ValidColumn,
+			attendancerecord.Table:    attendancerecord.ValidColumn,
+			attendancerule.Table:      attendancerule.ValidColumn,
 			authoutlet.Table:          authoutlet.ValidColumn,
 			authtenant.Table:          authtenant.ValidColumn,
 			bankbranch.Table:          bankbranch.ValidColumn,
@@ -136,6 +151,7 @@ func checkColumn(t, c string) error {
 			contract.Table:            contract.ValidColumn,
 			customuser.Table:          customuser.ValidColumn,
 			department.Table:          department.ValidColumn,
+			esssettings.Table:         esssettings.ValidColumn,
 			employee.Table:            employee.ValidColumn,
 			employeebankaccount.Table: employeebankaccount.ValidColumn,
 			employeebenefit.Table:     employeebenefit.ValidColumn,
@@ -155,6 +171,7 @@ func checkColumn(t, c string) error {
 			loantype.Table:            loantype.ValidColumn,
 			lossanddamage.Table:       lossanddamage.ValidColumn,
 			nextofkin.Table:           nextofkin.ValidColumn,
+			offday.Table:              offday.ValidColumn,
 			outboxevent.Table:         outboxevent.ValidColumn,
 			payrollcomponent.Table:    payrollcomponent.ValidColumn,
 			payrollformula.Table:      payrollformula.ValidColumn,
@@ -171,8 +188,17 @@ func checkColumn(t, c string) error {
 			role.Table:                role.ValidColumn,
 			rolepermission.Table:      rolepermission.ValidColumn,
 			salarydetails.Table:       salarydetails.ValidColumn,
+			shiftassignment.Table:     shiftassignment.ValidColumn,
+			shiftroster.Table:         shiftroster.ValidColumn,
+			shiftrosterslot.Table:     shiftrosterslot.ValidColumn,
+			shiftrotation.Table:       shiftrotation.ValidColumn,
+			staffshiftoverride.Table:  staffshiftoverride.ValidColumn,
+			timesheet.Table:           timesheet.ValidColumn,
+			timesheetentry.Table:      timesheetentry.ValidColumn,
 			userroleassignment.Table:  userroleassignment.ValidColumn,
 			withholdingtax.Table:      withholdingtax.ValidColumn,
+			workshift.Table:           workshift.ValidColumn,
+			workshiftschedule.Table:   workshiftschedule.ValidColumn,
 			workersunion.Table:        workersunion.ValidColumn,
 		})
 	})
