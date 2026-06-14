@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Advance is the predicate function for advance builders.
+type Advance func(*sql.Selector)
+
 // ApiRequestMetric is the predicate function for apirequestmetric builders.
 type ApiRequestMetric func(*sql.Selector)
 
@@ -24,17 +27,89 @@ type BankBranch func(*sql.Selector)
 // BankInstitution is the predicate function for bankinstitution builders.
 type BankInstitution func(*sql.Selector)
 
+// BenefitTax is the predicate function for benefittax builders.
+type BenefitTax func(*sql.Selector)
+
+// ClaimItem is the predicate function for claimitem builders.
+type ClaimItem func(*sql.Selector)
+
+// ContactDetails is the predicate function for contactdetails builders.
+type ContactDetails func(*sql.Selector)
+
+// Contract is the predicate function for contract builders.
+type Contract func(*sql.Selector)
+
 // CustomUser is the predicate function for customuser builders.
 type CustomUser func(*sql.Selector)
 
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
 
+// Employee is the predicate function for employee builders.
+type Employee func(*sql.Selector)
+
+// EmployeeBankAccount is the predicate function for employeebankaccount builders.
+type EmployeeBankAccount func(*sql.Selector)
+
+// EmployeeBenefit is the predicate function for employeebenefit builders.
+type EmployeeBenefit func(*sql.Selector)
+
+// EmployeeDocument is the predicate function for employeedocument builders.
+type EmployeeDocument func(*sql.Selector)
+
+// EmployeeLoan is the predicate function for employeeloan builders.
+type EmployeeLoan func(*sql.Selector)
+
+// ExpenseClaim is the predicate function for expenseclaim builders.
+type ExpenseClaim func(*sql.Selector)
+
+// GeneralHRSettings is the predicate function for generalhrsettings builders.
+type GeneralHRSettings func(*sql.Selector)
+
+// HRDetails is the predicate function for hrdetails builders.
+type HRDetails func(*sql.Selector)
+
 // IdempotencyKey is the predicate function for idempotencykey builders.
 type IdempotencyKey func(*sql.Selector)
 
+// JobGroup is the predicate function for jobgroup builders.
+type JobGroup func(*sql.Selector)
+
+// JobTitle is the predicate function for jobtitle builders.
+type JobTitle func(*sql.Selector)
+
+// LoanType is the predicate function for loantype builders.
+type LoanType func(*sql.Selector)
+
+// LossAndDamage is the predicate function for lossanddamage builders.
+type LossAndDamage func(*sql.Selector)
+
+// NextOfKin is the predicate function for nextofkin builders.
+type NextOfKin func(*sql.Selector)
+
 // OutboxEvent is the predicate function for outboxevent builders.
 type OutboxEvent func(*sql.Selector)
+
+// PayrollComponent is the predicate function for payrollcomponent builders.
+type PayrollComponent func(*sql.Selector)
+
+// PayrollFormula is the predicate function for payrollformula builders.
+type PayrollFormula func(*sql.Selector)
+
+// PayrollFormulaItem is the predicate function for payrollformulaitem builders.
+type PayrollFormulaItem func(*sql.Selector)
+
+// PayrollRelief is the predicate function for payrollrelief builders.
+type PayrollRelief func(*sql.Selector)
+
+// PayrollSplitRatio is the predicate function for payrollsplitratio builders.
+type PayrollSplitRatio func(*sql.Selector)
+
+// Payslip is the predicate function for payslip builders.
+type Payslip func(*sql.Selector)
+
+// PayslipAudit is the predicate function for payslipaudit builders.
+type PayslipAudit func(*sql.Selector)
 
 // Permission is the predicate function for permission builders.
 type Permission func(*sql.Selector)
@@ -45,11 +120,23 @@ type Project func(*sql.Selector)
 // Region is the predicate function for region builders.
 type Region func(*sql.Selector)
 
+// RepayOption is the predicate function for repayoption builders.
+type RepayOption func(*sql.Selector)
+
 // Role is the predicate function for role builders.
 type Role func(*sql.Selector)
 
 // RolePermission is the predicate function for rolepermission builders.
 type RolePermission func(*sql.Selector)
 
+// SalaryDetails is the predicate function for salarydetails builders.
+type SalaryDetails func(*sql.Selector)
+
 // UserRoleAssignment is the predicate function for userroleassignment builders.
 type UserRoleAssignment func(*sql.Selector)
+
+// WithHoldingTax is the predicate function for withholdingtax builders.
+type WithHoldingTax func(*sql.Selector)
+
+// WorkersUnion is the predicate function for workersunion builders.
+type WorkersUnion func(*sql.Selector)
