@@ -18,6 +18,18 @@ type Tx struct {
 	ApiRequestMetric *ApiRequestMetricClient
 	// AppSetting is the client for interacting with the AppSetting builders.
 	AppSetting *AppSettingClient
+	// Application is the client for interacting with the Application builders.
+	Application *ApplicationClient
+	// Appraisal is the client for interacting with the Appraisal builders.
+	Appraisal *AppraisalClient
+	// AppraisalCycle is the client for interacting with the AppraisalCycle builders.
+	AppraisalCycle *AppraisalCycleClient
+	// AppraisalQuestion is the client for interacting with the AppraisalQuestion builders.
+	AppraisalQuestion *AppraisalQuestionClient
+	// AppraisalResponse is the client for interacting with the AppraisalResponse builders.
+	AppraisalResponse *AppraisalResponseClient
+	// AppraisalTemplate is the client for interacting with the AppraisalTemplate builders.
+	AppraisalTemplate *AppraisalTemplateClient
 	// AttendanceRecord is the client for interacting with the AttendanceRecord builders.
 	AttendanceRecord *AttendanceRecordClient
 	// AttendanceRule is the client for interacting with the AttendanceRule builders.
@@ -32,6 +44,8 @@ type Tx struct {
 	BankInstitution *BankInstitutionClient
 	// BenefitTax is the client for interacting with the BenefitTax builders.
 	BenefitTax *BenefitTaxClient
+	// Candidate is the client for interacting with the Candidate builders.
+	Candidate *CandidateClient
 	// ClaimItem is the client for interacting with the ClaimItem builders.
 	ClaimItem *ClaimItemClient
 	// ContactDetails is the client for interacting with the ContactDetails builders.
@@ -54,16 +68,26 @@ type Tx struct {
 	EmployeeDocument *EmployeeDocumentClient
 	// EmployeeLoan is the client for interacting with the EmployeeLoan builders.
 	EmployeeLoan *EmployeeLoanClient
+	// EmployeeMetric is the client for interacting with the EmployeeMetric builders.
+	EmployeeMetric *EmployeeMetricClient
+	// EmployeeOnboarding is the client for interacting with the EmployeeOnboarding builders.
+	EmployeeOnboarding *EmployeeOnboardingClient
 	// ExpenseClaim is the client for interacting with the ExpenseClaim builders.
 	ExpenseClaim *ExpenseClaimClient
 	// GeneralHRSettings is the client for interacting with the GeneralHRSettings builders.
 	GeneralHRSettings *GeneralHRSettingsClient
+	// Goal is the client for interacting with the Goal builders.
+	Goal *GoalClient
+	// GoalProgress is the client for interacting with the GoalProgress builders.
+	GoalProgress *GoalProgressClient
 	// HRDetails is the client for interacting with the HRDetails builders.
 	HRDetails *HRDetailsClient
 	// IdempotencyKey is the client for interacting with the IdempotencyKey builders.
 	IdempotencyKey *IdempotencyKeyClient
 	// JobGroup is the client for interacting with the JobGroup builders.
 	JobGroup *JobGroupClient
+	// JobPosting is the client for interacting with the JobPosting builders.
+	JobPosting *JobPostingClient
 	// JobTitle is the client for interacting with the JobTitle builders.
 	JobTitle *JobTitleClient
 	// LeaveBalance is the client for interacting with the LeaveBalance builders.
@@ -80,10 +104,16 @@ type Tx struct {
 	LoanType *LoanTypeClient
 	// LossAndDamage is the client for interacting with the LossAndDamage builders.
 	LossAndDamage *LossAndDamageClient
+	// MetricCategory is the client for interacting with the MetricCategory builders.
+	MetricCategory *MetricCategoryClient
+	// MetricTarget is the client for interacting with the MetricTarget builders.
+	MetricTarget *MetricTargetClient
 	// NextOfKin is the client for interacting with the NextOfKin builders.
 	NextOfKin *NextOfKinClient
 	// OffDay is the client for interacting with the OffDay builders.
 	OffDay *OffDayClient
+	// OnboardingTask is the client for interacting with the OnboardingTask builders.
+	OnboardingTask *OnboardingTaskClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
 	// PayrollComponent is the client for interacting with the PayrollComponent builders.
@@ -100,6 +130,10 @@ type Tx struct {
 	Payslip *PayslipClient
 	// PayslipAudit is the client for interacting with the PayslipAudit builders.
 	PayslipAudit *PayslipAuditClient
+	// PerformanceMetric is the client for interacting with the PerformanceMetric builders.
+	PerformanceMetric *PerformanceMetricClient
+	// PerformanceReview is the client for interacting with the PerformanceReview builders.
+	PerformanceReview *PerformanceReviewClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
 	// Project is the client for interacting with the Project builders.
@@ -110,6 +144,8 @@ type Tx struct {
 	Region *RegionClient
 	// RepayOption is the client for interacting with the RepayOption builders.
 	RepayOption *RepayOptionClient
+	// ReviewMetric is the client for interacting with the ReviewMetric builders.
+	ReviewMetric *ReviewMetricClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
 	// RolePermission is the client for interacting with the RolePermission builders.
@@ -130,6 +166,12 @@ type Tx struct {
 	Timesheet *TimesheetClient
 	// TimesheetEntry is the client for interacting with the TimesheetEntry builders.
 	TimesheetEntry *TimesheetEntryClient
+	// TrainingCourse is the client for interacting with the TrainingCourse builders.
+	TrainingCourse *TrainingCourseClient
+	// TrainingEnrollment is the client for interacting with the TrainingEnrollment builders.
+	TrainingEnrollment *TrainingEnrollmentClient
+	// TrainingEvaluation is the client for interacting with the TrainingEvaluation builders.
+	TrainingEvaluation *TrainingEvaluationClient
 	// UserRoleAssignment is the client for interacting with the UserRoleAssignment builders.
 	UserRoleAssignment *UserRoleAssignmentClient
 	// WithHoldingTax is the client for interacting with the WithHoldingTax builders.
@@ -274,6 +316,12 @@ func (tx *Tx) init() {
 	tx.Advance = NewAdvanceClient(tx.config)
 	tx.ApiRequestMetric = NewApiRequestMetricClient(tx.config)
 	tx.AppSetting = NewAppSettingClient(tx.config)
+	tx.Application = NewApplicationClient(tx.config)
+	tx.Appraisal = NewAppraisalClient(tx.config)
+	tx.AppraisalCycle = NewAppraisalCycleClient(tx.config)
+	tx.AppraisalQuestion = NewAppraisalQuestionClient(tx.config)
+	tx.AppraisalResponse = NewAppraisalResponseClient(tx.config)
+	tx.AppraisalTemplate = NewAppraisalTemplateClient(tx.config)
 	tx.AttendanceRecord = NewAttendanceRecordClient(tx.config)
 	tx.AttendanceRule = NewAttendanceRuleClient(tx.config)
 	tx.AuthOutlet = NewAuthOutletClient(tx.config)
@@ -281,6 +329,7 @@ func (tx *Tx) init() {
 	tx.BankBranch = NewBankBranchClient(tx.config)
 	tx.BankInstitution = NewBankInstitutionClient(tx.config)
 	tx.BenefitTax = NewBenefitTaxClient(tx.config)
+	tx.Candidate = NewCandidateClient(tx.config)
 	tx.ClaimItem = NewClaimItemClient(tx.config)
 	tx.ContactDetails = NewContactDetailsClient(tx.config)
 	tx.Contract = NewContractClient(tx.config)
@@ -292,11 +341,16 @@ func (tx *Tx) init() {
 	tx.EmployeeBenefit = NewEmployeeBenefitClient(tx.config)
 	tx.EmployeeDocument = NewEmployeeDocumentClient(tx.config)
 	tx.EmployeeLoan = NewEmployeeLoanClient(tx.config)
+	tx.EmployeeMetric = NewEmployeeMetricClient(tx.config)
+	tx.EmployeeOnboarding = NewEmployeeOnboardingClient(tx.config)
 	tx.ExpenseClaim = NewExpenseClaimClient(tx.config)
 	tx.GeneralHRSettings = NewGeneralHRSettingsClient(tx.config)
+	tx.Goal = NewGoalClient(tx.config)
+	tx.GoalProgress = NewGoalProgressClient(tx.config)
 	tx.HRDetails = NewHRDetailsClient(tx.config)
 	tx.IdempotencyKey = NewIdempotencyKeyClient(tx.config)
 	tx.JobGroup = NewJobGroupClient(tx.config)
+	tx.JobPosting = NewJobPostingClient(tx.config)
 	tx.JobTitle = NewJobTitleClient(tx.config)
 	tx.LeaveBalance = NewLeaveBalanceClient(tx.config)
 	tx.LeaveCategory = NewLeaveCategoryClient(tx.config)
@@ -305,8 +359,11 @@ func (tx *Tx) init() {
 	tx.LeaveRequest = NewLeaveRequestClient(tx.config)
 	tx.LoanType = NewLoanTypeClient(tx.config)
 	tx.LossAndDamage = NewLossAndDamageClient(tx.config)
+	tx.MetricCategory = NewMetricCategoryClient(tx.config)
+	tx.MetricTarget = NewMetricTargetClient(tx.config)
 	tx.NextOfKin = NewNextOfKinClient(tx.config)
 	tx.OffDay = NewOffDayClient(tx.config)
+	tx.OnboardingTask = NewOnboardingTaskClient(tx.config)
 	tx.OutboxEvent = NewOutboxEventClient(tx.config)
 	tx.PayrollComponent = NewPayrollComponentClient(tx.config)
 	tx.PayrollFormula = NewPayrollFormulaClient(tx.config)
@@ -315,11 +372,14 @@ func (tx *Tx) init() {
 	tx.PayrollSplitRatio = NewPayrollSplitRatioClient(tx.config)
 	tx.Payslip = NewPayslipClient(tx.config)
 	tx.PayslipAudit = NewPayslipAuditClient(tx.config)
+	tx.PerformanceMetric = NewPerformanceMetricClient(tx.config)
+	tx.PerformanceReview = NewPerformanceReviewClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
 	tx.PublicHoliday = NewPublicHolidayClient(tx.config)
 	tx.Region = NewRegionClient(tx.config)
 	tx.RepayOption = NewRepayOptionClient(tx.config)
+	tx.ReviewMetric = NewReviewMetricClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
 	tx.SalaryDetails = NewSalaryDetailsClient(tx.config)
@@ -330,6 +390,9 @@ func (tx *Tx) init() {
 	tx.StaffShiftOverride = NewStaffShiftOverrideClient(tx.config)
 	tx.Timesheet = NewTimesheetClient(tx.config)
 	tx.TimesheetEntry = NewTimesheetEntryClient(tx.config)
+	tx.TrainingCourse = NewTrainingCourseClient(tx.config)
+	tx.TrainingEnrollment = NewTrainingEnrollmentClient(tx.config)
+	tx.TrainingEvaluation = NewTrainingEvaluationClient(tx.config)
 	tx.UserRoleAssignment = NewUserRoleAssignmentClient(tx.config)
 	tx.WithHoldingTax = NewWithHoldingTaxClient(tx.config)
 	tx.WorkShift = NewWorkShiftClient(tx.config)

@@ -14,6 +14,12 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/apirequestmetric"
+	"github.com/Bengo-Hub/erp-api/internal/ent/application"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisal"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalcycle"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalquestion"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalresponse"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
@@ -22,6 +28,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/bankbranch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/bankinstitution"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
+	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
@@ -32,12 +39,17 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeedocument"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeemetric"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeeonboarding"
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/expenseclaim"
 	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/goal"
+	"github.com/Bengo-Hub/erp-api/internal/ent/goalprogress"
 	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/idempotencykey"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
+	"github.com/Bengo-Hub/erp-api/internal/ent/jobposting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavecategory"
@@ -46,8 +58,11 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
+	"github.com/Bengo-Hub/erp-api/internal/ent/metriccategory"
+	"github.com/Bengo-Hub/erp-api/internal/ent/metrictarget"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
 	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
+	"github.com/Bengo-Hub/erp-api/internal/ent/onboardingtask"
 	"github.com/Bengo-Hub/erp-api/internal/ent/outboxevent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
@@ -56,11 +71,14 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
+	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
+	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/project"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
+	"github.com/Bengo-Hub/erp-api/internal/ent/reviewmetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
 	"github.com/Bengo-Hub/erp-api/internal/ent/rolepermission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
@@ -71,6 +89,9 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
 	"github.com/Bengo-Hub/erp-api/internal/ent/timesheet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/timesheetentry"
+	"github.com/Bengo-Hub/erp-api/internal/ent/trainingcourse"
+	"github.com/Bengo-Hub/erp-api/internal/ent/trainingenrollment"
+	"github.com/Bengo-Hub/erp-api/internal/ent/trainingevaluation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/userroleassignment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/withholdingtax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workersunion"
@@ -139,6 +160,12 @@ func checkColumn(t, c string) error {
 			advance.Table:             advance.ValidColumn,
 			apirequestmetric.Table:    apirequestmetric.ValidColumn,
 			appsetting.Table:          appsetting.ValidColumn,
+			application.Table:         application.ValidColumn,
+			appraisal.Table:           appraisal.ValidColumn,
+			appraisalcycle.Table:      appraisalcycle.ValidColumn,
+			appraisalquestion.Table:   appraisalquestion.ValidColumn,
+			appraisalresponse.Table:   appraisalresponse.ValidColumn,
+			appraisaltemplate.Table:   appraisaltemplate.ValidColumn,
 			attendancerecord.Table:    attendancerecord.ValidColumn,
 			attendancerule.Table:      attendancerule.ValidColumn,
 			authoutlet.Table:          authoutlet.ValidColumn,
@@ -146,6 +173,7 @@ func checkColumn(t, c string) error {
 			bankbranch.Table:          bankbranch.ValidColumn,
 			bankinstitution.Table:     bankinstitution.ValidColumn,
 			benefittax.Table:          benefittax.ValidColumn,
+			candidate.Table:           candidate.ValidColumn,
 			claimitem.Table:           claimitem.ValidColumn,
 			contactdetails.Table:      contactdetails.ValidColumn,
 			contract.Table:            contract.ValidColumn,
@@ -157,11 +185,16 @@ func checkColumn(t, c string) error {
 			employeebenefit.Table:     employeebenefit.ValidColumn,
 			employeedocument.Table:    employeedocument.ValidColumn,
 			employeeloan.Table:        employeeloan.ValidColumn,
+			employeemetric.Table:      employeemetric.ValidColumn,
+			employeeonboarding.Table:  employeeonboarding.ValidColumn,
 			expenseclaim.Table:        expenseclaim.ValidColumn,
 			generalhrsettings.Table:   generalhrsettings.ValidColumn,
+			goal.Table:                goal.ValidColumn,
+			goalprogress.Table:        goalprogress.ValidColumn,
 			hrdetails.Table:           hrdetails.ValidColumn,
 			idempotencykey.Table:      idempotencykey.ValidColumn,
 			jobgroup.Table:            jobgroup.ValidColumn,
+			jobposting.Table:          jobposting.ValidColumn,
 			jobtitle.Table:            jobtitle.ValidColumn,
 			leavebalance.Table:        leavebalance.ValidColumn,
 			leavecategory.Table:       leavecategory.ValidColumn,
@@ -170,8 +203,11 @@ func checkColumn(t, c string) error {
 			leaverequest.Table:        leaverequest.ValidColumn,
 			loantype.Table:            loantype.ValidColumn,
 			lossanddamage.Table:       lossanddamage.ValidColumn,
+			metriccategory.Table:      metriccategory.ValidColumn,
+			metrictarget.Table:        metrictarget.ValidColumn,
 			nextofkin.Table:           nextofkin.ValidColumn,
 			offday.Table:              offday.ValidColumn,
+			onboardingtask.Table:      onboardingtask.ValidColumn,
 			outboxevent.Table:         outboxevent.ValidColumn,
 			payrollcomponent.Table:    payrollcomponent.ValidColumn,
 			payrollformula.Table:      payrollformula.ValidColumn,
@@ -180,11 +216,14 @@ func checkColumn(t, c string) error {
 			payrollsplitratio.Table:   payrollsplitratio.ValidColumn,
 			payslip.Table:             payslip.ValidColumn,
 			payslipaudit.Table:        payslipaudit.ValidColumn,
+			performancemetric.Table:   performancemetric.ValidColumn,
+			performancereview.Table:   performancereview.ValidColumn,
 			permission.Table:          permission.ValidColumn,
 			project.Table:             project.ValidColumn,
 			publicholiday.Table:       publicholiday.ValidColumn,
 			region.Table:              region.ValidColumn,
 			repayoption.Table:         repayoption.ValidColumn,
+			reviewmetric.Table:        reviewmetric.ValidColumn,
 			role.Table:                role.ValidColumn,
 			rolepermission.Table:      rolepermission.ValidColumn,
 			salarydetails.Table:       salarydetails.ValidColumn,
@@ -195,6 +234,9 @@ func checkColumn(t, c string) error {
 			staffshiftoverride.Table:  staffshiftoverride.ValidColumn,
 			timesheet.Table:           timesheet.ValidColumn,
 			timesheetentry.Table:      timesheetentry.ValidColumn,
+			trainingcourse.Table:      trainingcourse.ValidColumn,
+			trainingenrollment.Table:  trainingenrollment.ValidColumn,
+			trainingevaluation.Table:  trainingevaluation.ValidColumn,
 			userroleassignment.Table:  userroleassignment.ValidColumn,
 			withholdingtax.Table:      withholdingtax.ValidColumn,
 			workshift.Table:           workshift.ValidColumn,
