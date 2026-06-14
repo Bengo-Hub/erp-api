@@ -37,6 +37,9 @@ credentials.json
 # Go build artifacts
 *.exe
 /bin/
-api
-migrate
-seed
+# Compiled command binaries at repo root only (anchored with a leading slash so they do
+# NOT match the internal/ent/migrate package or any nested path component — that bug
+# silently git-ignored ALL Atlas migration SQL + the migrate package code).
+/api
+/migrate
+/seed
