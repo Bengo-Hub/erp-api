@@ -176,7 +176,7 @@ flowchart LR
 |---|---|---|---|
 | 1 | Foundation | Go scaffold, Ent core+auth shadows, Atlas, config/health, httpware, shared-auth-client + `/auth/me`, tenant/outlet middleware, NATS + transactional outbox + `auth.tenant.>`/`auth.outlet.>` consumers | `sprints/sprint-1-foundation.md` |
 | 2 | HRM + Payroll | employees, payroll engine (payslips/components/deductions/loans/relief/claims) + **ERP-owned tax engine + versioned tenant rate tables**, `POST /payroll/disburse` → publish `erp.payroll.processed` + treasury `/payouts/disburse` (idempotent), consume `treasury.payroll.disbursed` | `sprints/sprint-2-hrm-payroll.md` |
-| 3 | Leave/Attendance/Recruitment/Appraisals | leave + accrual cron, attendance/shifts/rotations/timesheets/ESS, recruitment + onboarding, training, appraisals/performance | `sprints/sprint-3-leave-attendance-recruitment-appraisals.md` |
+| 3 ✅ | Leave/Attendance/Recruitment/Appraisals | leave + accrual cron, attendance/shifts/rotations/timesheets/ESS, recruitment + onboarding, training, appraisals/performance — **DONE** (see sprint-3 status section) | `sprints/sprint-3-leave-attendance-recruitment-appraisals.md` |
 | 4 | Approvals/Tasks/Reports/Config | approval matrix engine (typed, tenant-scoped), task_management, **reports built for real** (P9/P10A/statutory/bank/muster/variance), business/addresses/core config, branding + FX cron + email/notification events | `sprints/sprint-4-approvals-tasks-reports.md` |
 | 5 | Data migration & cutover | prod assessment, `cmd/migrate-data` (dry-run/reconcile/cut over), parity verification vs old endpoints, deploy & flip ingress | `sprints/sprint-5-data-migration-cutover.md` |
 

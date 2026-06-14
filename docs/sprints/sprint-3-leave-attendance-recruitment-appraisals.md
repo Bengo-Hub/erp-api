@@ -66,3 +66,60 @@ All entities above with `tenant_id` + composite `(tenant_id, …)` indexes; per-
 ## Dependencies
 - Sprint 1 (rails). Soft dependency on Sprint 4 for the shared approval engine (use direct
   approve/reject until S4 lands, then route leave/appraisal/contract approvals through it).
+
+---
+
+## Status — DONE (revamp branch)
+
+All five domains implemented in Go, tenant-scoped, RBAC-enforced, building green
+(`go build ./...` + `go vet ./...`). Endpoints under `/api/v1/hrm/...`, all `data`-enveloped.
+
+**Modules / Ent schemas (all tenant_id + composite indexes; decimal for days/hours/ratings):**
+- `modules/leave` — LeaveCategory, LeaveEntitlement, LeaveRequest (FSM
+  pending→approved|rejected|cancelled), LeaveBalance, LeaveLog, PublicHoliday
+  (now tenant-scoped `uniq(tenant,date,county)`). Balance math (entitled/taken/remaining)
+  kept in sync on entitlement upsert, approve (deduct), cancel-of-approved (return).
+  Idempotent accrual with capped carryover (port of `accrue_leave.py`); in-process accrual
+  cron goroutine (`LEAVE_ACCRUAL_INTERVAL`, default 24h) + per-tenant `POST /leave/accrue`.
+  Leave decisions emit `erp.notification.requested` via the outbox.
+- `modules/attendance` — WorkShift(+Schedule, `is_default` seed flag), AttendanceRecord
+  (GPS/biometric, status `present|absent|late|half-day`), AttendanceRule (priority-ordered
+  policies), ShiftRotation, OffDay, ESSSettings (**per-tenant, not singleton**),
+  Timesheet(+Entry, FSM, totals rollup), shift planner (ShiftRoster/Slot/Assignment,
+  StaffShiftOverride). Late-detection + overtime/half-day split as a pure decimal package
+  (port of `apply_late_status`/`compute_hours`); highest-priority active `overtime_policy`
+  drives the split. `EnsureDefaultShift` seeds one Regular shift per tenant (replaces the
+  per-request `DefaultShiftMiddleware`, gaps §5).
+- `modules/recruitment` — JobPosting, Candidate, Application (hiring FSM
+  applied→screening→interview→offered→hired; rejected from any non-terminal),
+  EmployeeOnboarding(+OnboardingTask). On hire (`create_employee=true`) atomically creates an
+  Employee from the candidate, seeds the 10-item IT/HR/Training checklist, links
+  `hired_employee_id`. Task completion auto-completes onboarding.
+- `modules/training` — TrainingCourse, TrainingEnrollment (`uniq(tenant,course,employee)` +
+  capacity enforcement), TrainingEvaluation (rating clamped 0-5).
+- `modules/appraisals` — AppraisalCycle (FSM), AppraisalTemplate/Question, Appraisal (FSM
+  draft→in_progress→completed→approved|rejected) + AppraisalResponse, Goal(+GoalProgress,
+  progress 0-100 syncs goal status). Ratings decimal 0-5.
+- `modules/performance` — MetricCategory, PerformanceMetric, EmployeeMetric (numeric
+  projection per type), MetricTarget, PerformanceReview (FSM) + ReviewMetric. Ratings/values
+  decimal.
+
+**Atlas migrations (apply clean on a fresh schema, verified):**
+`20260614165124_leave_schema`, `20260614170337_attendance_schema`,
+`20260614201329_recruitment_schema`, `20260614202321_training_appraisals_performance_schema`.
+
+**Acceptance criteria met:** tenant_id on every business table + tenant-filtered handlers;
+leave balance math + idempotent accrual cron; decimal hours/overtime per rule priority;
+defaults seeded once per tenant (no per-request ensure); application/onboarding/timesheet/
+appraisal/review FSMs reject invalid transitions.
+
+**Deferred / notes:**
+- Leave/appraisal approvals use direct approve/reject (per spec) until the Sprint 4 shared
+  approval engine lands.
+- RBAC permission codes (`hrm.{leave,attendance,recruitment,training,appraisal,performance}.
+  {view,manage,approve}`) are enforced by handlers; seeding them into roles is a `cmd/seed`
+  follow-up (Sprint 4 config work). Platform owners/superusers/services bypass.
+- Candidate resume upload stores a relative media path only (no file-upload endpoint yet) —
+  follows the per-tenant media convention; wiring the upload is a later task.
+- AttendanceRule late/absenteeism *penalty enforcement* (salary deduction wiring into
+  payroll) is modeled but not yet applied to payslips — payroll integration is a follow-up.
