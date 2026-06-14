@@ -20,6 +20,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 
+	"github.com/Bengo-Hub/erp-api/internal/config"
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/migrate"
 )
@@ -35,6 +36,14 @@ func main() {
 		dsn = "postgres://postgres:postgres@localhost:5432/bengo_erp?sslmode=disable"
 	}
 
+	// The Go ERP lives in a dedicated schema (default "erp"), isolated from the legacy Django
+	// tables in public on the same bengo_erp DB. Pin search_path and ensure the schema exists.
+	schemaName := os.Getenv("DB_SCHEMA")
+	if schemaName == "" {
+		schemaName = "erp"
+	}
+	dsn = config.EnsureSearchPath(dsn, schemaName)
+
 	sqlDB, err := sql.Open("pgx", dsn)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
@@ -45,11 +54,15 @@ func main() {
 		log.Fatalf("db ping: %v", err)
 	}
 
+	ctx := context.Background()
+	if _, err := sqlDB.ExecContext(ctx, fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %q", schemaName)); err != nil {
+		log.Fatalf("create schema %q: %v", schemaName, err)
+	}
+
 	drv := entsql.OpenDB(dialect.Postgres, sqlDB)
 	client := ent.NewClient(ent.Driver(drv))
 	defer func() { _ = client.Close() }()
 
-	ctx := context.Background()
 	if err := client.Schema.Create(ctx, schema.WithDir(migrate.Dir)); err != nil {
 		log.Fatalf("apply migrations: %v", err)
 	}

@@ -85,7 +85,7 @@ func run() error {
 	}
 	defer dbPool.Close()
 
-	sqlDB, err := sql.Open("pgx", cfg.Postgres.URL)
+	sqlDB, err := sql.Open("pgx", cfg.Postgres.DSN())
 	if err != nil {
 		return fmt.Errorf("ent driver init: %w", err)
 	}
