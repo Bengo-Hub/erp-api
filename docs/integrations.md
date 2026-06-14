@@ -5,9 +5,38 @@
 > exchange-rate API, branding. Authoritative for the Go revamp — keep contracts identical.
 > (Supersedes the old pre-decomposition integration guide.)
 
-Code: `integrations/` (events, service_client, branding, taxes, tenant_sync, notifications_client,
-tasks), `authmanagement/sso.py`, `authmanagement/sso_middleware.py`,
-`hrm/payroll/treasury_integration.py`.
+Go code: `internal/platform/{events,auth,treasury,cache}`, `internal/modules/consumers`,
+`internal/services/usersync`, `internal/modules/fx`, shared-auth-client middleware. (The
+Django paths below are retained as the contract reference — the Go rebuild keeps the same
+subjects + S2S contracts.)
+
+---
+
+## 0. VERIFIED INTEGRATION MAP (authoritative — plan §0a-map, audited across siblings)
+
+ERP's **entire** cross-service surface. ERP consumes ONLY these and owns no other service's
+data. ERP = client only for all of them.
+
+- **auth-service (SSO)** — JWT/JWKS validation + `/auth/me` (shared-auth-client). Branding
+  read-through `GET /api/v1/tenants/by-slug/{slug}` (auth-api public route), Redis-cached 6h
+  via `internal/platform/auth.BrandingClient` → surfaced on the public branding endpoint.
+  Tenant/outlet shadows synced from `auth.tenant.*` / `auth.outlet.created|updated` events.
+- **treasury (finance-service)** — payroll disbursement `POST /api/v1/s2s/{tenant}/payouts/disburse`
+  (`internal/platform/treasury`); ERP publishes `erp.payroll.processed` (treasury posts the GL
+  journal) and consumes `treasury.payroll.disbursed` to mark payslips published/paid. **Payroll
+  tax stays ERP-owned**; treasury owns GL + payout rails + bank/payment reference.
+- **notifications-service** — ERP publishes `erp.email.requested` (supports base64 attachments,
+  e.g. payslip PDFs) + `erp.notification.requested` (`internal/platform/events.Notifications`);
+  notifications-api consumes both. **ERP never sends email/SMS directly.**
+- **subscriptions-service** — feature gating via the tenant subscription endpoint
+  (`/api/v1/tenants/{id}/subscription`, Redis-cached), **mutations-only**. Single shared
+  `INTERNAL_SERVICE_KEY` for all S2S.
+- **NO consumption from inventory / ordering / logistics / marketflow / projects.** Assets →
+  inventory+treasury, customers → marketflow, orders/address_book/pickup_station/service_type →
+  ordering, projects/tenders → projects-service, banks → treasury/payment-rail reference. ERP
+  links to those only via UI menu (external), never their data/schemas.
+- **Shared libs:** shared-auth-client, shared-events (outbox + QueueSubscribe + IdempotencyStore),
+  httpware, cache, shared-service-client.
 
 ---
 
