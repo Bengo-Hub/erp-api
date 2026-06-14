@@ -33,6 +33,18 @@ type AppraisalResponse func(*sql.Selector)
 // AppraisalTemplate is the predicate function for appraisaltemplate builders.
 type AppraisalTemplate func(*sql.Selector)
 
+// ApprovalRequest is the predicate function for approvalrequest builders.
+type ApprovalRequest func(*sql.Selector)
+
+// ApprovalStepAction is the predicate function for approvalstepaction builders.
+type ApprovalStepAction func(*sql.Selector)
+
+// ApprovalWorkflow is the predicate function for approvalworkflow builders.
+type ApprovalWorkflow func(*sql.Selector)
+
+// ApprovalWorkflowStep is the predicate function for approvalworkflowstep builders.
+type ApprovalWorkflowStep func(*sql.Selector)
+
 // AttendanceRecord is the predicate function for attendancerecord builders.
 type AttendanceRecord func(*sql.Selector)
 
@@ -221,6 +233,15 @@ type ShiftRotation func(*sql.Selector)
 
 // StaffShiftOverride is the predicate function for staffshiftoverride builders.
 type StaffShiftOverride func(*sql.Selector)
+
+// Task is the predicate function for task builders.
+type Task func(*sql.Selector)
+
+// TaskComment is the predicate function for taskcomment builders.
+type TaskComment func(*sql.Selector)
+
+// TaskLog is the predicate function for tasklog builders.
+type TaskLog func(*sql.Selector)
 
 // Timesheet is the predicate function for timesheet builders.
 type Timesheet func(*sql.Selector)

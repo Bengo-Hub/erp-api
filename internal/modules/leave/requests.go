@@ -12,7 +12,11 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavelog"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
+	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 )
+
+// moduleLeaveRequest is the approvals-engine module key for leave requests.
+const moduleLeaveRequest = "leave_request"
 
 // ListRequests returns leave requests filtered by tenant (+ optional employee/status).
 func (s *Service) ListRequests(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, status string) ([]*ent.LeaveRequest, error) {
@@ -65,6 +69,20 @@ func (s *Service) CreateRequest(ctx context.Context, tenantID uuid.UUID, in Crea
 		return nil, fmt.Errorf("leave: create request: %w", err)
 	}
 	logAction(ctx, s.orm, tenantID, row.ID, leavelog.ActionCreate, "leave request filed", in.ActingUserID)
+
+	// Sprint 4: if the tenant configured a leave_request approval workflow, open an approval
+	// request so the multi-step chain drives the decision. Best-effort; the direct
+	// approve/reject path still works when no workflow exists.
+	if s.approvals != nil {
+		empID := in.EmployeeID
+		_, _ = s.approvals.Submit(ctx, tenantID, approvals.SubmitInput{
+			Module:              moduleLeaveRequest,
+			ObjectID:            row.ID,
+			ObjectReference:     "leave:" + row.ID.String(),
+			RequesterEmployeeID: &empID,
+			SubmittedBy:         in.ActingUserID,
+		})
+	}
 	return row, nil
 }
 
@@ -72,6 +90,14 @@ func (s *Service) CreateRequest(ctx context.Context, tenantID uuid.UUID, in Crea
 // (entitled - taken), writes the audit log, and emits the decision notification.
 // Rejects invalid transitions (only pending -> approved is allowed).
 func (s *Service) Approve(ctx context.Context, tenantID, id uuid.UUID, approverEmployeeID *uuid.UUID, actingUserID *uuid.UUID) (*ent.LeaveRequest, error) {
+	// Sprint 4: route through the approvals engine when this leave request has an open
+	// approval workflow. Only apply the leave side-effect (status flip + balance deduction)
+	// once the multi-step chain is fully approved; intermediate steps just advance the chain.
+	if proceed, out, err := s.routeDecision(ctx, tenantID, id, true, "", actingUserID); err != nil {
+		return nil, err
+	} else if !proceed {
+		return out, nil
+	}
 	tx, err := s.orm.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("leave: begin tx: %w", err)
@@ -112,6 +138,12 @@ func (s *Service) Approve(ctx context.Context, tenantID, id uuid.UUID, approverE
 
 // Reject transitions a pending request to rejected with a reason and emits notification.
 func (s *Service) Reject(ctx context.Context, tenantID, id uuid.UUID, reason string, actingUserID *uuid.UUID) (*ent.LeaveRequest, error) {
+	// Sprint 4: route through the approvals engine (a reject is terminal at any step).
+	if proceed, out, err := s.routeDecision(ctx, tenantID, id, false, reason, actingUserID); err != nil {
+		return nil, err
+	} else if !proceed {
+		return out, nil
+	}
 	req, err := s.Get(ctx, tenantID, id)
 	if err != nil {
 		return nil, fmt.Errorf("leave: load request: %w", err)
@@ -164,6 +196,43 @@ func (s *Service) Cancel(ctx context.Context, tenantID, id uuid.UUID, actingUser
 		return nil, fmt.Errorf("leave: commit cancel: %w", err)
 	}
 	return updated, nil
+}
+
+// routeDecision drives the approvals engine for a leave request when one is open.
+// Returns proceed=true when the caller should run its own terminal transition:
+//   - no approvals engine wired, or no open approval request for this leave  -> proceed=true
+//   - approve that fully completes the chain (engine -> approved)             -> proceed=true
+//   - reject (terminal at any step)                                          -> proceed=true
+//
+// Returns proceed=false (with the unchanged leave request) when an intermediate approval
+// step was recorded but the chain is not yet complete.
+func (s *Service) routeDecision(ctx context.Context, tenantID, id uuid.UUID, approve bool, comment string, actingUserID *uuid.UUID) (bool, *ent.LeaveRequest, error) {
+	if s.approvals == nil {
+		return true, nil, nil
+	}
+	apr, err := s.approvals.FindRequestForObject(ctx, tenantID, moduleLeaveRequest, id)
+	if ent.IsNotFound(err) {
+		return true, nil, nil
+	}
+	if err != nil {
+		return false, nil, fmt.Errorf("leave: find approval request: %w", err)
+	}
+	if apr.Status != "pending" {
+		// Chain already decided elsewhere — fall through to local transition for consistency.
+		return true, nil, nil
+	}
+	dec, err := s.approvals.Decide(ctx, tenantID, approvals.DecisionInput{
+		RequestID: apr.ID, Approve: approve, Comment: comment, ActedBy: actingUserID,
+	})
+	if err != nil {
+		return false, nil, fmt.Errorf("leave: approval decision: %w", err)
+	}
+	if approve && !dec.Finished {
+		// Intermediate step approved; leave request stays pending.
+		cur, gerr := s.Get(ctx, tenantID, id)
+		return false, cur, gerr
+	}
+	return true, nil, nil
 }
 
 // applyTakenTx adjusts days_taken by delta (positive = consume, negative = return) and

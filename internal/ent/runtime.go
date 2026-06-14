@@ -13,6 +13,10 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalquestion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalresponse"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
+	"github.com/Bengo-Hub/erp-api/internal/ent/approvalrequest"
+	"github.com/Bengo-Hub/erp-api/internal/ent/approvalstepaction"
+	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflow"
+	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflowstep"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
@@ -77,6 +81,9 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrosterslot"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrotation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
+	"github.com/Bengo-Hub/erp-api/internal/ent/task"
+	"github.com/Bengo-Hub/erp-api/internal/ent/taskcomment"
+	"github.com/Bengo-Hub/erp-api/internal/ent/tasklog"
 	"github.com/Bengo-Hub/erp-api/internal/ent/timesheet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/timesheetentry"
 	"github.com/Bengo-Hub/erp-api/internal/ent/trainingcourse"
@@ -277,6 +284,78 @@ func init() {
 	appraisaltemplateDescID := appraisaltemplateFields[0].Descriptor()
 	// appraisaltemplate.DefaultID holds the default value on creation for the id field.
 	appraisaltemplate.DefaultID = appraisaltemplateDescID.Default.(func() uuid.UUID)
+	approvalrequestFields := schema.ApprovalRequest{}.Fields()
+	_ = approvalrequestFields
+	// approvalrequestDescCurrentSequence is the schema descriptor for current_sequence field.
+	approvalrequestDescCurrentSequence := approvalrequestFields[8].Descriptor()
+	// approvalrequest.DefaultCurrentSequence holds the default value on creation for the current_sequence field.
+	approvalrequest.DefaultCurrentSequence = approvalrequestDescCurrentSequence.Default.(int)
+	// approvalrequestDescCreatedAt is the schema descriptor for created_at field.
+	approvalrequestDescCreatedAt := approvalrequestFields[10].Descriptor()
+	// approvalrequest.DefaultCreatedAt holds the default value on creation for the created_at field.
+	approvalrequest.DefaultCreatedAt = approvalrequestDescCreatedAt.Default.(func() time.Time)
+	// approvalrequestDescUpdatedAt is the schema descriptor for updated_at field.
+	approvalrequestDescUpdatedAt := approvalrequestFields[11].Descriptor()
+	// approvalrequest.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	approvalrequest.DefaultUpdatedAt = approvalrequestDescUpdatedAt.Default.(func() time.Time)
+	// approvalrequest.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	approvalrequest.UpdateDefaultUpdatedAt = approvalrequestDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// approvalrequestDescID is the schema descriptor for id field.
+	approvalrequestDescID := approvalrequestFields[0].Descriptor()
+	// approvalrequest.DefaultID holds the default value on creation for the id field.
+	approvalrequest.DefaultID = approvalrequestDescID.Default.(func() uuid.UUID)
+	approvalstepactionFields := schema.ApprovalStepAction{}.Fields()
+	_ = approvalstepactionFields
+	// approvalstepactionDescCreatedAt is the schema descriptor for created_at field.
+	approvalstepactionDescCreatedAt := approvalstepactionFields[12].Descriptor()
+	// approvalstepaction.DefaultCreatedAt holds the default value on creation for the created_at field.
+	approvalstepaction.DefaultCreatedAt = approvalstepactionDescCreatedAt.Default.(func() time.Time)
+	// approvalstepactionDescID is the schema descriptor for id field.
+	approvalstepactionDescID := approvalstepactionFields[0].Descriptor()
+	// approvalstepaction.DefaultID holds the default value on creation for the id field.
+	approvalstepaction.DefaultID = approvalstepactionDescID.Default.(func() uuid.UUID)
+	approvalworkflowFields := schema.ApprovalWorkflow{}.Fields()
+	_ = approvalworkflowFields
+	// approvalworkflowDescName is the schema descriptor for name field.
+	approvalworkflowDescName := approvalworkflowFields[3].Descriptor()
+	// approvalworkflow.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	approvalworkflow.NameValidator = approvalworkflowDescName.Validators[0].(func(string) error)
+	// approvalworkflowDescIsActive is the schema descriptor for is_active field.
+	approvalworkflowDescIsActive := approvalworkflowFields[5].Descriptor()
+	// approvalworkflow.DefaultIsActive holds the default value on creation for the is_active field.
+	approvalworkflow.DefaultIsActive = approvalworkflowDescIsActive.Default.(bool)
+	// approvalworkflowDescCreatedAt is the schema descriptor for created_at field.
+	approvalworkflowDescCreatedAt := approvalworkflowFields[6].Descriptor()
+	// approvalworkflow.DefaultCreatedAt holds the default value on creation for the created_at field.
+	approvalworkflow.DefaultCreatedAt = approvalworkflowDescCreatedAt.Default.(func() time.Time)
+	// approvalworkflowDescUpdatedAt is the schema descriptor for updated_at field.
+	approvalworkflowDescUpdatedAt := approvalworkflowFields[7].Descriptor()
+	// approvalworkflow.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	approvalworkflow.DefaultUpdatedAt = approvalworkflowDescUpdatedAt.Default.(func() time.Time)
+	// approvalworkflow.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	approvalworkflow.UpdateDefaultUpdatedAt = approvalworkflowDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// approvalworkflowDescID is the schema descriptor for id field.
+	approvalworkflowDescID := approvalworkflowFields[0].Descriptor()
+	// approvalworkflow.DefaultID holds the default value on creation for the id field.
+	approvalworkflow.DefaultID = approvalworkflowDescID.Default.(func() uuid.UUID)
+	approvalworkflowstepFields := schema.ApprovalWorkflowStep{}.Fields()
+	_ = approvalworkflowstepFields
+	// approvalworkflowstepDescName is the schema descriptor for name field.
+	approvalworkflowstepDescName := approvalworkflowstepFields[4].Descriptor()
+	// approvalworkflowstep.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	approvalworkflowstep.NameValidator = approvalworkflowstepDescName.Validators[0].(func(string) error)
+	// approvalworkflowstepDescIsOptional is the schema descriptor for is_optional field.
+	approvalworkflowstepDescIsOptional := approvalworkflowstepFields[8].Descriptor()
+	// approvalworkflowstep.DefaultIsOptional holds the default value on creation for the is_optional field.
+	approvalworkflowstep.DefaultIsOptional = approvalworkflowstepDescIsOptional.Default.(bool)
+	// approvalworkflowstepDescCreatedAt is the schema descriptor for created_at field.
+	approvalworkflowstepDescCreatedAt := approvalworkflowstepFields[9].Descriptor()
+	// approvalworkflowstep.DefaultCreatedAt holds the default value on creation for the created_at field.
+	approvalworkflowstep.DefaultCreatedAt = approvalworkflowstepDescCreatedAt.Default.(func() time.Time)
+	// approvalworkflowstepDescID is the schema descriptor for id field.
+	approvalworkflowstepDescID := approvalworkflowstepFields[0].Descriptor()
+	// approvalworkflowstep.DefaultID holds the default value on creation for the id field.
+	approvalworkflowstep.DefaultID = approvalworkflowstepDescID.Default.(func() uuid.UUID)
 	attendancerecordFields := schema.AttendanceRecord{}.Fields()
 	_ = attendancerecordFields
 	// attendancerecordDescTotalSecondsWorked is the schema descriptor for total_seconds_worked field.
@@ -978,11 +1057,11 @@ func init() {
 	hrdetailsFields := schema.HRDetails{}.Fields()
 	_ = hrdetailsFields
 	// hrdetailsDescCreatedAt is the schema descriptor for created_at field.
-	hrdetailsDescCreatedAt := hrdetailsFields[11].Descriptor()
+	hrdetailsDescCreatedAt := hrdetailsFields[10].Descriptor()
 	// hrdetails.DefaultCreatedAt holds the default value on creation for the created_at field.
 	hrdetails.DefaultCreatedAt = hrdetailsDescCreatedAt.Default.(func() time.Time)
 	// hrdetailsDescUpdatedAt is the schema descriptor for updated_at field.
-	hrdetailsDescUpdatedAt := hrdetailsFields[12].Descriptor()
+	hrdetailsDescUpdatedAt := hrdetailsFields[11].Descriptor()
 	// hrdetails.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	hrdetails.DefaultUpdatedAt = hrdetailsDescUpdatedAt.Default.(func() time.Time)
 	// hrdetails.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1981,6 +2060,58 @@ func init() {
 	staffshiftoverrideDescID := staffshiftoverrideFields[0].Descriptor()
 	// staffshiftoverride.DefaultID holds the default value on creation for the id field.
 	staffshiftoverride.DefaultID = staffshiftoverrideDescID.Default.(func() uuid.UUID)
+	taskFields := schema.Task{}.Fields()
+	_ = taskFields
+	// taskDescTitle is the schema descriptor for title field.
+	taskDescTitle := taskFields[2].Descriptor()
+	// task.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	task.TitleValidator = taskDescTitle.Validators[0].(func(string) error)
+	// taskDescProgress is the schema descriptor for progress field.
+	taskDescProgress := taskFields[9].Descriptor()
+	// task.DefaultProgress holds the default value on creation for the progress field.
+	task.DefaultProgress = taskDescProgress.Default.(int)
+	// taskDescCreatedAt is the schema descriptor for created_at field.
+	taskDescCreatedAt := taskFields[12].Descriptor()
+	// task.DefaultCreatedAt holds the default value on creation for the created_at field.
+	task.DefaultCreatedAt = taskDescCreatedAt.Default.(func() time.Time)
+	// taskDescUpdatedAt is the schema descriptor for updated_at field.
+	taskDescUpdatedAt := taskFields[13].Descriptor()
+	// task.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	task.DefaultUpdatedAt = taskDescUpdatedAt.Default.(func() time.Time)
+	// task.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	task.UpdateDefaultUpdatedAt = taskDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// taskDescID is the schema descriptor for id field.
+	taskDescID := taskFields[0].Descriptor()
+	// task.DefaultID holds the default value on creation for the id field.
+	task.DefaultID = taskDescID.Default.(func() uuid.UUID)
+	taskcommentFields := schema.TaskComment{}.Fields()
+	_ = taskcommentFields
+	// taskcommentDescBody is the schema descriptor for body field.
+	taskcommentDescBody := taskcommentFields[4].Descriptor()
+	// taskcomment.BodyValidator is a validator for the "body" field. It is called by the builders before save.
+	taskcomment.BodyValidator = taskcommentDescBody.Validators[0].(func(string) error)
+	// taskcommentDescCreatedAt is the schema descriptor for created_at field.
+	taskcommentDescCreatedAt := taskcommentFields[5].Descriptor()
+	// taskcomment.DefaultCreatedAt holds the default value on creation for the created_at field.
+	taskcomment.DefaultCreatedAt = taskcommentDescCreatedAt.Default.(func() time.Time)
+	// taskcommentDescID is the schema descriptor for id field.
+	taskcommentDescID := taskcommentFields[0].Descriptor()
+	// taskcomment.DefaultID holds the default value on creation for the id field.
+	taskcomment.DefaultID = taskcommentDescID.Default.(func() uuid.UUID)
+	tasklogFields := schema.TaskLog{}.Fields()
+	_ = tasklogFields
+	// tasklogDescAction is the schema descriptor for action field.
+	tasklogDescAction := tasklogFields[3].Descriptor()
+	// tasklog.ActionValidator is a validator for the "action" field. It is called by the builders before save.
+	tasklog.ActionValidator = tasklogDescAction.Validators[0].(func(string) error)
+	// tasklogDescCreatedAt is the schema descriptor for created_at field.
+	tasklogDescCreatedAt := tasklogFields[6].Descriptor()
+	// tasklog.DefaultCreatedAt holds the default value on creation for the created_at field.
+	tasklog.DefaultCreatedAt = tasklogDescCreatedAt.Default.(func() time.Time)
+	// tasklogDescID is the schema descriptor for id field.
+	tasklogDescID := tasklogFields[0].Descriptor()
+	// tasklog.DefaultID holds the default value on creation for the id field.
+	tasklog.DefaultID = tasklogDescID.Default.(func() uuid.UUID)
 	timesheetFields := schema.Timesheet{}.Fields()
 	_ = timesheetFields
 	// timesheetDescTotalHours is the schema descriptor for total_hours field.

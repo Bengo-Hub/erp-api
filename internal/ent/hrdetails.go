@@ -32,8 +32,6 @@ type HRDetails struct {
 	ReportsToID *uuid.UUID `json:"reports_to_id,omitempty"`
 	// RegionID holds the value of the "region_id" field.
 	RegionID *uuid.UUID `json:"region_id,omitempty"`
-	// ProjectID holds the value of the "project_id" field.
-	ProjectID *uuid.UUID `json:"project_id,omitempty"`
 	// permanent | contract | casual | consultant
 	EmploymentType string `json:"employment_type,omitempty"`
 	// DateJoined holds the value of the "date_joined" field.
@@ -50,7 +48,7 @@ func (*HRDetails) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case hrdetails.FieldJobTitleID, hrdetails.FieldDepartmentID, hrdetails.FieldHeadOfDepartmentID, hrdetails.FieldReportsToID, hrdetails.FieldRegionID, hrdetails.FieldProjectID:
+		case hrdetails.FieldJobTitleID, hrdetails.FieldDepartmentID, hrdetails.FieldHeadOfDepartmentID, hrdetails.FieldReportsToID, hrdetails.FieldRegionID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case hrdetails.FieldEmploymentType:
 			values[i] = new(sql.NullString)
@@ -125,13 +123,6 @@ func (_m *HRDetails) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.RegionID = new(uuid.UUID)
 				*_m.RegionID = *value.S.(*uuid.UUID)
-			}
-		case hrdetails.FieldProjectID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field project_id", values[i])
-			} else if value.Valid {
-				_m.ProjectID = new(uuid.UUID)
-				*_m.ProjectID = *value.S.(*uuid.UUID)
 			}
 		case hrdetails.FieldEmploymentType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -222,11 +213,6 @@ func (_m *HRDetails) String() string {
 	builder.WriteString(", ")
 	if v := _m.RegionID; v != nil {
 		builder.WriteString("region_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
-	builder.WriteString(", ")
-	if v := _m.ProjectID; v != nil {
-		builder.WriteString("project_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")

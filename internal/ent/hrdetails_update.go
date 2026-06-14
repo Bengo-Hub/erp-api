@@ -157,26 +157,6 @@ func (_u *HRDetailsUpdate) ClearRegionID() *HRDetailsUpdate {
 	return _u
 }
 
-// SetProjectID sets the "project_id" field.
-func (_u *HRDetailsUpdate) SetProjectID(v uuid.UUID) *HRDetailsUpdate {
-	_u.mutation.SetProjectID(v)
-	return _u
-}
-
-// SetNillableProjectID sets the "project_id" field if the given value is not nil.
-func (_u *HRDetailsUpdate) SetNillableProjectID(v *uuid.UUID) *HRDetailsUpdate {
-	if v != nil {
-		_u.SetProjectID(*v)
-	}
-	return _u
-}
-
-// ClearProjectID clears the value of the "project_id" field.
-func (_u *HRDetailsUpdate) ClearProjectID() *HRDetailsUpdate {
-	_u.mutation.ClearProjectID()
-	return _u
-}
-
 // SetEmploymentType sets the "employment_type" field.
 func (_u *HRDetailsUpdate) SetEmploymentType(v string) *HRDetailsUpdate {
 	_u.mutation.SetEmploymentType(v)
@@ -308,12 +288,6 @@ func (_u *HRDetailsUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.RegionIDCleared() {
 		_spec.ClearField(hrdetails.FieldRegionID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.ProjectID(); ok {
-		_spec.SetField(hrdetails.FieldProjectID, field.TypeUUID, value)
-	}
-	if _u.mutation.ProjectIDCleared() {
-		_spec.ClearField(hrdetails.FieldProjectID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.EmploymentType(); ok {
 		_spec.SetField(hrdetails.FieldEmploymentType, field.TypeString, value)
@@ -478,26 +452,6 @@ func (_u *HRDetailsUpdateOne) ClearRegionID() *HRDetailsUpdateOne {
 	return _u
 }
 
-// SetProjectID sets the "project_id" field.
-func (_u *HRDetailsUpdateOne) SetProjectID(v uuid.UUID) *HRDetailsUpdateOne {
-	_u.mutation.SetProjectID(v)
-	return _u
-}
-
-// SetNillableProjectID sets the "project_id" field if the given value is not nil.
-func (_u *HRDetailsUpdateOne) SetNillableProjectID(v *uuid.UUID) *HRDetailsUpdateOne {
-	if v != nil {
-		_u.SetProjectID(*v)
-	}
-	return _u
-}
-
-// ClearProjectID clears the value of the "project_id" field.
-func (_u *HRDetailsUpdateOne) ClearProjectID() *HRDetailsUpdateOne {
-	_u.mutation.ClearProjectID()
-	return _u
-}
-
 // SetEmploymentType sets the "employment_type" field.
 func (_u *HRDetailsUpdateOne) SetEmploymentType(v string) *HRDetailsUpdateOne {
 	_u.mutation.SetEmploymentType(v)
@@ -659,12 +613,6 @@ func (_u *HRDetailsUpdateOne) sqlSave(ctx context.Context) (_node *HRDetails, er
 	}
 	if _u.mutation.RegionIDCleared() {
 		_spec.ClearField(hrdetails.FieldRegionID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.ProjectID(); ok {
-		_spec.SetField(hrdetails.FieldProjectID, field.TypeUUID, value)
-	}
-	if _u.mutation.ProjectIDCleared() {
-		_spec.ClearField(hrdetails.FieldProjectID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.EmploymentType(); ok {
 		_spec.SetField(hrdetails.FieldEmploymentType, field.TypeString, value)

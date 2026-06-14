@@ -32,12 +32,13 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/http/handlers"
 	mw "github.com/Bengo-Hub/erp-api/internal/http/middleware"
 	"github.com/Bengo-Hub/erp-api/internal/modules/appraisals"
+	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/consumers"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
-	"github.com/Bengo-Hub/erp-api/internal/modules/rbac"
 	"github.com/Bengo-Hub/erp-api/internal/modules/performance"
+	"github.com/Bengo-Hub/erp-api/internal/modules/rbac"
 	"github.com/Bengo-Hub/erp-api/internal/modules/recruitment"
 	"github.com/Bengo-Hub/erp-api/internal/modules/training"
 	"github.com/Bengo-Hub/erp-api/internal/platform/cache"
@@ -145,8 +146,16 @@ func run() error {
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
 	recruitmentHandler := handlers.NewRecruitmentHandler(log, recruitment.NewService(orm))
 	trainingHandler := handlers.NewTrainingHandler(log, training.NewService(orm))
-	appraisalsHandler := handlers.NewAppraisalsHandler(log, appraisals.NewService(orm))
+	appraisalsSvc := appraisals.NewService(orm)
+	appraisalsHandler := handlers.NewAppraisalsHandler(log, appraisalsSvc)
 	performanceHandler := handlers.NewPerformanceHandler(log, performance.NewService(orm))
+
+	// Sprint 4: generic approvals engine wired into leave + appraisals (replaces their
+	// Sprint-3 direct approve/reject when a tenant configures a workflow).
+	approvalsSvc := approvals.NewService(orm, approvals.NewOutboxEmitter(notifyPublisher))
+	approvalsHandler := handlers.NewApprovalsHandler(log, approvalsSvc)
+	leaveSvc.SetApprovals(approvalsSvc)
+	appraisalsSvc.SetApprovals(approvalsSvc)
 
 	// Leave accrual cron (Go replacement for the accrue_leave management command).
 	leave.NewAccrualCron(leaveSvc, log, cfg.Events.LeaveAccrualInterval).Start(ctx)
@@ -180,6 +189,7 @@ func run() error {
 			trainingHandler.RegisterRoutes(priv)
 			appraisalsHandler.RegisterRoutes(priv)
 			performanceHandler.RegisterRoutes(priv)
+			approvalsHandler.RegisterRoutes(priv)
 		})
 	})
 

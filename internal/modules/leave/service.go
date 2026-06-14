@@ -17,12 +17,14 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaveentitlement"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavelog"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
+	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 )
 
 // Service holds leave CRUD + balance/accrual logic. Every query is tenant-scoped.
 type Service struct {
-	orm    *ent.Client
-	notify Notifier
+	orm       *ent.Client
+	notify    Notifier
+	approvals Approver
 }
 
 // Notifier publishes leave-decision notifications to the outbox (erp.notification.requested).
@@ -31,9 +33,21 @@ type Notifier interface {
 	NotifyLeaveDecision(ctx context.Context, tenantID uuid.UUID, req *ent.LeaveRequest) error
 }
 
+// Approver is the slice of the approvals engine the leave module needs. When a tenant has
+// configured a leave_request approval workflow, leave decisions route through it (Sprint 4);
+// otherwise the leave module falls back to its direct pending->approved/rejected path.
+type Approver interface {
+	Submit(ctx context.Context, tenantID uuid.UUID, in approvals.SubmitInput) (*ent.ApprovalRequest, error)
+	FindRequestForObject(ctx context.Context, tenantID uuid.UUID, module string, objectID uuid.UUID) (*ent.ApprovalRequest, error)
+	Decide(ctx context.Context, tenantID uuid.UUID, in approvals.DecisionInput) (*approvals.Decision, error)
+}
+
 func NewService(orm *ent.Client, notify Notifier) *Service {
 	return &Service{orm: orm, notify: notify}
 }
+
+// SetApprovals wires the approval engine into the leave module (called at startup).
+func (s *Service) SetApprovals(a Approver) { s.approvals = a }
 
 // ---- Categories ----
 
