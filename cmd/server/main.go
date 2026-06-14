@@ -31,12 +31,15 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/http/handlers"
 	mw "github.com/Bengo-Hub/erp-api/internal/http/middleware"
+	"github.com/Bengo-Hub/erp-api/internal/modules/appraisals"
 	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/consumers"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
 	"github.com/Bengo-Hub/erp-api/internal/modules/rbac"
+	"github.com/Bengo-Hub/erp-api/internal/modules/performance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/recruitment"
+	"github.com/Bengo-Hub/erp-api/internal/modules/training"
 	"github.com/Bengo-Hub/erp-api/internal/platform/cache"
 	"github.com/Bengo-Hub/erp-api/internal/platform/database"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
@@ -141,6 +144,9 @@ func run() error {
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
 	recruitmentHandler := handlers.NewRecruitmentHandler(log, recruitment.NewService(orm))
+	trainingHandler := handlers.NewTrainingHandler(log, training.NewService(orm))
+	appraisalsHandler := handlers.NewAppraisalsHandler(log, appraisals.NewService(orm))
+	performanceHandler := handlers.NewPerformanceHandler(log, performance.NewService(orm))
 
 	// Leave accrual cron (Go replacement for the accrue_leave management command).
 	leave.NewAccrualCron(leaveSvc, log, cfg.Events.LeaveAccrualInterval).Start(ctx)
@@ -171,6 +177,9 @@ func run() error {
 			leaveHandler.RegisterRoutes(priv)
 			attendanceHandler.RegisterRoutes(priv)
 			recruitmentHandler.RegisterRoutes(priv)
+			trainingHandler.RegisterRoutes(priv)
+			appraisalsHandler.RegisterRoutes(priv)
+			performanceHandler.RegisterRoutes(priv)
 		})
 	})
 
