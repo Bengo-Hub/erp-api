@@ -1,17 +1,19 @@
 // Package treasury is a service-to-service client for treasury-api. erp-api uses it only
 // to request payroll net-pay disbursement (POST /s2s/{tenant}/payouts/disburse). Treasury
 // remains the single source of truth for money movement + GL; erp-api never posts ledgers.
+//
+// The S2S transport is the shared github.com/Bengo-Hub/shared-service-client (circuit
+// breaker + retry + tracing + tenant/request-id header propagation). erp-api layers the
+// shared INTERNAL_SERVICE_KEY (X-API-Key) and a per-batch Idempotency-Key on top.
 package treasury
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
+	serviceclient "github.com/Bengo-Hub/shared-service-client"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -27,58 +29,59 @@ type Payout struct {
 	Description   string `json:"description"`
 }
 
-// Client calls treasury-api over S2S (X-API-Key: INTERNAL_SERVICE_KEY).
+// Client calls treasury-api over S2S (X-API-Key: INTERNAL_SERVICE_KEY) using the shared
+// service client for resilience (retry/circuit-breaker) and header propagation.
 type Client struct {
-	baseURL string
 	apiKey  string
-	http    *http.Client
+	enabled bool
+	sc      *serviceclient.Client
 	log     *zap.Logger
 }
 
-// NewClient builds the treasury S2S client.
+// NewClient builds the treasury S2S client. apiKey is the shared INTERNAL_SERVICE_KEY.
+// When baseURL or apiKey is empty the client is disabled (Disburse becomes a no-op).
 func NewClient(baseURL, apiKey string, log *zap.Logger) *Client {
+	log = log.Named("treasury.client")
+	baseURL = strings.TrimRight(baseURL, "/")
+	enabled := baseURL != "" && apiKey != ""
+	var sc *serviceclient.Client
+	if enabled {
+		cfg := serviceclient.DefaultConfig(baseURL, "treasury-api", log)
+		cfg.Timeout = 12 * time.Second
+		sc = serviceclient.New(cfg)
+	}
 	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"),
 		apiKey:  apiKey,
-		http:    &http.Client{Timeout: 12 * time.Second},
-		log:     log.Named("treasury.client"),
+		enabled: enabled,
+		sc:      sc,
+		log:     log,
 	}
 }
 
 // Enabled reports whether the client is configured for S2S calls.
-func (c *Client) Enabled() bool { return c.baseURL != "" && c.apiKey != "" }
+func (c *Client) Enabled() bool { return c.enabled }
 
 // Disburse POSTs the payouts to treasury. idempotencyKey is sent as Idempotency-Key so
 // treasury can dedupe a re-sent batch (sprint §payroll→treasury flow). Best-effort: a
 // transport/5xx failure is returned to the caller but does NOT roll back the GL event.
 func (c *Client) Disburse(ctx context.Context, tenantID uuid.UUID, payouts []Payout, idempotencyKey string) error {
-	if !c.Enabled() {
+	if !c.enabled {
 		c.log.Debug("treasury disburse skipped: client not configured")
 		return nil
 	}
 	if len(payouts) == 0 {
 		return nil
 	}
-	body, err := json.Marshal(map[string]any{"payouts": payouts})
-	if err != nil {
-		return fmt.Errorf("treasury: marshal payouts: %w", err)
-	}
-	url := fmt.Sprintf("%s/api/v1/s2s/%s/payouts/disburse", c.baseURL, tenantID.String())
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", c.apiKey)
+	headers := map[string]string{"X-API-Key": c.apiKey}
 	if idempotencyKey != "" {
-		req.Header.Set("Idempotency-Key", idempotencyKey)
+		headers["Idempotency-Key"] = idempotencyKey
 	}
-	resp, err := c.http.Do(req)
+	path := fmt.Sprintf("/api/v1/s2s/%s/payouts/disburse", tenantID.String())
+	resp, err := c.sc.Post(ctx, path, map[string]any{"payouts": payouts}, headers)
 	if err != nil {
 		return fmt.Errorf("treasury: disburse: %w", err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
+	if !resp.IsSuccess() {
 		return fmt.Errorf("treasury: disburse: status %d", resp.StatusCode)
 	}
 	return nil
