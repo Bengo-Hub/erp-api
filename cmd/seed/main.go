@@ -21,6 +21,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 
+	"github.com/Bengo-Hub/erp-api/internal/config"
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
@@ -79,6 +80,12 @@ func main() {
 	if dsn == "" {
 		dsn = "postgres://postgres:postgres@localhost:5432/bengo_erp?sslmode=disable"
 	}
+	// Seed into the erp schema (not public — see config.DSN / data-migration-runbook).
+	schemaName := os.Getenv("DB_SCHEMA")
+	if schemaName == "" {
+		schemaName = "erp"
+	}
+	dsn = config.EnsureSearchPath(dsn, schemaName)
 
 	sqlDB, err := sql.Open("pgx", dsn)
 	if err != nil {
