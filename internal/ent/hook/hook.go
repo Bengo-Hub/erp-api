@@ -165,30 +165,6 @@ func (f AuthTenantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AuthTenantMutation", m)
 }
 
-// The BankBranchFunc type is an adapter to allow the use of ordinary
-// function as BankBranch mutator.
-type BankBranchFunc func(context.Context, *ent.BankBranchMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f BankBranchFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.BankBranchMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BankBranchMutation", m)
-}
-
-// The BankInstitutionFunc type is an adapter to allow the use of ordinary
-// function as BankInstitution mutator.
-type BankInstitutionFunc func(context.Context, *ent.BankInstitutionMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f BankInstitutionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.BankInstitutionMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BankInstitutionMutation", m)
-}
-
 // The BenefitTaxFunc type is an adapter to allow the use of ordinary
 // function as BenefitTax mutator.
 type BenefitTaxFunc func(context.Context, *ent.BenefitTaxMutation) (ent.Value, error)
@@ -751,18 +727,6 @@ func (f PermissionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PermissionMutation", m)
-}
-
-// The ProjectFunc type is an adapter to allow the use of ordinary
-// function as Project mutator.
-type ProjectFunc func(context.Context, *ent.ProjectMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f ProjectFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.ProjectMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProjectMutation", m)
 }
 
 // The PublicHolidayFunc type is an adapter to allow the use of ordinary

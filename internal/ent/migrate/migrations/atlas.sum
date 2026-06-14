@@ -1,5 +1,6 @@
-h1:yky37uQ0RsbSA+1S1aT1a4Ft7vnUusfKd6cyxJ2Czh8=
+h1:Mu/OQyQvoV+x9epDZvcaZiglGQ28VvsvC6W1JY0c9f8=
 20260614111624_initial_schema.sql h1:tduj8h0RdEm+lMEI2bb30y3PuaaHSJmw5kPoJ1kC5jk=
 20260614165124_leave_schema.sql h1:nMX5BEZkndFmBfl63yvqIKFsnuuMwtZ90snrBefIfrE=
 20260614170337_attendance_schema.sql h1:z7tsaY/igRA6rGJJoBcVLgeuNS6Y8d8wR5vwdeQboAw=
 20260614171329_recruitment_schema.sql h1:PS7fyRs3/Ws7DBZl0B8Efr/kqa3JdIoFVwXdt71i4x8=
+20260614183044_remove_project_and_bank_masters.sql h1:kac0KpV5YUww55b0D5iQTlo4/6DbmBWpXSjoBgaRl98=

@@ -38,10 +38,6 @@ type Tx struct {
 	AuthOutlet *AuthOutletClient
 	// AuthTenant is the client for interacting with the AuthTenant builders.
 	AuthTenant *AuthTenantClient
-	// BankBranch is the client for interacting with the BankBranch builders.
-	BankBranch *BankBranchClient
-	// BankInstitution is the client for interacting with the BankInstitution builders.
-	BankInstitution *BankInstitutionClient
 	// BenefitTax is the client for interacting with the BenefitTax builders.
 	BenefitTax *BenefitTaxClient
 	// Candidate is the client for interacting with the Candidate builders.
@@ -136,8 +132,6 @@ type Tx struct {
 	PerformanceReview *PerformanceReviewClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
-	// Project is the client for interacting with the Project builders.
-	Project *ProjectClient
 	// PublicHoliday is the client for interacting with the PublicHoliday builders.
 	PublicHoliday *PublicHolidayClient
 	// Region is the client for interacting with the Region builders.
@@ -326,8 +320,6 @@ func (tx *Tx) init() {
 	tx.AttendanceRule = NewAttendanceRuleClient(tx.config)
 	tx.AuthOutlet = NewAuthOutletClient(tx.config)
 	tx.AuthTenant = NewAuthTenantClient(tx.config)
-	tx.BankBranch = NewBankBranchClient(tx.config)
-	tx.BankInstitution = NewBankInstitutionClient(tx.config)
 	tx.BenefitTax = NewBenefitTaxClient(tx.config)
 	tx.Candidate = NewCandidateClient(tx.config)
 	tx.ClaimItem = NewClaimItemClient(tx.config)
@@ -375,7 +367,6 @@ func (tx *Tx) init() {
 	tx.PerformanceMetric = NewPerformanceMetricClient(tx.config)
 	tx.PerformanceReview = NewPerformanceReviewClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
-	tx.Project = NewProjectClient(tx.config)
 	tx.PublicHoliday = NewPublicHolidayClient(tx.config)
 	tx.Region = NewRegionClient(tx.config)
 	tx.RepayOption = NewRepayOptionClient(tx.config)

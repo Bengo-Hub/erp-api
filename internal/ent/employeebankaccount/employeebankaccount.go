@@ -18,10 +18,14 @@ const (
 	FieldTenantID = "tenant_id"
 	// FieldEmployeeID holds the string denoting the employee_id field in the database.
 	FieldEmployeeID = "employee_id"
-	// FieldBankInstitutionID holds the string denoting the bank_institution_id field in the database.
-	FieldBankInstitutionID = "bank_institution_id"
-	// FieldBankBranchID holds the string denoting the bank_branch_id field in the database.
-	FieldBankBranchID = "bank_branch_id"
+	// FieldBankName holds the string denoting the bank_name field in the database.
+	FieldBankName = "bank_name"
+	// FieldBankCode holds the string denoting the bank_code field in the database.
+	FieldBankCode = "bank_code"
+	// FieldBranchName holds the string denoting the branch_name field in the database.
+	FieldBranchName = "branch_name"
+	// FieldBranchCode holds the string denoting the branch_code field in the database.
+	FieldBranchCode = "branch_code"
 	// FieldAccountName holds the string denoting the account_name field in the database.
 	FieldAccountName = "account_name"
 	// FieldAccountNumber holds the string denoting the account_number field in the database.
@@ -49,8 +53,10 @@ var Columns = []string{
 	FieldID,
 	FieldTenantID,
 	FieldEmployeeID,
-	FieldBankInstitutionID,
-	FieldBankBranchID,
+	FieldBankName,
+	FieldBankCode,
+	FieldBranchName,
+	FieldBranchCode,
 	FieldAccountName,
 	FieldAccountNumber,
 	FieldAccountType,
@@ -113,14 +119,24 @@ func ByEmployeeID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEmployeeID, opts...).ToFunc()
 }
 
-// ByBankInstitutionID orders the results by the bank_institution_id field.
-func ByBankInstitutionID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldBankInstitutionID, opts...).ToFunc()
+// ByBankName orders the results by the bank_name field.
+func ByBankName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBankName, opts...).ToFunc()
 }
 
-// ByBankBranchID orders the results by the bank_branch_id field.
-func ByBankBranchID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldBankBranchID, opts...).ToFunc()
+// ByBankCode orders the results by the bank_code field.
+func ByBankCode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBankCode, opts...).ToFunc()
+}
+
+// ByBranchName orders the results by the branch_name field.
+func ByBranchName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBranchName, opts...).ToFunc()
+}
+
+// ByBranchCode orders the results by the branch_code field.
+func ByBranchCode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBranchCode, opts...).ToFunc()
 }
 
 // ByAccountName orders the results by the account_name field.

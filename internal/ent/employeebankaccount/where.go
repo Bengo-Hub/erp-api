@@ -65,14 +65,24 @@ func EmployeeID(v uuid.UUID) predicate.EmployeeBankAccount {
 	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldEmployeeID, v))
 }
 
-// BankInstitutionID applies equality check predicate on the "bank_institution_id" field. It's identical to BankInstitutionIDEQ.
-func BankInstitutionID(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBankInstitutionID, v))
+// BankName applies equality check predicate on the "bank_name" field. It's identical to BankNameEQ.
+func BankName(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBankName, v))
 }
 
-// BankBranchID applies equality check predicate on the "bank_branch_id" field. It's identical to BankBranchIDEQ.
-func BankBranchID(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBankBranchID, v))
+// BankCode applies equality check predicate on the "bank_code" field. It's identical to BankCodeEQ.
+func BankCode(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBankCode, v))
+}
+
+// BranchName applies equality check predicate on the "branch_name" field. It's identical to BranchNameEQ.
+func BranchName(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBranchName, v))
+}
+
+// BranchCode applies equality check predicate on the "branch_code" field. It's identical to BranchCodeEQ.
+func BranchCode(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBranchCode, v))
 }
 
 // AccountName applies equality check predicate on the "account_name" field. It's identical to AccountNameEQ.
@@ -200,104 +210,304 @@ func EmployeeIDLTE(v uuid.UUID) predicate.EmployeeBankAccount {
 	return predicate.EmployeeBankAccount(sql.FieldLTE(FieldEmployeeID, v))
 }
 
-// BankInstitutionIDEQ applies the EQ predicate on the "bank_institution_id" field.
-func BankInstitutionIDEQ(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBankInstitutionID, v))
+// BankNameEQ applies the EQ predicate on the "bank_name" field.
+func BankNameEQ(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBankName, v))
 }
 
-// BankInstitutionIDNEQ applies the NEQ predicate on the "bank_institution_id" field.
-func BankInstitutionIDNEQ(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldNEQ(FieldBankInstitutionID, v))
+// BankNameNEQ applies the NEQ predicate on the "bank_name" field.
+func BankNameNEQ(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNEQ(FieldBankName, v))
 }
 
-// BankInstitutionIDIn applies the In predicate on the "bank_institution_id" field.
-func BankInstitutionIDIn(vs ...uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldIn(FieldBankInstitutionID, vs...))
+// BankNameIn applies the In predicate on the "bank_name" field.
+func BankNameIn(vs ...string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldIn(FieldBankName, vs...))
 }
 
-// BankInstitutionIDNotIn applies the NotIn predicate on the "bank_institution_id" field.
-func BankInstitutionIDNotIn(vs ...uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldNotIn(FieldBankInstitutionID, vs...))
+// BankNameNotIn applies the NotIn predicate on the "bank_name" field.
+func BankNameNotIn(vs ...string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNotIn(FieldBankName, vs...))
 }
 
-// BankInstitutionIDGT applies the GT predicate on the "bank_institution_id" field.
-func BankInstitutionIDGT(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldGT(FieldBankInstitutionID, v))
+// BankNameGT applies the GT predicate on the "bank_name" field.
+func BankNameGT(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldGT(FieldBankName, v))
 }
 
-// BankInstitutionIDGTE applies the GTE predicate on the "bank_institution_id" field.
-func BankInstitutionIDGTE(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldGTE(FieldBankInstitutionID, v))
+// BankNameGTE applies the GTE predicate on the "bank_name" field.
+func BankNameGTE(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldGTE(FieldBankName, v))
 }
 
-// BankInstitutionIDLT applies the LT predicate on the "bank_institution_id" field.
-func BankInstitutionIDLT(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldLT(FieldBankInstitutionID, v))
+// BankNameLT applies the LT predicate on the "bank_name" field.
+func BankNameLT(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldLT(FieldBankName, v))
 }
 
-// BankInstitutionIDLTE applies the LTE predicate on the "bank_institution_id" field.
-func BankInstitutionIDLTE(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldLTE(FieldBankInstitutionID, v))
+// BankNameLTE applies the LTE predicate on the "bank_name" field.
+func BankNameLTE(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldLTE(FieldBankName, v))
 }
 
-// BankInstitutionIDIsNil applies the IsNil predicate on the "bank_institution_id" field.
-func BankInstitutionIDIsNil() predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldIsNull(FieldBankInstitutionID))
+// BankNameContains applies the Contains predicate on the "bank_name" field.
+func BankNameContains(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldContains(FieldBankName, v))
 }
 
-// BankInstitutionIDNotNil applies the NotNil predicate on the "bank_institution_id" field.
-func BankInstitutionIDNotNil() predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldNotNull(FieldBankInstitutionID))
+// BankNameHasPrefix applies the HasPrefix predicate on the "bank_name" field.
+func BankNameHasPrefix(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldHasPrefix(FieldBankName, v))
 }
 
-// BankBranchIDEQ applies the EQ predicate on the "bank_branch_id" field.
-func BankBranchIDEQ(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBankBranchID, v))
+// BankNameHasSuffix applies the HasSuffix predicate on the "bank_name" field.
+func BankNameHasSuffix(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldHasSuffix(FieldBankName, v))
 }
 
-// BankBranchIDNEQ applies the NEQ predicate on the "bank_branch_id" field.
-func BankBranchIDNEQ(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldNEQ(FieldBankBranchID, v))
+// BankNameIsNil applies the IsNil predicate on the "bank_name" field.
+func BankNameIsNil() predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldIsNull(FieldBankName))
 }
 
-// BankBranchIDIn applies the In predicate on the "bank_branch_id" field.
-func BankBranchIDIn(vs ...uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldIn(FieldBankBranchID, vs...))
+// BankNameNotNil applies the NotNil predicate on the "bank_name" field.
+func BankNameNotNil() predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNotNull(FieldBankName))
 }
 
-// BankBranchIDNotIn applies the NotIn predicate on the "bank_branch_id" field.
-func BankBranchIDNotIn(vs ...uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldNotIn(FieldBankBranchID, vs...))
+// BankNameEqualFold applies the EqualFold predicate on the "bank_name" field.
+func BankNameEqualFold(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEqualFold(FieldBankName, v))
 }
 
-// BankBranchIDGT applies the GT predicate on the "bank_branch_id" field.
-func BankBranchIDGT(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldGT(FieldBankBranchID, v))
+// BankNameContainsFold applies the ContainsFold predicate on the "bank_name" field.
+func BankNameContainsFold(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldContainsFold(FieldBankName, v))
 }
 
-// BankBranchIDGTE applies the GTE predicate on the "bank_branch_id" field.
-func BankBranchIDGTE(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldGTE(FieldBankBranchID, v))
+// BankCodeEQ applies the EQ predicate on the "bank_code" field.
+func BankCodeEQ(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBankCode, v))
 }
 
-// BankBranchIDLT applies the LT predicate on the "bank_branch_id" field.
-func BankBranchIDLT(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldLT(FieldBankBranchID, v))
+// BankCodeNEQ applies the NEQ predicate on the "bank_code" field.
+func BankCodeNEQ(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNEQ(FieldBankCode, v))
 }
 
-// BankBranchIDLTE applies the LTE predicate on the "bank_branch_id" field.
-func BankBranchIDLTE(v uuid.UUID) predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldLTE(FieldBankBranchID, v))
+// BankCodeIn applies the In predicate on the "bank_code" field.
+func BankCodeIn(vs ...string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldIn(FieldBankCode, vs...))
 }
 
-// BankBranchIDIsNil applies the IsNil predicate on the "bank_branch_id" field.
-func BankBranchIDIsNil() predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldIsNull(FieldBankBranchID))
+// BankCodeNotIn applies the NotIn predicate on the "bank_code" field.
+func BankCodeNotIn(vs ...string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNotIn(FieldBankCode, vs...))
 }
 
-// BankBranchIDNotNil applies the NotNil predicate on the "bank_branch_id" field.
-func BankBranchIDNotNil() predicate.EmployeeBankAccount {
-	return predicate.EmployeeBankAccount(sql.FieldNotNull(FieldBankBranchID))
+// BankCodeGT applies the GT predicate on the "bank_code" field.
+func BankCodeGT(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldGT(FieldBankCode, v))
+}
+
+// BankCodeGTE applies the GTE predicate on the "bank_code" field.
+func BankCodeGTE(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldGTE(FieldBankCode, v))
+}
+
+// BankCodeLT applies the LT predicate on the "bank_code" field.
+func BankCodeLT(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldLT(FieldBankCode, v))
+}
+
+// BankCodeLTE applies the LTE predicate on the "bank_code" field.
+func BankCodeLTE(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldLTE(FieldBankCode, v))
+}
+
+// BankCodeContains applies the Contains predicate on the "bank_code" field.
+func BankCodeContains(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldContains(FieldBankCode, v))
+}
+
+// BankCodeHasPrefix applies the HasPrefix predicate on the "bank_code" field.
+func BankCodeHasPrefix(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldHasPrefix(FieldBankCode, v))
+}
+
+// BankCodeHasSuffix applies the HasSuffix predicate on the "bank_code" field.
+func BankCodeHasSuffix(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldHasSuffix(FieldBankCode, v))
+}
+
+// BankCodeIsNil applies the IsNil predicate on the "bank_code" field.
+func BankCodeIsNil() predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldIsNull(FieldBankCode))
+}
+
+// BankCodeNotNil applies the NotNil predicate on the "bank_code" field.
+func BankCodeNotNil() predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNotNull(FieldBankCode))
+}
+
+// BankCodeEqualFold applies the EqualFold predicate on the "bank_code" field.
+func BankCodeEqualFold(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEqualFold(FieldBankCode, v))
+}
+
+// BankCodeContainsFold applies the ContainsFold predicate on the "bank_code" field.
+func BankCodeContainsFold(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldContainsFold(FieldBankCode, v))
+}
+
+// BranchNameEQ applies the EQ predicate on the "branch_name" field.
+func BranchNameEQ(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBranchName, v))
+}
+
+// BranchNameNEQ applies the NEQ predicate on the "branch_name" field.
+func BranchNameNEQ(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNEQ(FieldBranchName, v))
+}
+
+// BranchNameIn applies the In predicate on the "branch_name" field.
+func BranchNameIn(vs ...string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldIn(FieldBranchName, vs...))
+}
+
+// BranchNameNotIn applies the NotIn predicate on the "branch_name" field.
+func BranchNameNotIn(vs ...string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNotIn(FieldBranchName, vs...))
+}
+
+// BranchNameGT applies the GT predicate on the "branch_name" field.
+func BranchNameGT(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldGT(FieldBranchName, v))
+}
+
+// BranchNameGTE applies the GTE predicate on the "branch_name" field.
+func BranchNameGTE(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldGTE(FieldBranchName, v))
+}
+
+// BranchNameLT applies the LT predicate on the "branch_name" field.
+func BranchNameLT(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldLT(FieldBranchName, v))
+}
+
+// BranchNameLTE applies the LTE predicate on the "branch_name" field.
+func BranchNameLTE(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldLTE(FieldBranchName, v))
+}
+
+// BranchNameContains applies the Contains predicate on the "branch_name" field.
+func BranchNameContains(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldContains(FieldBranchName, v))
+}
+
+// BranchNameHasPrefix applies the HasPrefix predicate on the "branch_name" field.
+func BranchNameHasPrefix(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldHasPrefix(FieldBranchName, v))
+}
+
+// BranchNameHasSuffix applies the HasSuffix predicate on the "branch_name" field.
+func BranchNameHasSuffix(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldHasSuffix(FieldBranchName, v))
+}
+
+// BranchNameIsNil applies the IsNil predicate on the "branch_name" field.
+func BranchNameIsNil() predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldIsNull(FieldBranchName))
+}
+
+// BranchNameNotNil applies the NotNil predicate on the "branch_name" field.
+func BranchNameNotNil() predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNotNull(FieldBranchName))
+}
+
+// BranchNameEqualFold applies the EqualFold predicate on the "branch_name" field.
+func BranchNameEqualFold(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEqualFold(FieldBranchName, v))
+}
+
+// BranchNameContainsFold applies the ContainsFold predicate on the "branch_name" field.
+func BranchNameContainsFold(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldContainsFold(FieldBranchName, v))
+}
+
+// BranchCodeEQ applies the EQ predicate on the "branch_code" field.
+func BranchCodeEQ(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEQ(FieldBranchCode, v))
+}
+
+// BranchCodeNEQ applies the NEQ predicate on the "branch_code" field.
+func BranchCodeNEQ(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNEQ(FieldBranchCode, v))
+}
+
+// BranchCodeIn applies the In predicate on the "branch_code" field.
+func BranchCodeIn(vs ...string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldIn(FieldBranchCode, vs...))
+}
+
+// BranchCodeNotIn applies the NotIn predicate on the "branch_code" field.
+func BranchCodeNotIn(vs ...string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNotIn(FieldBranchCode, vs...))
+}
+
+// BranchCodeGT applies the GT predicate on the "branch_code" field.
+func BranchCodeGT(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldGT(FieldBranchCode, v))
+}
+
+// BranchCodeGTE applies the GTE predicate on the "branch_code" field.
+func BranchCodeGTE(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldGTE(FieldBranchCode, v))
+}
+
+// BranchCodeLT applies the LT predicate on the "branch_code" field.
+func BranchCodeLT(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldLT(FieldBranchCode, v))
+}
+
+// BranchCodeLTE applies the LTE predicate on the "branch_code" field.
+func BranchCodeLTE(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldLTE(FieldBranchCode, v))
+}
+
+// BranchCodeContains applies the Contains predicate on the "branch_code" field.
+func BranchCodeContains(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldContains(FieldBranchCode, v))
+}
+
+// BranchCodeHasPrefix applies the HasPrefix predicate on the "branch_code" field.
+func BranchCodeHasPrefix(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldHasPrefix(FieldBranchCode, v))
+}
+
+// BranchCodeHasSuffix applies the HasSuffix predicate on the "branch_code" field.
+func BranchCodeHasSuffix(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldHasSuffix(FieldBranchCode, v))
+}
+
+// BranchCodeIsNil applies the IsNil predicate on the "branch_code" field.
+func BranchCodeIsNil() predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldIsNull(FieldBranchCode))
+}
+
+// BranchCodeNotNil applies the NotNil predicate on the "branch_code" field.
+func BranchCodeNotNil() predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldNotNull(FieldBranchCode))
+}
+
+// BranchCodeEqualFold applies the EqualFold predicate on the "branch_code" field.
+func BranchCodeEqualFold(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldEqualFold(FieldBranchCode, v))
+}
+
+// BranchCodeContainsFold applies the ContainsFold predicate on the "branch_code" field.
+func BranchCodeContainsFold(v string) predicate.EmployeeBankAccount {
+	return predicate.EmployeeBankAccount(sql.FieldContainsFold(FieldBranchCode, v))
 }
 
 // AccountNameEQ applies the EQ predicate on the "account_name" field.

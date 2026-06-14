@@ -22,10 +22,14 @@ type EmployeeBankAccount struct {
 	TenantID uuid.UUID `json:"tenant_id,omitempty"`
 	// FK -> employee.id
 	EmployeeID uuid.UUID `json:"employee_id,omitempty"`
-	// BankInstitutionID holds the value of the "bank_institution_id" field.
-	BankInstitutionID *uuid.UUID `json:"bank_institution_id,omitempty"`
-	// BankBranchID holds the value of the "bank_branch_id" field.
-	BankBranchID *uuid.UUID `json:"bank_branch_id,omitempty"`
+	// Plain bank name (no ERP-owned bank master)
+	BankName string `json:"bank_name,omitempty"`
+	// Bank code / clearing code
+	BankCode string `json:"bank_code,omitempty"`
+	// BranchName holds the value of the "branch_name" field.
+	BranchName string `json:"branch_name,omitempty"`
+	// BranchCode holds the value of the "branch_code" field.
+	BranchCode string `json:"branch_code,omitempty"`
 	// AccountName holds the value of the "account_name" field.
 	AccountName string `json:"account_name,omitempty"`
 	// AccountNumber holds the value of the "account_number" field.
@@ -52,11 +56,9 @@ func (*EmployeeBankAccount) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case employeebankaccount.FieldBankInstitutionID, employeebankaccount.FieldBankBranchID:
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case employeebankaccount.FieldIsPrimary, employeebankaccount.FieldIsVerified:
 			values[i] = new(sql.NullBool)
-		case employeebankaccount.FieldAccountName, employeebankaccount.FieldAccountNumber, employeebankaccount.FieldAccountType, employeebankaccount.FieldStatus:
+		case employeebankaccount.FieldBankName, employeebankaccount.FieldBankCode, employeebankaccount.FieldBranchName, employeebankaccount.FieldBranchCode, employeebankaccount.FieldAccountName, employeebankaccount.FieldAccountNumber, employeebankaccount.FieldAccountType, employeebankaccount.FieldStatus:
 			values[i] = new(sql.NullString)
 		case employeebankaccount.FieldOpenedDate, employeebankaccount.FieldCreatedAt, employeebankaccount.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -95,19 +97,29 @@ func (_m *EmployeeBankAccount) assignValues(columns []string, values []any) erro
 			} else if value != nil {
 				_m.EmployeeID = *value
 			}
-		case employeebankaccount.FieldBankInstitutionID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field bank_institution_id", values[i])
+		case employeebankaccount.FieldBankName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field bank_name", values[i])
 			} else if value.Valid {
-				_m.BankInstitutionID = new(uuid.UUID)
-				*_m.BankInstitutionID = *value.S.(*uuid.UUID)
+				_m.BankName = value.String
 			}
-		case employeebankaccount.FieldBankBranchID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field bank_branch_id", values[i])
+		case employeebankaccount.FieldBankCode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field bank_code", values[i])
 			} else if value.Valid {
-				_m.BankBranchID = new(uuid.UUID)
-				*_m.BankBranchID = *value.S.(*uuid.UUID)
+				_m.BankCode = value.String
+			}
+		case employeebankaccount.FieldBranchName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field branch_name", values[i])
+			} else if value.Valid {
+				_m.BranchName = value.String
+			}
+		case employeebankaccount.FieldBranchCode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field branch_code", values[i])
+			} else if value.Valid {
+				_m.BranchCode = value.String
 			}
 		case employeebankaccount.FieldAccountName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -206,15 +218,17 @@ func (_m *EmployeeBankAccount) String() string {
 	builder.WriteString("employee_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.EmployeeID))
 	builder.WriteString(", ")
-	if v := _m.BankInstitutionID; v != nil {
-		builder.WriteString("bank_institution_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
+	builder.WriteString("bank_name=")
+	builder.WriteString(_m.BankName)
 	builder.WriteString(", ")
-	if v := _m.BankBranchID; v != nil {
-		builder.WriteString("bank_branch_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
+	builder.WriteString("bank_code=")
+	builder.WriteString(_m.BankCode)
+	builder.WriteString(", ")
+	builder.WriteString("branch_name=")
+	builder.WriteString(_m.BranchName)
+	builder.WriteString(", ")
+	builder.WriteString("branch_code=")
+	builder.WriteString(_m.BranchCode)
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
 	builder.WriteString(_m.AccountName)

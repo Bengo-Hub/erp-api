@@ -25,8 +25,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
-	"github.com/Bengo-Hub/erp-api/internal/ent/bankbranch"
-	"github.com/Bengo-Hub/erp-api/internal/ent/bankinstitution"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
@@ -74,7 +72,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
-	"github.com/Bengo-Hub/erp-api/internal/ent/project"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
@@ -170,8 +167,6 @@ func checkColumn(t, c string) error {
 			attendancerule.Table:      attendancerule.ValidColumn,
 			authoutlet.Table:          authoutlet.ValidColumn,
 			authtenant.Table:          authtenant.ValidColumn,
-			bankbranch.Table:          bankbranch.ValidColumn,
-			bankinstitution.Table:     bankinstitution.ValidColumn,
 			benefittax.Table:          benefittax.ValidColumn,
 			candidate.Table:           candidate.ValidColumn,
 			claimitem.Table:           claimitem.ValidColumn,
@@ -219,7 +214,6 @@ func checkColumn(t, c string) error {
 			performancemetric.Table:   performancemetric.ValidColumn,
 			performancereview.Table:   performancereview.ValidColumn,
 			permission.Table:          permission.ValidColumn,
-			project.Table:             project.ValidColumn,
 			publicholiday.Table:       publicholiday.ValidColumn,
 			region.Table:              region.ValidColumn,
 			repayoption.Table:         repayoption.ValidColumn,

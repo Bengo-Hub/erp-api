@@ -29,8 +29,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
-	"github.com/Bengo-Hub/erp-api/internal/ent/bankbranch"
-	"github.com/Bengo-Hub/erp-api/internal/ent/bankinstitution"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
@@ -78,7 +76,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
-	"github.com/Bengo-Hub/erp-api/internal/ent/project"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
@@ -134,10 +131,6 @@ type Client struct {
 	AuthOutlet *AuthOutletClient
 	// AuthTenant is the client for interacting with the AuthTenant builders.
 	AuthTenant *AuthTenantClient
-	// BankBranch is the client for interacting with the BankBranch builders.
-	BankBranch *BankBranchClient
-	// BankInstitution is the client for interacting with the BankInstitution builders.
-	BankInstitution *BankInstitutionClient
 	// BenefitTax is the client for interacting with the BenefitTax builders.
 	BenefitTax *BenefitTaxClient
 	// Candidate is the client for interacting with the Candidate builders.
@@ -232,8 +225,6 @@ type Client struct {
 	PerformanceReview *PerformanceReviewClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
-	// Project is the client for interacting with the Project builders.
-	Project *ProjectClient
 	// PublicHoliday is the client for interacting with the PublicHoliday builders.
 	PublicHoliday *PublicHolidayClient
 	// Region is the client for interacting with the Region builders.
@@ -302,8 +293,6 @@ func (c *Client) init() {
 	c.AttendanceRule = NewAttendanceRuleClient(c.config)
 	c.AuthOutlet = NewAuthOutletClient(c.config)
 	c.AuthTenant = NewAuthTenantClient(c.config)
-	c.BankBranch = NewBankBranchClient(c.config)
-	c.BankInstitution = NewBankInstitutionClient(c.config)
 	c.BenefitTax = NewBenefitTaxClient(c.config)
 	c.Candidate = NewCandidateClient(c.config)
 	c.ClaimItem = NewClaimItemClient(c.config)
@@ -351,7 +340,6 @@ func (c *Client) init() {
 	c.PerformanceMetric = NewPerformanceMetricClient(c.config)
 	c.PerformanceReview = NewPerformanceReviewClient(c.config)
 	c.Permission = NewPermissionClient(c.config)
-	c.Project = NewProjectClient(c.config)
 	c.PublicHoliday = NewPublicHolidayClient(c.config)
 	c.Region = NewRegionClient(c.config)
 	c.RepayOption = NewRepayOptionClient(c.config)
@@ -479,8 +467,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		AttendanceRule:      NewAttendanceRuleClient(cfg),
 		AuthOutlet:          NewAuthOutletClient(cfg),
 		AuthTenant:          NewAuthTenantClient(cfg),
-		BankBranch:          NewBankBranchClient(cfg),
-		BankInstitution:     NewBankInstitutionClient(cfg),
 		BenefitTax:          NewBenefitTaxClient(cfg),
 		Candidate:           NewCandidateClient(cfg),
 		ClaimItem:           NewClaimItemClient(cfg),
@@ -528,7 +514,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PerformanceMetric:   NewPerformanceMetricClient(cfg),
 		PerformanceReview:   NewPerformanceReviewClient(cfg),
 		Permission:          NewPermissionClient(cfg),
-		Project:             NewProjectClient(cfg),
 		PublicHoliday:       NewPublicHolidayClient(cfg),
 		Region:              NewRegionClient(cfg),
 		RepayOption:         NewRepayOptionClient(cfg),
@@ -583,8 +568,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		AttendanceRule:      NewAttendanceRuleClient(cfg),
 		AuthOutlet:          NewAuthOutletClient(cfg),
 		AuthTenant:          NewAuthTenantClient(cfg),
-		BankBranch:          NewBankBranchClient(cfg),
-		BankInstitution:     NewBankInstitutionClient(cfg),
 		BenefitTax:          NewBenefitTaxClient(cfg),
 		Candidate:           NewCandidateClient(cfg),
 		ClaimItem:           NewClaimItemClient(cfg),
@@ -632,7 +615,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PerformanceMetric:   NewPerformanceMetricClient(cfg),
 		PerformanceReview:   NewPerformanceReviewClient(cfg),
 		Permission:          NewPermissionClient(cfg),
-		Project:             NewProjectClient(cfg),
 		PublicHoliday:       NewPublicHolidayClient(cfg),
 		Region:              NewRegionClient(cfg),
 		RepayOption:         NewRepayOptionClient(cfg),
@@ -687,23 +669,22 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Advance, c.ApiRequestMetric, c.AppSetting, c.Application, c.Appraisal,
 		c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
 		c.AppraisalTemplate, c.AttendanceRecord, c.AttendanceRule, c.AuthOutlet,
-		c.AuthTenant, c.BankBranch, c.BankInstitution, c.BenefitTax, c.Candidate,
-		c.ClaimItem, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
-		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
-		c.EmployeeDocument, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
-		c.ExpenseClaim, c.GeneralHRSettings, c.Goal, c.GoalProgress, c.HRDetails,
-		c.IdempotencyKey, c.JobGroup, c.JobPosting, c.JobTitle, c.LeaveBalance,
-		c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog, c.LeaveRequest, c.LoanType,
-		c.LossAndDamage, c.MetricCategory, c.MetricTarget, c.NextOfKin, c.OffDay,
-		c.OnboardingTask, c.OutboxEvent, c.PayrollComponent, c.PayrollFormula,
-		c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio, c.Payslip,
-		c.PayslipAudit, c.PerformanceMetric, c.PerformanceReview, c.Permission,
-		c.Project, c.PublicHoliday, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
-		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
-		c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride, c.Timesheet,
-		c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
-		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
-		c.WorkersUnion,
+		c.AuthTenant, c.BenefitTax, c.Candidate, c.ClaimItem, c.ContactDetails,
+		c.Contract, c.CustomUser, c.Department, c.ESSSettings, c.Employee,
+		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan,
+		c.EmployeeMetric, c.EmployeeOnboarding, c.ExpenseClaim, c.GeneralHRSettings,
+		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
+		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
+		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
+		c.MetricTarget, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
+		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
+		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PerformanceMetric,
+		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
+		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
+		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
+		c.Timesheet, c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment,
+		c.TrainingEvaluation, c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift,
+		c.WorkShiftSchedule, c.WorkersUnion,
 	} {
 		n.Use(hooks...)
 	}
@@ -716,23 +697,22 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Advance, c.ApiRequestMetric, c.AppSetting, c.Application, c.Appraisal,
 		c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
 		c.AppraisalTemplate, c.AttendanceRecord, c.AttendanceRule, c.AuthOutlet,
-		c.AuthTenant, c.BankBranch, c.BankInstitution, c.BenefitTax, c.Candidate,
-		c.ClaimItem, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
-		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
-		c.EmployeeDocument, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
-		c.ExpenseClaim, c.GeneralHRSettings, c.Goal, c.GoalProgress, c.HRDetails,
-		c.IdempotencyKey, c.JobGroup, c.JobPosting, c.JobTitle, c.LeaveBalance,
-		c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog, c.LeaveRequest, c.LoanType,
-		c.LossAndDamage, c.MetricCategory, c.MetricTarget, c.NextOfKin, c.OffDay,
-		c.OnboardingTask, c.OutboxEvent, c.PayrollComponent, c.PayrollFormula,
-		c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio, c.Payslip,
-		c.PayslipAudit, c.PerformanceMetric, c.PerformanceReview, c.Permission,
-		c.Project, c.PublicHoliday, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
-		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
-		c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride, c.Timesheet,
-		c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
-		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
-		c.WorkersUnion,
+		c.AuthTenant, c.BenefitTax, c.Candidate, c.ClaimItem, c.ContactDetails,
+		c.Contract, c.CustomUser, c.Department, c.ESSSettings, c.Employee,
+		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan,
+		c.EmployeeMetric, c.EmployeeOnboarding, c.ExpenseClaim, c.GeneralHRSettings,
+		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
+		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
+		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
+		c.MetricTarget, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
+		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
+		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PerformanceMetric,
+		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
+		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
+		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
+		c.Timesheet, c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment,
+		c.TrainingEvaluation, c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift,
+		c.WorkShiftSchedule, c.WorkersUnion,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -767,10 +747,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.AuthOutlet.mutate(ctx, m)
 	case *AuthTenantMutation:
 		return c.AuthTenant.mutate(ctx, m)
-	case *BankBranchMutation:
-		return c.BankBranch.mutate(ctx, m)
-	case *BankInstitutionMutation:
-		return c.BankInstitution.mutate(ctx, m)
 	case *BenefitTaxMutation:
 		return c.BenefitTax.mutate(ctx, m)
 	case *CandidateMutation:
@@ -865,8 +841,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PerformanceReview.mutate(ctx, m)
 	case *PermissionMutation:
 		return c.Permission.mutate(ctx, m)
-	case *ProjectMutation:
-		return c.Project.mutate(ctx, m)
 	case *PublicHolidayMutation:
 		return c.PublicHoliday.mutate(ctx, m)
 	case *RegionMutation:
@@ -2674,304 +2648,6 @@ func (c *AuthTenantClient) mutate(ctx context.Context, m *AuthTenantMutation) (V
 		return (&AuthTenantDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown AuthTenant mutation op: %q", m.Op())
-	}
-}
-
-// BankBranchClient is a client for the BankBranch schema.
-type BankBranchClient struct {
-	config
-}
-
-// NewBankBranchClient returns a client for the BankBranch from the given config.
-func NewBankBranchClient(c config) *BankBranchClient {
-	return &BankBranchClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `bankbranch.Hooks(f(g(h())))`.
-func (c *BankBranchClient) Use(hooks ...Hook) {
-	c.hooks.BankBranch = append(c.hooks.BankBranch, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `bankbranch.Intercept(f(g(h())))`.
-func (c *BankBranchClient) Intercept(interceptors ...Interceptor) {
-	c.inters.BankBranch = append(c.inters.BankBranch, interceptors...)
-}
-
-// Create returns a builder for creating a BankBranch entity.
-func (c *BankBranchClient) Create() *BankBranchCreate {
-	mutation := newBankBranchMutation(c.config, OpCreate)
-	return &BankBranchCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of BankBranch entities.
-func (c *BankBranchClient) CreateBulk(builders ...*BankBranchCreate) *BankBranchCreateBulk {
-	return &BankBranchCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *BankBranchClient) MapCreateBulk(slice any, setFunc func(*BankBranchCreate, int)) *BankBranchCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &BankBranchCreateBulk{err: fmt.Errorf("calling to BankBranchClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*BankBranchCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &BankBranchCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for BankBranch.
-func (c *BankBranchClient) Update() *BankBranchUpdate {
-	mutation := newBankBranchMutation(c.config, OpUpdate)
-	return &BankBranchUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *BankBranchClient) UpdateOne(_m *BankBranch) *BankBranchUpdateOne {
-	mutation := newBankBranchMutation(c.config, OpUpdateOne, withBankBranch(_m))
-	return &BankBranchUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *BankBranchClient) UpdateOneID(id uuid.UUID) *BankBranchUpdateOne {
-	mutation := newBankBranchMutation(c.config, OpUpdateOne, withBankBranchID(id))
-	return &BankBranchUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for BankBranch.
-func (c *BankBranchClient) Delete() *BankBranchDelete {
-	mutation := newBankBranchMutation(c.config, OpDelete)
-	return &BankBranchDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *BankBranchClient) DeleteOne(_m *BankBranch) *BankBranchDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *BankBranchClient) DeleteOneID(id uuid.UUID) *BankBranchDeleteOne {
-	builder := c.Delete().Where(bankbranch.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &BankBranchDeleteOne{builder}
-}
-
-// Query returns a query builder for BankBranch.
-func (c *BankBranchClient) Query() *BankBranchQuery {
-	return &BankBranchQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeBankBranch},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a BankBranch entity by its id.
-func (c *BankBranchClient) Get(ctx context.Context, id uuid.UUID) (*BankBranch, error) {
-	return c.Query().Where(bankbranch.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *BankBranchClient) GetX(ctx context.Context, id uuid.UUID) *BankBranch {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryBank queries the bank edge of a BankBranch.
-func (c *BankBranchClient) QueryBank(_m *BankBranch) *BankInstitutionQuery {
-	query := (&BankInstitutionClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(bankbranch.Table, bankbranch.FieldID, id),
-			sqlgraph.To(bankinstitution.Table, bankinstitution.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, bankbranch.BankTable, bankbranch.BankColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *BankBranchClient) Hooks() []Hook {
-	return c.hooks.BankBranch
-}
-
-// Interceptors returns the client interceptors.
-func (c *BankBranchClient) Interceptors() []Interceptor {
-	return c.inters.BankBranch
-}
-
-func (c *BankBranchClient) mutate(ctx context.Context, m *BankBranchMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&BankBranchCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&BankBranchUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&BankBranchUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&BankBranchDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown BankBranch mutation op: %q", m.Op())
-	}
-}
-
-// BankInstitutionClient is a client for the BankInstitution schema.
-type BankInstitutionClient struct {
-	config
-}
-
-// NewBankInstitutionClient returns a client for the BankInstitution from the given config.
-func NewBankInstitutionClient(c config) *BankInstitutionClient {
-	return &BankInstitutionClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `bankinstitution.Hooks(f(g(h())))`.
-func (c *BankInstitutionClient) Use(hooks ...Hook) {
-	c.hooks.BankInstitution = append(c.hooks.BankInstitution, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `bankinstitution.Intercept(f(g(h())))`.
-func (c *BankInstitutionClient) Intercept(interceptors ...Interceptor) {
-	c.inters.BankInstitution = append(c.inters.BankInstitution, interceptors...)
-}
-
-// Create returns a builder for creating a BankInstitution entity.
-func (c *BankInstitutionClient) Create() *BankInstitutionCreate {
-	mutation := newBankInstitutionMutation(c.config, OpCreate)
-	return &BankInstitutionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of BankInstitution entities.
-func (c *BankInstitutionClient) CreateBulk(builders ...*BankInstitutionCreate) *BankInstitutionCreateBulk {
-	return &BankInstitutionCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *BankInstitutionClient) MapCreateBulk(slice any, setFunc func(*BankInstitutionCreate, int)) *BankInstitutionCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &BankInstitutionCreateBulk{err: fmt.Errorf("calling to BankInstitutionClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*BankInstitutionCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &BankInstitutionCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for BankInstitution.
-func (c *BankInstitutionClient) Update() *BankInstitutionUpdate {
-	mutation := newBankInstitutionMutation(c.config, OpUpdate)
-	return &BankInstitutionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *BankInstitutionClient) UpdateOne(_m *BankInstitution) *BankInstitutionUpdateOne {
-	mutation := newBankInstitutionMutation(c.config, OpUpdateOne, withBankInstitution(_m))
-	return &BankInstitutionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *BankInstitutionClient) UpdateOneID(id uuid.UUID) *BankInstitutionUpdateOne {
-	mutation := newBankInstitutionMutation(c.config, OpUpdateOne, withBankInstitutionID(id))
-	return &BankInstitutionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for BankInstitution.
-func (c *BankInstitutionClient) Delete() *BankInstitutionDelete {
-	mutation := newBankInstitutionMutation(c.config, OpDelete)
-	return &BankInstitutionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *BankInstitutionClient) DeleteOne(_m *BankInstitution) *BankInstitutionDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *BankInstitutionClient) DeleteOneID(id uuid.UUID) *BankInstitutionDeleteOne {
-	builder := c.Delete().Where(bankinstitution.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &BankInstitutionDeleteOne{builder}
-}
-
-// Query returns a query builder for BankInstitution.
-func (c *BankInstitutionClient) Query() *BankInstitutionQuery {
-	return &BankInstitutionQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeBankInstitution},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a BankInstitution entity by its id.
-func (c *BankInstitutionClient) Get(ctx context.Context, id uuid.UUID) (*BankInstitution, error) {
-	return c.Query().Where(bankinstitution.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *BankInstitutionClient) GetX(ctx context.Context, id uuid.UUID) *BankInstitution {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryBranches queries the branches edge of a BankInstitution.
-func (c *BankInstitutionClient) QueryBranches(_m *BankInstitution) *BankBranchQuery {
-	query := (&BankBranchClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(bankinstitution.Table, bankinstitution.FieldID, id),
-			sqlgraph.To(bankbranch.Table, bankbranch.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, bankinstitution.BranchesTable, bankinstitution.BranchesColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *BankInstitutionClient) Hooks() []Hook {
-	return c.hooks.BankInstitution
-}
-
-// Interceptors returns the client interceptors.
-func (c *BankInstitutionClient) Interceptors() []Interceptor {
-	return c.inters.BankInstitution
-}
-
-func (c *BankInstitutionClient) mutate(ctx context.Context, m *BankInstitutionMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&BankInstitutionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&BankInstitutionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&BankInstitutionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&BankInstitutionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown BankInstitution mutation op: %q", m.Op())
 	}
 }
 
@@ -9274,139 +8950,6 @@ func (c *PermissionClient) mutate(ctx context.Context, m *PermissionMutation) (V
 	}
 }
 
-// ProjectClient is a client for the Project schema.
-type ProjectClient struct {
-	config
-}
-
-// NewProjectClient returns a client for the Project from the given config.
-func NewProjectClient(c config) *ProjectClient {
-	return &ProjectClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `project.Hooks(f(g(h())))`.
-func (c *ProjectClient) Use(hooks ...Hook) {
-	c.hooks.Project = append(c.hooks.Project, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `project.Intercept(f(g(h())))`.
-func (c *ProjectClient) Intercept(interceptors ...Interceptor) {
-	c.inters.Project = append(c.inters.Project, interceptors...)
-}
-
-// Create returns a builder for creating a Project entity.
-func (c *ProjectClient) Create() *ProjectCreate {
-	mutation := newProjectMutation(c.config, OpCreate)
-	return &ProjectCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of Project entities.
-func (c *ProjectClient) CreateBulk(builders ...*ProjectCreate) *ProjectCreateBulk {
-	return &ProjectCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *ProjectClient) MapCreateBulk(slice any, setFunc func(*ProjectCreate, int)) *ProjectCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &ProjectCreateBulk{err: fmt.Errorf("calling to ProjectClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*ProjectCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &ProjectCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for Project.
-func (c *ProjectClient) Update() *ProjectUpdate {
-	mutation := newProjectMutation(c.config, OpUpdate)
-	return &ProjectUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *ProjectClient) UpdateOne(_m *Project) *ProjectUpdateOne {
-	mutation := newProjectMutation(c.config, OpUpdateOne, withProject(_m))
-	return &ProjectUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *ProjectClient) UpdateOneID(id uuid.UUID) *ProjectUpdateOne {
-	mutation := newProjectMutation(c.config, OpUpdateOne, withProjectID(id))
-	return &ProjectUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for Project.
-func (c *ProjectClient) Delete() *ProjectDelete {
-	mutation := newProjectMutation(c.config, OpDelete)
-	return &ProjectDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *ProjectClient) DeleteOne(_m *Project) *ProjectDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ProjectClient) DeleteOneID(id uuid.UUID) *ProjectDeleteOne {
-	builder := c.Delete().Where(project.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &ProjectDeleteOne{builder}
-}
-
-// Query returns a query builder for Project.
-func (c *ProjectClient) Query() *ProjectQuery {
-	return &ProjectQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeProject},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a Project entity by its id.
-func (c *ProjectClient) Get(ctx context.Context, id uuid.UUID) (*Project, error) {
-	return c.Query().Where(project.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *ProjectClient) GetX(ctx context.Context, id uuid.UUID) *Project {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *ProjectClient) Hooks() []Hook {
-	return c.hooks.Project
-}
-
-// Interceptors returns the client interceptors.
-func (c *ProjectClient) Interceptors() []Interceptor {
-	return c.inters.Project
-}
-
-func (c *ProjectClient) mutate(ctx context.Context, m *ProjectMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&ProjectCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&ProjectUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&ProjectUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&ProjectDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown Project mutation op: %q", m.Op())
-	}
-}
-
 // PublicHolidayClient is a client for the PublicHoliday schema.
 type PublicHolidayClient struct {
 	config
@@ -12450,18 +11993,18 @@ type (
 	hooks struct {
 		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, AttendanceRecord,
-		AttendanceRule, AuthOutlet, AuthTenant, BankBranch, BankInstitution,
-		BenefitTax, Candidate, ClaimItem, ContactDetails, Contract, CustomUser,
-		Department, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
-		EmployeeDocument, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
-		ExpenseClaim, GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey,
-		JobGroup, JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement,
-		LeaveLog, LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
-		NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
-		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
-		PayslipAudit, PerformanceMetric, PerformanceReview, Permission, Project,
-		PublicHoliday, Region, RepayOption, ReviewMetric, Role, RolePermission,
-		SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
+		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, ClaimItem,
+		ContactDetails, Contract, CustomUser, Department, ESSSettings, Employee,
+		EmployeeBankAccount, EmployeeBenefit, EmployeeDocument, EmployeeLoan,
+		EmployeeMetric, EmployeeOnboarding, ExpenseClaim, GeneralHRSettings, Goal,
+		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
+		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
+		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
+		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
+		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
+		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
 		StaffShiftOverride, Timesheet, TimesheetEntry, TrainingCourse,
 		TrainingEnrollment, TrainingEvaluation, UserRoleAssignment, WithHoldingTax,
 		WorkShift, WorkShiftSchedule, WorkersUnion []ent.Hook
@@ -12469,18 +12012,18 @@ type (
 	inters struct {
 		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, AttendanceRecord,
-		AttendanceRule, AuthOutlet, AuthTenant, BankBranch, BankInstitution,
-		BenefitTax, Candidate, ClaimItem, ContactDetails, Contract, CustomUser,
-		Department, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
-		EmployeeDocument, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
-		ExpenseClaim, GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey,
-		JobGroup, JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement,
-		LeaveLog, LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
-		NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
-		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
-		PayslipAudit, PerformanceMetric, PerformanceReview, Permission, Project,
-		PublicHoliday, Region, RepayOption, ReviewMetric, Role, RolePermission,
-		SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
+		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, ClaimItem,
+		ContactDetails, Contract, CustomUser, Department, ESSSettings, Employee,
+		EmployeeBankAccount, EmployeeBenefit, EmployeeDocument, EmployeeLoan,
+		EmployeeMetric, EmployeeOnboarding, ExpenseClaim, GeneralHRSettings, Goal,
+		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
+		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
+		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
+		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
+		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
+		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
 		StaffShiftOverride, Timesheet, TimesheetEntry, TrainingCourse,
 		TrainingEnrollment, TrainingEvaluation, UserRoleAssignment, WithHoldingTax,
 		WorkShift, WorkShiftSchedule, WorkersUnion []ent.Interceptor
