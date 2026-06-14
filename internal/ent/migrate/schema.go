@@ -1204,6 +1204,60 @@ var (
 			},
 		},
 	}
+	// ExchangeRatesColumns holds the columns for the "exchange_rates" table.
+	ExchangeRatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "base_currency", Type: field.TypeString, Default: "KES"},
+		{Name: "quote_currency", Type: field.TypeString},
+		{Name: "rate", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "rate_date", Type: field.TypeTime},
+		{Name: "source", Type: field.TypeString, Default: "exchangerate-api"},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// ExchangeRatesTable holds the schema information for the "exchange_rates" table.
+	ExchangeRatesTable = &schema.Table{
+		Name:       "exchange_rates",
+		Columns:    ExchangeRatesColumns,
+		PrimaryKey: []*schema.Column{ExchangeRatesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "exchangerate_base_currency_quote_currency_rate_date",
+				Unique:  true,
+				Columns: []*schema.Column{ExchangeRatesColumns[2], ExchangeRatesColumns[3], ExchangeRatesColumns[5]},
+			},
+			{
+				Name:    "exchangerate_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{ExchangeRatesColumns[1]},
+			},
+		},
+	}
+	// ExchangeRateAPISettingsColumns holds the columns for the "exchange_rate_api_settings" table.
+	ExchangeRateAPISettingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID, Unique: true},
+		{Name: "provider", Type: field.TypeString, Default: "exchangerate-api"},
+		{Name: "api_key_ref", Type: field.TypeString, Nullable: true},
+		{Name: "base_currency", Type: field.TypeString, Default: "KES"},
+		{Name: "is_active", Type: field.TypeBool, Default: false},
+		{Name: "last_fetched_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// ExchangeRateAPISettingsTable holds the schema information for the "exchange_rate_api_settings" table.
+	ExchangeRateAPISettingsTable = &schema.Table{
+		Name:       "exchange_rate_api_settings",
+		Columns:    ExchangeRateAPISettingsColumns,
+		PrimaryKey: []*schema.Column{ExchangeRateAPISettingsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "exchangerateapisettings_tenant_id",
+				Unique:  true,
+				Columns: []*schema.Column{ExchangeRateAPISettingsColumns[1]},
+			},
+		},
+	}
 	// ExpenseClaimsColumns holds the columns for the "expense_claims" table.
 	ExpenseClaimsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -3192,6 +3246,8 @@ var (
 		EmployeeLoansTable,
 		EmployeeMetricsTable,
 		EmployeeOnboardingsTable,
+		ExchangeRatesTable,
+		ExchangeRateAPISettingsTable,
 		ExpenseClaimsTable,
 		GeneralHrSettingsTable,
 		GoalsTable,

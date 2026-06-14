@@ -78,6 +78,9 @@ type EventsConfig struct {
 	// (Go replacement for the accrue_leave management command). Idempotent, so a daily
 	// tick is safe. Disable via a very large value when running accrual as a k8s CronJob.
 	LeaveAccrualInterval time.Duration `envconfig:"LEAVE_ACCRUAL_INTERVAL" default:"24h"`
+	// FXFetchInterval is the period of the in-process FX-rate fetch cron (Go replacement for
+	// the Celery Beat fetch_exchange_rates task). Idempotent per (base,quote,date).
+	FXFetchInterval time.Duration `envconfig:"FX_FETCH_INTERVAL" default:"24h"`
 }
 
 type AuthConfig struct {

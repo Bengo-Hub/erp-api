@@ -37,6 +37,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/business"
 	"github.com/Bengo-Hub/erp-api/internal/modules/consumers"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
+	"github.com/Bengo-Hub/erp-api/internal/modules/fx"
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
 	"github.com/Bengo-Hub/erp-api/internal/modules/performance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/rbac"
@@ -44,6 +45,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/reports"
 	"github.com/Bengo-Hub/erp-api/internal/modules/tasks"
 	"github.com/Bengo-Hub/erp-api/internal/modules/training"
+	platformauth "github.com/Bengo-Hub/erp-api/internal/platform/auth"
 	"github.com/Bengo-Hub/erp-api/internal/platform/cache"
 	"github.com/Bengo-Hub/erp-api/internal/platform/database"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
@@ -138,7 +140,9 @@ func run() error {
 	rbacService := rbac.NewService(orm, log)
 	authHandler := handlers.NewAuthHandler(log, rbacService)
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
-	brandingHandler := handlers.NewBrandingHandler(log)
+	// Branding read-through: auth-api SoT, Redis-cached (plan §0a-map).
+	brandingClient := platformauth.NewBrandingClient(cfg.Auth.ServiceURL, redisClient, log)
+	brandingHandler := handlers.NewBrandingHandler(log, brandingClient)
 
 	// HRM modules (Sprint 2 employees + Sprint 3 leave/attendance/recruitment/training/appraisals).
 	notifyPublisher := events.NewPublisher(orm, cfg.Events.SourceService)
@@ -168,6 +172,11 @@ func run() error {
 
 	// Sprint 4: slim business config (company settings + document numbering).
 	businessHandler := handlers.NewBusinessHandler(log, business.NewService(orm))
+
+	// Sprint 4: FX rate fetch (cron) + read endpoints.
+	fxSvc := fx.NewService(orm, log)
+	fxHandler := handlers.NewFXHandler(log, fxSvc)
+	fx.NewCron(fxSvc, log, cfg.Events.FXFetchInterval).Start(ctx)
 
 	// Leave accrual cron (Go replacement for the accrue_leave management command).
 	leave.NewAccrualCron(leaveSvc, log, cfg.Events.LeaveAccrualInterval).Start(ctx)
@@ -205,6 +214,7 @@ func run() error {
 			tasksHandler.RegisterRoutes(priv)
 			reportsHandler.RegisterRoutes(priv)
 			businessHandler.RegisterRoutes(priv)
+			fxHandler.RegisterRoutes(priv)
 		})
 	})
 

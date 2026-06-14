@@ -50,6 +50,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeonboarding"
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerate"
+	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerateapisettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/expenseclaim"
 	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/goal"
@@ -182,6 +184,10 @@ type Client struct {
 	EmployeeMetric *EmployeeMetricClient
 	// EmployeeOnboarding is the client for interacting with the EmployeeOnboarding builders.
 	EmployeeOnboarding *EmployeeOnboardingClient
+	// ExchangeRate is the client for interacting with the ExchangeRate builders.
+	ExchangeRate *ExchangeRateClient
+	// ExchangeRateAPISettings is the client for interacting with the ExchangeRateAPISettings builders.
+	ExchangeRateAPISettings *ExchangeRateAPISettingsClient
 	// ExpenseClaim is the client for interacting with the ExpenseClaim builders.
 	ExpenseClaim *ExpenseClaimClient
 	// GeneralHRSettings is the client for interacting with the GeneralHRSettings builders.
@@ -341,6 +347,8 @@ func (c *Client) init() {
 	c.EmployeeLoan = NewEmployeeLoanClient(c.config)
 	c.EmployeeMetric = NewEmployeeMetricClient(c.config)
 	c.EmployeeOnboarding = NewEmployeeOnboardingClient(c.config)
+	c.ExchangeRate = NewExchangeRateClient(c.config)
+	c.ExchangeRateAPISettings = NewExchangeRateAPISettingsClient(c.config)
 	c.ExpenseClaim = NewExpenseClaimClient(c.config)
 	c.GeneralHRSettings = NewGeneralHRSettingsClient(c.config)
 	c.Goal = NewGoalClient(c.config)
@@ -488,99 +496,101 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                  ctx,
-		config:               cfg,
-		Advance:              NewAdvanceClient(cfg),
-		ApiRequestMetric:     NewApiRequestMetricClient(cfg),
-		AppSetting:           NewAppSettingClient(cfg),
-		Application:          NewApplicationClient(cfg),
-		Appraisal:            NewAppraisalClient(cfg),
-		AppraisalCycle:       NewAppraisalCycleClient(cfg),
-		AppraisalQuestion:    NewAppraisalQuestionClient(cfg),
-		AppraisalResponse:    NewAppraisalResponseClient(cfg),
-		AppraisalTemplate:    NewAppraisalTemplateClient(cfg),
-		ApprovalRequest:      NewApprovalRequestClient(cfg),
-		ApprovalStepAction:   NewApprovalStepActionClient(cfg),
-		ApprovalWorkflow:     NewApprovalWorkflowClient(cfg),
-		ApprovalWorkflowStep: NewApprovalWorkflowStepClient(cfg),
-		AttendanceRecord:     NewAttendanceRecordClient(cfg),
-		AttendanceRule:       NewAttendanceRuleClient(cfg),
-		AuthOutlet:           NewAuthOutletClient(cfg),
-		AuthTenant:           NewAuthTenantClient(cfg),
-		BenefitTax:           NewBenefitTaxClient(cfg),
-		Candidate:            NewCandidateClient(cfg),
-		ClaimItem:            NewClaimItemClient(cfg),
-		CompanySettings:      NewCompanySettingsClient(cfg),
-		ContactDetails:       NewContactDetailsClient(cfg),
-		Contract:             NewContractClient(cfg),
-		CustomUser:           NewCustomUserClient(cfg),
-		Department:           NewDepartmentClient(cfg),
-		DocumentSequence:     NewDocumentSequenceClient(cfg),
-		ESSSettings:          NewESSSettingsClient(cfg),
-		Employee:             NewEmployeeClient(cfg),
-		EmployeeBankAccount:  NewEmployeeBankAccountClient(cfg),
-		EmployeeBenefit:      NewEmployeeBenefitClient(cfg),
-		EmployeeDocument:     NewEmployeeDocumentClient(cfg),
-		EmployeeLoan:         NewEmployeeLoanClient(cfg),
-		EmployeeMetric:       NewEmployeeMetricClient(cfg),
-		EmployeeOnboarding:   NewEmployeeOnboardingClient(cfg),
-		ExpenseClaim:         NewExpenseClaimClient(cfg),
-		GeneralHRSettings:    NewGeneralHRSettingsClient(cfg),
-		Goal:                 NewGoalClient(cfg),
-		GoalProgress:         NewGoalProgressClient(cfg),
-		HRDetails:            NewHRDetailsClient(cfg),
-		IdempotencyKey:       NewIdempotencyKeyClient(cfg),
-		JobGroup:             NewJobGroupClient(cfg),
-		JobPosting:           NewJobPostingClient(cfg),
-		JobTitle:             NewJobTitleClient(cfg),
-		LeaveBalance:         NewLeaveBalanceClient(cfg),
-		LeaveCategory:        NewLeaveCategoryClient(cfg),
-		LeaveEntitlement:     NewLeaveEntitlementClient(cfg),
-		LeaveLog:             NewLeaveLogClient(cfg),
-		LeaveRequest:         NewLeaveRequestClient(cfg),
-		LoanType:             NewLoanTypeClient(cfg),
-		LossAndDamage:        NewLossAndDamageClient(cfg),
-		MetricCategory:       NewMetricCategoryClient(cfg),
-		MetricTarget:         NewMetricTargetClient(cfg),
-		NextOfKin:            NewNextOfKinClient(cfg),
-		OffDay:               NewOffDayClient(cfg),
-		OnboardingTask:       NewOnboardingTaskClient(cfg),
-		OutboxEvent:          NewOutboxEventClient(cfg),
-		PayrollComponent:     NewPayrollComponentClient(cfg),
-		PayrollFormula:       NewPayrollFormulaClient(cfg),
-		PayrollFormulaItem:   NewPayrollFormulaItemClient(cfg),
-		PayrollRelief:        NewPayrollReliefClient(cfg),
-		PayrollSplitRatio:    NewPayrollSplitRatioClient(cfg),
-		Payslip:              NewPayslipClient(cfg),
-		PayslipAudit:         NewPayslipAuditClient(cfg),
-		PerformanceMetric:    NewPerformanceMetricClient(cfg),
-		PerformanceReview:    NewPerformanceReviewClient(cfg),
-		Permission:           NewPermissionClient(cfg),
-		PublicHoliday:        NewPublicHolidayClient(cfg),
-		Region:               NewRegionClient(cfg),
-		RepayOption:          NewRepayOptionClient(cfg),
-		ReviewMetric:         NewReviewMetricClient(cfg),
-		Role:                 NewRoleClient(cfg),
-		RolePermission:       NewRolePermissionClient(cfg),
-		SalaryDetails:        NewSalaryDetailsClient(cfg),
-		ShiftAssignment:      NewShiftAssignmentClient(cfg),
-		ShiftRoster:          NewShiftRosterClient(cfg),
-		ShiftRosterSlot:      NewShiftRosterSlotClient(cfg),
-		ShiftRotation:        NewShiftRotationClient(cfg),
-		StaffShiftOverride:   NewStaffShiftOverrideClient(cfg),
-		Task:                 NewTaskClient(cfg),
-		TaskComment:          NewTaskCommentClient(cfg),
-		TaskLog:              NewTaskLogClient(cfg),
-		Timesheet:            NewTimesheetClient(cfg),
-		TimesheetEntry:       NewTimesheetEntryClient(cfg),
-		TrainingCourse:       NewTrainingCourseClient(cfg),
-		TrainingEnrollment:   NewTrainingEnrollmentClient(cfg),
-		TrainingEvaluation:   NewTrainingEvaluationClient(cfg),
-		UserRoleAssignment:   NewUserRoleAssignmentClient(cfg),
-		WithHoldingTax:       NewWithHoldingTaxClient(cfg),
-		WorkShift:            NewWorkShiftClient(cfg),
-		WorkShiftSchedule:    NewWorkShiftScheduleClient(cfg),
-		WorkersUnion:         NewWorkersUnionClient(cfg),
+		ctx:                     ctx,
+		config:                  cfg,
+		Advance:                 NewAdvanceClient(cfg),
+		ApiRequestMetric:        NewApiRequestMetricClient(cfg),
+		AppSetting:              NewAppSettingClient(cfg),
+		Application:             NewApplicationClient(cfg),
+		Appraisal:               NewAppraisalClient(cfg),
+		AppraisalCycle:          NewAppraisalCycleClient(cfg),
+		AppraisalQuestion:       NewAppraisalQuestionClient(cfg),
+		AppraisalResponse:       NewAppraisalResponseClient(cfg),
+		AppraisalTemplate:       NewAppraisalTemplateClient(cfg),
+		ApprovalRequest:         NewApprovalRequestClient(cfg),
+		ApprovalStepAction:      NewApprovalStepActionClient(cfg),
+		ApprovalWorkflow:        NewApprovalWorkflowClient(cfg),
+		ApprovalWorkflowStep:    NewApprovalWorkflowStepClient(cfg),
+		AttendanceRecord:        NewAttendanceRecordClient(cfg),
+		AttendanceRule:          NewAttendanceRuleClient(cfg),
+		AuthOutlet:              NewAuthOutletClient(cfg),
+		AuthTenant:              NewAuthTenantClient(cfg),
+		BenefitTax:              NewBenefitTaxClient(cfg),
+		Candidate:               NewCandidateClient(cfg),
+		ClaimItem:               NewClaimItemClient(cfg),
+		CompanySettings:         NewCompanySettingsClient(cfg),
+		ContactDetails:          NewContactDetailsClient(cfg),
+		Contract:                NewContractClient(cfg),
+		CustomUser:              NewCustomUserClient(cfg),
+		Department:              NewDepartmentClient(cfg),
+		DocumentSequence:        NewDocumentSequenceClient(cfg),
+		ESSSettings:             NewESSSettingsClient(cfg),
+		Employee:                NewEmployeeClient(cfg),
+		EmployeeBankAccount:     NewEmployeeBankAccountClient(cfg),
+		EmployeeBenefit:         NewEmployeeBenefitClient(cfg),
+		EmployeeDocument:        NewEmployeeDocumentClient(cfg),
+		EmployeeLoan:            NewEmployeeLoanClient(cfg),
+		EmployeeMetric:          NewEmployeeMetricClient(cfg),
+		EmployeeOnboarding:      NewEmployeeOnboardingClient(cfg),
+		ExchangeRate:            NewExchangeRateClient(cfg),
+		ExchangeRateAPISettings: NewExchangeRateAPISettingsClient(cfg),
+		ExpenseClaim:            NewExpenseClaimClient(cfg),
+		GeneralHRSettings:       NewGeneralHRSettingsClient(cfg),
+		Goal:                    NewGoalClient(cfg),
+		GoalProgress:            NewGoalProgressClient(cfg),
+		HRDetails:               NewHRDetailsClient(cfg),
+		IdempotencyKey:          NewIdempotencyKeyClient(cfg),
+		JobGroup:                NewJobGroupClient(cfg),
+		JobPosting:              NewJobPostingClient(cfg),
+		JobTitle:                NewJobTitleClient(cfg),
+		LeaveBalance:            NewLeaveBalanceClient(cfg),
+		LeaveCategory:           NewLeaveCategoryClient(cfg),
+		LeaveEntitlement:        NewLeaveEntitlementClient(cfg),
+		LeaveLog:                NewLeaveLogClient(cfg),
+		LeaveRequest:            NewLeaveRequestClient(cfg),
+		LoanType:                NewLoanTypeClient(cfg),
+		LossAndDamage:           NewLossAndDamageClient(cfg),
+		MetricCategory:          NewMetricCategoryClient(cfg),
+		MetricTarget:            NewMetricTargetClient(cfg),
+		NextOfKin:               NewNextOfKinClient(cfg),
+		OffDay:                  NewOffDayClient(cfg),
+		OnboardingTask:          NewOnboardingTaskClient(cfg),
+		OutboxEvent:             NewOutboxEventClient(cfg),
+		PayrollComponent:        NewPayrollComponentClient(cfg),
+		PayrollFormula:          NewPayrollFormulaClient(cfg),
+		PayrollFormulaItem:      NewPayrollFormulaItemClient(cfg),
+		PayrollRelief:           NewPayrollReliefClient(cfg),
+		PayrollSplitRatio:       NewPayrollSplitRatioClient(cfg),
+		Payslip:                 NewPayslipClient(cfg),
+		PayslipAudit:            NewPayslipAuditClient(cfg),
+		PerformanceMetric:       NewPerformanceMetricClient(cfg),
+		PerformanceReview:       NewPerformanceReviewClient(cfg),
+		Permission:              NewPermissionClient(cfg),
+		PublicHoliday:           NewPublicHolidayClient(cfg),
+		Region:                  NewRegionClient(cfg),
+		RepayOption:             NewRepayOptionClient(cfg),
+		ReviewMetric:            NewReviewMetricClient(cfg),
+		Role:                    NewRoleClient(cfg),
+		RolePermission:          NewRolePermissionClient(cfg),
+		SalaryDetails:           NewSalaryDetailsClient(cfg),
+		ShiftAssignment:         NewShiftAssignmentClient(cfg),
+		ShiftRoster:             NewShiftRosterClient(cfg),
+		ShiftRosterSlot:         NewShiftRosterSlotClient(cfg),
+		ShiftRotation:           NewShiftRotationClient(cfg),
+		StaffShiftOverride:      NewStaffShiftOverrideClient(cfg),
+		Task:                    NewTaskClient(cfg),
+		TaskComment:             NewTaskCommentClient(cfg),
+		TaskLog:                 NewTaskLogClient(cfg),
+		Timesheet:               NewTimesheetClient(cfg),
+		TimesheetEntry:          NewTimesheetEntryClient(cfg),
+		TrainingCourse:          NewTrainingCourseClient(cfg),
+		TrainingEnrollment:      NewTrainingEnrollmentClient(cfg),
+		TrainingEvaluation:      NewTrainingEvaluationClient(cfg),
+		UserRoleAssignment:      NewUserRoleAssignmentClient(cfg),
+		WithHoldingTax:          NewWithHoldingTaxClient(cfg),
+		WorkShift:               NewWorkShiftClient(cfg),
+		WorkShiftSchedule:       NewWorkShiftScheduleClient(cfg),
+		WorkersUnion:            NewWorkersUnionClient(cfg),
 	}, nil
 }
 
@@ -598,99 +608,101 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                  ctx,
-		config:               cfg,
-		Advance:              NewAdvanceClient(cfg),
-		ApiRequestMetric:     NewApiRequestMetricClient(cfg),
-		AppSetting:           NewAppSettingClient(cfg),
-		Application:          NewApplicationClient(cfg),
-		Appraisal:            NewAppraisalClient(cfg),
-		AppraisalCycle:       NewAppraisalCycleClient(cfg),
-		AppraisalQuestion:    NewAppraisalQuestionClient(cfg),
-		AppraisalResponse:    NewAppraisalResponseClient(cfg),
-		AppraisalTemplate:    NewAppraisalTemplateClient(cfg),
-		ApprovalRequest:      NewApprovalRequestClient(cfg),
-		ApprovalStepAction:   NewApprovalStepActionClient(cfg),
-		ApprovalWorkflow:     NewApprovalWorkflowClient(cfg),
-		ApprovalWorkflowStep: NewApprovalWorkflowStepClient(cfg),
-		AttendanceRecord:     NewAttendanceRecordClient(cfg),
-		AttendanceRule:       NewAttendanceRuleClient(cfg),
-		AuthOutlet:           NewAuthOutletClient(cfg),
-		AuthTenant:           NewAuthTenantClient(cfg),
-		BenefitTax:           NewBenefitTaxClient(cfg),
-		Candidate:            NewCandidateClient(cfg),
-		ClaimItem:            NewClaimItemClient(cfg),
-		CompanySettings:      NewCompanySettingsClient(cfg),
-		ContactDetails:       NewContactDetailsClient(cfg),
-		Contract:             NewContractClient(cfg),
-		CustomUser:           NewCustomUserClient(cfg),
-		Department:           NewDepartmentClient(cfg),
-		DocumentSequence:     NewDocumentSequenceClient(cfg),
-		ESSSettings:          NewESSSettingsClient(cfg),
-		Employee:             NewEmployeeClient(cfg),
-		EmployeeBankAccount:  NewEmployeeBankAccountClient(cfg),
-		EmployeeBenefit:      NewEmployeeBenefitClient(cfg),
-		EmployeeDocument:     NewEmployeeDocumentClient(cfg),
-		EmployeeLoan:         NewEmployeeLoanClient(cfg),
-		EmployeeMetric:       NewEmployeeMetricClient(cfg),
-		EmployeeOnboarding:   NewEmployeeOnboardingClient(cfg),
-		ExpenseClaim:         NewExpenseClaimClient(cfg),
-		GeneralHRSettings:    NewGeneralHRSettingsClient(cfg),
-		Goal:                 NewGoalClient(cfg),
-		GoalProgress:         NewGoalProgressClient(cfg),
-		HRDetails:            NewHRDetailsClient(cfg),
-		IdempotencyKey:       NewIdempotencyKeyClient(cfg),
-		JobGroup:             NewJobGroupClient(cfg),
-		JobPosting:           NewJobPostingClient(cfg),
-		JobTitle:             NewJobTitleClient(cfg),
-		LeaveBalance:         NewLeaveBalanceClient(cfg),
-		LeaveCategory:        NewLeaveCategoryClient(cfg),
-		LeaveEntitlement:     NewLeaveEntitlementClient(cfg),
-		LeaveLog:             NewLeaveLogClient(cfg),
-		LeaveRequest:         NewLeaveRequestClient(cfg),
-		LoanType:             NewLoanTypeClient(cfg),
-		LossAndDamage:        NewLossAndDamageClient(cfg),
-		MetricCategory:       NewMetricCategoryClient(cfg),
-		MetricTarget:         NewMetricTargetClient(cfg),
-		NextOfKin:            NewNextOfKinClient(cfg),
-		OffDay:               NewOffDayClient(cfg),
-		OnboardingTask:       NewOnboardingTaskClient(cfg),
-		OutboxEvent:          NewOutboxEventClient(cfg),
-		PayrollComponent:     NewPayrollComponentClient(cfg),
-		PayrollFormula:       NewPayrollFormulaClient(cfg),
-		PayrollFormulaItem:   NewPayrollFormulaItemClient(cfg),
-		PayrollRelief:        NewPayrollReliefClient(cfg),
-		PayrollSplitRatio:    NewPayrollSplitRatioClient(cfg),
-		Payslip:              NewPayslipClient(cfg),
-		PayslipAudit:         NewPayslipAuditClient(cfg),
-		PerformanceMetric:    NewPerformanceMetricClient(cfg),
-		PerformanceReview:    NewPerformanceReviewClient(cfg),
-		Permission:           NewPermissionClient(cfg),
-		PublicHoliday:        NewPublicHolidayClient(cfg),
-		Region:               NewRegionClient(cfg),
-		RepayOption:          NewRepayOptionClient(cfg),
-		ReviewMetric:         NewReviewMetricClient(cfg),
-		Role:                 NewRoleClient(cfg),
-		RolePermission:       NewRolePermissionClient(cfg),
-		SalaryDetails:        NewSalaryDetailsClient(cfg),
-		ShiftAssignment:      NewShiftAssignmentClient(cfg),
-		ShiftRoster:          NewShiftRosterClient(cfg),
-		ShiftRosterSlot:      NewShiftRosterSlotClient(cfg),
-		ShiftRotation:        NewShiftRotationClient(cfg),
-		StaffShiftOverride:   NewStaffShiftOverrideClient(cfg),
-		Task:                 NewTaskClient(cfg),
-		TaskComment:          NewTaskCommentClient(cfg),
-		TaskLog:              NewTaskLogClient(cfg),
-		Timesheet:            NewTimesheetClient(cfg),
-		TimesheetEntry:       NewTimesheetEntryClient(cfg),
-		TrainingCourse:       NewTrainingCourseClient(cfg),
-		TrainingEnrollment:   NewTrainingEnrollmentClient(cfg),
-		TrainingEvaluation:   NewTrainingEvaluationClient(cfg),
-		UserRoleAssignment:   NewUserRoleAssignmentClient(cfg),
-		WithHoldingTax:       NewWithHoldingTaxClient(cfg),
-		WorkShift:            NewWorkShiftClient(cfg),
-		WorkShiftSchedule:    NewWorkShiftScheduleClient(cfg),
-		WorkersUnion:         NewWorkersUnionClient(cfg),
+		ctx:                     ctx,
+		config:                  cfg,
+		Advance:                 NewAdvanceClient(cfg),
+		ApiRequestMetric:        NewApiRequestMetricClient(cfg),
+		AppSetting:              NewAppSettingClient(cfg),
+		Application:             NewApplicationClient(cfg),
+		Appraisal:               NewAppraisalClient(cfg),
+		AppraisalCycle:          NewAppraisalCycleClient(cfg),
+		AppraisalQuestion:       NewAppraisalQuestionClient(cfg),
+		AppraisalResponse:       NewAppraisalResponseClient(cfg),
+		AppraisalTemplate:       NewAppraisalTemplateClient(cfg),
+		ApprovalRequest:         NewApprovalRequestClient(cfg),
+		ApprovalStepAction:      NewApprovalStepActionClient(cfg),
+		ApprovalWorkflow:        NewApprovalWorkflowClient(cfg),
+		ApprovalWorkflowStep:    NewApprovalWorkflowStepClient(cfg),
+		AttendanceRecord:        NewAttendanceRecordClient(cfg),
+		AttendanceRule:          NewAttendanceRuleClient(cfg),
+		AuthOutlet:              NewAuthOutletClient(cfg),
+		AuthTenant:              NewAuthTenantClient(cfg),
+		BenefitTax:              NewBenefitTaxClient(cfg),
+		Candidate:               NewCandidateClient(cfg),
+		ClaimItem:               NewClaimItemClient(cfg),
+		CompanySettings:         NewCompanySettingsClient(cfg),
+		ContactDetails:          NewContactDetailsClient(cfg),
+		Contract:                NewContractClient(cfg),
+		CustomUser:              NewCustomUserClient(cfg),
+		Department:              NewDepartmentClient(cfg),
+		DocumentSequence:        NewDocumentSequenceClient(cfg),
+		ESSSettings:             NewESSSettingsClient(cfg),
+		Employee:                NewEmployeeClient(cfg),
+		EmployeeBankAccount:     NewEmployeeBankAccountClient(cfg),
+		EmployeeBenefit:         NewEmployeeBenefitClient(cfg),
+		EmployeeDocument:        NewEmployeeDocumentClient(cfg),
+		EmployeeLoan:            NewEmployeeLoanClient(cfg),
+		EmployeeMetric:          NewEmployeeMetricClient(cfg),
+		EmployeeOnboarding:      NewEmployeeOnboardingClient(cfg),
+		ExchangeRate:            NewExchangeRateClient(cfg),
+		ExchangeRateAPISettings: NewExchangeRateAPISettingsClient(cfg),
+		ExpenseClaim:            NewExpenseClaimClient(cfg),
+		GeneralHRSettings:       NewGeneralHRSettingsClient(cfg),
+		Goal:                    NewGoalClient(cfg),
+		GoalProgress:            NewGoalProgressClient(cfg),
+		HRDetails:               NewHRDetailsClient(cfg),
+		IdempotencyKey:          NewIdempotencyKeyClient(cfg),
+		JobGroup:                NewJobGroupClient(cfg),
+		JobPosting:              NewJobPostingClient(cfg),
+		JobTitle:                NewJobTitleClient(cfg),
+		LeaveBalance:            NewLeaveBalanceClient(cfg),
+		LeaveCategory:           NewLeaveCategoryClient(cfg),
+		LeaveEntitlement:        NewLeaveEntitlementClient(cfg),
+		LeaveLog:                NewLeaveLogClient(cfg),
+		LeaveRequest:            NewLeaveRequestClient(cfg),
+		LoanType:                NewLoanTypeClient(cfg),
+		LossAndDamage:           NewLossAndDamageClient(cfg),
+		MetricCategory:          NewMetricCategoryClient(cfg),
+		MetricTarget:            NewMetricTargetClient(cfg),
+		NextOfKin:               NewNextOfKinClient(cfg),
+		OffDay:                  NewOffDayClient(cfg),
+		OnboardingTask:          NewOnboardingTaskClient(cfg),
+		OutboxEvent:             NewOutboxEventClient(cfg),
+		PayrollComponent:        NewPayrollComponentClient(cfg),
+		PayrollFormula:          NewPayrollFormulaClient(cfg),
+		PayrollFormulaItem:      NewPayrollFormulaItemClient(cfg),
+		PayrollRelief:           NewPayrollReliefClient(cfg),
+		PayrollSplitRatio:       NewPayrollSplitRatioClient(cfg),
+		Payslip:                 NewPayslipClient(cfg),
+		PayslipAudit:            NewPayslipAuditClient(cfg),
+		PerformanceMetric:       NewPerformanceMetricClient(cfg),
+		PerformanceReview:       NewPerformanceReviewClient(cfg),
+		Permission:              NewPermissionClient(cfg),
+		PublicHoliday:           NewPublicHolidayClient(cfg),
+		Region:                  NewRegionClient(cfg),
+		RepayOption:             NewRepayOptionClient(cfg),
+		ReviewMetric:            NewReviewMetricClient(cfg),
+		Role:                    NewRoleClient(cfg),
+		RolePermission:          NewRolePermissionClient(cfg),
+		SalaryDetails:           NewSalaryDetailsClient(cfg),
+		ShiftAssignment:         NewShiftAssignmentClient(cfg),
+		ShiftRoster:             NewShiftRosterClient(cfg),
+		ShiftRosterSlot:         NewShiftRosterSlotClient(cfg),
+		ShiftRotation:           NewShiftRotationClient(cfg),
+		StaffShiftOverride:      NewStaffShiftOverrideClient(cfg),
+		Task:                    NewTaskClient(cfg),
+		TaskComment:             NewTaskCommentClient(cfg),
+		TaskLog:                 NewTaskLogClient(cfg),
+		Timesheet:               NewTimesheetClient(cfg),
+		TimesheetEntry:          NewTimesheetEntryClient(cfg),
+		TrainingCourse:          NewTrainingCourseClient(cfg),
+		TrainingEnrollment:      NewTrainingEnrollmentClient(cfg),
+		TrainingEvaluation:      NewTrainingEvaluationClient(cfg),
+		UserRoleAssignment:      NewUserRoleAssignmentClient(cfg),
+		WithHoldingTax:          NewWithHoldingTaxClient(cfg),
+		WorkShift:               NewWorkShiftClient(cfg),
+		WorkShiftSchedule:       NewWorkShiftScheduleClient(cfg),
+		WorkersUnion:            NewWorkersUnionClient(cfg),
 	}, nil
 }
 
@@ -728,20 +740,20 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ClaimItem, c.CompanySettings, c.ContactDetails, c.Contract, c.CustomUser,
 		c.Department, c.DocumentSequence, c.ESSSettings, c.Employee,
 		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan,
-		c.EmployeeMetric, c.EmployeeOnboarding, c.ExpenseClaim, c.GeneralHRSettings,
-		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
-		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
-		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
-		c.MetricTarget, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
-		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
-		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PerformanceMetric,
-		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
-		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
-		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
-		c.Task, c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry,
-		c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
-		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
-		c.WorkersUnion,
+		c.EmployeeMetric, c.EmployeeOnboarding, c.ExchangeRate,
+		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
+		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
+		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
+		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory, c.MetricTarget,
+		c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent, c.PayrollComponent,
+		c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio,
+		c.Payslip, c.PayslipAudit, c.PerformanceMetric, c.PerformanceReview,
+		c.Permission, c.PublicHoliday, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
+		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
+		c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride, c.Task,
+		c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry, c.TrainingCourse,
+		c.TrainingEnrollment, c.TrainingEvaluation, c.UserRoleAssignment,
+		c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule, c.WorkersUnion,
 	} {
 		n.Use(hooks...)
 	}
@@ -759,20 +771,20 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ClaimItem, c.CompanySettings, c.ContactDetails, c.Contract, c.CustomUser,
 		c.Department, c.DocumentSequence, c.ESSSettings, c.Employee,
 		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan,
-		c.EmployeeMetric, c.EmployeeOnboarding, c.ExpenseClaim, c.GeneralHRSettings,
-		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
-		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
-		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
-		c.MetricTarget, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
-		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
-		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PerformanceMetric,
-		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
-		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
-		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
-		c.Task, c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry,
-		c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
-		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
-		c.WorkersUnion,
+		c.EmployeeMetric, c.EmployeeOnboarding, c.ExchangeRate,
+		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
+		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
+		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
+		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory, c.MetricTarget,
+		c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent, c.PayrollComponent,
+		c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio,
+		c.Payslip, c.PayslipAudit, c.PerformanceMetric, c.PerformanceReview,
+		c.Permission, c.PublicHoliday, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
+		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
+		c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride, c.Task,
+		c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry, c.TrainingCourse,
+		c.TrainingEnrollment, c.TrainingEvaluation, c.UserRoleAssignment,
+		c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule, c.WorkersUnion,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -849,6 +861,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.EmployeeMetric.mutate(ctx, m)
 	case *EmployeeOnboardingMutation:
 		return c.EmployeeOnboarding.mutate(ctx, m)
+	case *ExchangeRateMutation:
+		return c.ExchangeRate.mutate(ctx, m)
+	case *ExchangeRateAPISettingsMutation:
+		return c.ExchangeRateAPISettings.mutate(ctx, m)
 	case *ExpenseClaimMutation:
 		return c.ExpenseClaim.mutate(ctx, m)
 	case *GeneralHRSettingsMutation:
@@ -5599,6 +5615,272 @@ func (c *EmployeeOnboardingClient) mutate(ctx context.Context, m *EmployeeOnboar
 		return (&EmployeeOnboardingDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown EmployeeOnboarding mutation op: %q", m.Op())
+	}
+}
+
+// ExchangeRateClient is a client for the ExchangeRate schema.
+type ExchangeRateClient struct {
+	config
+}
+
+// NewExchangeRateClient returns a client for the ExchangeRate from the given config.
+func NewExchangeRateClient(c config) *ExchangeRateClient {
+	return &ExchangeRateClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `exchangerate.Hooks(f(g(h())))`.
+func (c *ExchangeRateClient) Use(hooks ...Hook) {
+	c.hooks.ExchangeRate = append(c.hooks.ExchangeRate, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `exchangerate.Intercept(f(g(h())))`.
+func (c *ExchangeRateClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ExchangeRate = append(c.inters.ExchangeRate, interceptors...)
+}
+
+// Create returns a builder for creating a ExchangeRate entity.
+func (c *ExchangeRateClient) Create() *ExchangeRateCreate {
+	mutation := newExchangeRateMutation(c.config, OpCreate)
+	return &ExchangeRateCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ExchangeRate entities.
+func (c *ExchangeRateClient) CreateBulk(builders ...*ExchangeRateCreate) *ExchangeRateCreateBulk {
+	return &ExchangeRateCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ExchangeRateClient) MapCreateBulk(slice any, setFunc func(*ExchangeRateCreate, int)) *ExchangeRateCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ExchangeRateCreateBulk{err: fmt.Errorf("calling to ExchangeRateClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ExchangeRateCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ExchangeRateCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ExchangeRate.
+func (c *ExchangeRateClient) Update() *ExchangeRateUpdate {
+	mutation := newExchangeRateMutation(c.config, OpUpdate)
+	return &ExchangeRateUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ExchangeRateClient) UpdateOne(_m *ExchangeRate) *ExchangeRateUpdateOne {
+	mutation := newExchangeRateMutation(c.config, OpUpdateOne, withExchangeRate(_m))
+	return &ExchangeRateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ExchangeRateClient) UpdateOneID(id uuid.UUID) *ExchangeRateUpdateOne {
+	mutation := newExchangeRateMutation(c.config, OpUpdateOne, withExchangeRateID(id))
+	return &ExchangeRateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ExchangeRate.
+func (c *ExchangeRateClient) Delete() *ExchangeRateDelete {
+	mutation := newExchangeRateMutation(c.config, OpDelete)
+	return &ExchangeRateDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ExchangeRateClient) DeleteOne(_m *ExchangeRate) *ExchangeRateDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ExchangeRateClient) DeleteOneID(id uuid.UUID) *ExchangeRateDeleteOne {
+	builder := c.Delete().Where(exchangerate.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ExchangeRateDeleteOne{builder}
+}
+
+// Query returns a query builder for ExchangeRate.
+func (c *ExchangeRateClient) Query() *ExchangeRateQuery {
+	return &ExchangeRateQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeExchangeRate},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ExchangeRate entity by its id.
+func (c *ExchangeRateClient) Get(ctx context.Context, id uuid.UUID) (*ExchangeRate, error) {
+	return c.Query().Where(exchangerate.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ExchangeRateClient) GetX(ctx context.Context, id uuid.UUID) *ExchangeRate {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ExchangeRateClient) Hooks() []Hook {
+	return c.hooks.ExchangeRate
+}
+
+// Interceptors returns the client interceptors.
+func (c *ExchangeRateClient) Interceptors() []Interceptor {
+	return c.inters.ExchangeRate
+}
+
+func (c *ExchangeRateClient) mutate(ctx context.Context, m *ExchangeRateMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ExchangeRateCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ExchangeRateUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ExchangeRateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ExchangeRateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ExchangeRate mutation op: %q", m.Op())
+	}
+}
+
+// ExchangeRateAPISettingsClient is a client for the ExchangeRateAPISettings schema.
+type ExchangeRateAPISettingsClient struct {
+	config
+}
+
+// NewExchangeRateAPISettingsClient returns a client for the ExchangeRateAPISettings from the given config.
+func NewExchangeRateAPISettingsClient(c config) *ExchangeRateAPISettingsClient {
+	return &ExchangeRateAPISettingsClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `exchangerateapisettings.Hooks(f(g(h())))`.
+func (c *ExchangeRateAPISettingsClient) Use(hooks ...Hook) {
+	c.hooks.ExchangeRateAPISettings = append(c.hooks.ExchangeRateAPISettings, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `exchangerateapisettings.Intercept(f(g(h())))`.
+func (c *ExchangeRateAPISettingsClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ExchangeRateAPISettings = append(c.inters.ExchangeRateAPISettings, interceptors...)
+}
+
+// Create returns a builder for creating a ExchangeRateAPISettings entity.
+func (c *ExchangeRateAPISettingsClient) Create() *ExchangeRateAPISettingsCreate {
+	mutation := newExchangeRateAPISettingsMutation(c.config, OpCreate)
+	return &ExchangeRateAPISettingsCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ExchangeRateAPISettings entities.
+func (c *ExchangeRateAPISettingsClient) CreateBulk(builders ...*ExchangeRateAPISettingsCreate) *ExchangeRateAPISettingsCreateBulk {
+	return &ExchangeRateAPISettingsCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ExchangeRateAPISettingsClient) MapCreateBulk(slice any, setFunc func(*ExchangeRateAPISettingsCreate, int)) *ExchangeRateAPISettingsCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ExchangeRateAPISettingsCreateBulk{err: fmt.Errorf("calling to ExchangeRateAPISettingsClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ExchangeRateAPISettingsCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ExchangeRateAPISettingsCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ExchangeRateAPISettings.
+func (c *ExchangeRateAPISettingsClient) Update() *ExchangeRateAPISettingsUpdate {
+	mutation := newExchangeRateAPISettingsMutation(c.config, OpUpdate)
+	return &ExchangeRateAPISettingsUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ExchangeRateAPISettingsClient) UpdateOne(_m *ExchangeRateAPISettings) *ExchangeRateAPISettingsUpdateOne {
+	mutation := newExchangeRateAPISettingsMutation(c.config, OpUpdateOne, withExchangeRateAPISettings(_m))
+	return &ExchangeRateAPISettingsUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ExchangeRateAPISettingsClient) UpdateOneID(id uuid.UUID) *ExchangeRateAPISettingsUpdateOne {
+	mutation := newExchangeRateAPISettingsMutation(c.config, OpUpdateOne, withExchangeRateAPISettingsID(id))
+	return &ExchangeRateAPISettingsUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ExchangeRateAPISettings.
+func (c *ExchangeRateAPISettingsClient) Delete() *ExchangeRateAPISettingsDelete {
+	mutation := newExchangeRateAPISettingsMutation(c.config, OpDelete)
+	return &ExchangeRateAPISettingsDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ExchangeRateAPISettingsClient) DeleteOne(_m *ExchangeRateAPISettings) *ExchangeRateAPISettingsDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ExchangeRateAPISettingsClient) DeleteOneID(id uuid.UUID) *ExchangeRateAPISettingsDeleteOne {
+	builder := c.Delete().Where(exchangerateapisettings.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ExchangeRateAPISettingsDeleteOne{builder}
+}
+
+// Query returns a query builder for ExchangeRateAPISettings.
+func (c *ExchangeRateAPISettingsClient) Query() *ExchangeRateAPISettingsQuery {
+	return &ExchangeRateAPISettingsQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeExchangeRateAPISettings},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ExchangeRateAPISettings entity by its id.
+func (c *ExchangeRateAPISettingsClient) Get(ctx context.Context, id uuid.UUID) (*ExchangeRateAPISettings, error) {
+	return c.Query().Where(exchangerateapisettings.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ExchangeRateAPISettingsClient) GetX(ctx context.Context, id uuid.UUID) *ExchangeRateAPISettings {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ExchangeRateAPISettingsClient) Hooks() []Hook {
+	return c.hooks.ExchangeRateAPISettings
+}
+
+// Interceptors returns the client interceptors.
+func (c *ExchangeRateAPISettingsClient) Interceptors() []Interceptor {
+	return c.inters.ExchangeRateAPISettings
+}
+
+func (c *ExchangeRateAPISettingsClient) mutate(ctx context.Context, m *ExchangeRateAPISettingsMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ExchangeRateAPISettingsCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ExchangeRateAPISettingsUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ExchangeRateAPISettingsUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ExchangeRateAPISettingsDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ExchangeRateAPISettings mutation op: %q", m.Op())
 	}
 }
 
@@ -13401,13 +13683,14 @@ type (
 		CompanySettings, ContactDetails, Contract, CustomUser, Department,
 		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
 		EmployeeDocument, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
-		ExpenseClaim, GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey,
-		JobGroup, JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement,
-		LeaveLog, LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
-		NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
-		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
-		PayslipAudit, PerformanceMetric, PerformanceReview, Permission, PublicHoliday,
-		Region, RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		ExchangeRate, ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal,
+		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
+		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
+		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
+		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
+		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
+		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
 		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
 		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
 		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
@@ -13421,13 +13704,14 @@ type (
 		CompanySettings, ContactDetails, Contract, CustomUser, Department,
 		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
 		EmployeeDocument, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
-		ExpenseClaim, GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey,
-		JobGroup, JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement,
-		LeaveLog, LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
-		NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
-		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
-		PayslipAudit, PerformanceMetric, PerformanceReview, Permission, PublicHoliday,
-		Region, RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		ExchangeRate, ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal,
+		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
+		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
+		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
+		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
+		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
+		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
 		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
 		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
 		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
