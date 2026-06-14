@@ -249,6 +249,18 @@ func (f ClaimItemFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ClaimItemMutation", m)
 }
 
+// The CompanySettingsFunc type is an adapter to allow the use of ordinary
+// function as CompanySettings mutator.
+type CompanySettingsFunc func(context.Context, *ent.CompanySettingsMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CompanySettingsFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CompanySettingsMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CompanySettingsMutation", m)
+}
+
 // The ContactDetailsFunc type is an adapter to allow the use of ordinary
 // function as ContactDetails mutator.
 type ContactDetailsFunc func(context.Context, *ent.ContactDetailsMutation) (ent.Value, error)
@@ -295,6 +307,18 @@ func (f DepartmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DepartmentMutation", m)
+}
+
+// The DocumentSequenceFunc type is an adapter to allow the use of ordinary
+// function as DocumentSequence mutator.
+type DocumentSequenceFunc func(context.Context, *ent.DocumentSequenceMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DocumentSequenceFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.DocumentSequenceMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DocumentSequenceMutation", m)
 }
 
 // The ESSSettingsFunc type is an adapter to allow the use of ordinary

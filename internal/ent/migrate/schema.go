@@ -702,6 +702,37 @@ var (
 			},
 		},
 	}
+	// CompanySettingsColumns holds the columns for the "company_settings" table.
+	CompanySettingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID, Unique: true},
+		{Name: "legal_name", Type: field.TypeString, Nullable: true},
+		{Name: "kra_pin", Type: field.TypeString, Nullable: true},
+		{Name: "nssf_employer_no", Type: field.TypeString, Nullable: true},
+		{Name: "shif_employer_no", Type: field.TypeString, Nullable: true},
+		{Name: "contact_email", Type: field.TypeString, Nullable: true},
+		{Name: "contact_phone", Type: field.TypeString, Nullable: true},
+		{Name: "postal_address", Type: field.TypeString, Nullable: true},
+		{Name: "physical_address", Type: field.TypeString, Nullable: true},
+		{Name: "financial_year_start_month", Type: field.TypeInt, Default: 1},
+		{Name: "default_currency", Type: field.TypeString, Default: "KES"},
+		{Name: "timezone", Type: field.TypeString, Default: "Africa/Nairobi"},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// CompanySettingsTable holds the schema information for the "company_settings" table.
+	CompanySettingsTable = &schema.Table{
+		Name:       "company_settings",
+		Columns:    CompanySettingsColumns,
+		PrimaryKey: []*schema.Column{CompanySettingsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "companysettings_tenant_id",
+				Unique:  true,
+				Columns: []*schema.Column{CompanySettingsColumns[1]},
+			},
+		},
+	}
 	// ContactDetailsColumns holds the columns for the "contact_details" table.
 	ContactDetailsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -839,6 +870,34 @@ var (
 				Name:    "department_code",
 				Unique:  false,
 				Columns: []*schema.Column{DepartmentsColumns[2]},
+			},
+		},
+	}
+	// DocumentSequencesColumns holds the columns for the "document_sequences" table.
+	DocumentSequencesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "doc_type", Type: field.TypeString},
+		{Name: "prefix", Type: field.TypeString, Nullable: true},
+		{Name: "separator", Type: field.TypeString, Default: "-"},
+		{Name: "date_format", Type: field.TypeString, Nullable: true},
+		{Name: "padding", Type: field.TypeInt, Default: 6},
+		{Name: "reset_freq", Type: field.TypeString, Default: "never"},
+		{Name: "current_val", Type: field.TypeInt64, Default: 0},
+		{Name: "last_reset", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// DocumentSequencesTable holds the schema information for the "document_sequences" table.
+	DocumentSequencesTable = &schema.Table{
+		Name:       "document_sequences",
+		Columns:    DocumentSequencesColumns,
+		PrimaryKey: []*schema.Column{DocumentSequencesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "documentsequence_tenant_id_doc_type",
+				Unique:  true,
+				Columns: []*schema.Column{DocumentSequencesColumns[1], DocumentSequencesColumns[2]},
 			},
 		},
 	}
@@ -3119,10 +3178,12 @@ var (
 		BenefitTaxesTable,
 		CandidatesTable,
 		ClaimItemsTable,
+		CompanySettingsTable,
 		ContactDetailsTable,
 		ContractsTable,
 		CustomUsersTable,
 		DepartmentsTable,
+		DocumentSequencesTable,
 		EssSettingsTable,
 		EmployeesTable,
 		EmployeeBankAccountsTable,

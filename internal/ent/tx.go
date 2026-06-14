@@ -52,6 +52,8 @@ type Tx struct {
 	Candidate *CandidateClient
 	// ClaimItem is the client for interacting with the ClaimItem builders.
 	ClaimItem *ClaimItemClient
+	// CompanySettings is the client for interacting with the CompanySettings builders.
+	CompanySettings *CompanySettingsClient
 	// ContactDetails is the client for interacting with the ContactDetails builders.
 	ContactDetails *ContactDetailsClient
 	// Contract is the client for interacting with the Contract builders.
@@ -60,6 +62,8 @@ type Tx struct {
 	CustomUser *CustomUserClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// DocumentSequence is the client for interacting with the DocumentSequence builders.
+	DocumentSequence *DocumentSequenceClient
 	// ESSSettings is the client for interacting with the ESSSettings builders.
 	ESSSettings *ESSSettingsClient
 	// Employee is the client for interacting with the Employee builders.
@@ -341,10 +345,12 @@ func (tx *Tx) init() {
 	tx.BenefitTax = NewBenefitTaxClient(tx.config)
 	tx.Candidate = NewCandidateClient(tx.config)
 	tx.ClaimItem = NewClaimItemClient(tx.config)
+	tx.CompanySettings = NewCompanySettingsClient(tx.config)
 	tx.ContactDetails = NewContactDetailsClient(tx.config)
 	tx.Contract = NewContractClient(tx.config)
 	tx.CustomUser = NewCustomUserClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
+	tx.DocumentSequence = NewDocumentSequenceClient(tx.config)
 	tx.ESSSettings = NewESSSettingsClient(tx.config)
 	tx.Employee = NewEmployeeClient(tx.config)
 	tx.EmployeeBankAccount = NewEmployeeBankAccountClient(tx.config)

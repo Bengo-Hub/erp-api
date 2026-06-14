@@ -32,10 +32,12 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
+	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
+	"github.com/Bengo-Hub/erp-api/internal/ent/documentsequence"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
@@ -181,10 +183,12 @@ func checkColumn(t, c string) error {
 			benefittax.Table:           benefittax.ValidColumn,
 			candidate.Table:            candidate.ValidColumn,
 			claimitem.Table:            claimitem.ValidColumn,
+			companysettings.Table:      companysettings.ValidColumn,
 			contactdetails.Table:       contactdetails.ValidColumn,
 			contract.Table:             contract.ValidColumn,
 			customuser.Table:           customuser.ValidColumn,
 			department.Table:           department.ValidColumn,
+			documentsequence.Table:     documentsequence.ValidColumn,
 			esssettings.Table:          esssettings.ValidColumn,
 			employee.Table:             employee.ValidColumn,
 			employeebankaccount.Table:  employeebankaccount.ValidColumn,

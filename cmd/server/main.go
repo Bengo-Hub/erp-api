@@ -34,6 +34,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/appraisals"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
+	"github.com/Bengo-Hub/erp-api/internal/modules/business"
 	"github.com/Bengo-Hub/erp-api/internal/modules/consumers"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
@@ -165,6 +166,9 @@ func run() error {
 	// Sprint 4: reporting layer (P9/P10A/statutory/bank/summaries) for the erp-ui report-runner.
 	reportsHandler := handlers.NewReportsHandler(log, reports.NewService(orm))
 
+	// Sprint 4: slim business config (company settings + document numbering).
+	businessHandler := handlers.NewBusinessHandler(log, business.NewService(orm))
+
 	// Leave accrual cron (Go replacement for the accrue_leave management command).
 	leave.NewAccrualCron(leaveSvc, log, cfg.Events.LeaveAccrualInterval).Start(ctx)
 
@@ -200,6 +204,7 @@ func run() error {
 			approvalsHandler.RegisterRoutes(priv)
 			tasksHandler.RegisterRoutes(priv)
 			reportsHandler.RegisterRoutes(priv)
+			businessHandler.RegisterRoutes(priv)
 		})
 	})
 
