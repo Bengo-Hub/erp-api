@@ -24,6 +24,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
+	sharedcache "github.com/Bengo-Hub/cache"
 	httpware "github.com/Bengo-Hub/httpware"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	eventslib "github.com/Bengo-Hub/shared-events"
@@ -104,9 +105,10 @@ func run() error {
 		log.Info("ent schema auto-migrated (POSTGRES_RUN_MIGRATIONS=true)")
 	}
 
-	// --- Redis cache ---
+	// --- Redis cache + shared cache-aside helper (read-through for branding etc.) ---
 	redisClient := cache.NewClient(cfg.Redis)
 	defer func() { _ = redisClient.Close() }()
+	cacheAside := sharedcache.New(redisClient, log)
 
 	// --- NATS + transactional outbox + tenant-sync consumers ---
 	natsConn := mustNATS(log, cfg)
@@ -143,7 +145,7 @@ func run() error {
 	authHandler := handlers.NewAuthHandler(log, rbacService)
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
 	// Branding read-through: auth-api SoT, Redis-cached (plan §0a-map).
-	brandingClient := platformauth.NewBrandingClient(cfg.Auth.ServiceURL, redisClient, log)
+	brandingClient := platformauth.NewBrandingClient(cfg.Auth.ServiceURL, cacheAside, log)
 	brandingHandler := handlers.NewBrandingHandler(log, brandingClient)
 
 	// HRM modules (Sprint 2 employees + Sprint 3 leave/attendance/recruitment/training/appraisals).

@@ -12,9 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	sharedcache "github.com/Bengo-Hub/cache"
 	"go.uber.org/zap"
 )
+
+// brandingTTL matches the JWT/tenant lifetime — branding rarely changes.
+const brandingTTL = 6 * time.Hour
 
 // Branding is the subset of the auth-api tenant payload the ERP surfaces (login page +
 // PDF/report headers). Unknown fields are ignored.
@@ -28,42 +31,47 @@ type Branding struct {
 	Address        string `json:"address"`
 }
 
-// BrandingClient fetches tenant branding from auth-api with a Redis read-through cache.
+// BrandingClient fetches tenant branding from auth-api with a shared cache-aside
+// read-through (github.com/Bengo-Hub/cache). The cache may be nil (cache off).
 type BrandingClient struct {
 	baseURL string
 	http    *http.Client
-	redis   *redis.Client
-	ttl     time.Duration
+	cache   *sharedcache.Aside
 	log     *zap.Logger
 }
 
-// NewBrandingClient builds the read-through branding client. redis may be nil (cache off).
-func NewBrandingClient(baseURL string, redis *redis.Client, log *zap.Logger) *BrandingClient {
+// NewBrandingClient builds the read-through branding client. cache may be nil (cache off).
+func NewBrandingClient(baseURL string, cache *sharedcache.Aside, log *zap.Logger) *BrandingClient {
 	return &BrandingClient{
 		baseURL: strings.TrimRight(baseURL, "/"),
 		http:    &http.Client{Timeout: 8 * time.Second},
-		redis:   redis,
-		ttl:     6 * time.Hour,
+		cache:   cache,
 		log:     log.Named("auth.branding"),
 	}
 }
 
-func cacheKey(slug string) string { return "erp:branding:" + slug }
-
-// GetBySlug returns branding for a tenant slug, serving from Redis when warm and falling
-// back to the auth-api public endpoint (then caching). Returns (nil, nil) when not found.
+// GetBySlug returns branding for a tenant slug, serving from the shared cache when warm
+// and falling back to the auth-api public endpoint (then caching). Returns (nil, nil)
+// when not found.
 func (c *BrandingClient) GetBySlug(ctx context.Context, slug string) (*Branding, error) {
 	if slug == "" {
 		return nil, nil
 	}
-	if c.redis != nil {
-		if raw, err := c.redis.Get(ctx, cacheKey(slug)).Result(); err == nil && raw != "" {
-			var b Branding
-			if json.Unmarshal([]byte(raw), &b) == nil {
-				return &b, nil
-			}
+	if c.cache != nil {
+		key := sharedcache.Key("erp", "branding", slug)
+		b, err := sharedcache.GetOrSet(ctx, c.cache, key, brandingTTL, func(ctx context.Context) (*Branding, error) {
+			return c.fetch(ctx, slug)
+		})
+		if err != nil {
+			return nil, err
 		}
+		return b, nil
 	}
+	return c.fetch(ctx, slug)
+}
+
+// fetch reads branding directly from the auth-api public by-slug endpoint.
+func (c *BrandingClient) fetch(ctx context.Context, slug string) (*Branding, error) {
 	if c.baseURL == "" {
 		return nil, nil
 	}
@@ -89,11 +97,6 @@ func (c *BrandingClient) GetBySlug(ctx context.Context, slug string) (*Branding,
 	}
 	if b.Slug == "" {
 		b.Slug = slug
-	}
-	if c.redis != nil {
-		if raw, err := json.Marshal(b); err == nil {
-			_ = c.redis.Set(ctx, cacheKey(slug), raw, c.ttl).Err()
-		}
 	}
 	return &b, nil
 }
