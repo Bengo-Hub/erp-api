@@ -85,17 +85,19 @@ Insert in this order so FKs resolve. (`→` = depends on.)
     authmanagement_customuser                                  (keep external_id; remap id->uuid)
     authmanagement_customuser_groups, *_user_permissions
     authmanagement_userpreferences
-2.  core reference
-    regions, departments, project_categories, projects,
-    bank_institutions, bank_branches, core_exchangerate,
-    core_regionalsettings, core_appsettings
-3.  business
-    business_location, business_details (tenant_id),
-    business_branches, business_branding_settings, taxrates,
-    prefix_settings, document_sequences, service_types,
-    product_settings, sale_settings, pickup_stations
-4.  addresses
-    delivery_regions, address_book, address_validations
+2.  reference (HR/Ops only)
+    regions, departments, core_exchangerate (-> exchange_rates),
+    app_settings
+    -- SKIP (decomposed, not migrated to ERP): project_categories/projects (projects-service),
+    --   bank_institutions/bank_branches (treasury/payment-rail; bank details now plain fields
+    --   on employee_bank_accounts), service_types/pickup_stations (ordering-service),
+    --   product_settings/sale_settings (inventory/pos)
+3.  business (slim)
+    business_details (-> company_settings, drop branding/taxrate columns),
+    document_sequences (prefix/format config)
+    -- SKIP: business_branding_settings (auth-api SoT), taxrates (payroll tables own those)
+4.  addresses -- SKIP entirely (address_book/delivery_regions/address_validations belong to
+    ordering-service; the HR-owned employee contact address migrates as part of HR core)
 5.  HR core
     jobtitles, job_groups, workers_unions,
     employee  (FK user, organisation),
