@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
@@ -30,6 +31,30 @@ type errorResponse struct {
 // writeError writes a structured JSON error response.
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	writeJSON(w, status, errorResponse{Error: message, Code: code})
+}
+
+// writePaginated writes a list response using the shared pagination envelope
+// (data/total/limit/page/hasMore). It is used by handlers whose service layer
+// already returns a (slice, total) pair from an offset/limit query.
+func writePaginated[T any](w http.ResponseWriter, rows []T, total int, p pagination.Params) {
+	writeJSON(w, http.StatusOK, pagination.NewResponse(rows, total, p))
+}
+
+// writePagedSlice writes a list response for handlers whose service layer returns
+// the full result set (no DB-level paging). It slices the in-memory rows to the
+// requested page and reports the true total, so every list endpoint shares the
+// uniform pagination envelope without requiring service/schema changes.
+func writePagedSlice[T any](w http.ResponseWriter, rows []T, p pagination.Params) {
+	total := len(rows)
+	start := p.Offset
+	if start > total {
+		start = total
+	}
+	end := start + p.Limit
+	if end > total {
+		end = total
+	}
+	writeJSON(w, http.StatusOK, pagination.NewResponse(rows[start:end], total, p))
 }
 
 // parseDecimalDefault parses a decimal string, returning decimal.Zero for an empty value.

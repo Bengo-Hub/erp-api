@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -61,7 +62,7 @@ func (h *PerformanceHandler) ListCategories(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list categories")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type metricCategoryBody struct {
@@ -100,7 +101,7 @@ func (h *PerformanceHandler) ListMetrics(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list metrics")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type metricBody struct {
@@ -152,7 +153,7 @@ func (h *PerformanceHandler) ListEmployeeMetrics(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list employee metrics")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type recordMetricBody struct {
@@ -209,7 +210,7 @@ func (h *PerformanceHandler) ListTargets(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list targets")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type targetBody struct {
@@ -275,7 +276,7 @@ func (h *PerformanceHandler) ListReviews(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list reviews")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type reviewBody struct {
@@ -366,7 +367,7 @@ func (h *PerformanceHandler) ListReviewMetrics(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list review metrics")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type reviewMetricBody struct {

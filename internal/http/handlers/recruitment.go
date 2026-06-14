@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -62,7 +63,7 @@ func (h *RecruitmentHandler) ListPostings(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list postings")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type postingBody struct {
@@ -133,7 +134,7 @@ func (h *RecruitmentHandler) ListCandidates(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list candidates")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type candidateBody struct {
@@ -220,7 +221,7 @@ func (h *RecruitmentHandler) ListApplications(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list applications")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type applicationBody struct {
@@ -305,7 +306,7 @@ func (h *RecruitmentHandler) ListOnboardings(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list onboardings")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type startOnboardingBody struct {
@@ -350,7 +351,7 @@ func (h *RecruitmentHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list tasks")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type completeTaskBody struct {

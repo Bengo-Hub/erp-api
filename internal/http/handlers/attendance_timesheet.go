@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
@@ -30,7 +31,7 @@ func (h *AttendanceHandler) ListTimesheets(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list timesheets")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 type timesheetBody struct {
