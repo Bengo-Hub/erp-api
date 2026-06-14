@@ -40,6 +40,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/performance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/rbac"
 	"github.com/Bengo-Hub/erp-api/internal/modules/recruitment"
+	"github.com/Bengo-Hub/erp-api/internal/modules/tasks"
 	"github.com/Bengo-Hub/erp-api/internal/modules/training"
 	"github.com/Bengo-Hub/erp-api/internal/platform/cache"
 	"github.com/Bengo-Hub/erp-api/internal/platform/database"
@@ -157,6 +158,9 @@ func run() error {
 	leaveSvc.SetApprovals(approvalsSvc)
 	appraisalsSvc.SetApprovals(approvalsSvc)
 
+	// Sprint 4: internal task tracker (distinct from projects-service).
+	tasksHandler := handlers.NewTasksHandler(log, tasks.NewService(orm))
+
 	// Leave accrual cron (Go replacement for the accrue_leave management command).
 	leave.NewAccrualCron(leaveSvc, log, cfg.Events.LeaveAccrualInterval).Start(ctx)
 
@@ -190,6 +194,7 @@ func run() error {
 			appraisalsHandler.RegisterRoutes(priv)
 			performanceHandler.RegisterRoutes(priv)
 			approvalsHandler.RegisterRoutes(priv)
+			tasksHandler.RegisterRoutes(priv)
 		})
 	})
 
