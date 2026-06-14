@@ -108,6 +108,12 @@ type EmployeeMetric func(*sql.Selector)
 // EmployeeOnboarding is the predicate function for employeeonboarding builders.
 type EmployeeOnboarding func(*sql.Selector)
 
+// ExchangeRate is the predicate function for exchangerate builders.
+type ExchangeRate func(*sql.Selector)
+
+// ExchangeRateAPISettings is the predicate function for exchangerateapisettings builders.
+type ExchangeRateAPISettings func(*sql.Selector)
+
 // ExpenseClaim is the predicate function for expenseclaim builders.
 type ExpenseClaim func(*sql.Selector)
 

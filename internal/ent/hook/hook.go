@@ -417,6 +417,30 @@ func (f EmployeeOnboardingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeOnboardingMutation", m)
 }
 
+// The ExchangeRateFunc type is an adapter to allow the use of ordinary
+// function as ExchangeRate mutator.
+type ExchangeRateFunc func(context.Context, *ent.ExchangeRateMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ExchangeRateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ExchangeRateMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ExchangeRateMutation", m)
+}
+
+// The ExchangeRateAPISettingsFunc type is an adapter to allow the use of ordinary
+// function as ExchangeRateAPISettings mutator.
+type ExchangeRateAPISettingsFunc func(context.Context, *ent.ExchangeRateAPISettingsMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ExchangeRateAPISettingsFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ExchangeRateAPISettingsMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ExchangeRateAPISettingsMutation", m)
+}
+
 // The ExpenseClaimFunc type is an adapter to allow the use of ordinary
 // function as ExpenseClaim mutator.
 type ExpenseClaimFunc func(context.Context, *ent.ExpenseClaimMutation) (ent.Value, error)

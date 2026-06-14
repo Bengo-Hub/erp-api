@@ -39,6 +39,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeonboarding"
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerate"
+	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerateapisettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/expenseclaim"
 	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/goal"
@@ -1002,6 +1004,60 @@ func init() {
 	employeeonboardingDescID := employeeonboardingFields[0].Descriptor()
 	// employeeonboarding.DefaultID holds the default value on creation for the id field.
 	employeeonboarding.DefaultID = employeeonboardingDescID.Default.(func() uuid.UUID)
+	exchangerateFields := schema.ExchangeRate{}.Fields()
+	_ = exchangerateFields
+	// exchangerateDescBaseCurrency is the schema descriptor for base_currency field.
+	exchangerateDescBaseCurrency := exchangerateFields[2].Descriptor()
+	// exchangerate.DefaultBaseCurrency holds the default value on creation for the base_currency field.
+	exchangerate.DefaultBaseCurrency = exchangerateDescBaseCurrency.Default.(string)
+	// exchangerateDescQuoteCurrency is the schema descriptor for quote_currency field.
+	exchangerateDescQuoteCurrency := exchangerateFields[3].Descriptor()
+	// exchangerate.QuoteCurrencyValidator is a validator for the "quote_currency" field. It is called by the builders before save.
+	exchangerate.QuoteCurrencyValidator = exchangerateDescQuoteCurrency.Validators[0].(func(string) error)
+	// exchangerateDescRate is the schema descriptor for rate field.
+	exchangerateDescRate := exchangerateFields[4].Descriptor()
+	// exchangerate.DefaultRate holds the default value on creation for the rate field.
+	exchangerate.DefaultRate = exchangerateDescRate.Default.(decimal.Decimal)
+	// exchangerateDescSource is the schema descriptor for source field.
+	exchangerateDescSource := exchangerateFields[6].Descriptor()
+	// exchangerate.DefaultSource holds the default value on creation for the source field.
+	exchangerate.DefaultSource = exchangerateDescSource.Default.(string)
+	// exchangerateDescCreatedAt is the schema descriptor for created_at field.
+	exchangerateDescCreatedAt := exchangerateFields[7].Descriptor()
+	// exchangerate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	exchangerate.DefaultCreatedAt = exchangerateDescCreatedAt.Default.(func() time.Time)
+	// exchangerateDescID is the schema descriptor for id field.
+	exchangerateDescID := exchangerateFields[0].Descriptor()
+	// exchangerate.DefaultID holds the default value on creation for the id field.
+	exchangerate.DefaultID = exchangerateDescID.Default.(func() uuid.UUID)
+	exchangerateapisettingsFields := schema.ExchangeRateAPISettings{}.Fields()
+	_ = exchangerateapisettingsFields
+	// exchangerateapisettingsDescProvider is the schema descriptor for provider field.
+	exchangerateapisettingsDescProvider := exchangerateapisettingsFields[2].Descriptor()
+	// exchangerateapisettings.DefaultProvider holds the default value on creation for the provider field.
+	exchangerateapisettings.DefaultProvider = exchangerateapisettingsDescProvider.Default.(string)
+	// exchangerateapisettingsDescBaseCurrency is the schema descriptor for base_currency field.
+	exchangerateapisettingsDescBaseCurrency := exchangerateapisettingsFields[4].Descriptor()
+	// exchangerateapisettings.DefaultBaseCurrency holds the default value on creation for the base_currency field.
+	exchangerateapisettings.DefaultBaseCurrency = exchangerateapisettingsDescBaseCurrency.Default.(string)
+	// exchangerateapisettingsDescIsActive is the schema descriptor for is_active field.
+	exchangerateapisettingsDescIsActive := exchangerateapisettingsFields[5].Descriptor()
+	// exchangerateapisettings.DefaultIsActive holds the default value on creation for the is_active field.
+	exchangerateapisettings.DefaultIsActive = exchangerateapisettingsDescIsActive.Default.(bool)
+	// exchangerateapisettingsDescCreatedAt is the schema descriptor for created_at field.
+	exchangerateapisettingsDescCreatedAt := exchangerateapisettingsFields[7].Descriptor()
+	// exchangerateapisettings.DefaultCreatedAt holds the default value on creation for the created_at field.
+	exchangerateapisettings.DefaultCreatedAt = exchangerateapisettingsDescCreatedAt.Default.(func() time.Time)
+	// exchangerateapisettingsDescUpdatedAt is the schema descriptor for updated_at field.
+	exchangerateapisettingsDescUpdatedAt := exchangerateapisettingsFields[8].Descriptor()
+	// exchangerateapisettings.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	exchangerateapisettings.DefaultUpdatedAt = exchangerateapisettingsDescUpdatedAt.Default.(func() time.Time)
+	// exchangerateapisettings.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	exchangerateapisettings.UpdateDefaultUpdatedAt = exchangerateapisettingsDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// exchangerateapisettingsDescID is the schema descriptor for id field.
+	exchangerateapisettingsDescID := exchangerateapisettingsFields[0].Descriptor()
+	// exchangerateapisettings.DefaultID holds the default value on creation for the id field.
+	exchangerateapisettings.DefaultID = exchangerateapisettingsDescID.Default.(func() uuid.UUID)
 	expenseclaimFields := schema.ExpenseClaim{}.Fields()
 	_ = expenseclaimFields
 	// expenseclaimDescApproved is the schema descriptor for approved field.

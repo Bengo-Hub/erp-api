@@ -5,36 +5,35 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
+
+	platformauth "github.com/Bengo-Hub/erp-api/internal/platform/auth"
 )
 
-// BrandingHandler serves public branding for the login page (no auth).
-// auth-api is the source of truth for branding; this is a read-through cache surface.
-//
-// TODO(sprint-2): wire the auth-api S2S GET /api/v1/tenants/by-slug/{slug} read-through
-// (Redis-cached 6h, per docs/integrations.md §8). For now it returns an empty 200 so the
-// public route contract exists and the login page degrades gracefully.
+// BrandingHandler serves public branding for the login page (no auth). auth-api is the SoT
+// for branding; this is a Redis-cached read-through of GET /api/v1/tenants/by-slug/{slug}
+// (plan §0a-map). When the client is unconfigured it degrades to echoing the slug so the
+// public route contract still holds and the login page renders.
 type BrandingHandler struct {
-	log *zap.Logger
+	log    *zap.Logger
+	client *platformauth.BrandingClient
 }
 
-func NewBrandingHandler(log *zap.Logger) *BrandingHandler {
-	return &BrandingHandler{log: log.Named("branding.Handler")}
+func NewBrandingHandler(log *zap.Logger, client *platformauth.BrandingClient) *BrandingHandler {
+	return &BrandingHandler{log: log.Named("branding.Handler"), client: client}
 }
 
-type brandingResponse struct {
-	Name           string `json:"name"`
-	Slug           string `json:"slug"`
-	LogoURL        string `json:"logo_url"`
-	PrimaryColor   string `json:"primary_color"`
-	SecondaryColor string `json:"secondary_color"`
-	KraPin         string `json:"kra_pin"`
-	Address        string `json:"address"`
-}
-
-// PublicBranding handles GET /api/v1/business/public-branding/.
+// PublicBranding handles GET /api/v1/business/public-branding/?slug=...
 func (h *BrandingHandler) PublicBranding(w http.ResponseWriter, r *http.Request) {
 	slug := r.URL.Query().Get("slug")
-	respondJSON(w, http.StatusOK, brandingResponse{Slug: slug})
+	if h.client != nil {
+		if b, err := h.client.GetBySlug(r.Context(), slug); err == nil && b != nil {
+			respondJSON(w, http.StatusOK, b)
+			return
+		} else if err != nil {
+			h.log.Warn("branding read-through failed; degrading", zap.Error(err), zap.String("slug", slug))
+		}
+	}
+	respondJSON(w, http.StatusOK, platformauth.Branding{Slug: slug})
 }
 
 // RegisterRoutes mounts the public branding route.
