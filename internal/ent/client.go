@@ -36,10 +36,12 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
+	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
+	"github.com/Bengo-Hub/erp-api/internal/ent/documentsequence"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
@@ -152,6 +154,8 @@ type Client struct {
 	Candidate *CandidateClient
 	// ClaimItem is the client for interacting with the ClaimItem builders.
 	ClaimItem *ClaimItemClient
+	// CompanySettings is the client for interacting with the CompanySettings builders.
+	CompanySettings *CompanySettingsClient
 	// ContactDetails is the client for interacting with the ContactDetails builders.
 	ContactDetails *ContactDetailsClient
 	// Contract is the client for interacting with the Contract builders.
@@ -160,6 +164,8 @@ type Client struct {
 	CustomUser *CustomUserClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// DocumentSequence is the client for interacting with the DocumentSequence builders.
+	DocumentSequence *DocumentSequenceClient
 	// ESSSettings is the client for interacting with the ESSSettings builders.
 	ESSSettings *ESSSettingsClient
 	// Employee is the client for interacting with the Employee builders.
@@ -321,10 +327,12 @@ func (c *Client) init() {
 	c.BenefitTax = NewBenefitTaxClient(c.config)
 	c.Candidate = NewCandidateClient(c.config)
 	c.ClaimItem = NewClaimItemClient(c.config)
+	c.CompanySettings = NewCompanySettingsClient(c.config)
 	c.ContactDetails = NewContactDetailsClient(c.config)
 	c.Contract = NewContractClient(c.config)
 	c.CustomUser = NewCustomUserClient(c.config)
 	c.Department = NewDepartmentClient(c.config)
+	c.DocumentSequence = NewDocumentSequenceClient(c.config)
 	c.ESSSettings = NewESSSettingsClient(c.config)
 	c.Employee = NewEmployeeClient(c.config)
 	c.EmployeeBankAccount = NewEmployeeBankAccountClient(c.config)
@@ -502,10 +510,12 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		BenefitTax:           NewBenefitTaxClient(cfg),
 		Candidate:            NewCandidateClient(cfg),
 		ClaimItem:            NewClaimItemClient(cfg),
+		CompanySettings:      NewCompanySettingsClient(cfg),
 		ContactDetails:       NewContactDetailsClient(cfg),
 		Contract:             NewContractClient(cfg),
 		CustomUser:           NewCustomUserClient(cfg),
 		Department:           NewDepartmentClient(cfg),
+		DocumentSequence:     NewDocumentSequenceClient(cfg),
 		ESSSettings:          NewESSSettingsClient(cfg),
 		Employee:             NewEmployeeClient(cfg),
 		EmployeeBankAccount:  NewEmployeeBankAccountClient(cfg),
@@ -610,10 +620,12 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		BenefitTax:           NewBenefitTaxClient(cfg),
 		Candidate:            NewCandidateClient(cfg),
 		ClaimItem:            NewClaimItemClient(cfg),
+		CompanySettings:      NewCompanySettingsClient(cfg),
 		ContactDetails:       NewContactDetailsClient(cfg),
 		Contract:             NewContractClient(cfg),
 		CustomUser:           NewCustomUserClient(cfg),
 		Department:           NewDepartmentClient(cfg),
+		DocumentSequence:     NewDocumentSequenceClient(cfg),
 		ESSSettings:          NewESSSettingsClient(cfg),
 		Employee:             NewEmployeeClient(cfg),
 		EmployeeBankAccount:  NewEmployeeBankAccountClient(cfg),
@@ -713,22 +725,23 @@ func (c *Client) Use(hooks ...Hook) {
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
 		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.BenefitTax, c.Candidate,
-		c.ClaimItem, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
-		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
-		c.EmployeeDocument, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
-		c.ExpenseClaim, c.GeneralHRSettings, c.Goal, c.GoalProgress, c.HRDetails,
-		c.IdempotencyKey, c.JobGroup, c.JobPosting, c.JobTitle, c.LeaveBalance,
-		c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog, c.LeaveRequest, c.LoanType,
-		c.LossAndDamage, c.MetricCategory, c.MetricTarget, c.NextOfKin, c.OffDay,
-		c.OnboardingTask, c.OutboxEvent, c.PayrollComponent, c.PayrollFormula,
-		c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio, c.Payslip,
-		c.PayslipAudit, c.PerformanceMetric, c.PerformanceReview, c.Permission,
-		c.PublicHoliday, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
-		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
-		c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride, c.Task,
-		c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry, c.TrainingCourse,
-		c.TrainingEnrollment, c.TrainingEvaluation, c.UserRoleAssignment,
-		c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule, c.WorkersUnion,
+		c.ClaimItem, c.CompanySettings, c.ContactDetails, c.Contract, c.CustomUser,
+		c.Department, c.DocumentSequence, c.ESSSettings, c.Employee,
+		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan,
+		c.EmployeeMetric, c.EmployeeOnboarding, c.ExpenseClaim, c.GeneralHRSettings,
+		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
+		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
+		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
+		c.MetricTarget, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
+		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
+		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PerformanceMetric,
+		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
+		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
+		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
+		c.Task, c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry,
+		c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
+		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
+		c.WorkersUnion,
 	} {
 		n.Use(hooks...)
 	}
@@ -743,22 +756,23 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
 		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.BenefitTax, c.Candidate,
-		c.ClaimItem, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
-		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
-		c.EmployeeDocument, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
-		c.ExpenseClaim, c.GeneralHRSettings, c.Goal, c.GoalProgress, c.HRDetails,
-		c.IdempotencyKey, c.JobGroup, c.JobPosting, c.JobTitle, c.LeaveBalance,
-		c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog, c.LeaveRequest, c.LoanType,
-		c.LossAndDamage, c.MetricCategory, c.MetricTarget, c.NextOfKin, c.OffDay,
-		c.OnboardingTask, c.OutboxEvent, c.PayrollComponent, c.PayrollFormula,
-		c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio, c.Payslip,
-		c.PayslipAudit, c.PerformanceMetric, c.PerformanceReview, c.Permission,
-		c.PublicHoliday, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
-		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
-		c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride, c.Task,
-		c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry, c.TrainingCourse,
-		c.TrainingEnrollment, c.TrainingEvaluation, c.UserRoleAssignment,
-		c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule, c.WorkersUnion,
+		c.ClaimItem, c.CompanySettings, c.ContactDetails, c.Contract, c.CustomUser,
+		c.Department, c.DocumentSequence, c.ESSSettings, c.Employee,
+		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan,
+		c.EmployeeMetric, c.EmployeeOnboarding, c.ExpenseClaim, c.GeneralHRSettings,
+		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
+		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
+		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
+		c.MetricTarget, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
+		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
+		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PerformanceMetric,
+		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
+		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
+		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
+		c.Task, c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry,
+		c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
+		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
+		c.WorkersUnion,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -807,6 +821,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Candidate.mutate(ctx, m)
 	case *ClaimItemMutation:
 		return c.ClaimItem.mutate(ctx, m)
+	case *CompanySettingsMutation:
+		return c.CompanySettings.mutate(ctx, m)
 	case *ContactDetailsMutation:
 		return c.ContactDetails.mutate(ctx, m)
 	case *ContractMutation:
@@ -815,6 +831,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.CustomUser.mutate(ctx, m)
 	case *DepartmentMutation:
 		return c.Department.mutate(ctx, m)
+	case *DocumentSequenceMutation:
+		return c.DocumentSequence.mutate(ctx, m)
 	case *ESSSettingsMutation:
 		return c.ESSSettings.mutate(ctx, m)
 	case *EmployeeMutation:
@@ -3706,6 +3724,139 @@ func (c *ClaimItemClient) mutate(ctx context.Context, m *ClaimItemMutation) (Val
 	}
 }
 
+// CompanySettingsClient is a client for the CompanySettings schema.
+type CompanySettingsClient struct {
+	config
+}
+
+// NewCompanySettingsClient returns a client for the CompanySettings from the given config.
+func NewCompanySettingsClient(c config) *CompanySettingsClient {
+	return &CompanySettingsClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `companysettings.Hooks(f(g(h())))`.
+func (c *CompanySettingsClient) Use(hooks ...Hook) {
+	c.hooks.CompanySettings = append(c.hooks.CompanySettings, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `companysettings.Intercept(f(g(h())))`.
+func (c *CompanySettingsClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CompanySettings = append(c.inters.CompanySettings, interceptors...)
+}
+
+// Create returns a builder for creating a CompanySettings entity.
+func (c *CompanySettingsClient) Create() *CompanySettingsCreate {
+	mutation := newCompanySettingsMutation(c.config, OpCreate)
+	return &CompanySettingsCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CompanySettings entities.
+func (c *CompanySettingsClient) CreateBulk(builders ...*CompanySettingsCreate) *CompanySettingsCreateBulk {
+	return &CompanySettingsCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CompanySettingsClient) MapCreateBulk(slice any, setFunc func(*CompanySettingsCreate, int)) *CompanySettingsCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CompanySettingsCreateBulk{err: fmt.Errorf("calling to CompanySettingsClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CompanySettingsCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CompanySettingsCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CompanySettings.
+func (c *CompanySettingsClient) Update() *CompanySettingsUpdate {
+	mutation := newCompanySettingsMutation(c.config, OpUpdate)
+	return &CompanySettingsUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CompanySettingsClient) UpdateOne(_m *CompanySettings) *CompanySettingsUpdateOne {
+	mutation := newCompanySettingsMutation(c.config, OpUpdateOne, withCompanySettings(_m))
+	return &CompanySettingsUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CompanySettingsClient) UpdateOneID(id uuid.UUID) *CompanySettingsUpdateOne {
+	mutation := newCompanySettingsMutation(c.config, OpUpdateOne, withCompanySettingsID(id))
+	return &CompanySettingsUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CompanySettings.
+func (c *CompanySettingsClient) Delete() *CompanySettingsDelete {
+	mutation := newCompanySettingsMutation(c.config, OpDelete)
+	return &CompanySettingsDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CompanySettingsClient) DeleteOne(_m *CompanySettings) *CompanySettingsDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CompanySettingsClient) DeleteOneID(id uuid.UUID) *CompanySettingsDeleteOne {
+	builder := c.Delete().Where(companysettings.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CompanySettingsDeleteOne{builder}
+}
+
+// Query returns a query builder for CompanySettings.
+func (c *CompanySettingsClient) Query() *CompanySettingsQuery {
+	return &CompanySettingsQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCompanySettings},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CompanySettings entity by its id.
+func (c *CompanySettingsClient) Get(ctx context.Context, id uuid.UUID) (*CompanySettings, error) {
+	return c.Query().Where(companysettings.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CompanySettingsClient) GetX(ctx context.Context, id uuid.UUID) *CompanySettings {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CompanySettingsClient) Hooks() []Hook {
+	return c.hooks.CompanySettings
+}
+
+// Interceptors returns the client interceptors.
+func (c *CompanySettingsClient) Interceptors() []Interceptor {
+	return c.inters.CompanySettings
+}
+
+func (c *CompanySettingsClient) mutate(ctx context.Context, m *CompanySettingsMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CompanySettingsCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CompanySettingsUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CompanySettingsUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CompanySettingsDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown CompanySettings mutation op: %q", m.Op())
+	}
+}
+
 // ContactDetailsClient is a client for the ContactDetails schema.
 type ContactDetailsClient struct {
 	config
@@ -4251,6 +4402,139 @@ func (c *DepartmentClient) mutate(ctx context.Context, m *DepartmentMutation) (V
 		return (&DepartmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Department mutation op: %q", m.Op())
+	}
+}
+
+// DocumentSequenceClient is a client for the DocumentSequence schema.
+type DocumentSequenceClient struct {
+	config
+}
+
+// NewDocumentSequenceClient returns a client for the DocumentSequence from the given config.
+func NewDocumentSequenceClient(c config) *DocumentSequenceClient {
+	return &DocumentSequenceClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `documentsequence.Hooks(f(g(h())))`.
+func (c *DocumentSequenceClient) Use(hooks ...Hook) {
+	c.hooks.DocumentSequence = append(c.hooks.DocumentSequence, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `documentsequence.Intercept(f(g(h())))`.
+func (c *DocumentSequenceClient) Intercept(interceptors ...Interceptor) {
+	c.inters.DocumentSequence = append(c.inters.DocumentSequence, interceptors...)
+}
+
+// Create returns a builder for creating a DocumentSequence entity.
+func (c *DocumentSequenceClient) Create() *DocumentSequenceCreate {
+	mutation := newDocumentSequenceMutation(c.config, OpCreate)
+	return &DocumentSequenceCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of DocumentSequence entities.
+func (c *DocumentSequenceClient) CreateBulk(builders ...*DocumentSequenceCreate) *DocumentSequenceCreateBulk {
+	return &DocumentSequenceCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *DocumentSequenceClient) MapCreateBulk(slice any, setFunc func(*DocumentSequenceCreate, int)) *DocumentSequenceCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &DocumentSequenceCreateBulk{err: fmt.Errorf("calling to DocumentSequenceClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*DocumentSequenceCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &DocumentSequenceCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for DocumentSequence.
+func (c *DocumentSequenceClient) Update() *DocumentSequenceUpdate {
+	mutation := newDocumentSequenceMutation(c.config, OpUpdate)
+	return &DocumentSequenceUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DocumentSequenceClient) UpdateOne(_m *DocumentSequence) *DocumentSequenceUpdateOne {
+	mutation := newDocumentSequenceMutation(c.config, OpUpdateOne, withDocumentSequence(_m))
+	return &DocumentSequenceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DocumentSequenceClient) UpdateOneID(id uuid.UUID) *DocumentSequenceUpdateOne {
+	mutation := newDocumentSequenceMutation(c.config, OpUpdateOne, withDocumentSequenceID(id))
+	return &DocumentSequenceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for DocumentSequence.
+func (c *DocumentSequenceClient) Delete() *DocumentSequenceDelete {
+	mutation := newDocumentSequenceMutation(c.config, OpDelete)
+	return &DocumentSequenceDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DocumentSequenceClient) DeleteOne(_m *DocumentSequence) *DocumentSequenceDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DocumentSequenceClient) DeleteOneID(id uuid.UUID) *DocumentSequenceDeleteOne {
+	builder := c.Delete().Where(documentsequence.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DocumentSequenceDeleteOne{builder}
+}
+
+// Query returns a query builder for DocumentSequence.
+func (c *DocumentSequenceClient) Query() *DocumentSequenceQuery {
+	return &DocumentSequenceQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeDocumentSequence},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a DocumentSequence entity by its id.
+func (c *DocumentSequenceClient) Get(ctx context.Context, id uuid.UUID) (*DocumentSequence, error) {
+	return c.Query().Where(documentsequence.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DocumentSequenceClient) GetX(ctx context.Context, id uuid.UUID) *DocumentSequence {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *DocumentSequenceClient) Hooks() []Hook {
+	return c.hooks.DocumentSequence
+}
+
+// Interceptors returns the client interceptors.
+func (c *DocumentSequenceClient) Interceptors() []Interceptor {
+	return c.inters.DocumentSequence
+}
+
+func (c *DocumentSequenceClient) mutate(ctx context.Context, m *DocumentSequenceMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DocumentSequenceCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DocumentSequenceUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DocumentSequenceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DocumentSequenceDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown DocumentSequence mutation op: %q", m.Op())
 	}
 }
 
@@ -13114,16 +13398,16 @@ type (
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
 		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
 		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, ClaimItem,
-		ContactDetails, Contract, CustomUser, Department, ESSSettings, Employee,
-		EmployeeBankAccount, EmployeeBenefit, EmployeeDocument, EmployeeLoan,
-		EmployeeMetric, EmployeeOnboarding, ExpenseClaim, GeneralHRSettings, Goal,
-		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
-		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
-		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
-		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
-		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
-		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
-		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		CompanySettings, ContactDetails, Contract, CustomUser, Department,
+		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
+		EmployeeDocument, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
+		ExpenseClaim, GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey,
+		JobGroup, JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement,
+		LeaveLog, LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
+		NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
+		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
+		PayslipAudit, PerformanceMetric, PerformanceReview, Permission, PublicHoliday,
+		Region, RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
 		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
 		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
 		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
@@ -13134,16 +13418,16 @@ type (
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
 		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
 		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, ClaimItem,
-		ContactDetails, Contract, CustomUser, Department, ESSSettings, Employee,
-		EmployeeBankAccount, EmployeeBenefit, EmployeeDocument, EmployeeLoan,
-		EmployeeMetric, EmployeeOnboarding, ExpenseClaim, GeneralHRSettings, Goal,
-		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
-		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
-		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
-		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
-		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
-		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
-		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		CompanySettings, ContactDetails, Contract, CustomUser, Department,
+		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
+		EmployeeDocument, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
+		ExpenseClaim, GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey,
+		JobGroup, JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement,
+		LeaveLog, LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
+		NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
+		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
+		PayslipAudit, PerformanceMetric, PerformanceReview, Permission, PublicHoliday,
+		Region, RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
 		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
 		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
 		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,

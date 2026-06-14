@@ -66,6 +66,9 @@ type Candidate func(*sql.Selector)
 // ClaimItem is the predicate function for claimitem builders.
 type ClaimItem func(*sql.Selector)
 
+// CompanySettings is the predicate function for companysettings builders.
+type CompanySettings func(*sql.Selector)
+
 // ContactDetails is the predicate function for contactdetails builders.
 type ContactDetails func(*sql.Selector)
 
@@ -77,6 +80,9 @@ type CustomUser func(*sql.Selector)
 
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
+
+// DocumentSequence is the predicate function for documentsequence builders.
+type DocumentSequence func(*sql.Selector)
 
 // ESSSettings is the predicate function for esssettings builders.
 type ESSSettings func(*sql.Selector)

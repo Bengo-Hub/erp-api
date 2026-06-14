@@ -25,10 +25,12 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
+	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
+	"github.com/Bengo-Hub/erp-api/internal/ent/documentsequence"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
@@ -586,6 +588,34 @@ func init() {
 	claimitemDescID := claimitemFields[0].Descriptor()
 	// claimitem.DefaultID holds the default value on creation for the id field.
 	claimitem.DefaultID = claimitemDescID.Default.(func() uuid.UUID)
+	companysettingsFields := schema.CompanySettings{}.Fields()
+	_ = companysettingsFields
+	// companysettingsDescFinancialYearStartMonth is the schema descriptor for financial_year_start_month field.
+	companysettingsDescFinancialYearStartMonth := companysettingsFields[10].Descriptor()
+	// companysettings.DefaultFinancialYearStartMonth holds the default value on creation for the financial_year_start_month field.
+	companysettings.DefaultFinancialYearStartMonth = companysettingsDescFinancialYearStartMonth.Default.(int)
+	// companysettingsDescDefaultCurrency is the schema descriptor for default_currency field.
+	companysettingsDescDefaultCurrency := companysettingsFields[11].Descriptor()
+	// companysettings.DefaultDefaultCurrency holds the default value on creation for the default_currency field.
+	companysettings.DefaultDefaultCurrency = companysettingsDescDefaultCurrency.Default.(string)
+	// companysettingsDescTimezone is the schema descriptor for timezone field.
+	companysettingsDescTimezone := companysettingsFields[12].Descriptor()
+	// companysettings.DefaultTimezone holds the default value on creation for the timezone field.
+	companysettings.DefaultTimezone = companysettingsDescTimezone.Default.(string)
+	// companysettingsDescCreatedAt is the schema descriptor for created_at field.
+	companysettingsDescCreatedAt := companysettingsFields[13].Descriptor()
+	// companysettings.DefaultCreatedAt holds the default value on creation for the created_at field.
+	companysettings.DefaultCreatedAt = companysettingsDescCreatedAt.Default.(func() time.Time)
+	// companysettingsDescUpdatedAt is the schema descriptor for updated_at field.
+	companysettingsDescUpdatedAt := companysettingsFields[14].Descriptor()
+	// companysettings.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	companysettings.DefaultUpdatedAt = companysettingsDescUpdatedAt.Default.(func() time.Time)
+	// companysettings.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	companysettings.UpdateDefaultUpdatedAt = companysettingsDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// companysettingsDescID is the schema descriptor for id field.
+	companysettingsDescID := companysettingsFields[0].Descriptor()
+	// companysettings.DefaultID holds the default value on creation for the id field.
+	companysettings.DefaultID = companysettingsDescID.Default.(func() uuid.UUID)
 	contactdetailsFields := schema.ContactDetails{}.Fields()
 	_ = contactdetailsFields
 	// contactdetailsDescCreatedAt is the schema descriptor for created_at field.
@@ -680,6 +710,42 @@ func init() {
 	departmentDescID := departmentFields[0].Descriptor()
 	// department.DefaultID holds the default value on creation for the id field.
 	department.DefaultID = departmentDescID.Default.(func() uuid.UUID)
+	documentsequenceFields := schema.DocumentSequence{}.Fields()
+	_ = documentsequenceFields
+	// documentsequenceDescDocType is the schema descriptor for doc_type field.
+	documentsequenceDescDocType := documentsequenceFields[2].Descriptor()
+	// documentsequence.DocTypeValidator is a validator for the "doc_type" field. It is called by the builders before save.
+	documentsequence.DocTypeValidator = documentsequenceDescDocType.Validators[0].(func(string) error)
+	// documentsequenceDescSeparator is the schema descriptor for separator field.
+	documentsequenceDescSeparator := documentsequenceFields[4].Descriptor()
+	// documentsequence.DefaultSeparator holds the default value on creation for the separator field.
+	documentsequence.DefaultSeparator = documentsequenceDescSeparator.Default.(string)
+	// documentsequenceDescPadding is the schema descriptor for padding field.
+	documentsequenceDescPadding := documentsequenceFields[6].Descriptor()
+	// documentsequence.DefaultPadding holds the default value on creation for the padding field.
+	documentsequence.DefaultPadding = documentsequenceDescPadding.Default.(int)
+	// documentsequenceDescResetFreq is the schema descriptor for reset_freq field.
+	documentsequenceDescResetFreq := documentsequenceFields[7].Descriptor()
+	// documentsequence.DefaultResetFreq holds the default value on creation for the reset_freq field.
+	documentsequence.DefaultResetFreq = documentsequenceDescResetFreq.Default.(string)
+	// documentsequenceDescCurrentVal is the schema descriptor for current_val field.
+	documentsequenceDescCurrentVal := documentsequenceFields[8].Descriptor()
+	// documentsequence.DefaultCurrentVal holds the default value on creation for the current_val field.
+	documentsequence.DefaultCurrentVal = documentsequenceDescCurrentVal.Default.(int64)
+	// documentsequenceDescCreatedAt is the schema descriptor for created_at field.
+	documentsequenceDescCreatedAt := documentsequenceFields[10].Descriptor()
+	// documentsequence.DefaultCreatedAt holds the default value on creation for the created_at field.
+	documentsequence.DefaultCreatedAt = documentsequenceDescCreatedAt.Default.(func() time.Time)
+	// documentsequenceDescUpdatedAt is the schema descriptor for updated_at field.
+	documentsequenceDescUpdatedAt := documentsequenceFields[11].Descriptor()
+	// documentsequence.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	documentsequence.DefaultUpdatedAt = documentsequenceDescUpdatedAt.Default.(func() time.Time)
+	// documentsequence.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	documentsequence.UpdateDefaultUpdatedAt = documentsequenceDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// documentsequenceDescID is the schema descriptor for id field.
+	documentsequenceDescID := documentsequenceFields[0].Descriptor()
+	// documentsequence.DefaultID holds the default value on creation for the id field.
+	documentsequence.DefaultID = documentsequenceDescID.Default.(func() uuid.UUID)
 	esssettingsFields := schema.ESSSettings{}.Fields()
 	_ = esssettingsFields
 	// esssettingsDescEnableShiftBasedRestrictions is the schema descriptor for enable_shift_based_restrictions field.
