@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -52,6 +53,33 @@ type PostgresConfig struct {
 	// RunMigrations applies versioned migrations on boot. Keep false in prod; the entrypoint
 	// runs cmd/migrate before the server starts.
 	RunMigrations bool `envconfig:"POSTGRES_RUN_MIGRATIONS" default:"false"`
+	// Schema is the Postgres schema the Go ERP lives in. It is "erp" (NOT public) so the new
+	// Ent tables are isolated from the legacy Django tables that still occupy the public schema
+	// of the SAME bengo_erp database during/after cutover (16 table names collide). See
+	// docs/data-migration-runbook.md.
+	Schema string `envconfig:"DB_SCHEMA" default:"erp"`
+}
+
+// DSN returns the Postgres connection string with search_path pinned to the configured
+// schema (erp), so every connection in the service reads/writes the Go ERP's own tables.
+func (c PostgresConfig) DSN() string { return EnsureSearchPath(c.URL, c.Schema) }
+
+// EnsureSearchPath returns dsn with its search_path query parameter set to schema.
+// pgx (used by both pgxpool and the database/sql stdlib driver) sends unknown URL query
+// params as Postgres runtime parameters, so search_path is honored on every connection.
+// If dsn can't be parsed, it's returned unchanged.
+func EnsureSearchPath(dsn, schema string) string {
+	if schema == "" {
+		return dsn
+	}
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return dsn
+	}
+	q := u.Query()
+	q.Set("search_path", schema)
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 type RedisConfig struct {

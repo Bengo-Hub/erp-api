@@ -13,7 +13,9 @@ import (
 // NewPool creates a pgx connection pool from the supplied Postgres config and
 // applies session-level timeout guardrails.
 func NewPool(ctx context.Context, cfg config.PostgresConfig) (*pgxpool.Pool, error) {
-	poolConfig, err := pgxpool.ParseConfig(cfg.URL)
+	// Pin search_path to the erp schema (isolates the Go ERP from the legacy Django tables
+	// still in public on the same bengo_erp DB).
+	poolConfig, err := pgxpool.ParseConfig(cfg.DSN())
 	if err != nil {
 		return nil, fmt.Errorf("postgres: parse config: %w", err)
 	}

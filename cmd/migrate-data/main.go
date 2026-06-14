@@ -37,6 +37,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 
+	"github.com/Bengo-Hub/erp-api/internal/config"
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 )
 
@@ -56,21 +57,38 @@ func main() {
 	if dsn == "" {
 		dsn = "postgres://postgres:postgres@localhost:5432/bengo_erp?sslmode=disable"
 	}
+	destSchema := os.Getenv("DB_SCHEMA")
+	if destSchema == "" {
+		destSchema = "erp"
+	}
 
-	sqlDB, err := sql.Open("pgx", dsn)
+	// READ from the legacy Django tables in the public schema; WRITE the new Ent rows into the
+	// erp schema (the two collide by name in the same bengo_erp DB — plan §0c / runbook). Two
+	// connections with different search_path keeps reads/writes unambiguous without qualifying
+	// every query.
+	readDB, err := sql.Open("pgx", config.EnsureSearchPath(dsn, "public"))
 	if err != nil {
-		log.Fatalf("open db: %v", err)
+		log.Fatalf("open read db (public): %v", err)
 	}
-	defer func() { _ = sqlDB.Close() }()
-	if err := sqlDB.Ping(); err != nil {
-		log.Fatalf("db ping: %v", err)
+	defer func() { _ = readDB.Close() }()
+	if err := readDB.Ping(); err != nil {
+		log.Fatalf("read db ping: %v", err)
 	}
 
-	client := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, sqlDB)))
+	writeDB, err := sql.Open("pgx", config.EnsureSearchPath(dsn, destSchema))
+	if err != nil {
+		log.Fatalf("open write db (%s): %v", destSchema, err)
+	}
+	defer func() { _ = writeDB.Close() }()
+	if err := writeDB.Ping(); err != nil {
+		log.Fatalf("write db ping: %v", err)
+	}
+
+	client := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, writeDB)))
 	defer func() { _ = client.Close() }()
 
 	m := &Migrator{
-		db:      sqlDB,
+		db:      readDB,
 		client:  client,
 		ctx:     context.Background(),
 		dryRun:  *dryRun,
