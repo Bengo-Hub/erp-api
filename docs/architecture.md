@@ -249,13 +249,20 @@ The new service is **`erp-service/erp-api`** (Go module e.g. `github.com/bengobo
 | ORM / schema | **Ent** (`entgo.io/ent`) — schema-as-code in `internal/ent/schema/*.go` |
 | Migrations | **Atlas** (`ariga.io/atlas`) — versioned SQL in `migrations/`, run by entrypoint (not auto in prod) |
 | DB | PostgreSQL (pgx/v5 pool + Ent `database/sql` driver) |
-| Auth | `github.com/Bengo-Hub/shared-auth-client` (JWKS RS256 + Claims + middleware) |
-| HTTP middleware | `github.com/Bengo-Hub/httpware` (CORS, request-id, tenant ctx, recovery) |
-| Events | `github.com/Bengo-Hub/shared-events` (`OutboxPoller` + NATS JetStream) |
-| Cache | `github.com/Bengo-Hub/cache` (Redis) |
+| Auth | `github.com/Bengo-Hub/shared-auth-client v0.9.0` (JWKS RS256 + Claims + middleware) |
+| HTTP middleware | `github.com/Bengo-Hub/httpware v0.5.0` (CORS, request-id, logging, recovery) |
+| Events | `github.com/Bengo-Hub/shared-events v0.5.0` (`OutboxPoller` + NATS JetStream) |
+| Cache | `github.com/Bengo-Hub/cache v0.3.0` (cache-aside helper over Redis) |
+| S2S client | `github.com/Bengo-Hub/shared-service-client v0.3.1` (circuit-breaker + retry + tracing; treasury) |
+| List pagination | `github.com/Bengo-Hub/pagination v0.3.0` (uniform `data/total/limit/page/hasMore` envelope) |
 | Config | `kelseyhightower/envconfig` + `joho/godotenv` |
 | Logging | `go.uber.org/zap` |
 | Telemetry | OTLP (optional) + `/metrics` |
+
+> **Shared-lib adoption (plan §0d):** the HTTP middleware stack (`cmd/server/main.go`),
+> the branding cache-aside read-through (`platform/auth`), the treasury S2S client
+> (`platform/treasury`), and every list endpoint now use the latest tagged shared libs
+> above instead of hand-rolled equivalents — see `docs/integrations.md`.
 
 ## T2. Repo layout (copy inventory-api)
 

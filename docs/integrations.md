@@ -18,11 +18,13 @@ ERP's **entire** cross-service surface. ERP consumes ONLY these and owns no othe
 data. ERP = client only for all of them.
 
 - **auth-service (SSO)** — JWT/JWKS validation + `/auth/me` (shared-auth-client). Branding
-  read-through `GET /api/v1/tenants/by-slug/{slug}` (auth-api public route), Redis-cached 6h
-  via `internal/platform/auth.BrandingClient` → surfaced on the public branding endpoint.
+  read-through `GET /api/v1/tenants/by-slug/{slug}` (auth-api public route), cached 6h via the
+  shared `cache` lib (`sharedcache.Aside.GetOrSet`) in `internal/platform/auth.BrandingClient`
+  → surfaced on the public branding endpoint.
   Tenant/outlet shadows synced from `auth.tenant.*` / `auth.outlet.created|updated` events.
 - **treasury (finance-service)** — payroll disbursement `POST /api/v1/s2s/{tenant}/payouts/disburse`
-  (`internal/platform/treasury`); ERP publishes `erp.payroll.processed` (treasury posts the GL
+  (`internal/platform/treasury`, transport via `shared-service-client` with `X-API-Key:
+  INTERNAL_SERVICE_KEY` + per-batch `Idempotency-Key`); ERP publishes `erp.payroll.processed` (treasury posts the GL
   journal) and consumes `treasury.payroll.disbursed` to mark payslips published/paid. **Payroll
   tax stays ERP-owned**; treasury owns GL + payout rails + bank/payment reference.
 - **notifications-service** — ERP publishes `erp.email.requested` (supports base64 attachments,
@@ -35,8 +37,13 @@ data. ERP = client only for all of them.
   inventory+treasury, customers → marketflow, orders/address_book/pickup_station/service_type →
   ordering, projects/tenders → projects-service, banks → treasury/payment-rail reference. ERP
   links to those only via UI menu (external), never their data/schemas.
-- **Shared libs:** shared-auth-client, shared-events (outbox + QueueSubscribe + IdempotencyStore),
-  httpware, cache, shared-service-client.
+- **Shared libs (latest tagged releases, plan §0d):**
+  - `shared-auth-client v0.9.0` (via `replace … => github.com/Bengo-Hub/auth-client v0.9.0`) — JWKS/Claims/middleware.
+  - `shared-events v0.5.0` — outbox `OutboxPoller` + NATS `QueueSubscribe` + `IdempotencyStore`.
+  - `httpware v0.5.0` — HTTP middleware stack in `cmd/server/main.go` (RequestID, Logging, Recover, CORS).
+  - `cache v0.3.0` — cache-aside helper (`sharedcache.New(redisClient, log)` + `GetOrSet`/`Key`); backs the branding read-through.
+  - `shared-service-client v0.3.1` — resilient S2S transport (circuit-breaker + retry + tracing + tenant/request-id propagation); backs the treasury client.
+  - `pagination v0.3.0` — uniform list envelope (`data/total/limit/page/hasMore`) for all list endpoints.
 
 ---
 
@@ -267,7 +274,7 @@ sequenceDiagram
 | Django piece | Go replacement |
 |---|---|
 | `integrations/events.py` + `EventOutbox` + `drain_outbox`/`consume_events` | `shared-events` `OutboxPoller` + NATS consumers in `modules/consumers` against an `outbox_events` Ent table |
-| `integrations/service_client.py` | `platform/auth`, `platform/treasury` typed S2S clients (httpware client + `INTERNAL_SERVICE_KEY`) |
+| `integrations/service_client.py` | `platform/auth`, `platform/treasury` typed S2S clients (treasury over `shared-service-client v0.3.1` + `INTERNAL_SERVICE_KEY`) |
 | `authmanagement/sso.py` + middleware | `shared-auth-client` (JWKS, Claims, middleware) + `services/usersync` JIT shadow |
 | `SubscriptionGatingMiddleware` | `platform/subscriptions` middleware (claims-based, mutations-only) — copy inventory-api |
 | `integrations/branding.py` / `taxes.py` | `platform/auth.GetBranding` / `platform/treasury.GetTaxCodes` (Redis-cached) |
