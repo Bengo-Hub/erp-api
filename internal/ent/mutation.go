@@ -25,8 +25,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
-	"github.com/Bengo-Hub/erp-api/internal/ent/bankbranch"
-	"github.com/Bengo-Hub/erp-api/internal/ent/bankinstitution"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
@@ -75,7 +73,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
-	"github.com/Bengo-Hub/erp-api/internal/ent/project"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
@@ -125,8 +122,6 @@ const (
 	TypeAttendanceRule      = "AttendanceRule"
 	TypeAuthOutlet          = "AuthOutlet"
 	TypeAuthTenant          = "AuthTenant"
-	TypeBankBranch          = "BankBranch"
-	TypeBankInstitution     = "BankInstitution"
 	TypeBenefitTax          = "BenefitTax"
 	TypeCandidate           = "Candidate"
 	TypeClaimItem           = "ClaimItem"
@@ -174,7 +169,6 @@ const (
 	TypePerformanceMetric   = "PerformanceMetric"
 	TypePerformanceReview   = "PerformanceReview"
 	TypePermission          = "Permission"
-	TypeProject             = "Project"
 	TypePublicHoliday       = "PublicHoliday"
 	TypeRegion              = "Region"
 	TypeRepayOption         = "RepayOption"
@@ -12409,1277 +12403,6 @@ func (m *AuthTenantMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown AuthTenant edge %s", name)
 }
 
-// BankBranchMutation represents an operation that mutates the BankBranch nodes in the graph.
-type BankBranchMutation struct {
-	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	name          *string
-	code          *string
-	created_at    *time.Time
-	clearedFields map[string]struct{}
-	bank          *uuid.UUID
-	clearedbank   bool
-	done          bool
-	oldValue      func(context.Context) (*BankBranch, error)
-	predicates    []predicate.BankBranch
-}
-
-var _ ent.Mutation = (*BankBranchMutation)(nil)
-
-// bankbranchOption allows management of the mutation configuration using functional options.
-type bankbranchOption func(*BankBranchMutation)
-
-// newBankBranchMutation creates new mutation for the BankBranch entity.
-func newBankBranchMutation(c config, op Op, opts ...bankbranchOption) *BankBranchMutation {
-	m := &BankBranchMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeBankBranch,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withBankBranchID sets the ID field of the mutation.
-func withBankBranchID(id uuid.UUID) bankbranchOption {
-	return func(m *BankBranchMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *BankBranch
-		)
-		m.oldValue = func(ctx context.Context) (*BankBranch, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().BankBranch.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withBankBranch sets the old BankBranch of the mutation.
-func withBankBranch(node *BankBranch) bankbranchOption {
-	return func(m *BankBranchMutation) {
-		m.oldValue = func(context.Context) (*BankBranch, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m BankBranchMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m BankBranchMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of BankBranch entities.
-func (m *BankBranchMutation) SetID(id uuid.UUID) {
-	m.id = &id
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *BankBranchMutation) ID() (id uuid.UUID, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *BankBranchMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []uuid.UUID{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().BankBranch.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetBankID sets the "bank_id" field.
-func (m *BankBranchMutation) SetBankID(u uuid.UUID) {
-	m.bank = &u
-}
-
-// BankID returns the value of the "bank_id" field in the mutation.
-func (m *BankBranchMutation) BankID() (r uuid.UUID, exists bool) {
-	v := m.bank
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldBankID returns the old "bank_id" field's value of the BankBranch entity.
-// If the BankBranch object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BankBranchMutation) OldBankID(ctx context.Context) (v uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBankID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBankID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBankID: %w", err)
-	}
-	return oldValue.BankID, nil
-}
-
-// ResetBankID resets all changes to the "bank_id" field.
-func (m *BankBranchMutation) ResetBankID() {
-	m.bank = nil
-}
-
-// SetName sets the "name" field.
-func (m *BankBranchMutation) SetName(s string) {
-	m.name = &s
-}
-
-// Name returns the value of the "name" field in the mutation.
-func (m *BankBranchMutation) Name() (r string, exists bool) {
-	v := m.name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldName returns the old "name" field's value of the BankBranch entity.
-// If the BankBranch object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BankBranchMutation) OldName(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldName: %w", err)
-	}
-	return oldValue.Name, nil
-}
-
-// ResetName resets all changes to the "name" field.
-func (m *BankBranchMutation) ResetName() {
-	m.name = nil
-}
-
-// SetCode sets the "code" field.
-func (m *BankBranchMutation) SetCode(s string) {
-	m.code = &s
-}
-
-// Code returns the value of the "code" field in the mutation.
-func (m *BankBranchMutation) Code() (r string, exists bool) {
-	v := m.code
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCode returns the old "code" field's value of the BankBranch entity.
-// If the BankBranch object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BankBranchMutation) OldCode(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCode is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCode requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCode: %w", err)
-	}
-	return oldValue.Code, nil
-}
-
-// ClearCode clears the value of the "code" field.
-func (m *BankBranchMutation) ClearCode() {
-	m.code = nil
-	m.clearedFields[bankbranch.FieldCode] = struct{}{}
-}
-
-// CodeCleared returns if the "code" field was cleared in this mutation.
-func (m *BankBranchMutation) CodeCleared() bool {
-	_, ok := m.clearedFields[bankbranch.FieldCode]
-	return ok
-}
-
-// ResetCode resets all changes to the "code" field.
-func (m *BankBranchMutation) ResetCode() {
-	m.code = nil
-	delete(m.clearedFields, bankbranch.FieldCode)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *BankBranchMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *BankBranchMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the BankBranch entity.
-// If the BankBranch object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BankBranchMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *BankBranchMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// ClearBank clears the "bank" edge to the BankInstitution entity.
-func (m *BankBranchMutation) ClearBank() {
-	m.clearedbank = true
-	m.clearedFields[bankbranch.FieldBankID] = struct{}{}
-}
-
-// BankCleared reports if the "bank" edge to the BankInstitution entity was cleared.
-func (m *BankBranchMutation) BankCleared() bool {
-	return m.clearedbank
-}
-
-// BankIDs returns the "bank" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// BankID instead. It exists only for internal usage by the builders.
-func (m *BankBranchMutation) BankIDs() (ids []uuid.UUID) {
-	if id := m.bank; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetBank resets all changes to the "bank" edge.
-func (m *BankBranchMutation) ResetBank() {
-	m.bank = nil
-	m.clearedbank = false
-}
-
-// Where appends a list predicates to the BankBranchMutation builder.
-func (m *BankBranchMutation) Where(ps ...predicate.BankBranch) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the BankBranchMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *BankBranchMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.BankBranch, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *BankBranchMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *BankBranchMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (BankBranch).
-func (m *BankBranchMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *BankBranchMutation) Fields() []string {
-	fields := make([]string, 0, 4)
-	if m.bank != nil {
-		fields = append(fields, bankbranch.FieldBankID)
-	}
-	if m.name != nil {
-		fields = append(fields, bankbranch.FieldName)
-	}
-	if m.code != nil {
-		fields = append(fields, bankbranch.FieldCode)
-	}
-	if m.created_at != nil {
-		fields = append(fields, bankbranch.FieldCreatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *BankBranchMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case bankbranch.FieldBankID:
-		return m.BankID()
-	case bankbranch.FieldName:
-		return m.Name()
-	case bankbranch.FieldCode:
-		return m.Code()
-	case bankbranch.FieldCreatedAt:
-		return m.CreatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *BankBranchMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case bankbranch.FieldBankID:
-		return m.OldBankID(ctx)
-	case bankbranch.FieldName:
-		return m.OldName(ctx)
-	case bankbranch.FieldCode:
-		return m.OldCode(ctx)
-	case bankbranch.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown BankBranch field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *BankBranchMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case bankbranch.FieldBankID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetBankID(v)
-		return nil
-	case bankbranch.FieldName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetName(v)
-		return nil
-	case bankbranch.FieldCode:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCode(v)
-		return nil
-	case bankbranch.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown BankBranch field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *BankBranchMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *BankBranchMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *BankBranchMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown BankBranch numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *BankBranchMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(bankbranch.FieldCode) {
-		fields = append(fields, bankbranch.FieldCode)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *BankBranchMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *BankBranchMutation) ClearField(name string) error {
-	switch name {
-	case bankbranch.FieldCode:
-		m.ClearCode()
-		return nil
-	}
-	return fmt.Errorf("unknown BankBranch nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *BankBranchMutation) ResetField(name string) error {
-	switch name {
-	case bankbranch.FieldBankID:
-		m.ResetBankID()
-		return nil
-	case bankbranch.FieldName:
-		m.ResetName()
-		return nil
-	case bankbranch.FieldCode:
-		m.ResetCode()
-		return nil
-	case bankbranch.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown BankBranch field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *BankBranchMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.bank != nil {
-		edges = append(edges, bankbranch.EdgeBank)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *BankBranchMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case bankbranch.EdgeBank:
-		if id := m.bank; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *BankBranchMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *BankBranchMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *BankBranchMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedbank {
-		edges = append(edges, bankbranch.EdgeBank)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *BankBranchMutation) EdgeCleared(name string) bool {
-	switch name {
-	case bankbranch.EdgeBank:
-		return m.clearedbank
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *BankBranchMutation) ClearEdge(name string) error {
-	switch name {
-	case bankbranch.EdgeBank:
-		m.ClearBank()
-		return nil
-	}
-	return fmt.Errorf("unknown BankBranch unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *BankBranchMutation) ResetEdge(name string) error {
-	switch name {
-	case bankbranch.EdgeBank:
-		m.ResetBank()
-		return nil
-	}
-	return fmt.Errorf("unknown BankBranch edge %s", name)
-}
-
-// BankInstitutionMutation represents an operation that mutates the BankInstitution nodes in the graph.
-type BankInstitutionMutation struct {
-	config
-	op              Op
-	typ             string
-	id              *uuid.UUID
-	name            *string
-	code            *string
-	short_code      *string
-	swift_code      *string
-	created_at      *time.Time
-	clearedFields   map[string]struct{}
-	branches        map[uuid.UUID]struct{}
-	removedbranches map[uuid.UUID]struct{}
-	clearedbranches bool
-	done            bool
-	oldValue        func(context.Context) (*BankInstitution, error)
-	predicates      []predicate.BankInstitution
-}
-
-var _ ent.Mutation = (*BankInstitutionMutation)(nil)
-
-// bankinstitutionOption allows management of the mutation configuration using functional options.
-type bankinstitutionOption func(*BankInstitutionMutation)
-
-// newBankInstitutionMutation creates new mutation for the BankInstitution entity.
-func newBankInstitutionMutation(c config, op Op, opts ...bankinstitutionOption) *BankInstitutionMutation {
-	m := &BankInstitutionMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeBankInstitution,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withBankInstitutionID sets the ID field of the mutation.
-func withBankInstitutionID(id uuid.UUID) bankinstitutionOption {
-	return func(m *BankInstitutionMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *BankInstitution
-		)
-		m.oldValue = func(ctx context.Context) (*BankInstitution, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().BankInstitution.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withBankInstitution sets the old BankInstitution of the mutation.
-func withBankInstitution(node *BankInstitution) bankinstitutionOption {
-	return func(m *BankInstitutionMutation) {
-		m.oldValue = func(context.Context) (*BankInstitution, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m BankInstitutionMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m BankInstitutionMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of BankInstitution entities.
-func (m *BankInstitutionMutation) SetID(id uuid.UUID) {
-	m.id = &id
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *BankInstitutionMutation) ID() (id uuid.UUID, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *BankInstitutionMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []uuid.UUID{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().BankInstitution.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetName sets the "name" field.
-func (m *BankInstitutionMutation) SetName(s string) {
-	m.name = &s
-}
-
-// Name returns the value of the "name" field in the mutation.
-func (m *BankInstitutionMutation) Name() (r string, exists bool) {
-	v := m.name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldName returns the old "name" field's value of the BankInstitution entity.
-// If the BankInstitution object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BankInstitutionMutation) OldName(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldName: %w", err)
-	}
-	return oldValue.Name, nil
-}
-
-// ResetName resets all changes to the "name" field.
-func (m *BankInstitutionMutation) ResetName() {
-	m.name = nil
-}
-
-// SetCode sets the "code" field.
-func (m *BankInstitutionMutation) SetCode(s string) {
-	m.code = &s
-}
-
-// Code returns the value of the "code" field in the mutation.
-func (m *BankInstitutionMutation) Code() (r string, exists bool) {
-	v := m.code
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCode returns the old "code" field's value of the BankInstitution entity.
-// If the BankInstitution object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BankInstitutionMutation) OldCode(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCode is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCode requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCode: %w", err)
-	}
-	return oldValue.Code, nil
-}
-
-// ClearCode clears the value of the "code" field.
-func (m *BankInstitutionMutation) ClearCode() {
-	m.code = nil
-	m.clearedFields[bankinstitution.FieldCode] = struct{}{}
-}
-
-// CodeCleared returns if the "code" field was cleared in this mutation.
-func (m *BankInstitutionMutation) CodeCleared() bool {
-	_, ok := m.clearedFields[bankinstitution.FieldCode]
-	return ok
-}
-
-// ResetCode resets all changes to the "code" field.
-func (m *BankInstitutionMutation) ResetCode() {
-	m.code = nil
-	delete(m.clearedFields, bankinstitution.FieldCode)
-}
-
-// SetShortCode sets the "short_code" field.
-func (m *BankInstitutionMutation) SetShortCode(s string) {
-	m.short_code = &s
-}
-
-// ShortCode returns the value of the "short_code" field in the mutation.
-func (m *BankInstitutionMutation) ShortCode() (r string, exists bool) {
-	v := m.short_code
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldShortCode returns the old "short_code" field's value of the BankInstitution entity.
-// If the BankInstitution object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BankInstitutionMutation) OldShortCode(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldShortCode is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldShortCode requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldShortCode: %w", err)
-	}
-	return oldValue.ShortCode, nil
-}
-
-// ClearShortCode clears the value of the "short_code" field.
-func (m *BankInstitutionMutation) ClearShortCode() {
-	m.short_code = nil
-	m.clearedFields[bankinstitution.FieldShortCode] = struct{}{}
-}
-
-// ShortCodeCleared returns if the "short_code" field was cleared in this mutation.
-func (m *BankInstitutionMutation) ShortCodeCleared() bool {
-	_, ok := m.clearedFields[bankinstitution.FieldShortCode]
-	return ok
-}
-
-// ResetShortCode resets all changes to the "short_code" field.
-func (m *BankInstitutionMutation) ResetShortCode() {
-	m.short_code = nil
-	delete(m.clearedFields, bankinstitution.FieldShortCode)
-}
-
-// SetSwiftCode sets the "swift_code" field.
-func (m *BankInstitutionMutation) SetSwiftCode(s string) {
-	m.swift_code = &s
-}
-
-// SwiftCode returns the value of the "swift_code" field in the mutation.
-func (m *BankInstitutionMutation) SwiftCode() (r string, exists bool) {
-	v := m.swift_code
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSwiftCode returns the old "swift_code" field's value of the BankInstitution entity.
-// If the BankInstitution object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BankInstitutionMutation) OldSwiftCode(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSwiftCode is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSwiftCode requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSwiftCode: %w", err)
-	}
-	return oldValue.SwiftCode, nil
-}
-
-// ClearSwiftCode clears the value of the "swift_code" field.
-func (m *BankInstitutionMutation) ClearSwiftCode() {
-	m.swift_code = nil
-	m.clearedFields[bankinstitution.FieldSwiftCode] = struct{}{}
-}
-
-// SwiftCodeCleared returns if the "swift_code" field was cleared in this mutation.
-func (m *BankInstitutionMutation) SwiftCodeCleared() bool {
-	_, ok := m.clearedFields[bankinstitution.FieldSwiftCode]
-	return ok
-}
-
-// ResetSwiftCode resets all changes to the "swift_code" field.
-func (m *BankInstitutionMutation) ResetSwiftCode() {
-	m.swift_code = nil
-	delete(m.clearedFields, bankinstitution.FieldSwiftCode)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *BankInstitutionMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *BankInstitutionMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the BankInstitution entity.
-// If the BankInstitution object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BankInstitutionMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *BankInstitutionMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// AddBranchIDs adds the "branches" edge to the BankBranch entity by ids.
-func (m *BankInstitutionMutation) AddBranchIDs(ids ...uuid.UUID) {
-	if m.branches == nil {
-		m.branches = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.branches[ids[i]] = struct{}{}
-	}
-}
-
-// ClearBranches clears the "branches" edge to the BankBranch entity.
-func (m *BankInstitutionMutation) ClearBranches() {
-	m.clearedbranches = true
-}
-
-// BranchesCleared reports if the "branches" edge to the BankBranch entity was cleared.
-func (m *BankInstitutionMutation) BranchesCleared() bool {
-	return m.clearedbranches
-}
-
-// RemoveBranchIDs removes the "branches" edge to the BankBranch entity by IDs.
-func (m *BankInstitutionMutation) RemoveBranchIDs(ids ...uuid.UUID) {
-	if m.removedbranches == nil {
-		m.removedbranches = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.branches, ids[i])
-		m.removedbranches[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedBranches returns the removed IDs of the "branches" edge to the BankBranch entity.
-func (m *BankInstitutionMutation) RemovedBranchesIDs() (ids []uuid.UUID) {
-	for id := range m.removedbranches {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// BranchesIDs returns the "branches" edge IDs in the mutation.
-func (m *BankInstitutionMutation) BranchesIDs() (ids []uuid.UUID) {
-	for id := range m.branches {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetBranches resets all changes to the "branches" edge.
-func (m *BankInstitutionMutation) ResetBranches() {
-	m.branches = nil
-	m.clearedbranches = false
-	m.removedbranches = nil
-}
-
-// Where appends a list predicates to the BankInstitutionMutation builder.
-func (m *BankInstitutionMutation) Where(ps ...predicate.BankInstitution) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the BankInstitutionMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *BankInstitutionMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.BankInstitution, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *BankInstitutionMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *BankInstitutionMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (BankInstitution).
-func (m *BankInstitutionMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *BankInstitutionMutation) Fields() []string {
-	fields := make([]string, 0, 5)
-	if m.name != nil {
-		fields = append(fields, bankinstitution.FieldName)
-	}
-	if m.code != nil {
-		fields = append(fields, bankinstitution.FieldCode)
-	}
-	if m.short_code != nil {
-		fields = append(fields, bankinstitution.FieldShortCode)
-	}
-	if m.swift_code != nil {
-		fields = append(fields, bankinstitution.FieldSwiftCode)
-	}
-	if m.created_at != nil {
-		fields = append(fields, bankinstitution.FieldCreatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *BankInstitutionMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case bankinstitution.FieldName:
-		return m.Name()
-	case bankinstitution.FieldCode:
-		return m.Code()
-	case bankinstitution.FieldShortCode:
-		return m.ShortCode()
-	case bankinstitution.FieldSwiftCode:
-		return m.SwiftCode()
-	case bankinstitution.FieldCreatedAt:
-		return m.CreatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *BankInstitutionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case bankinstitution.FieldName:
-		return m.OldName(ctx)
-	case bankinstitution.FieldCode:
-		return m.OldCode(ctx)
-	case bankinstitution.FieldShortCode:
-		return m.OldShortCode(ctx)
-	case bankinstitution.FieldSwiftCode:
-		return m.OldSwiftCode(ctx)
-	case bankinstitution.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown BankInstitution field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *BankInstitutionMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case bankinstitution.FieldName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetName(v)
-		return nil
-	case bankinstitution.FieldCode:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCode(v)
-		return nil
-	case bankinstitution.FieldShortCode:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetShortCode(v)
-		return nil
-	case bankinstitution.FieldSwiftCode:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSwiftCode(v)
-		return nil
-	case bankinstitution.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown BankInstitution field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *BankInstitutionMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *BankInstitutionMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *BankInstitutionMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown BankInstitution numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *BankInstitutionMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(bankinstitution.FieldCode) {
-		fields = append(fields, bankinstitution.FieldCode)
-	}
-	if m.FieldCleared(bankinstitution.FieldShortCode) {
-		fields = append(fields, bankinstitution.FieldShortCode)
-	}
-	if m.FieldCleared(bankinstitution.FieldSwiftCode) {
-		fields = append(fields, bankinstitution.FieldSwiftCode)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *BankInstitutionMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *BankInstitutionMutation) ClearField(name string) error {
-	switch name {
-	case bankinstitution.FieldCode:
-		m.ClearCode()
-		return nil
-	case bankinstitution.FieldShortCode:
-		m.ClearShortCode()
-		return nil
-	case bankinstitution.FieldSwiftCode:
-		m.ClearSwiftCode()
-		return nil
-	}
-	return fmt.Errorf("unknown BankInstitution nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *BankInstitutionMutation) ResetField(name string) error {
-	switch name {
-	case bankinstitution.FieldName:
-		m.ResetName()
-		return nil
-	case bankinstitution.FieldCode:
-		m.ResetCode()
-		return nil
-	case bankinstitution.FieldShortCode:
-		m.ResetShortCode()
-		return nil
-	case bankinstitution.FieldSwiftCode:
-		m.ResetSwiftCode()
-		return nil
-	case bankinstitution.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown BankInstitution field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *BankInstitutionMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.branches != nil {
-		edges = append(edges, bankinstitution.EdgeBranches)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *BankInstitutionMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case bankinstitution.EdgeBranches:
-		ids := make([]ent.Value, 0, len(m.branches))
-		for id := range m.branches {
-			ids = append(ids, id)
-		}
-		return ids
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *BankInstitutionMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.removedbranches != nil {
-		edges = append(edges, bankinstitution.EdgeBranches)
-	}
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *BankInstitutionMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case bankinstitution.EdgeBranches:
-		ids := make([]ent.Value, 0, len(m.removedbranches))
-		for id := range m.removedbranches {
-			ids = append(ids, id)
-		}
-		return ids
-	}
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *BankInstitutionMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedbranches {
-		edges = append(edges, bankinstitution.EdgeBranches)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *BankInstitutionMutation) EdgeCleared(name string) bool {
-	switch name {
-	case bankinstitution.EdgeBranches:
-		return m.clearedbranches
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *BankInstitutionMutation) ClearEdge(name string) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown BankInstitution unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *BankInstitutionMutation) ResetEdge(name string) error {
-	switch name {
-	case bankinstitution.EdgeBranches:
-		m.ResetBranches()
-		return nil
-	}
-	return fmt.Errorf("unknown BankInstitution edge %s", name)
-}
-
 // BenefitTaxMutation represents an operation that mutates the BenefitTax nodes in the graph.
 type BenefitTaxMutation struct {
 	config
@@ -22528,26 +21251,28 @@ func (m *EmployeeMutation) ResetEdge(name string) error {
 // EmployeeBankAccountMutation represents an operation that mutates the EmployeeBankAccount nodes in the graph.
 type EmployeeBankAccountMutation struct {
 	config
-	op                  Op
-	typ                 string
-	id                  *uuid.UUID
-	tenant_id           *uuid.UUID
-	employee_id         *uuid.UUID
-	bank_institution_id *uuid.UUID
-	bank_branch_id      *uuid.UUID
-	account_name        *string
-	account_number      *string
-	account_type        *string
-	is_primary          *bool
-	status              *string
-	is_verified         *bool
-	opened_date         *time.Time
-	created_at          *time.Time
-	updated_at          *time.Time
-	clearedFields       map[string]struct{}
-	done                bool
-	oldValue            func(context.Context) (*EmployeeBankAccount, error)
-	predicates          []predicate.EmployeeBankAccount
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	tenant_id      *uuid.UUID
+	employee_id    *uuid.UUID
+	bank_name      *string
+	bank_code      *string
+	branch_name    *string
+	branch_code    *string
+	account_name   *string
+	account_number *string
+	account_type   *string
+	is_primary     *bool
+	status         *string
+	is_verified    *bool
+	opened_date    *time.Time
+	created_at     *time.Time
+	updated_at     *time.Time
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*EmployeeBankAccount, error)
+	predicates     []predicate.EmployeeBankAccount
 }
 
 var _ ent.Mutation = (*EmployeeBankAccountMutation)(nil)
@@ -22726,102 +21451,200 @@ func (m *EmployeeBankAccountMutation) ResetEmployeeID() {
 	m.employee_id = nil
 }
 
-// SetBankInstitutionID sets the "bank_institution_id" field.
-func (m *EmployeeBankAccountMutation) SetBankInstitutionID(u uuid.UUID) {
-	m.bank_institution_id = &u
+// SetBankName sets the "bank_name" field.
+func (m *EmployeeBankAccountMutation) SetBankName(s string) {
+	m.bank_name = &s
 }
 
-// BankInstitutionID returns the value of the "bank_institution_id" field in the mutation.
-func (m *EmployeeBankAccountMutation) BankInstitutionID() (r uuid.UUID, exists bool) {
-	v := m.bank_institution_id
+// BankName returns the value of the "bank_name" field in the mutation.
+func (m *EmployeeBankAccountMutation) BankName() (r string, exists bool) {
+	v := m.bank_name
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldBankInstitutionID returns the old "bank_institution_id" field's value of the EmployeeBankAccount entity.
+// OldBankName returns the old "bank_name" field's value of the EmployeeBankAccount entity.
 // If the EmployeeBankAccount object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *EmployeeBankAccountMutation) OldBankInstitutionID(ctx context.Context) (v *uuid.UUID, err error) {
+func (m *EmployeeBankAccountMutation) OldBankName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBankInstitutionID is only allowed on UpdateOne operations")
+		return v, errors.New("OldBankName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBankInstitutionID requires an ID field in the mutation")
+		return v, errors.New("OldBankName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBankInstitutionID: %w", err)
+		return v, fmt.Errorf("querying old value for OldBankName: %w", err)
 	}
-	return oldValue.BankInstitutionID, nil
+	return oldValue.BankName, nil
 }
 
-// ClearBankInstitutionID clears the value of the "bank_institution_id" field.
-func (m *EmployeeBankAccountMutation) ClearBankInstitutionID() {
-	m.bank_institution_id = nil
-	m.clearedFields[employeebankaccount.FieldBankInstitutionID] = struct{}{}
+// ClearBankName clears the value of the "bank_name" field.
+func (m *EmployeeBankAccountMutation) ClearBankName() {
+	m.bank_name = nil
+	m.clearedFields[employeebankaccount.FieldBankName] = struct{}{}
 }
 
-// BankInstitutionIDCleared returns if the "bank_institution_id" field was cleared in this mutation.
-func (m *EmployeeBankAccountMutation) BankInstitutionIDCleared() bool {
-	_, ok := m.clearedFields[employeebankaccount.FieldBankInstitutionID]
+// BankNameCleared returns if the "bank_name" field was cleared in this mutation.
+func (m *EmployeeBankAccountMutation) BankNameCleared() bool {
+	_, ok := m.clearedFields[employeebankaccount.FieldBankName]
 	return ok
 }
 
-// ResetBankInstitutionID resets all changes to the "bank_institution_id" field.
-func (m *EmployeeBankAccountMutation) ResetBankInstitutionID() {
-	m.bank_institution_id = nil
-	delete(m.clearedFields, employeebankaccount.FieldBankInstitutionID)
+// ResetBankName resets all changes to the "bank_name" field.
+func (m *EmployeeBankAccountMutation) ResetBankName() {
+	m.bank_name = nil
+	delete(m.clearedFields, employeebankaccount.FieldBankName)
 }
 
-// SetBankBranchID sets the "bank_branch_id" field.
-func (m *EmployeeBankAccountMutation) SetBankBranchID(u uuid.UUID) {
-	m.bank_branch_id = &u
+// SetBankCode sets the "bank_code" field.
+func (m *EmployeeBankAccountMutation) SetBankCode(s string) {
+	m.bank_code = &s
 }
 
-// BankBranchID returns the value of the "bank_branch_id" field in the mutation.
-func (m *EmployeeBankAccountMutation) BankBranchID() (r uuid.UUID, exists bool) {
-	v := m.bank_branch_id
+// BankCode returns the value of the "bank_code" field in the mutation.
+func (m *EmployeeBankAccountMutation) BankCode() (r string, exists bool) {
+	v := m.bank_code
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldBankBranchID returns the old "bank_branch_id" field's value of the EmployeeBankAccount entity.
+// OldBankCode returns the old "bank_code" field's value of the EmployeeBankAccount entity.
 // If the EmployeeBankAccount object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *EmployeeBankAccountMutation) OldBankBranchID(ctx context.Context) (v *uuid.UUID, err error) {
+func (m *EmployeeBankAccountMutation) OldBankCode(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldBankBranchID is only allowed on UpdateOne operations")
+		return v, errors.New("OldBankCode is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldBankBranchID requires an ID field in the mutation")
+		return v, errors.New("OldBankCode requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldBankBranchID: %w", err)
+		return v, fmt.Errorf("querying old value for OldBankCode: %w", err)
 	}
-	return oldValue.BankBranchID, nil
+	return oldValue.BankCode, nil
 }
 
-// ClearBankBranchID clears the value of the "bank_branch_id" field.
-func (m *EmployeeBankAccountMutation) ClearBankBranchID() {
-	m.bank_branch_id = nil
-	m.clearedFields[employeebankaccount.FieldBankBranchID] = struct{}{}
+// ClearBankCode clears the value of the "bank_code" field.
+func (m *EmployeeBankAccountMutation) ClearBankCode() {
+	m.bank_code = nil
+	m.clearedFields[employeebankaccount.FieldBankCode] = struct{}{}
 }
 
-// BankBranchIDCleared returns if the "bank_branch_id" field was cleared in this mutation.
-func (m *EmployeeBankAccountMutation) BankBranchIDCleared() bool {
-	_, ok := m.clearedFields[employeebankaccount.FieldBankBranchID]
+// BankCodeCleared returns if the "bank_code" field was cleared in this mutation.
+func (m *EmployeeBankAccountMutation) BankCodeCleared() bool {
+	_, ok := m.clearedFields[employeebankaccount.FieldBankCode]
 	return ok
 }
 
-// ResetBankBranchID resets all changes to the "bank_branch_id" field.
-func (m *EmployeeBankAccountMutation) ResetBankBranchID() {
-	m.bank_branch_id = nil
-	delete(m.clearedFields, employeebankaccount.FieldBankBranchID)
+// ResetBankCode resets all changes to the "bank_code" field.
+func (m *EmployeeBankAccountMutation) ResetBankCode() {
+	m.bank_code = nil
+	delete(m.clearedFields, employeebankaccount.FieldBankCode)
+}
+
+// SetBranchName sets the "branch_name" field.
+func (m *EmployeeBankAccountMutation) SetBranchName(s string) {
+	m.branch_name = &s
+}
+
+// BranchName returns the value of the "branch_name" field in the mutation.
+func (m *EmployeeBankAccountMutation) BranchName() (r string, exists bool) {
+	v := m.branch_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBranchName returns the old "branch_name" field's value of the EmployeeBankAccount entity.
+// If the EmployeeBankAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeBankAccountMutation) OldBranchName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBranchName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBranchName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBranchName: %w", err)
+	}
+	return oldValue.BranchName, nil
+}
+
+// ClearBranchName clears the value of the "branch_name" field.
+func (m *EmployeeBankAccountMutation) ClearBranchName() {
+	m.branch_name = nil
+	m.clearedFields[employeebankaccount.FieldBranchName] = struct{}{}
+}
+
+// BranchNameCleared returns if the "branch_name" field was cleared in this mutation.
+func (m *EmployeeBankAccountMutation) BranchNameCleared() bool {
+	_, ok := m.clearedFields[employeebankaccount.FieldBranchName]
+	return ok
+}
+
+// ResetBranchName resets all changes to the "branch_name" field.
+func (m *EmployeeBankAccountMutation) ResetBranchName() {
+	m.branch_name = nil
+	delete(m.clearedFields, employeebankaccount.FieldBranchName)
+}
+
+// SetBranchCode sets the "branch_code" field.
+func (m *EmployeeBankAccountMutation) SetBranchCode(s string) {
+	m.branch_code = &s
+}
+
+// BranchCode returns the value of the "branch_code" field in the mutation.
+func (m *EmployeeBankAccountMutation) BranchCode() (r string, exists bool) {
+	v := m.branch_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBranchCode returns the old "branch_code" field's value of the EmployeeBankAccount entity.
+// If the EmployeeBankAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeBankAccountMutation) OldBranchCode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBranchCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBranchCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBranchCode: %w", err)
+	}
+	return oldValue.BranchCode, nil
+}
+
+// ClearBranchCode clears the value of the "branch_code" field.
+func (m *EmployeeBankAccountMutation) ClearBranchCode() {
+	m.branch_code = nil
+	m.clearedFields[employeebankaccount.FieldBranchCode] = struct{}{}
+}
+
+// BranchCodeCleared returns if the "branch_code" field was cleared in this mutation.
+func (m *EmployeeBankAccountMutation) BranchCodeCleared() bool {
+	_, ok := m.clearedFields[employeebankaccount.FieldBranchCode]
+	return ok
+}
+
+// ResetBranchCode resets all changes to the "branch_code" field.
+func (m *EmployeeBankAccountMutation) ResetBranchCode() {
+	m.branch_code = nil
+	delete(m.clearedFields, employeebankaccount.FieldBranchCode)
 }
 
 // SetAccountName sets the "account_name" field.
@@ -23195,18 +22018,24 @@ func (m *EmployeeBankAccountMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EmployeeBankAccountMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 15)
 	if m.tenant_id != nil {
 		fields = append(fields, employeebankaccount.FieldTenantID)
 	}
 	if m.employee_id != nil {
 		fields = append(fields, employeebankaccount.FieldEmployeeID)
 	}
-	if m.bank_institution_id != nil {
-		fields = append(fields, employeebankaccount.FieldBankInstitutionID)
+	if m.bank_name != nil {
+		fields = append(fields, employeebankaccount.FieldBankName)
 	}
-	if m.bank_branch_id != nil {
-		fields = append(fields, employeebankaccount.FieldBankBranchID)
+	if m.bank_code != nil {
+		fields = append(fields, employeebankaccount.FieldBankCode)
+	}
+	if m.branch_name != nil {
+		fields = append(fields, employeebankaccount.FieldBranchName)
+	}
+	if m.branch_code != nil {
+		fields = append(fields, employeebankaccount.FieldBranchCode)
 	}
 	if m.account_name != nil {
 		fields = append(fields, employeebankaccount.FieldAccountName)
@@ -23247,10 +22076,14 @@ func (m *EmployeeBankAccountMutation) Field(name string) (ent.Value, bool) {
 		return m.TenantID()
 	case employeebankaccount.FieldEmployeeID:
 		return m.EmployeeID()
-	case employeebankaccount.FieldBankInstitutionID:
-		return m.BankInstitutionID()
-	case employeebankaccount.FieldBankBranchID:
-		return m.BankBranchID()
+	case employeebankaccount.FieldBankName:
+		return m.BankName()
+	case employeebankaccount.FieldBankCode:
+		return m.BankCode()
+	case employeebankaccount.FieldBranchName:
+		return m.BranchName()
+	case employeebankaccount.FieldBranchCode:
+		return m.BranchCode()
 	case employeebankaccount.FieldAccountName:
 		return m.AccountName()
 	case employeebankaccount.FieldAccountNumber:
@@ -23282,10 +22115,14 @@ func (m *EmployeeBankAccountMutation) OldField(ctx context.Context, name string)
 		return m.OldTenantID(ctx)
 	case employeebankaccount.FieldEmployeeID:
 		return m.OldEmployeeID(ctx)
-	case employeebankaccount.FieldBankInstitutionID:
-		return m.OldBankInstitutionID(ctx)
-	case employeebankaccount.FieldBankBranchID:
-		return m.OldBankBranchID(ctx)
+	case employeebankaccount.FieldBankName:
+		return m.OldBankName(ctx)
+	case employeebankaccount.FieldBankCode:
+		return m.OldBankCode(ctx)
+	case employeebankaccount.FieldBranchName:
+		return m.OldBranchName(ctx)
+	case employeebankaccount.FieldBranchCode:
+		return m.OldBranchCode(ctx)
 	case employeebankaccount.FieldAccountName:
 		return m.OldAccountName(ctx)
 	case employeebankaccount.FieldAccountNumber:
@@ -23327,19 +22164,33 @@ func (m *EmployeeBankAccountMutation) SetField(name string, value ent.Value) err
 		}
 		m.SetEmployeeID(v)
 		return nil
-	case employeebankaccount.FieldBankInstitutionID:
-		v, ok := value.(uuid.UUID)
+	case employeebankaccount.FieldBankName:
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetBankInstitutionID(v)
+		m.SetBankName(v)
 		return nil
-	case employeebankaccount.FieldBankBranchID:
-		v, ok := value.(uuid.UUID)
+	case employeebankaccount.FieldBankCode:
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetBankBranchID(v)
+		m.SetBankCode(v)
+		return nil
+	case employeebankaccount.FieldBranchName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBranchName(v)
+		return nil
+	case employeebankaccount.FieldBranchCode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBranchCode(v)
 		return nil
 	case employeebankaccount.FieldAccountName:
 		v, ok := value.(string)
@@ -23434,11 +22285,17 @@ func (m *EmployeeBankAccountMutation) AddField(name string, value ent.Value) err
 // mutation.
 func (m *EmployeeBankAccountMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(employeebankaccount.FieldBankInstitutionID) {
-		fields = append(fields, employeebankaccount.FieldBankInstitutionID)
+	if m.FieldCleared(employeebankaccount.FieldBankName) {
+		fields = append(fields, employeebankaccount.FieldBankName)
 	}
-	if m.FieldCleared(employeebankaccount.FieldBankBranchID) {
-		fields = append(fields, employeebankaccount.FieldBankBranchID)
+	if m.FieldCleared(employeebankaccount.FieldBankCode) {
+		fields = append(fields, employeebankaccount.FieldBankCode)
+	}
+	if m.FieldCleared(employeebankaccount.FieldBranchName) {
+		fields = append(fields, employeebankaccount.FieldBranchName)
+	}
+	if m.FieldCleared(employeebankaccount.FieldBranchCode) {
+		fields = append(fields, employeebankaccount.FieldBranchCode)
 	}
 	if m.FieldCleared(employeebankaccount.FieldOpenedDate) {
 		fields = append(fields, employeebankaccount.FieldOpenedDate)
@@ -23457,11 +22314,17 @@ func (m *EmployeeBankAccountMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *EmployeeBankAccountMutation) ClearField(name string) error {
 	switch name {
-	case employeebankaccount.FieldBankInstitutionID:
-		m.ClearBankInstitutionID()
+	case employeebankaccount.FieldBankName:
+		m.ClearBankName()
 		return nil
-	case employeebankaccount.FieldBankBranchID:
-		m.ClearBankBranchID()
+	case employeebankaccount.FieldBankCode:
+		m.ClearBankCode()
+		return nil
+	case employeebankaccount.FieldBranchName:
+		m.ClearBranchName()
+		return nil
+	case employeebankaccount.FieldBranchCode:
+		m.ClearBranchCode()
 		return nil
 	case employeebankaccount.FieldOpenedDate:
 		m.ClearOpenedDate()
@@ -23480,11 +22343,17 @@ func (m *EmployeeBankAccountMutation) ResetField(name string) error {
 	case employeebankaccount.FieldEmployeeID:
 		m.ResetEmployeeID()
 		return nil
-	case employeebankaccount.FieldBankInstitutionID:
-		m.ResetBankInstitutionID()
+	case employeebankaccount.FieldBankName:
+		m.ResetBankName()
 		return nil
-	case employeebankaccount.FieldBankBranchID:
-		m.ResetBankBranchID()
+	case employeebankaccount.FieldBankCode:
+		m.ResetBankCode()
+		return nil
+	case employeebankaccount.FieldBranchName:
+		m.ResetBranchName()
+		return nil
+	case employeebankaccount.FieldBranchCode:
+		m.ResetBranchCode()
 		return nil
 	case employeebankaccount.FieldAccountName:
 		m.ResetAccountName()
@@ -57415,614 +56284,6 @@ func (m *PermissionMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Permission edge %s", name)
-}
-
-// ProjectMutation represents an operation that mutates the Project nodes in the graph.
-type ProjectMutation struct {
-	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	tenant_id     *uuid.UUID
-	code          *string
-	title         *string
-	category      *string
-	created_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*Project, error)
-	predicates    []predicate.Project
-}
-
-var _ ent.Mutation = (*ProjectMutation)(nil)
-
-// projectOption allows management of the mutation configuration using functional options.
-type projectOption func(*ProjectMutation)
-
-// newProjectMutation creates new mutation for the Project entity.
-func newProjectMutation(c config, op Op, opts ...projectOption) *ProjectMutation {
-	m := &ProjectMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeProject,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withProjectID sets the ID field of the mutation.
-func withProjectID(id uuid.UUID) projectOption {
-	return func(m *ProjectMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *Project
-		)
-		m.oldValue = func(ctx context.Context) (*Project, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().Project.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withProject sets the old Project of the mutation.
-func withProject(node *Project) projectOption {
-	return func(m *ProjectMutation) {
-		m.oldValue = func(context.Context) (*Project, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m ProjectMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m ProjectMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of Project entities.
-func (m *ProjectMutation) SetID(id uuid.UUID) {
-	m.id = &id
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *ProjectMutation) ID() (id uuid.UUID, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *ProjectMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []uuid.UUID{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().Project.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetTenantID sets the "tenant_id" field.
-func (m *ProjectMutation) SetTenantID(u uuid.UUID) {
-	m.tenant_id = &u
-}
-
-// TenantID returns the value of the "tenant_id" field in the mutation.
-func (m *ProjectMutation) TenantID() (r uuid.UUID, exists bool) {
-	v := m.tenant_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldTenantID returns the old "tenant_id" field's value of the Project entity.
-// If the Project object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProjectMutation) OldTenantID(ctx context.Context) (v *uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldTenantID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
-	}
-	return oldValue.TenantID, nil
-}
-
-// ClearTenantID clears the value of the "tenant_id" field.
-func (m *ProjectMutation) ClearTenantID() {
-	m.tenant_id = nil
-	m.clearedFields[project.FieldTenantID] = struct{}{}
-}
-
-// TenantIDCleared returns if the "tenant_id" field was cleared in this mutation.
-func (m *ProjectMutation) TenantIDCleared() bool {
-	_, ok := m.clearedFields[project.FieldTenantID]
-	return ok
-}
-
-// ResetTenantID resets all changes to the "tenant_id" field.
-func (m *ProjectMutation) ResetTenantID() {
-	m.tenant_id = nil
-	delete(m.clearedFields, project.FieldTenantID)
-}
-
-// SetCode sets the "code" field.
-func (m *ProjectMutation) SetCode(s string) {
-	m.code = &s
-}
-
-// Code returns the value of the "code" field in the mutation.
-func (m *ProjectMutation) Code() (r string, exists bool) {
-	v := m.code
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCode returns the old "code" field's value of the Project entity.
-// If the Project object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProjectMutation) OldCode(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCode is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCode requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCode: %w", err)
-	}
-	return oldValue.Code, nil
-}
-
-// ClearCode clears the value of the "code" field.
-func (m *ProjectMutation) ClearCode() {
-	m.code = nil
-	m.clearedFields[project.FieldCode] = struct{}{}
-}
-
-// CodeCleared returns if the "code" field was cleared in this mutation.
-func (m *ProjectMutation) CodeCleared() bool {
-	_, ok := m.clearedFields[project.FieldCode]
-	return ok
-}
-
-// ResetCode resets all changes to the "code" field.
-func (m *ProjectMutation) ResetCode() {
-	m.code = nil
-	delete(m.clearedFields, project.FieldCode)
-}
-
-// SetTitle sets the "title" field.
-func (m *ProjectMutation) SetTitle(s string) {
-	m.title = &s
-}
-
-// Title returns the value of the "title" field in the mutation.
-func (m *ProjectMutation) Title() (r string, exists bool) {
-	v := m.title
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldTitle returns the old "title" field's value of the Project entity.
-// If the Project object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProjectMutation) OldTitle(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldTitle requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
-	}
-	return oldValue.Title, nil
-}
-
-// ResetTitle resets all changes to the "title" field.
-func (m *ProjectMutation) ResetTitle() {
-	m.title = nil
-}
-
-// SetCategory sets the "category" field.
-func (m *ProjectMutation) SetCategory(s string) {
-	m.category = &s
-}
-
-// Category returns the value of the "category" field in the mutation.
-func (m *ProjectMutation) Category() (r string, exists bool) {
-	v := m.category
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCategory returns the old "category" field's value of the Project entity.
-// If the Project object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProjectMutation) OldCategory(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCategory is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCategory requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCategory: %w", err)
-	}
-	return oldValue.Category, nil
-}
-
-// ClearCategory clears the value of the "category" field.
-func (m *ProjectMutation) ClearCategory() {
-	m.category = nil
-	m.clearedFields[project.FieldCategory] = struct{}{}
-}
-
-// CategoryCleared returns if the "category" field was cleared in this mutation.
-func (m *ProjectMutation) CategoryCleared() bool {
-	_, ok := m.clearedFields[project.FieldCategory]
-	return ok
-}
-
-// ResetCategory resets all changes to the "category" field.
-func (m *ProjectMutation) ResetCategory() {
-	m.category = nil
-	delete(m.clearedFields, project.FieldCategory)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *ProjectMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *ProjectMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the Project entity.
-// If the Project object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProjectMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *ProjectMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// Where appends a list predicates to the ProjectMutation builder.
-func (m *ProjectMutation) Where(ps ...predicate.Project) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the ProjectMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *ProjectMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.Project, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *ProjectMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *ProjectMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (Project).
-func (m *ProjectMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *ProjectMutation) Fields() []string {
-	fields := make([]string, 0, 5)
-	if m.tenant_id != nil {
-		fields = append(fields, project.FieldTenantID)
-	}
-	if m.code != nil {
-		fields = append(fields, project.FieldCode)
-	}
-	if m.title != nil {
-		fields = append(fields, project.FieldTitle)
-	}
-	if m.category != nil {
-		fields = append(fields, project.FieldCategory)
-	}
-	if m.created_at != nil {
-		fields = append(fields, project.FieldCreatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *ProjectMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case project.FieldTenantID:
-		return m.TenantID()
-	case project.FieldCode:
-		return m.Code()
-	case project.FieldTitle:
-		return m.Title()
-	case project.FieldCategory:
-		return m.Category()
-	case project.FieldCreatedAt:
-		return m.CreatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *ProjectMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case project.FieldTenantID:
-		return m.OldTenantID(ctx)
-	case project.FieldCode:
-		return m.OldCode(ctx)
-	case project.FieldTitle:
-		return m.OldTitle(ctx)
-	case project.FieldCategory:
-		return m.OldCategory(ctx)
-	case project.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown Project field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *ProjectMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case project.FieldTenantID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetTenantID(v)
-		return nil
-	case project.FieldCode:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCode(v)
-		return nil
-	case project.FieldTitle:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetTitle(v)
-		return nil
-	case project.FieldCategory:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCategory(v)
-		return nil
-	case project.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown Project field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *ProjectMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *ProjectMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *ProjectMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown Project numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *ProjectMutation) ClearedFields() []string {
-	var fields []string
-	if m.FieldCleared(project.FieldTenantID) {
-		fields = append(fields, project.FieldTenantID)
-	}
-	if m.FieldCleared(project.FieldCode) {
-		fields = append(fields, project.FieldCode)
-	}
-	if m.FieldCleared(project.FieldCategory) {
-		fields = append(fields, project.FieldCategory)
-	}
-	return fields
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *ProjectMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *ProjectMutation) ClearField(name string) error {
-	switch name {
-	case project.FieldTenantID:
-		m.ClearTenantID()
-		return nil
-	case project.FieldCode:
-		m.ClearCode()
-		return nil
-	case project.FieldCategory:
-		m.ClearCategory()
-		return nil
-	}
-	return fmt.Errorf("unknown Project nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *ProjectMutation) ResetField(name string) error {
-	switch name {
-	case project.FieldTenantID:
-		m.ResetTenantID()
-		return nil
-	case project.FieldCode:
-		m.ResetCode()
-		return nil
-	case project.FieldTitle:
-		m.ResetTitle()
-		return nil
-	case project.FieldCategory:
-		m.ResetCategory()
-		return nil
-	case project.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown Project field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *ProjectMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *ProjectMutation) AddedIDs(name string) []ent.Value {
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *ProjectMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *ProjectMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *ProjectMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *ProjectMutation) EdgeCleared(name string) bool {
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *ProjectMutation) ClearEdge(name string) error {
-	return fmt.Errorf("unknown Project unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *ProjectMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown Project edge %s", name)
 }
 
 // PublicHolidayMutation represents an operation that mutates the PublicHoliday nodes in the graph.

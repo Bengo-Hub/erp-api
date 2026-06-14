@@ -45,12 +45,6 @@ type AuthOutlet func(*sql.Selector)
 // AuthTenant is the predicate function for authtenant builders.
 type AuthTenant func(*sql.Selector)
 
-// BankBranch is the predicate function for bankbranch builders.
-type BankBranch func(*sql.Selector)
-
-// BankInstitution is the predicate function for bankinstitution builders.
-type BankInstitution func(*sql.Selector)
-
 // BenefitTax is the predicate function for benefittax builders.
 type BenefitTax func(*sql.Selector)
 
@@ -191,9 +185,6 @@ type PerformanceReview func(*sql.Selector)
 
 // Permission is the predicate function for permission builders.
 type Permission func(*sql.Selector)
-
-// Project is the predicate function for project builders.
-type Project func(*sql.Selector)
 
 // PublicHoliday is the predicate function for publicholiday builders.
 type PublicHoliday func(*sql.Selector)

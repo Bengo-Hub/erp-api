@@ -18,8 +18,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
-	"github.com/Bengo-Hub/erp-api/internal/ent/bankbranch"
-	"github.com/Bengo-Hub/erp-api/internal/ent/bankinstitution"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
@@ -67,7 +65,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
-	"github.com/Bengo-Hub/erp-api/internal/ent/project"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
@@ -440,34 +437,6 @@ func init() {
 	authtenant.DefaultUpdatedAt = authtenantDescUpdatedAt.Default.(func() time.Time)
 	// authtenant.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	authtenant.UpdateDefaultUpdatedAt = authtenantDescUpdatedAt.UpdateDefault.(func() time.Time)
-	bankbranchFields := schema.BankBranch{}.Fields()
-	_ = bankbranchFields
-	// bankbranchDescName is the schema descriptor for name field.
-	bankbranchDescName := bankbranchFields[2].Descriptor()
-	// bankbranch.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	bankbranch.NameValidator = bankbranchDescName.Validators[0].(func(string) error)
-	// bankbranchDescCreatedAt is the schema descriptor for created_at field.
-	bankbranchDescCreatedAt := bankbranchFields[4].Descriptor()
-	// bankbranch.DefaultCreatedAt holds the default value on creation for the created_at field.
-	bankbranch.DefaultCreatedAt = bankbranchDescCreatedAt.Default.(func() time.Time)
-	// bankbranchDescID is the schema descriptor for id field.
-	bankbranchDescID := bankbranchFields[0].Descriptor()
-	// bankbranch.DefaultID holds the default value on creation for the id field.
-	bankbranch.DefaultID = bankbranchDescID.Default.(func() uuid.UUID)
-	bankinstitutionFields := schema.BankInstitution{}.Fields()
-	_ = bankinstitutionFields
-	// bankinstitutionDescName is the schema descriptor for name field.
-	bankinstitutionDescName := bankinstitutionFields[1].Descriptor()
-	// bankinstitution.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	bankinstitution.NameValidator = bankinstitutionDescName.Validators[0].(func(string) error)
-	// bankinstitutionDescCreatedAt is the schema descriptor for created_at field.
-	bankinstitutionDescCreatedAt := bankinstitutionFields[5].Descriptor()
-	// bankinstitution.DefaultCreatedAt holds the default value on creation for the created_at field.
-	bankinstitution.DefaultCreatedAt = bankinstitutionDescCreatedAt.Default.(func() time.Time)
-	// bankinstitutionDescID is the schema descriptor for id field.
-	bankinstitutionDescID := bankinstitutionFields[0].Descriptor()
-	// bankinstitution.DefaultID holds the default value on creation for the id field.
-	bankinstitution.DefaultID = bankinstitutionDescID.Default.(func() uuid.UUID)
 	benefittaxFields := schema.BenefitTax{}.Fields()
 	_ = benefittaxFields
 	// benefittaxDescTitle is the schema descriptor for title field.
@@ -727,35 +696,35 @@ func init() {
 	employeebankaccountFields := schema.EmployeeBankAccount{}.Fields()
 	_ = employeebankaccountFields
 	// employeebankaccountDescAccountName is the schema descriptor for account_name field.
-	employeebankaccountDescAccountName := employeebankaccountFields[5].Descriptor()
+	employeebankaccountDescAccountName := employeebankaccountFields[7].Descriptor()
 	// employeebankaccount.AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
 	employeebankaccount.AccountNameValidator = employeebankaccountDescAccountName.Validators[0].(func(string) error)
 	// employeebankaccountDescAccountNumber is the schema descriptor for account_number field.
-	employeebankaccountDescAccountNumber := employeebankaccountFields[6].Descriptor()
+	employeebankaccountDescAccountNumber := employeebankaccountFields[8].Descriptor()
 	// employeebankaccount.AccountNumberValidator is a validator for the "account_number" field. It is called by the builders before save.
 	employeebankaccount.AccountNumberValidator = employeebankaccountDescAccountNumber.Validators[0].(func(string) error)
 	// employeebankaccountDescAccountType is the schema descriptor for account_type field.
-	employeebankaccountDescAccountType := employeebankaccountFields[7].Descriptor()
+	employeebankaccountDescAccountType := employeebankaccountFields[9].Descriptor()
 	// employeebankaccount.DefaultAccountType holds the default value on creation for the account_type field.
 	employeebankaccount.DefaultAccountType = employeebankaccountDescAccountType.Default.(string)
 	// employeebankaccountDescIsPrimary is the schema descriptor for is_primary field.
-	employeebankaccountDescIsPrimary := employeebankaccountFields[8].Descriptor()
+	employeebankaccountDescIsPrimary := employeebankaccountFields[10].Descriptor()
 	// employeebankaccount.DefaultIsPrimary holds the default value on creation for the is_primary field.
 	employeebankaccount.DefaultIsPrimary = employeebankaccountDescIsPrimary.Default.(bool)
 	// employeebankaccountDescStatus is the schema descriptor for status field.
-	employeebankaccountDescStatus := employeebankaccountFields[9].Descriptor()
+	employeebankaccountDescStatus := employeebankaccountFields[11].Descriptor()
 	// employeebankaccount.DefaultStatus holds the default value on creation for the status field.
 	employeebankaccount.DefaultStatus = employeebankaccountDescStatus.Default.(string)
 	// employeebankaccountDescIsVerified is the schema descriptor for is_verified field.
-	employeebankaccountDescIsVerified := employeebankaccountFields[10].Descriptor()
+	employeebankaccountDescIsVerified := employeebankaccountFields[12].Descriptor()
 	// employeebankaccount.DefaultIsVerified holds the default value on creation for the is_verified field.
 	employeebankaccount.DefaultIsVerified = employeebankaccountDescIsVerified.Default.(bool)
 	// employeebankaccountDescCreatedAt is the schema descriptor for created_at field.
-	employeebankaccountDescCreatedAt := employeebankaccountFields[12].Descriptor()
+	employeebankaccountDescCreatedAt := employeebankaccountFields[14].Descriptor()
 	// employeebankaccount.DefaultCreatedAt holds the default value on creation for the created_at field.
 	employeebankaccount.DefaultCreatedAt = employeebankaccountDescCreatedAt.Default.(func() time.Time)
 	// employeebankaccountDescUpdatedAt is the schema descriptor for updated_at field.
-	employeebankaccountDescUpdatedAt := employeebankaccountFields[13].Descriptor()
+	employeebankaccountDescUpdatedAt := employeebankaccountFields[15].Descriptor()
 	// employeebankaccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	employeebankaccount.DefaultUpdatedAt = employeebankaccountDescUpdatedAt.Default.(func() time.Time)
 	// employeebankaccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1756,20 +1725,6 @@ func init() {
 	permissionDescID := permissionFields[0].Descriptor()
 	// permission.DefaultID holds the default value on creation for the id field.
 	permission.DefaultID = permissionDescID.Default.(func() uuid.UUID)
-	projectFields := schema.Project{}.Fields()
-	_ = projectFields
-	// projectDescTitle is the schema descriptor for title field.
-	projectDescTitle := projectFields[3].Descriptor()
-	// project.TitleValidator is a validator for the "title" field. It is called by the builders before save.
-	project.TitleValidator = projectDescTitle.Validators[0].(func(string) error)
-	// projectDescCreatedAt is the schema descriptor for created_at field.
-	projectDescCreatedAt := projectFields[5].Descriptor()
-	// project.DefaultCreatedAt holds the default value on creation for the created_at field.
-	project.DefaultCreatedAt = projectDescCreatedAt.Default.(func() time.Time)
-	// projectDescID is the schema descriptor for id field.
-	projectDescID := projectFields[0].Descriptor()
-	// project.DefaultID holds the default value on creation for the id field.
-	project.DefaultID = projectDescID.Default.(func() uuid.UUID)
 	publicholidayFields := schema.PublicHoliday{}.Fields()
 	_ = publicholidayFields
 	// publicholidayDescIsNational is the schema descriptor for is_national field.

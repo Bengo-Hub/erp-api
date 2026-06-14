@@ -36,30 +36,58 @@ func (_c *EmployeeBankAccountCreate) SetEmployeeID(v uuid.UUID) *EmployeeBankAcc
 	return _c
 }
 
-// SetBankInstitutionID sets the "bank_institution_id" field.
-func (_c *EmployeeBankAccountCreate) SetBankInstitutionID(v uuid.UUID) *EmployeeBankAccountCreate {
-	_c.mutation.SetBankInstitutionID(v)
+// SetBankName sets the "bank_name" field.
+func (_c *EmployeeBankAccountCreate) SetBankName(v string) *EmployeeBankAccountCreate {
+	_c.mutation.SetBankName(v)
 	return _c
 }
 
-// SetNillableBankInstitutionID sets the "bank_institution_id" field if the given value is not nil.
-func (_c *EmployeeBankAccountCreate) SetNillableBankInstitutionID(v *uuid.UUID) *EmployeeBankAccountCreate {
+// SetNillableBankName sets the "bank_name" field if the given value is not nil.
+func (_c *EmployeeBankAccountCreate) SetNillableBankName(v *string) *EmployeeBankAccountCreate {
 	if v != nil {
-		_c.SetBankInstitutionID(*v)
+		_c.SetBankName(*v)
 	}
 	return _c
 }
 
-// SetBankBranchID sets the "bank_branch_id" field.
-func (_c *EmployeeBankAccountCreate) SetBankBranchID(v uuid.UUID) *EmployeeBankAccountCreate {
-	_c.mutation.SetBankBranchID(v)
+// SetBankCode sets the "bank_code" field.
+func (_c *EmployeeBankAccountCreate) SetBankCode(v string) *EmployeeBankAccountCreate {
+	_c.mutation.SetBankCode(v)
 	return _c
 }
 
-// SetNillableBankBranchID sets the "bank_branch_id" field if the given value is not nil.
-func (_c *EmployeeBankAccountCreate) SetNillableBankBranchID(v *uuid.UUID) *EmployeeBankAccountCreate {
+// SetNillableBankCode sets the "bank_code" field if the given value is not nil.
+func (_c *EmployeeBankAccountCreate) SetNillableBankCode(v *string) *EmployeeBankAccountCreate {
 	if v != nil {
-		_c.SetBankBranchID(*v)
+		_c.SetBankCode(*v)
+	}
+	return _c
+}
+
+// SetBranchName sets the "branch_name" field.
+func (_c *EmployeeBankAccountCreate) SetBranchName(v string) *EmployeeBankAccountCreate {
+	_c.mutation.SetBranchName(v)
+	return _c
+}
+
+// SetNillableBranchName sets the "branch_name" field if the given value is not nil.
+func (_c *EmployeeBankAccountCreate) SetNillableBranchName(v *string) *EmployeeBankAccountCreate {
+	if v != nil {
+		_c.SetBranchName(*v)
+	}
+	return _c
+}
+
+// SetBranchCode sets the "branch_code" field.
+func (_c *EmployeeBankAccountCreate) SetBranchCode(v string) *EmployeeBankAccountCreate {
+	_c.mutation.SetBranchCode(v)
+	return _c
+}
+
+// SetNillableBranchCode sets the "branch_code" field if the given value is not nil.
+func (_c *EmployeeBankAccountCreate) SetNillableBranchCode(v *string) *EmployeeBankAccountCreate {
+	if v != nil {
+		_c.SetBranchCode(*v)
 	}
 	return _c
 }
@@ -339,13 +367,21 @@ func (_c *EmployeeBankAccountCreate) createSpec() (*EmployeeBankAccount, *sqlgra
 		_spec.SetField(employeebankaccount.FieldEmployeeID, field.TypeUUID, value)
 		_node.EmployeeID = value
 	}
-	if value, ok := _c.mutation.BankInstitutionID(); ok {
-		_spec.SetField(employeebankaccount.FieldBankInstitutionID, field.TypeUUID, value)
-		_node.BankInstitutionID = &value
+	if value, ok := _c.mutation.BankName(); ok {
+		_spec.SetField(employeebankaccount.FieldBankName, field.TypeString, value)
+		_node.BankName = value
 	}
-	if value, ok := _c.mutation.BankBranchID(); ok {
-		_spec.SetField(employeebankaccount.FieldBankBranchID, field.TypeUUID, value)
-		_node.BankBranchID = &value
+	if value, ok := _c.mutation.BankCode(); ok {
+		_spec.SetField(employeebankaccount.FieldBankCode, field.TypeString, value)
+		_node.BankCode = value
+	}
+	if value, ok := _c.mutation.BranchName(); ok {
+		_spec.SetField(employeebankaccount.FieldBranchName, field.TypeString, value)
+		_node.BranchName = value
+	}
+	if value, ok := _c.mutation.BranchCode(); ok {
+		_spec.SetField(employeebankaccount.FieldBranchCode, field.TypeString, value)
+		_node.BranchCode = value
 	}
 	if value, ok := _c.mutation.AccountName(); ok {
 		_spec.SetField(employeebankaccount.FieldAccountName, field.TypeString, value)
@@ -459,39 +495,75 @@ func (u *EmployeeBankAccountUpsert) UpdateEmployeeID() *EmployeeBankAccountUpser
 	return u
 }
 
-// SetBankInstitutionID sets the "bank_institution_id" field.
-func (u *EmployeeBankAccountUpsert) SetBankInstitutionID(v uuid.UUID) *EmployeeBankAccountUpsert {
-	u.Set(employeebankaccount.FieldBankInstitutionID, v)
+// SetBankName sets the "bank_name" field.
+func (u *EmployeeBankAccountUpsert) SetBankName(v string) *EmployeeBankAccountUpsert {
+	u.Set(employeebankaccount.FieldBankName, v)
 	return u
 }
 
-// UpdateBankInstitutionID sets the "bank_institution_id" field to the value that was provided on create.
-func (u *EmployeeBankAccountUpsert) UpdateBankInstitutionID() *EmployeeBankAccountUpsert {
-	u.SetExcluded(employeebankaccount.FieldBankInstitutionID)
+// UpdateBankName sets the "bank_name" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsert) UpdateBankName() *EmployeeBankAccountUpsert {
+	u.SetExcluded(employeebankaccount.FieldBankName)
 	return u
 }
 
-// ClearBankInstitutionID clears the value of the "bank_institution_id" field.
-func (u *EmployeeBankAccountUpsert) ClearBankInstitutionID() *EmployeeBankAccountUpsert {
-	u.SetNull(employeebankaccount.FieldBankInstitutionID)
+// ClearBankName clears the value of the "bank_name" field.
+func (u *EmployeeBankAccountUpsert) ClearBankName() *EmployeeBankAccountUpsert {
+	u.SetNull(employeebankaccount.FieldBankName)
 	return u
 }
 
-// SetBankBranchID sets the "bank_branch_id" field.
-func (u *EmployeeBankAccountUpsert) SetBankBranchID(v uuid.UUID) *EmployeeBankAccountUpsert {
-	u.Set(employeebankaccount.FieldBankBranchID, v)
+// SetBankCode sets the "bank_code" field.
+func (u *EmployeeBankAccountUpsert) SetBankCode(v string) *EmployeeBankAccountUpsert {
+	u.Set(employeebankaccount.FieldBankCode, v)
 	return u
 }
 
-// UpdateBankBranchID sets the "bank_branch_id" field to the value that was provided on create.
-func (u *EmployeeBankAccountUpsert) UpdateBankBranchID() *EmployeeBankAccountUpsert {
-	u.SetExcluded(employeebankaccount.FieldBankBranchID)
+// UpdateBankCode sets the "bank_code" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsert) UpdateBankCode() *EmployeeBankAccountUpsert {
+	u.SetExcluded(employeebankaccount.FieldBankCode)
 	return u
 }
 
-// ClearBankBranchID clears the value of the "bank_branch_id" field.
-func (u *EmployeeBankAccountUpsert) ClearBankBranchID() *EmployeeBankAccountUpsert {
-	u.SetNull(employeebankaccount.FieldBankBranchID)
+// ClearBankCode clears the value of the "bank_code" field.
+func (u *EmployeeBankAccountUpsert) ClearBankCode() *EmployeeBankAccountUpsert {
+	u.SetNull(employeebankaccount.FieldBankCode)
+	return u
+}
+
+// SetBranchName sets the "branch_name" field.
+func (u *EmployeeBankAccountUpsert) SetBranchName(v string) *EmployeeBankAccountUpsert {
+	u.Set(employeebankaccount.FieldBranchName, v)
+	return u
+}
+
+// UpdateBranchName sets the "branch_name" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsert) UpdateBranchName() *EmployeeBankAccountUpsert {
+	u.SetExcluded(employeebankaccount.FieldBranchName)
+	return u
+}
+
+// ClearBranchName clears the value of the "branch_name" field.
+func (u *EmployeeBankAccountUpsert) ClearBranchName() *EmployeeBankAccountUpsert {
+	u.SetNull(employeebankaccount.FieldBranchName)
+	return u
+}
+
+// SetBranchCode sets the "branch_code" field.
+func (u *EmployeeBankAccountUpsert) SetBranchCode(v string) *EmployeeBankAccountUpsert {
+	u.Set(employeebankaccount.FieldBranchCode, v)
+	return u
+}
+
+// UpdateBranchCode sets the "branch_code" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsert) UpdateBranchCode() *EmployeeBankAccountUpsert {
+	u.SetExcluded(employeebankaccount.FieldBranchCode)
+	return u
+}
+
+// ClearBranchCode clears the value of the "branch_code" field.
+func (u *EmployeeBankAccountUpsert) ClearBranchCode() *EmployeeBankAccountUpsert {
+	u.SetNull(employeebankaccount.FieldBranchCode)
 	return u
 }
 
@@ -676,45 +748,87 @@ func (u *EmployeeBankAccountUpsertOne) UpdateEmployeeID() *EmployeeBankAccountUp
 	})
 }
 
-// SetBankInstitutionID sets the "bank_institution_id" field.
-func (u *EmployeeBankAccountUpsertOne) SetBankInstitutionID(v uuid.UUID) *EmployeeBankAccountUpsertOne {
+// SetBankName sets the "bank_name" field.
+func (u *EmployeeBankAccountUpsertOne) SetBankName(v string) *EmployeeBankAccountUpsertOne {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.SetBankInstitutionID(v)
+		s.SetBankName(v)
 	})
 }
 
-// UpdateBankInstitutionID sets the "bank_institution_id" field to the value that was provided on create.
-func (u *EmployeeBankAccountUpsertOne) UpdateBankInstitutionID() *EmployeeBankAccountUpsertOne {
+// UpdateBankName sets the "bank_name" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsertOne) UpdateBankName() *EmployeeBankAccountUpsertOne {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.UpdateBankInstitutionID()
+		s.UpdateBankName()
 	})
 }
 
-// ClearBankInstitutionID clears the value of the "bank_institution_id" field.
-func (u *EmployeeBankAccountUpsertOne) ClearBankInstitutionID() *EmployeeBankAccountUpsertOne {
+// ClearBankName clears the value of the "bank_name" field.
+func (u *EmployeeBankAccountUpsertOne) ClearBankName() *EmployeeBankAccountUpsertOne {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.ClearBankInstitutionID()
+		s.ClearBankName()
 	})
 }
 
-// SetBankBranchID sets the "bank_branch_id" field.
-func (u *EmployeeBankAccountUpsertOne) SetBankBranchID(v uuid.UUID) *EmployeeBankAccountUpsertOne {
+// SetBankCode sets the "bank_code" field.
+func (u *EmployeeBankAccountUpsertOne) SetBankCode(v string) *EmployeeBankAccountUpsertOne {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.SetBankBranchID(v)
+		s.SetBankCode(v)
 	})
 }
 
-// UpdateBankBranchID sets the "bank_branch_id" field to the value that was provided on create.
-func (u *EmployeeBankAccountUpsertOne) UpdateBankBranchID() *EmployeeBankAccountUpsertOne {
+// UpdateBankCode sets the "bank_code" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsertOne) UpdateBankCode() *EmployeeBankAccountUpsertOne {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.UpdateBankBranchID()
+		s.UpdateBankCode()
 	})
 }
 
-// ClearBankBranchID clears the value of the "bank_branch_id" field.
-func (u *EmployeeBankAccountUpsertOne) ClearBankBranchID() *EmployeeBankAccountUpsertOne {
+// ClearBankCode clears the value of the "bank_code" field.
+func (u *EmployeeBankAccountUpsertOne) ClearBankCode() *EmployeeBankAccountUpsertOne {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.ClearBankBranchID()
+		s.ClearBankCode()
+	})
+}
+
+// SetBranchName sets the "branch_name" field.
+func (u *EmployeeBankAccountUpsertOne) SetBranchName(v string) *EmployeeBankAccountUpsertOne {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.SetBranchName(v)
+	})
+}
+
+// UpdateBranchName sets the "branch_name" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsertOne) UpdateBranchName() *EmployeeBankAccountUpsertOne {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.UpdateBranchName()
+	})
+}
+
+// ClearBranchName clears the value of the "branch_name" field.
+func (u *EmployeeBankAccountUpsertOne) ClearBranchName() *EmployeeBankAccountUpsertOne {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.ClearBranchName()
+	})
+}
+
+// SetBranchCode sets the "branch_code" field.
+func (u *EmployeeBankAccountUpsertOne) SetBranchCode(v string) *EmployeeBankAccountUpsertOne {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.SetBranchCode(v)
+	})
+}
+
+// UpdateBranchCode sets the "branch_code" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsertOne) UpdateBranchCode() *EmployeeBankAccountUpsertOne {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.UpdateBranchCode()
+	})
+}
+
+// ClearBranchCode clears the value of the "branch_code" field.
+func (u *EmployeeBankAccountUpsertOne) ClearBranchCode() *EmployeeBankAccountUpsertOne {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.ClearBranchCode()
 	})
 }
 
@@ -1083,45 +1197,87 @@ func (u *EmployeeBankAccountUpsertBulk) UpdateEmployeeID() *EmployeeBankAccountU
 	})
 }
 
-// SetBankInstitutionID sets the "bank_institution_id" field.
-func (u *EmployeeBankAccountUpsertBulk) SetBankInstitutionID(v uuid.UUID) *EmployeeBankAccountUpsertBulk {
+// SetBankName sets the "bank_name" field.
+func (u *EmployeeBankAccountUpsertBulk) SetBankName(v string) *EmployeeBankAccountUpsertBulk {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.SetBankInstitutionID(v)
+		s.SetBankName(v)
 	})
 }
 
-// UpdateBankInstitutionID sets the "bank_institution_id" field to the value that was provided on create.
-func (u *EmployeeBankAccountUpsertBulk) UpdateBankInstitutionID() *EmployeeBankAccountUpsertBulk {
+// UpdateBankName sets the "bank_name" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsertBulk) UpdateBankName() *EmployeeBankAccountUpsertBulk {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.UpdateBankInstitutionID()
+		s.UpdateBankName()
 	})
 }
 
-// ClearBankInstitutionID clears the value of the "bank_institution_id" field.
-func (u *EmployeeBankAccountUpsertBulk) ClearBankInstitutionID() *EmployeeBankAccountUpsertBulk {
+// ClearBankName clears the value of the "bank_name" field.
+func (u *EmployeeBankAccountUpsertBulk) ClearBankName() *EmployeeBankAccountUpsertBulk {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.ClearBankInstitutionID()
+		s.ClearBankName()
 	})
 }
 
-// SetBankBranchID sets the "bank_branch_id" field.
-func (u *EmployeeBankAccountUpsertBulk) SetBankBranchID(v uuid.UUID) *EmployeeBankAccountUpsertBulk {
+// SetBankCode sets the "bank_code" field.
+func (u *EmployeeBankAccountUpsertBulk) SetBankCode(v string) *EmployeeBankAccountUpsertBulk {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.SetBankBranchID(v)
+		s.SetBankCode(v)
 	})
 }
 
-// UpdateBankBranchID sets the "bank_branch_id" field to the value that was provided on create.
-func (u *EmployeeBankAccountUpsertBulk) UpdateBankBranchID() *EmployeeBankAccountUpsertBulk {
+// UpdateBankCode sets the "bank_code" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsertBulk) UpdateBankCode() *EmployeeBankAccountUpsertBulk {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.UpdateBankBranchID()
+		s.UpdateBankCode()
 	})
 }
 
-// ClearBankBranchID clears the value of the "bank_branch_id" field.
-func (u *EmployeeBankAccountUpsertBulk) ClearBankBranchID() *EmployeeBankAccountUpsertBulk {
+// ClearBankCode clears the value of the "bank_code" field.
+func (u *EmployeeBankAccountUpsertBulk) ClearBankCode() *EmployeeBankAccountUpsertBulk {
 	return u.Update(func(s *EmployeeBankAccountUpsert) {
-		s.ClearBankBranchID()
+		s.ClearBankCode()
+	})
+}
+
+// SetBranchName sets the "branch_name" field.
+func (u *EmployeeBankAccountUpsertBulk) SetBranchName(v string) *EmployeeBankAccountUpsertBulk {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.SetBranchName(v)
+	})
+}
+
+// UpdateBranchName sets the "branch_name" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsertBulk) UpdateBranchName() *EmployeeBankAccountUpsertBulk {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.UpdateBranchName()
+	})
+}
+
+// ClearBranchName clears the value of the "branch_name" field.
+func (u *EmployeeBankAccountUpsertBulk) ClearBranchName() *EmployeeBankAccountUpsertBulk {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.ClearBranchName()
+	})
+}
+
+// SetBranchCode sets the "branch_code" field.
+func (u *EmployeeBankAccountUpsertBulk) SetBranchCode(v string) *EmployeeBankAccountUpsertBulk {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.SetBranchCode(v)
+	})
+}
+
+// UpdateBranchCode sets the "branch_code" field to the value that was provided on create.
+func (u *EmployeeBankAccountUpsertBulk) UpdateBranchCode() *EmployeeBankAccountUpsertBulk {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.UpdateBranchCode()
+	})
+}
+
+// ClearBranchCode clears the value of the "branch_code" field.
+func (u *EmployeeBankAccountUpsertBulk) ClearBranchCode() *EmployeeBankAccountUpsertBulk {
+	return u.Update(func(s *EmployeeBankAccountUpsert) {
+		s.ClearBranchCode()
 	})
 }
 

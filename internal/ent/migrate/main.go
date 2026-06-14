@@ -42,6 +42,10 @@ func main() {
 		schema.WithMigrationMode(schema.ModeReplay),
 		schema.WithDialect(dialect.Postgres),
 		schema.WithFormatter(atlasmigrate.DefaultFormatter),
+		// Allow destructive diffs so removed schemas (e.g. the project + bank-master tables
+		// dropped in the data-ownership conformance cleanup) and removed columns are emitted.
+		schema.WithDropColumn(true),
+		schema.WithDropIndex(true),
 	}
 
 	dbURL := os.Getenv("POSTGRES_MIGRATE_URL")

@@ -479,67 +479,6 @@ var (
 			},
 		},
 	}
-	// BankBranchesColumns holds the columns for the "bank_branches" table.
-	BankBranchesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "name", Type: field.TypeString},
-		{Name: "code", Type: field.TypeString, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "bank_id", Type: field.TypeUUID},
-	}
-	// BankBranchesTable holds the schema information for the "bank_branches" table.
-	BankBranchesTable = &schema.Table{
-		Name:       "bank_branches",
-		Columns:    BankBranchesColumns,
-		PrimaryKey: []*schema.Column{BankBranchesColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "bank_branches_bank_institutions_branches",
-				Columns:    []*schema.Column{BankBranchesColumns[4]},
-				RefColumns: []*schema.Column{BankInstitutionsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "bankbranch_bank_id",
-				Unique:  false,
-				Columns: []*schema.Column{BankBranchesColumns[4]},
-			},
-			{
-				Name:    "bankbranch_bank_id_code",
-				Unique:  true,
-				Columns: []*schema.Column{BankBranchesColumns[4], BankBranchesColumns[2]},
-			},
-		},
-	}
-	// BankInstitutionsColumns holds the columns for the "bank_institutions" table.
-	BankInstitutionsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "name", Type: field.TypeString},
-		{Name: "code", Type: field.TypeString, Nullable: true},
-		{Name: "short_code", Type: field.TypeString, Nullable: true},
-		{Name: "swift_code", Type: field.TypeString, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-	}
-	// BankInstitutionsTable holds the schema information for the "bank_institutions" table.
-	BankInstitutionsTable = &schema.Table{
-		Name:       "bank_institutions",
-		Columns:    BankInstitutionsColumns,
-		PrimaryKey: []*schema.Column{BankInstitutionsColumns[0]},
-		Indexes: []*schema.Index{
-			{
-				Name:    "bankinstitution_code",
-				Unique:  true,
-				Columns: []*schema.Column{BankInstitutionsColumns[2]},
-			},
-			{
-				Name:    "bankinstitution_name",
-				Unique:  false,
-				Columns: []*schema.Column{BankInstitutionsColumns[1]},
-			},
-		},
-	}
 	// BenefitTaxesColumns holds the columns for the "benefit_taxes" table.
 	BenefitTaxesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -857,8 +796,10 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "tenant_id", Type: field.TypeUUID},
 		{Name: "employee_id", Type: field.TypeUUID},
-		{Name: "bank_institution_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "bank_branch_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "bank_name", Type: field.TypeString, Nullable: true},
+		{Name: "bank_code", Type: field.TypeString, Nullable: true},
+		{Name: "branch_name", Type: field.TypeString, Nullable: true},
+		{Name: "branch_code", Type: field.TypeString, Nullable: true},
 		{Name: "account_name", Type: field.TypeString},
 		{Name: "account_number", Type: field.TypeString},
 		{Name: "account_type", Type: field.TypeString, Default: "savings"},
@@ -888,7 +829,7 @@ var (
 			{
 				Name:    "employeebankaccount_employee_id_is_primary",
 				Unique:  false,
-				Columns: []*schema.Column{EmployeeBankAccountsColumns[2], EmployeeBankAccountsColumns[8]},
+				Columns: []*schema.Column{EmployeeBankAccountsColumns[2], EmployeeBankAccountsColumns[10]},
 			},
 		},
 	}
@@ -2159,33 +2100,6 @@ var (
 			},
 		},
 	}
-	// ProjectsColumns holds the columns for the "projects" table.
-	ProjectsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "code", Type: field.TypeString, Nullable: true},
-		{Name: "title", Type: field.TypeString},
-		{Name: "category", Type: field.TypeString, Nullable: true},
-		{Name: "created_at", Type: field.TypeTime},
-	}
-	// ProjectsTable holds the schema information for the "projects" table.
-	ProjectsTable = &schema.Table{
-		Name:       "projects",
-		Columns:    ProjectsColumns,
-		PrimaryKey: []*schema.Column{ProjectsColumns[0]},
-		Indexes: []*schema.Index{
-			{
-				Name:    "project_tenant_id",
-				Unique:  false,
-				Columns: []*schema.Column{ProjectsColumns[1]},
-			},
-			{
-				Name:    "project_code",
-				Unique:  false,
-				Columns: []*schema.Column{ProjectsColumns[2]},
-			},
-		},
-	}
 	// PublicHolidaysColumns holds the columns for the "public_holidays" table.
 	PublicHolidaysColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -2949,8 +2863,6 @@ var (
 		AttendanceRulesTable,
 		AuthOutletsTable,
 		AuthTenantsTable,
-		BankBranchesTable,
-		BankInstitutionsTable,
 		BenefitTaxesTable,
 		CandidatesTable,
 		ClaimItemsTable,
@@ -2998,7 +2910,6 @@ var (
 		PerformanceMetricsTable,
 		PerformanceReviewsTable,
 		PermissionsTable,
-		ProjectsTable,
 		PublicHolidaysTable,
 		RegionsTable,
 		RepayOptionsTable,
@@ -3026,7 +2937,6 @@ var (
 
 func init() {
 	AuthOutletsTable.ForeignKeys[0].RefTable = AuthTenantsTable
-	BankBranchesTable.ForeignKeys[0].RefTable = BankInstitutionsTable
 	RolePermissionsTable.ForeignKeys[0].RefTable = RolesTable
 	RolePermissionsTable.ForeignKeys[1].RefTable = PermissionsTable
 	UserRoleAssignmentsTable.ForeignKeys[0].RefTable = CustomUsersTable

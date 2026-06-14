@@ -57,43 +57,83 @@ func (_u *EmployeeBankAccountUpdate) SetNillableEmployeeID(v *uuid.UUID) *Employ
 	return _u
 }
 
-// SetBankInstitutionID sets the "bank_institution_id" field.
-func (_u *EmployeeBankAccountUpdate) SetBankInstitutionID(v uuid.UUID) *EmployeeBankAccountUpdate {
-	_u.mutation.SetBankInstitutionID(v)
+// SetBankName sets the "bank_name" field.
+func (_u *EmployeeBankAccountUpdate) SetBankName(v string) *EmployeeBankAccountUpdate {
+	_u.mutation.SetBankName(v)
 	return _u
 }
 
-// SetNillableBankInstitutionID sets the "bank_institution_id" field if the given value is not nil.
-func (_u *EmployeeBankAccountUpdate) SetNillableBankInstitutionID(v *uuid.UUID) *EmployeeBankAccountUpdate {
+// SetNillableBankName sets the "bank_name" field if the given value is not nil.
+func (_u *EmployeeBankAccountUpdate) SetNillableBankName(v *string) *EmployeeBankAccountUpdate {
 	if v != nil {
-		_u.SetBankInstitutionID(*v)
+		_u.SetBankName(*v)
 	}
 	return _u
 }
 
-// ClearBankInstitutionID clears the value of the "bank_institution_id" field.
-func (_u *EmployeeBankAccountUpdate) ClearBankInstitutionID() *EmployeeBankAccountUpdate {
-	_u.mutation.ClearBankInstitutionID()
+// ClearBankName clears the value of the "bank_name" field.
+func (_u *EmployeeBankAccountUpdate) ClearBankName() *EmployeeBankAccountUpdate {
+	_u.mutation.ClearBankName()
 	return _u
 }
 
-// SetBankBranchID sets the "bank_branch_id" field.
-func (_u *EmployeeBankAccountUpdate) SetBankBranchID(v uuid.UUID) *EmployeeBankAccountUpdate {
-	_u.mutation.SetBankBranchID(v)
+// SetBankCode sets the "bank_code" field.
+func (_u *EmployeeBankAccountUpdate) SetBankCode(v string) *EmployeeBankAccountUpdate {
+	_u.mutation.SetBankCode(v)
 	return _u
 }
 
-// SetNillableBankBranchID sets the "bank_branch_id" field if the given value is not nil.
-func (_u *EmployeeBankAccountUpdate) SetNillableBankBranchID(v *uuid.UUID) *EmployeeBankAccountUpdate {
+// SetNillableBankCode sets the "bank_code" field if the given value is not nil.
+func (_u *EmployeeBankAccountUpdate) SetNillableBankCode(v *string) *EmployeeBankAccountUpdate {
 	if v != nil {
-		_u.SetBankBranchID(*v)
+		_u.SetBankCode(*v)
 	}
 	return _u
 }
 
-// ClearBankBranchID clears the value of the "bank_branch_id" field.
-func (_u *EmployeeBankAccountUpdate) ClearBankBranchID() *EmployeeBankAccountUpdate {
-	_u.mutation.ClearBankBranchID()
+// ClearBankCode clears the value of the "bank_code" field.
+func (_u *EmployeeBankAccountUpdate) ClearBankCode() *EmployeeBankAccountUpdate {
+	_u.mutation.ClearBankCode()
+	return _u
+}
+
+// SetBranchName sets the "branch_name" field.
+func (_u *EmployeeBankAccountUpdate) SetBranchName(v string) *EmployeeBankAccountUpdate {
+	_u.mutation.SetBranchName(v)
+	return _u
+}
+
+// SetNillableBranchName sets the "branch_name" field if the given value is not nil.
+func (_u *EmployeeBankAccountUpdate) SetNillableBranchName(v *string) *EmployeeBankAccountUpdate {
+	if v != nil {
+		_u.SetBranchName(*v)
+	}
+	return _u
+}
+
+// ClearBranchName clears the value of the "branch_name" field.
+func (_u *EmployeeBankAccountUpdate) ClearBranchName() *EmployeeBankAccountUpdate {
+	_u.mutation.ClearBranchName()
+	return _u
+}
+
+// SetBranchCode sets the "branch_code" field.
+func (_u *EmployeeBankAccountUpdate) SetBranchCode(v string) *EmployeeBankAccountUpdate {
+	_u.mutation.SetBranchCode(v)
+	return _u
+}
+
+// SetNillableBranchCode sets the "branch_code" field if the given value is not nil.
+func (_u *EmployeeBankAccountUpdate) SetNillableBranchCode(v *string) *EmployeeBankAccountUpdate {
+	if v != nil {
+		_u.SetBranchCode(*v)
+	}
+	return _u
+}
+
+// ClearBranchCode clears the value of the "branch_code" field.
+func (_u *EmployeeBankAccountUpdate) ClearBranchCode() *EmployeeBankAccountUpdate {
+	_u.mutation.ClearBranchCode()
 	return _u
 }
 
@@ -281,17 +321,29 @@ func (_u *EmployeeBankAccountUpdate) sqlSave(ctx context.Context) (_node int, er
 	if value, ok := _u.mutation.EmployeeID(); ok {
 		_spec.SetField(employeebankaccount.FieldEmployeeID, field.TypeUUID, value)
 	}
-	if value, ok := _u.mutation.BankInstitutionID(); ok {
-		_spec.SetField(employeebankaccount.FieldBankInstitutionID, field.TypeUUID, value)
+	if value, ok := _u.mutation.BankName(); ok {
+		_spec.SetField(employeebankaccount.FieldBankName, field.TypeString, value)
 	}
-	if _u.mutation.BankInstitutionIDCleared() {
-		_spec.ClearField(employeebankaccount.FieldBankInstitutionID, field.TypeUUID)
+	if _u.mutation.BankNameCleared() {
+		_spec.ClearField(employeebankaccount.FieldBankName, field.TypeString)
 	}
-	if value, ok := _u.mutation.BankBranchID(); ok {
-		_spec.SetField(employeebankaccount.FieldBankBranchID, field.TypeUUID, value)
+	if value, ok := _u.mutation.BankCode(); ok {
+		_spec.SetField(employeebankaccount.FieldBankCode, field.TypeString, value)
 	}
-	if _u.mutation.BankBranchIDCleared() {
-		_spec.ClearField(employeebankaccount.FieldBankBranchID, field.TypeUUID)
+	if _u.mutation.BankCodeCleared() {
+		_spec.ClearField(employeebankaccount.FieldBankCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.BranchName(); ok {
+		_spec.SetField(employeebankaccount.FieldBranchName, field.TypeString, value)
+	}
+	if _u.mutation.BranchNameCleared() {
+		_spec.ClearField(employeebankaccount.FieldBranchName, field.TypeString)
+	}
+	if value, ok := _u.mutation.BranchCode(); ok {
+		_spec.SetField(employeebankaccount.FieldBranchCode, field.TypeString, value)
+	}
+	if _u.mutation.BranchCodeCleared() {
+		_spec.ClearField(employeebankaccount.FieldBranchCode, field.TypeString)
 	}
 	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(employeebankaccount.FieldAccountName, field.TypeString, value)
@@ -368,43 +420,83 @@ func (_u *EmployeeBankAccountUpdateOne) SetNillableEmployeeID(v *uuid.UUID) *Emp
 	return _u
 }
 
-// SetBankInstitutionID sets the "bank_institution_id" field.
-func (_u *EmployeeBankAccountUpdateOne) SetBankInstitutionID(v uuid.UUID) *EmployeeBankAccountUpdateOne {
-	_u.mutation.SetBankInstitutionID(v)
+// SetBankName sets the "bank_name" field.
+func (_u *EmployeeBankAccountUpdateOne) SetBankName(v string) *EmployeeBankAccountUpdateOne {
+	_u.mutation.SetBankName(v)
 	return _u
 }
 
-// SetNillableBankInstitutionID sets the "bank_institution_id" field if the given value is not nil.
-func (_u *EmployeeBankAccountUpdateOne) SetNillableBankInstitutionID(v *uuid.UUID) *EmployeeBankAccountUpdateOne {
+// SetNillableBankName sets the "bank_name" field if the given value is not nil.
+func (_u *EmployeeBankAccountUpdateOne) SetNillableBankName(v *string) *EmployeeBankAccountUpdateOne {
 	if v != nil {
-		_u.SetBankInstitutionID(*v)
+		_u.SetBankName(*v)
 	}
 	return _u
 }
 
-// ClearBankInstitutionID clears the value of the "bank_institution_id" field.
-func (_u *EmployeeBankAccountUpdateOne) ClearBankInstitutionID() *EmployeeBankAccountUpdateOne {
-	_u.mutation.ClearBankInstitutionID()
+// ClearBankName clears the value of the "bank_name" field.
+func (_u *EmployeeBankAccountUpdateOne) ClearBankName() *EmployeeBankAccountUpdateOne {
+	_u.mutation.ClearBankName()
 	return _u
 }
 
-// SetBankBranchID sets the "bank_branch_id" field.
-func (_u *EmployeeBankAccountUpdateOne) SetBankBranchID(v uuid.UUID) *EmployeeBankAccountUpdateOne {
-	_u.mutation.SetBankBranchID(v)
+// SetBankCode sets the "bank_code" field.
+func (_u *EmployeeBankAccountUpdateOne) SetBankCode(v string) *EmployeeBankAccountUpdateOne {
+	_u.mutation.SetBankCode(v)
 	return _u
 }
 
-// SetNillableBankBranchID sets the "bank_branch_id" field if the given value is not nil.
-func (_u *EmployeeBankAccountUpdateOne) SetNillableBankBranchID(v *uuid.UUID) *EmployeeBankAccountUpdateOne {
+// SetNillableBankCode sets the "bank_code" field if the given value is not nil.
+func (_u *EmployeeBankAccountUpdateOne) SetNillableBankCode(v *string) *EmployeeBankAccountUpdateOne {
 	if v != nil {
-		_u.SetBankBranchID(*v)
+		_u.SetBankCode(*v)
 	}
 	return _u
 }
 
-// ClearBankBranchID clears the value of the "bank_branch_id" field.
-func (_u *EmployeeBankAccountUpdateOne) ClearBankBranchID() *EmployeeBankAccountUpdateOne {
-	_u.mutation.ClearBankBranchID()
+// ClearBankCode clears the value of the "bank_code" field.
+func (_u *EmployeeBankAccountUpdateOne) ClearBankCode() *EmployeeBankAccountUpdateOne {
+	_u.mutation.ClearBankCode()
+	return _u
+}
+
+// SetBranchName sets the "branch_name" field.
+func (_u *EmployeeBankAccountUpdateOne) SetBranchName(v string) *EmployeeBankAccountUpdateOne {
+	_u.mutation.SetBranchName(v)
+	return _u
+}
+
+// SetNillableBranchName sets the "branch_name" field if the given value is not nil.
+func (_u *EmployeeBankAccountUpdateOne) SetNillableBranchName(v *string) *EmployeeBankAccountUpdateOne {
+	if v != nil {
+		_u.SetBranchName(*v)
+	}
+	return _u
+}
+
+// ClearBranchName clears the value of the "branch_name" field.
+func (_u *EmployeeBankAccountUpdateOne) ClearBranchName() *EmployeeBankAccountUpdateOne {
+	_u.mutation.ClearBranchName()
+	return _u
+}
+
+// SetBranchCode sets the "branch_code" field.
+func (_u *EmployeeBankAccountUpdateOne) SetBranchCode(v string) *EmployeeBankAccountUpdateOne {
+	_u.mutation.SetBranchCode(v)
+	return _u
+}
+
+// SetNillableBranchCode sets the "branch_code" field if the given value is not nil.
+func (_u *EmployeeBankAccountUpdateOne) SetNillableBranchCode(v *string) *EmployeeBankAccountUpdateOne {
+	if v != nil {
+		_u.SetBranchCode(*v)
+	}
+	return _u
+}
+
+// ClearBranchCode clears the value of the "branch_code" field.
+func (_u *EmployeeBankAccountUpdateOne) ClearBranchCode() *EmployeeBankAccountUpdateOne {
+	_u.mutation.ClearBranchCode()
 	return _u
 }
 
@@ -622,17 +714,29 @@ func (_u *EmployeeBankAccountUpdateOne) sqlSave(ctx context.Context) (_node *Emp
 	if value, ok := _u.mutation.EmployeeID(); ok {
 		_spec.SetField(employeebankaccount.FieldEmployeeID, field.TypeUUID, value)
 	}
-	if value, ok := _u.mutation.BankInstitutionID(); ok {
-		_spec.SetField(employeebankaccount.FieldBankInstitutionID, field.TypeUUID, value)
+	if value, ok := _u.mutation.BankName(); ok {
+		_spec.SetField(employeebankaccount.FieldBankName, field.TypeString, value)
 	}
-	if _u.mutation.BankInstitutionIDCleared() {
-		_spec.ClearField(employeebankaccount.FieldBankInstitutionID, field.TypeUUID)
+	if _u.mutation.BankNameCleared() {
+		_spec.ClearField(employeebankaccount.FieldBankName, field.TypeString)
 	}
-	if value, ok := _u.mutation.BankBranchID(); ok {
-		_spec.SetField(employeebankaccount.FieldBankBranchID, field.TypeUUID, value)
+	if value, ok := _u.mutation.BankCode(); ok {
+		_spec.SetField(employeebankaccount.FieldBankCode, field.TypeString, value)
 	}
-	if _u.mutation.BankBranchIDCleared() {
-		_spec.ClearField(employeebankaccount.FieldBankBranchID, field.TypeUUID)
+	if _u.mutation.BankCodeCleared() {
+		_spec.ClearField(employeebankaccount.FieldBankCode, field.TypeString)
+	}
+	if value, ok := _u.mutation.BranchName(); ok {
+		_spec.SetField(employeebankaccount.FieldBranchName, field.TypeString, value)
+	}
+	if _u.mutation.BranchNameCleared() {
+		_spec.ClearField(employeebankaccount.FieldBranchName, field.TypeString)
+	}
+	if value, ok := _u.mutation.BranchCode(); ok {
+		_spec.SetField(employeebankaccount.FieldBranchCode, field.TypeString, value)
+	}
+	if _u.mutation.BranchCodeCleared() {
+		_spec.ClearField(employeebankaccount.FieldBranchCode, field.TypeString)
 	}
 	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(employeebankaccount.FieldAccountName, field.TypeString, value)

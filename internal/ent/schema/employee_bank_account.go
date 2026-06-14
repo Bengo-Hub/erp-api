@@ -21,8 +21,15 @@ func (EmployeeBankAccount) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
 		field.UUID("tenant_id", uuid.UUID{}).Comment("Owning tenant (auth_tenant.id)"),
 		field.UUID("employee_id", uuid.UUID{}).Comment("FK -> employee.id"),
-		field.UUID("bank_institution_id", uuid.UUID{}).Optional().Nillable(),
-		field.UUID("bank_branch_id", uuid.UUID{}).Optional().Nillable(),
+
+		// Bank details are stored as plain fields. Banks are payment-rail / treasury reference
+		// data, NOT an ERP-owned master (Part A data-ownership conformance) — the ERP must not
+		// maintain a bank_institution/bank_branch registry. Treasury validates the rail at
+		// disburse time if needed.
+		field.String("bank_name").Optional().Comment("Plain bank name (no ERP-owned bank master)"),
+		field.String("bank_code").Optional().Comment("Bank code / clearing code"),
+		field.String("branch_name").Optional(),
+		field.String("branch_code").Optional(),
 
 		field.String("account_name").NotEmpty(),
 		field.String("account_number").NotEmpty(),
