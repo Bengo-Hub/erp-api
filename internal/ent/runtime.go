@@ -7,6 +7,12 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/apirequestmetric"
+	"github.com/Bengo-Hub/erp-api/internal/ent/application"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisal"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalcycle"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalquestion"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalresponse"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
@@ -15,6 +21,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/bankbranch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/bankinstitution"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
+	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
@@ -25,12 +32,17 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeedocument"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeemetric"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeeonboarding"
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/expenseclaim"
 	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/goal"
+	"github.com/Bengo-Hub/erp-api/internal/ent/goalprogress"
 	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/idempotencykey"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
+	"github.com/Bengo-Hub/erp-api/internal/ent/jobposting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavecategory"
@@ -39,8 +51,11 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
+	"github.com/Bengo-Hub/erp-api/internal/ent/metriccategory"
+	"github.com/Bengo-Hub/erp-api/internal/ent/metrictarget"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
 	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
+	"github.com/Bengo-Hub/erp-api/internal/ent/onboardingtask"
 	"github.com/Bengo-Hub/erp-api/internal/ent/outboxevent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
@@ -49,11 +64,14 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
+	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
+	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/project"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
+	"github.com/Bengo-Hub/erp-api/internal/ent/reviewmetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/schema"
@@ -64,6 +82,9 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
 	"github.com/Bengo-Hub/erp-api/internal/ent/timesheet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/timesheetentry"
+	"github.com/Bengo-Hub/erp-api/internal/ent/trainingcourse"
+	"github.com/Bengo-Hub/erp-api/internal/ent/trainingenrollment"
+	"github.com/Bengo-Hub/erp-api/internal/ent/trainingevaluation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/userroleassignment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/withholdingtax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workersunion"
@@ -147,6 +168,118 @@ func init() {
 	appsettingDescID := appsettingFields[0].Descriptor()
 	// appsetting.DefaultID holds the default value on creation for the id field.
 	appsetting.DefaultID = appsettingDescID.Default.(func() uuid.UUID)
+	applicationFields := schema.Application{}.Fields()
+	_ = applicationFields
+	// applicationDescAppliedAt is the schema descriptor for applied_at field.
+	applicationDescAppliedAt := applicationFields[5].Descriptor()
+	// application.DefaultAppliedAt holds the default value on creation for the applied_at field.
+	application.DefaultAppliedAt = applicationDescAppliedAt.Default.(func() time.Time)
+	// applicationDescCreatedAt is the schema descriptor for created_at field.
+	applicationDescCreatedAt := applicationFields[8].Descriptor()
+	// application.DefaultCreatedAt holds the default value on creation for the created_at field.
+	application.DefaultCreatedAt = applicationDescCreatedAt.Default.(func() time.Time)
+	// applicationDescUpdatedAt is the schema descriptor for updated_at field.
+	applicationDescUpdatedAt := applicationFields[9].Descriptor()
+	// application.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	application.DefaultUpdatedAt = applicationDescUpdatedAt.Default.(func() time.Time)
+	// application.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	application.UpdateDefaultUpdatedAt = applicationDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// applicationDescID is the schema descriptor for id field.
+	applicationDescID := applicationFields[0].Descriptor()
+	// application.DefaultID holds the default value on creation for the id field.
+	application.DefaultID = applicationDescID.Default.(func() uuid.UUID)
+	appraisalFields := schema.Appraisal{}.Fields()
+	_ = appraisalFields
+	// appraisalDescCreatedAt is the schema descriptor for created_at field.
+	appraisalDescCreatedAt := appraisalFields[12].Descriptor()
+	// appraisal.DefaultCreatedAt holds the default value on creation for the created_at field.
+	appraisal.DefaultCreatedAt = appraisalDescCreatedAt.Default.(func() time.Time)
+	// appraisalDescUpdatedAt is the schema descriptor for updated_at field.
+	appraisalDescUpdatedAt := appraisalFields[13].Descriptor()
+	// appraisal.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	appraisal.DefaultUpdatedAt = appraisalDescUpdatedAt.Default.(func() time.Time)
+	// appraisal.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	appraisal.UpdateDefaultUpdatedAt = appraisalDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// appraisalDescID is the schema descriptor for id field.
+	appraisalDescID := appraisalFields[0].Descriptor()
+	// appraisal.DefaultID holds the default value on creation for the id field.
+	appraisal.DefaultID = appraisalDescID.Default.(func() uuid.UUID)
+	appraisalcycleFields := schema.AppraisalCycle{}.Fields()
+	_ = appraisalcycleFields
+	// appraisalcycleDescCreatedAt is the schema descriptor for created_at field.
+	appraisalcycleDescCreatedAt := appraisalcycleFields[9].Descriptor()
+	// appraisalcycle.DefaultCreatedAt holds the default value on creation for the created_at field.
+	appraisalcycle.DefaultCreatedAt = appraisalcycleDescCreatedAt.Default.(func() time.Time)
+	// appraisalcycleDescUpdatedAt is the schema descriptor for updated_at field.
+	appraisalcycleDescUpdatedAt := appraisalcycleFields[10].Descriptor()
+	// appraisalcycle.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	appraisalcycle.DefaultUpdatedAt = appraisalcycleDescUpdatedAt.Default.(func() time.Time)
+	// appraisalcycle.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	appraisalcycle.UpdateDefaultUpdatedAt = appraisalcycleDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// appraisalcycleDescID is the schema descriptor for id field.
+	appraisalcycleDescID := appraisalcycleFields[0].Descriptor()
+	// appraisalcycle.DefaultID holds the default value on creation for the id field.
+	appraisalcycle.DefaultID = appraisalcycleDescID.Default.(func() uuid.UUID)
+	appraisalquestionFields := schema.AppraisalQuestion{}.Fields()
+	_ = appraisalquestionFields
+	// appraisalquestionDescIsRequired is the schema descriptor for is_required field.
+	appraisalquestionDescIsRequired := appraisalquestionFields[5].Descriptor()
+	// appraisalquestion.DefaultIsRequired holds the default value on creation for the is_required field.
+	appraisalquestion.DefaultIsRequired = appraisalquestionDescIsRequired.Default.(bool)
+	// appraisalquestionDescOrder is the schema descriptor for order field.
+	appraisalquestionDescOrder := appraisalquestionFields[6].Descriptor()
+	// appraisalquestion.DefaultOrder holds the default value on creation for the order field.
+	appraisalquestion.DefaultOrder = appraisalquestionDescOrder.Default.(int)
+	// appraisalquestionDescCreatedAt is the schema descriptor for created_at field.
+	appraisalquestionDescCreatedAt := appraisalquestionFields[7].Descriptor()
+	// appraisalquestion.DefaultCreatedAt holds the default value on creation for the created_at field.
+	appraisalquestion.DefaultCreatedAt = appraisalquestionDescCreatedAt.Default.(func() time.Time)
+	// appraisalquestionDescUpdatedAt is the schema descriptor for updated_at field.
+	appraisalquestionDescUpdatedAt := appraisalquestionFields[8].Descriptor()
+	// appraisalquestion.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	appraisalquestion.DefaultUpdatedAt = appraisalquestionDescUpdatedAt.Default.(func() time.Time)
+	// appraisalquestion.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	appraisalquestion.UpdateDefaultUpdatedAt = appraisalquestionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// appraisalquestionDescID is the schema descriptor for id field.
+	appraisalquestionDescID := appraisalquestionFields[0].Descriptor()
+	// appraisalquestion.DefaultID holds the default value on creation for the id field.
+	appraisalquestion.DefaultID = appraisalquestionDescID.Default.(func() uuid.UUID)
+	appraisalresponseFields := schema.AppraisalResponse{}.Fields()
+	_ = appraisalresponseFields
+	// appraisalresponseDescCreatedAt is the schema descriptor for created_at field.
+	appraisalresponseDescCreatedAt := appraisalresponseFields[6].Descriptor()
+	// appraisalresponse.DefaultCreatedAt holds the default value on creation for the created_at field.
+	appraisalresponse.DefaultCreatedAt = appraisalresponseDescCreatedAt.Default.(func() time.Time)
+	// appraisalresponseDescUpdatedAt is the schema descriptor for updated_at field.
+	appraisalresponseDescUpdatedAt := appraisalresponseFields[7].Descriptor()
+	// appraisalresponse.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	appraisalresponse.DefaultUpdatedAt = appraisalresponseDescUpdatedAt.Default.(func() time.Time)
+	// appraisalresponse.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	appraisalresponse.UpdateDefaultUpdatedAt = appraisalresponseDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// appraisalresponseDescID is the schema descriptor for id field.
+	appraisalresponseDescID := appraisalresponseFields[0].Descriptor()
+	// appraisalresponse.DefaultID holds the default value on creation for the id field.
+	appraisalresponse.DefaultID = appraisalresponseDescID.Default.(func() uuid.UUID)
+	appraisaltemplateFields := schema.AppraisalTemplate{}.Fields()
+	_ = appraisaltemplateFields
+	// appraisaltemplateDescIsActive is the schema descriptor for is_active field.
+	appraisaltemplateDescIsActive := appraisaltemplateFields[4].Descriptor()
+	// appraisaltemplate.DefaultIsActive holds the default value on creation for the is_active field.
+	appraisaltemplate.DefaultIsActive = appraisaltemplateDescIsActive.Default.(bool)
+	// appraisaltemplateDescCreatedAt is the schema descriptor for created_at field.
+	appraisaltemplateDescCreatedAt := appraisaltemplateFields[6].Descriptor()
+	// appraisaltemplate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	appraisaltemplate.DefaultCreatedAt = appraisaltemplateDescCreatedAt.Default.(func() time.Time)
+	// appraisaltemplateDescUpdatedAt is the schema descriptor for updated_at field.
+	appraisaltemplateDescUpdatedAt := appraisaltemplateFields[7].Descriptor()
+	// appraisaltemplate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	appraisaltemplate.DefaultUpdatedAt = appraisaltemplateDescUpdatedAt.Default.(func() time.Time)
+	// appraisaltemplate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	appraisaltemplate.UpdateDefaultUpdatedAt = appraisaltemplateDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// appraisaltemplateDescID is the schema descriptor for id field.
+	appraisaltemplateDescID := appraisaltemplateFields[0].Descriptor()
+	// appraisaltemplate.DefaultID holds the default value on creation for the id field.
+	appraisaltemplate.DefaultID = appraisaltemplateDescID.Default.(func() uuid.UUID)
 	attendancerecordFields := schema.AttendanceRecord{}.Fields()
 	_ = attendancerecordFields
 	// attendancerecordDescTotalSecondsWorked is the schema descriptor for total_seconds_worked field.
@@ -375,6 +508,16 @@ func init() {
 	benefittaxDescID := benefittaxFields[0].Descriptor()
 	// benefittax.DefaultID holds the default value on creation for the id field.
 	benefittax.DefaultID = benefittaxDescID.Default.(func() uuid.UUID)
+	candidateFields := schema.Candidate{}.Fields()
+	_ = candidateFields
+	// candidateDescCreatedAt is the schema descriptor for created_at field.
+	candidateDescCreatedAt := candidateFields[6].Descriptor()
+	// candidate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	candidate.DefaultCreatedAt = candidateDescCreatedAt.Default.(func() time.Time)
+	// candidateDescID is the schema descriptor for id field.
+	candidateDescID := candidateFields[0].Descriptor()
+	// candidate.DefaultID holds the default value on creation for the id field.
+	candidate.DefaultID = candidateDescID.Default.(func() uuid.UUID)
 	claimitemFields := schema.ClaimItem{}.Fields()
 	_ = claimitemFields
 	// claimitemDescAmount is the schema descriptor for amount field.
@@ -713,6 +856,38 @@ func init() {
 	employeeloanDescID := employeeloanFields[0].Descriptor()
 	// employeeloan.DefaultID holds the default value on creation for the id field.
 	employeeloan.DefaultID = employeeloanDescID.Default.(func() uuid.UUID)
+	employeemetricFields := schema.EmployeeMetric{}.Fields()
+	_ = employeemetricFields
+	// employeemetricDescCreatedAt is the schema descriptor for created_at field.
+	employeemetricDescCreatedAt := employeemetricFields[11].Descriptor()
+	// employeemetric.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employeemetric.DefaultCreatedAt = employeemetricDescCreatedAt.Default.(func() time.Time)
+	// employeemetricDescUpdatedAt is the schema descriptor for updated_at field.
+	employeemetricDescUpdatedAt := employeemetricFields[12].Descriptor()
+	// employeemetric.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employeemetric.DefaultUpdatedAt = employeemetricDescUpdatedAt.Default.(func() time.Time)
+	// employeemetric.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employeemetric.UpdateDefaultUpdatedAt = employeemetricDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employeemetricDescID is the schema descriptor for id field.
+	employeemetricDescID := employeemetricFields[0].Descriptor()
+	// employeemetric.DefaultID holds the default value on creation for the id field.
+	employeemetric.DefaultID = employeemetricDescID.Default.(func() uuid.UUID)
+	employeeonboardingFields := schema.EmployeeOnboarding{}.Fields()
+	_ = employeeonboardingFields
+	// employeeonboardingDescCreatedAt is the schema descriptor for created_at field.
+	employeeonboardingDescCreatedAt := employeeonboardingFields[7].Descriptor()
+	// employeeonboarding.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employeeonboarding.DefaultCreatedAt = employeeonboardingDescCreatedAt.Default.(func() time.Time)
+	// employeeonboardingDescUpdatedAt is the schema descriptor for updated_at field.
+	employeeonboardingDescUpdatedAt := employeeonboardingFields[8].Descriptor()
+	// employeeonboarding.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employeeonboarding.DefaultUpdatedAt = employeeonboardingDescUpdatedAt.Default.(func() time.Time)
+	// employeeonboarding.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employeeonboarding.UpdateDefaultUpdatedAt = employeeonboardingDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employeeonboardingDescID is the schema descriptor for id field.
+	employeeonboardingDescID := employeeonboardingFields[0].Descriptor()
+	// employeeonboarding.DefaultID holds the default value on creation for the id field.
+	employeeonboarding.DefaultID = employeeonboardingDescID.Default.(func() uuid.UUID)
 	expenseclaimFields := schema.ExpenseClaim{}.Fields()
 	_ = expenseclaimFields
 	// expenseclaimDescApproved is the schema descriptor for approved field.
@@ -797,6 +972,40 @@ func init() {
 	generalhrsettingsDescID := generalhrsettingsFields[0].Descriptor()
 	// generalhrsettings.DefaultID holds the default value on creation for the id field.
 	generalhrsettings.DefaultID = generalhrsettingsDescID.Default.(func() uuid.UUID)
+	goalFields := schema.Goal{}.Fields()
+	_ = goalFields
+	// goalDescProgress is the schema descriptor for progress field.
+	goalDescProgress := goalFields[8].Descriptor()
+	// goal.DefaultProgress holds the default value on creation for the progress field.
+	goal.DefaultProgress = goalDescProgress.Default.(int)
+	// goalDescIsTemplate is the schema descriptor for is_template field.
+	goalDescIsTemplate := goalFields[9].Descriptor()
+	// goal.DefaultIsTemplate holds the default value on creation for the is_template field.
+	goal.DefaultIsTemplate = goalDescIsTemplate.Default.(bool)
+	// goalDescCreatedAt is the schema descriptor for created_at field.
+	goalDescCreatedAt := goalFields[11].Descriptor()
+	// goal.DefaultCreatedAt holds the default value on creation for the created_at field.
+	goal.DefaultCreatedAt = goalDescCreatedAt.Default.(func() time.Time)
+	// goalDescUpdatedAt is the schema descriptor for updated_at field.
+	goalDescUpdatedAt := goalFields[12].Descriptor()
+	// goal.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	goal.DefaultUpdatedAt = goalDescUpdatedAt.Default.(func() time.Time)
+	// goal.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	goal.UpdateDefaultUpdatedAt = goalDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// goalDescID is the schema descriptor for id field.
+	goalDescID := goalFields[0].Descriptor()
+	// goal.DefaultID holds the default value on creation for the id field.
+	goal.DefaultID = goalDescID.Default.(func() uuid.UUID)
+	goalprogressFields := schema.GoalProgress{}.Fields()
+	_ = goalprogressFields
+	// goalprogressDescCreatedAt is the schema descriptor for created_at field.
+	goalprogressDescCreatedAt := goalprogressFields[6].Descriptor()
+	// goalprogress.DefaultCreatedAt holds the default value on creation for the created_at field.
+	goalprogress.DefaultCreatedAt = goalprogressDescCreatedAt.Default.(func() time.Time)
+	// goalprogressDescID is the schema descriptor for id field.
+	goalprogressDescID := goalprogressFields[0].Descriptor()
+	// goalprogress.DefaultID holds the default value on creation for the id field.
+	goalprogress.DefaultID = goalprogressDescID.Default.(func() uuid.UUID)
 	hrdetailsFields := schema.HRDetails{}.Fields()
 	_ = hrdetailsFields
 	// hrdetailsDescCreatedAt is the schema descriptor for created_at field.
@@ -855,6 +1064,26 @@ func init() {
 	jobgroupDescID := jobgroupFields[0].Descriptor()
 	// jobgroup.DefaultID holds the default value on creation for the id field.
 	jobgroup.DefaultID = jobgroupDescID.Default.(func() uuid.UUID)
+	jobpostingFields := schema.JobPosting{}.Fields()
+	_ = jobpostingFields
+	// jobpostingDescPostedAt is the schema descriptor for posted_at field.
+	jobpostingDescPostedAt := jobpostingFields[7].Descriptor()
+	// jobposting.DefaultPostedAt holds the default value on creation for the posted_at field.
+	jobposting.DefaultPostedAt = jobpostingDescPostedAt.Default.(func() time.Time)
+	// jobpostingDescCreatedAt is the schema descriptor for created_at field.
+	jobpostingDescCreatedAt := jobpostingFields[9].Descriptor()
+	// jobposting.DefaultCreatedAt holds the default value on creation for the created_at field.
+	jobposting.DefaultCreatedAt = jobpostingDescCreatedAt.Default.(func() time.Time)
+	// jobpostingDescUpdatedAt is the schema descriptor for updated_at field.
+	jobpostingDescUpdatedAt := jobpostingFields[10].Descriptor()
+	// jobposting.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	jobposting.DefaultUpdatedAt = jobpostingDescUpdatedAt.Default.(func() time.Time)
+	// jobposting.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	jobposting.UpdateDefaultUpdatedAt = jobpostingDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// jobpostingDescID is the schema descriptor for id field.
+	jobpostingDescID := jobpostingFields[0].Descriptor()
+	// jobposting.DefaultID holds the default value on creation for the id field.
+	jobposting.DefaultID = jobpostingDescID.Default.(func() uuid.UUID)
 	jobtitleFields := schema.JobTitle{}.Fields()
 	_ = jobtitleFields
 	// jobtitleDescTitle is the schema descriptor for title field.
@@ -1045,6 +1274,54 @@ func init() {
 	lossanddamageDescID := lossanddamageFields[0].Descriptor()
 	// lossanddamage.DefaultID holds the default value on creation for the id field.
 	lossanddamage.DefaultID = lossanddamageDescID.Default.(func() uuid.UUID)
+	metriccategoryFields := schema.MetricCategory{}.Fields()
+	_ = metriccategoryFields
+	// metriccategoryDescOrder is the schema descriptor for order field.
+	metriccategoryDescOrder := metriccategoryFields[4].Descriptor()
+	// metriccategory.DefaultOrder holds the default value on creation for the order field.
+	metriccategory.DefaultOrder = metriccategoryDescOrder.Default.(int)
+	// metriccategoryDescIsActive is the schema descriptor for is_active field.
+	metriccategoryDescIsActive := metriccategoryFields[5].Descriptor()
+	// metriccategory.DefaultIsActive holds the default value on creation for the is_active field.
+	metriccategory.DefaultIsActive = metriccategoryDescIsActive.Default.(bool)
+	// metriccategoryDescCreatedAt is the schema descriptor for created_at field.
+	metriccategoryDescCreatedAt := metriccategoryFields[7].Descriptor()
+	// metriccategory.DefaultCreatedAt holds the default value on creation for the created_at field.
+	metriccategory.DefaultCreatedAt = metriccategoryDescCreatedAt.Default.(func() time.Time)
+	// metriccategoryDescUpdatedAt is the schema descriptor for updated_at field.
+	metriccategoryDescUpdatedAt := metriccategoryFields[8].Descriptor()
+	// metriccategory.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	metriccategory.DefaultUpdatedAt = metriccategoryDescUpdatedAt.Default.(func() time.Time)
+	// metriccategory.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	metriccategory.UpdateDefaultUpdatedAt = metriccategoryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// metriccategoryDescID is the schema descriptor for id field.
+	metriccategoryDescID := metriccategoryFields[0].Descriptor()
+	// metriccategory.DefaultID holds the default value on creation for the id field.
+	metriccategory.DefaultID = metriccategoryDescID.Default.(func() uuid.UUID)
+	metrictargetFields := schema.MetricTarget{}.Fields()
+	_ = metrictargetFields
+	// metrictargetDescTargetValue is the schema descriptor for target_value field.
+	metrictargetDescTargetValue := metrictargetFields[4].Descriptor()
+	// metrictarget.DefaultTargetValue holds the default value on creation for the target_value field.
+	metrictarget.DefaultTargetValue = metrictargetDescTargetValue.Default.(decimal.Decimal)
+	// metrictargetDescIsActive is the schema descriptor for is_active field.
+	metrictargetDescIsActive := metrictargetFields[7].Descriptor()
+	// metrictarget.DefaultIsActive holds the default value on creation for the is_active field.
+	metrictarget.DefaultIsActive = metrictargetDescIsActive.Default.(bool)
+	// metrictargetDescCreatedAt is the schema descriptor for created_at field.
+	metrictargetDescCreatedAt := metrictargetFields[9].Descriptor()
+	// metrictarget.DefaultCreatedAt holds the default value on creation for the created_at field.
+	metrictarget.DefaultCreatedAt = metrictargetDescCreatedAt.Default.(func() time.Time)
+	// metrictargetDescUpdatedAt is the schema descriptor for updated_at field.
+	metrictargetDescUpdatedAt := metrictargetFields[10].Descriptor()
+	// metrictarget.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	metrictarget.DefaultUpdatedAt = metrictargetDescUpdatedAt.Default.(func() time.Time)
+	// metrictarget.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	metrictarget.UpdateDefaultUpdatedAt = metrictargetDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// metrictargetDescID is the schema descriptor for id field.
+	metrictargetDescID := metrictargetFields[0].Descriptor()
+	// metrictarget.DefaultID holds the default value on creation for the id field.
+	metrictarget.DefaultID = metrictargetDescID.Default.(func() uuid.UUID)
 	nextofkinFields := schema.NextOfKin{}.Fields()
 	_ = nextofkinFields
 	// nextofkinDescFullName is the schema descriptor for full_name field.
@@ -1075,6 +1352,24 @@ func init() {
 	offdayDescID := offdayFields[0].Descriptor()
 	// offday.DefaultID holds the default value on creation for the id field.
 	offday.DefaultID = offdayDescID.Default.(func() uuid.UUID)
+	onboardingtaskFields := schema.OnboardingTask{}.Fields()
+	_ = onboardingtaskFields
+	// onboardingtaskDescOrder is the schema descriptor for order field.
+	onboardingtaskDescOrder := onboardingtaskFields[5].Descriptor()
+	// onboardingtask.DefaultOrder holds the default value on creation for the order field.
+	onboardingtask.DefaultOrder = onboardingtaskDescOrder.Default.(int)
+	// onboardingtaskDescIsDone is the schema descriptor for is_done field.
+	onboardingtaskDescIsDone := onboardingtaskFields[6].Descriptor()
+	// onboardingtask.DefaultIsDone holds the default value on creation for the is_done field.
+	onboardingtask.DefaultIsDone = onboardingtaskDescIsDone.Default.(bool)
+	// onboardingtaskDescCreatedAt is the schema descriptor for created_at field.
+	onboardingtaskDescCreatedAt := onboardingtaskFields[9].Descriptor()
+	// onboardingtask.DefaultCreatedAt holds the default value on creation for the created_at field.
+	onboardingtask.DefaultCreatedAt = onboardingtaskDescCreatedAt.Default.(func() time.Time)
+	// onboardingtaskDescID is the schema descriptor for id field.
+	onboardingtaskDescID := onboardingtaskFields[0].Descriptor()
+	// onboardingtask.DefaultID holds the default value on creation for the id field.
+	onboardingtask.DefaultID = onboardingtaskDescID.Default.(func() uuid.UUID)
 	outboxeventFields := schema.OutboxEvent{}.Fields()
 	_ = outboxeventFields
 	// outboxeventDescAggregateType is the schema descriptor for aggregate_type field.
@@ -1399,6 +1694,42 @@ func init() {
 	payslipauditDescID := payslipauditFields[0].Descriptor()
 	// payslipaudit.DefaultID holds the default value on creation for the id field.
 	payslipaudit.DefaultID = payslipauditDescID.Default.(func() uuid.UUID)
+	performancemetricFields := schema.PerformanceMetric{}.Fields()
+	_ = performancemetricFields
+	// performancemetricDescIsActive is the schema descriptor for is_active field.
+	performancemetricDescIsActive := performancemetricFields[10].Descriptor()
+	// performancemetric.DefaultIsActive holds the default value on creation for the is_active field.
+	performancemetric.DefaultIsActive = performancemetricDescIsActive.Default.(bool)
+	// performancemetricDescCreatedAt is the schema descriptor for created_at field.
+	performancemetricDescCreatedAt := performancemetricFields[12].Descriptor()
+	// performancemetric.DefaultCreatedAt holds the default value on creation for the created_at field.
+	performancemetric.DefaultCreatedAt = performancemetricDescCreatedAt.Default.(func() time.Time)
+	// performancemetricDescUpdatedAt is the schema descriptor for updated_at field.
+	performancemetricDescUpdatedAt := performancemetricFields[13].Descriptor()
+	// performancemetric.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	performancemetric.DefaultUpdatedAt = performancemetricDescUpdatedAt.Default.(func() time.Time)
+	// performancemetric.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	performancemetric.UpdateDefaultUpdatedAt = performancemetricDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// performancemetricDescID is the schema descriptor for id field.
+	performancemetricDescID := performancemetricFields[0].Descriptor()
+	// performancemetric.DefaultID holds the default value on creation for the id field.
+	performancemetric.DefaultID = performancemetricDescID.Default.(func() uuid.UUID)
+	performancereviewFields := schema.PerformanceReview{}.Fields()
+	_ = performancereviewFields
+	// performancereviewDescCreatedAt is the schema descriptor for created_at field.
+	performancereviewDescCreatedAt := performancereviewFields[11].Descriptor()
+	// performancereview.DefaultCreatedAt holds the default value on creation for the created_at field.
+	performancereview.DefaultCreatedAt = performancereviewDescCreatedAt.Default.(func() time.Time)
+	// performancereviewDescUpdatedAt is the schema descriptor for updated_at field.
+	performancereviewDescUpdatedAt := performancereviewFields[12].Descriptor()
+	// performancereview.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	performancereview.DefaultUpdatedAt = performancereviewDescUpdatedAt.Default.(func() time.Time)
+	// performancereview.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	performancereview.UpdateDefaultUpdatedAt = performancereviewDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// performancereviewDescID is the schema descriptor for id field.
+	performancereviewDescID := performancereviewFields[0].Descriptor()
+	// performancereview.DefaultID holds the default value on creation for the id field.
+	performancereview.DefaultID = performancereviewDescID.Default.(func() uuid.UUID)
 	permissionFields := schema.Permission{}.Fields()
 	_ = permissionFields
 	// permissionDescPermissionCode is the schema descriptor for permission_code field.
@@ -1501,6 +1832,22 @@ func init() {
 	repayoptionDescID := repayoptionFields[0].Descriptor()
 	// repayoption.DefaultID holds the default value on creation for the id field.
 	repayoption.DefaultID = repayoptionDescID.Default.(func() uuid.UUID)
+	reviewmetricFields := schema.ReviewMetric{}.Fields()
+	_ = reviewmetricFields
+	// reviewmetricDescCreatedAt is the schema descriptor for created_at field.
+	reviewmetricDescCreatedAt := reviewmetricFields[7].Descriptor()
+	// reviewmetric.DefaultCreatedAt holds the default value on creation for the created_at field.
+	reviewmetric.DefaultCreatedAt = reviewmetricDescCreatedAt.Default.(func() time.Time)
+	// reviewmetricDescUpdatedAt is the schema descriptor for updated_at field.
+	reviewmetricDescUpdatedAt := reviewmetricFields[8].Descriptor()
+	// reviewmetric.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	reviewmetric.DefaultUpdatedAt = reviewmetricDescUpdatedAt.Default.(func() time.Time)
+	// reviewmetric.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	reviewmetric.UpdateDefaultUpdatedAt = reviewmetricDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// reviewmetricDescID is the schema descriptor for id field.
+	reviewmetricDescID := reviewmetricFields[0].Descriptor()
+	// reviewmetric.DefaultID holds the default value on creation for the id field.
+	reviewmetric.DefaultID = reviewmetricDescID.Default.(func() uuid.UUID)
 	roleFields := schema.Role{}.Fields()
 	_ = roleFields
 	// roleDescRoleCode is the schema descriptor for role_code field.
@@ -1729,6 +2076,50 @@ func init() {
 	timesheetentryDescID := timesheetentryFields[0].Descriptor()
 	// timesheetentry.DefaultID holds the default value on creation for the id field.
 	timesheetentry.DefaultID = timesheetentryDescID.Default.(func() uuid.UUID)
+	trainingcourseFields := schema.TrainingCourse{}.Fields()
+	_ = trainingcourseFields
+	// trainingcourseDescCapacity is the schema descriptor for capacity field.
+	trainingcourseDescCapacity := trainingcourseFields[6].Descriptor()
+	// trainingcourse.DefaultCapacity holds the default value on creation for the capacity field.
+	trainingcourse.DefaultCapacity = trainingcourseDescCapacity.Default.(int)
+	// trainingcourseDescCreatedAt is the schema descriptor for created_at field.
+	trainingcourseDescCreatedAt := trainingcourseFields[7].Descriptor()
+	// trainingcourse.DefaultCreatedAt holds the default value on creation for the created_at field.
+	trainingcourse.DefaultCreatedAt = trainingcourseDescCreatedAt.Default.(func() time.Time)
+	// trainingcourseDescUpdatedAt is the schema descriptor for updated_at field.
+	trainingcourseDescUpdatedAt := trainingcourseFields[8].Descriptor()
+	// trainingcourse.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	trainingcourse.DefaultUpdatedAt = trainingcourseDescUpdatedAt.Default.(func() time.Time)
+	// trainingcourse.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	trainingcourse.UpdateDefaultUpdatedAt = trainingcourseDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// trainingcourseDescID is the schema descriptor for id field.
+	trainingcourseDescID := trainingcourseFields[0].Descriptor()
+	// trainingcourse.DefaultID holds the default value on creation for the id field.
+	trainingcourse.DefaultID = trainingcourseDescID.Default.(func() uuid.UUID)
+	trainingenrollmentFields := schema.TrainingEnrollment{}.Fields()
+	_ = trainingenrollmentFields
+	// trainingenrollmentDescEnrolledAt is the schema descriptor for enrolled_at field.
+	trainingenrollmentDescEnrolledAt := trainingenrollmentFields[5].Descriptor()
+	// trainingenrollment.DefaultEnrolledAt holds the default value on creation for the enrolled_at field.
+	trainingenrollment.DefaultEnrolledAt = trainingenrollmentDescEnrolledAt.Default.(func() time.Time)
+	// trainingenrollmentDescID is the schema descriptor for id field.
+	trainingenrollmentDescID := trainingenrollmentFields[0].Descriptor()
+	// trainingenrollment.DefaultID holds the default value on creation for the id field.
+	trainingenrollment.DefaultID = trainingenrollmentDescID.Default.(func() uuid.UUID)
+	trainingevaluationFields := schema.TrainingEvaluation{}.Fields()
+	_ = trainingevaluationFields
+	// trainingevaluationDescRating is the schema descriptor for rating field.
+	trainingevaluationDescRating := trainingevaluationFields[4].Descriptor()
+	// trainingevaluation.DefaultRating holds the default value on creation for the rating field.
+	trainingevaluation.DefaultRating = trainingevaluationDescRating.Default.(int)
+	// trainingevaluationDescCreatedAt is the schema descriptor for created_at field.
+	trainingevaluationDescCreatedAt := trainingevaluationFields[6].Descriptor()
+	// trainingevaluation.DefaultCreatedAt holds the default value on creation for the created_at field.
+	trainingevaluation.DefaultCreatedAt = trainingevaluationDescCreatedAt.Default.(func() time.Time)
+	// trainingevaluationDescID is the schema descriptor for id field.
+	trainingevaluationDescID := trainingevaluationFields[0].Descriptor()
+	// trainingevaluation.DefaultID holds the default value on creation for the id field.
+	trainingevaluation.DefaultID = trainingevaluationDescID.Default.(func() uuid.UUID)
 	userroleassignmentFields := schema.UserRoleAssignment{}.Fields()
 	_ = userroleassignmentFields
 	// userroleassignmentDescAssignedAt is the schema descriptor for assigned_at field.

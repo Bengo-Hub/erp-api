@@ -15,6 +15,24 @@ type ApiRequestMetric func(*sql.Selector)
 // AppSetting is the predicate function for appsetting builders.
 type AppSetting func(*sql.Selector)
 
+// Application is the predicate function for application builders.
+type Application func(*sql.Selector)
+
+// Appraisal is the predicate function for appraisal builders.
+type Appraisal func(*sql.Selector)
+
+// AppraisalCycle is the predicate function for appraisalcycle builders.
+type AppraisalCycle func(*sql.Selector)
+
+// AppraisalQuestion is the predicate function for appraisalquestion builders.
+type AppraisalQuestion func(*sql.Selector)
+
+// AppraisalResponse is the predicate function for appraisalresponse builders.
+type AppraisalResponse func(*sql.Selector)
+
+// AppraisalTemplate is the predicate function for appraisaltemplate builders.
+type AppraisalTemplate func(*sql.Selector)
+
 // AttendanceRecord is the predicate function for attendancerecord builders.
 type AttendanceRecord func(*sql.Selector)
 
@@ -35,6 +53,9 @@ type BankInstitution func(*sql.Selector)
 
 // BenefitTax is the predicate function for benefittax builders.
 type BenefitTax func(*sql.Selector)
+
+// Candidate is the predicate function for candidate builders.
+type Candidate func(*sql.Selector)
 
 // ClaimItem is the predicate function for claimitem builders.
 type ClaimItem func(*sql.Selector)
@@ -69,11 +90,23 @@ type EmployeeDocument func(*sql.Selector)
 // EmployeeLoan is the predicate function for employeeloan builders.
 type EmployeeLoan func(*sql.Selector)
 
+// EmployeeMetric is the predicate function for employeemetric builders.
+type EmployeeMetric func(*sql.Selector)
+
+// EmployeeOnboarding is the predicate function for employeeonboarding builders.
+type EmployeeOnboarding func(*sql.Selector)
+
 // ExpenseClaim is the predicate function for expenseclaim builders.
 type ExpenseClaim func(*sql.Selector)
 
 // GeneralHRSettings is the predicate function for generalhrsettings builders.
 type GeneralHRSettings func(*sql.Selector)
+
+// Goal is the predicate function for goal builders.
+type Goal func(*sql.Selector)
+
+// GoalProgress is the predicate function for goalprogress builders.
+type GoalProgress func(*sql.Selector)
 
 // HRDetails is the predicate function for hrdetails builders.
 type HRDetails func(*sql.Selector)
@@ -83,6 +116,9 @@ type IdempotencyKey func(*sql.Selector)
 
 // JobGroup is the predicate function for jobgroup builders.
 type JobGroup func(*sql.Selector)
+
+// JobPosting is the predicate function for jobposting builders.
+type JobPosting func(*sql.Selector)
 
 // JobTitle is the predicate function for jobtitle builders.
 type JobTitle func(*sql.Selector)
@@ -108,11 +144,20 @@ type LoanType func(*sql.Selector)
 // LossAndDamage is the predicate function for lossanddamage builders.
 type LossAndDamage func(*sql.Selector)
 
+// MetricCategory is the predicate function for metriccategory builders.
+type MetricCategory func(*sql.Selector)
+
+// MetricTarget is the predicate function for metrictarget builders.
+type MetricTarget func(*sql.Selector)
+
 // NextOfKin is the predicate function for nextofkin builders.
 type NextOfKin func(*sql.Selector)
 
 // OffDay is the predicate function for offday builders.
 type OffDay func(*sql.Selector)
+
+// OnboardingTask is the predicate function for onboardingtask builders.
+type OnboardingTask func(*sql.Selector)
 
 // OutboxEvent is the predicate function for outboxevent builders.
 type OutboxEvent func(*sql.Selector)
@@ -138,6 +183,12 @@ type Payslip func(*sql.Selector)
 // PayslipAudit is the predicate function for payslipaudit builders.
 type PayslipAudit func(*sql.Selector)
 
+// PerformanceMetric is the predicate function for performancemetric builders.
+type PerformanceMetric func(*sql.Selector)
+
+// PerformanceReview is the predicate function for performancereview builders.
+type PerformanceReview func(*sql.Selector)
+
 // Permission is the predicate function for permission builders.
 type Permission func(*sql.Selector)
 
@@ -152,6 +203,9 @@ type Region func(*sql.Selector)
 
 // RepayOption is the predicate function for repayoption builders.
 type RepayOption func(*sql.Selector)
+
+// ReviewMetric is the predicate function for reviewmetric builders.
+type ReviewMetric func(*sql.Selector)
 
 // Role is the predicate function for role builders.
 type Role func(*sql.Selector)
@@ -182,6 +236,15 @@ type Timesheet func(*sql.Selector)
 
 // TimesheetEntry is the predicate function for timesheetentry builders.
 type TimesheetEntry func(*sql.Selector)
+
+// TrainingCourse is the predicate function for trainingcourse builders.
+type TrainingCourse func(*sql.Selector)
+
+// TrainingEnrollment is the predicate function for trainingenrollment builders.
+type TrainingEnrollment func(*sql.Selector)
+
+// TrainingEvaluation is the predicate function for trainingevaluation builders.
+type TrainingEvaluation func(*sql.Selector)
 
 // UserRoleAssignment is the predicate function for userroleassignment builders.
 type UserRoleAssignment func(*sql.Selector)
