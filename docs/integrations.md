@@ -1,491 +1,249 @@
-# ERP Service - Integration Guide
+# erp-api Integrations
 
-## Overview
+> Every external interaction of `erp-api`: NATS subjects (pub/sub), S2S HTTP calls
+> (inbound + outbound), SSO/OIDC, subscription gating, notifications, treasury payroll/GL,
+> exchange-rate API, branding. Authoritative for the Go revamp — keep contracts identical.
+> (Supersedes the old pre-decomposition integration guide.)
 
-This document provides detailed integration information for all external services and systems integrated with the ERP service. **ERP focuses on CRM, HRM, Procurement, Manufacturing, and E-commerce modules**, and integrates with specialized microservices for finance, inventory, authentication, and notifications.
-
----
-
-## Table of Contents
-
-1. [Internal BengoBox Service Integrations](#internal-bengobox-service-integrations)
-2. [External Third-Party Integrations](#external-third-party-integrations)
-3. [Integration Patterns](#integration-patterns)
-4. [Two-Tier Configuration Management](#two-tier-configuration-management)
-5. [Event-Driven Architecture](#event-driven-architecture)
-6. [Integration Security](#integration-security)
-7. [Error Handling & Resilience](#error-handling--resilience)
+Code: `integrations/` (events, service_client, branding, taxes, tenant_sync, notifications_client,
+tasks), `authmanagement/sso.py`, `authmanagement/sso_middleware.py`,
+`hrm/payroll/treasury_integration.py`.
 
 ---
 
-## Internal BengoBox Service Integrations
+## 1. Event bus (NATS JetStream + transactional outbox)
 
-### Auth Service
-
-**Integration Type**: OAuth2/OIDC + Events + REST
-
-**Use Cases**:
-- User authentication and authorization
-- JWT token validation
-- User identity synchronization
-- Tenant/outlet discovery
-
-**Architecture**:
-- JWT validation middleware for all protected routes
-- User sync endpoint for SSO compatibility
-- **ERP does NOT manage users** - all user management is handled by auth-service
-
-**Events Consumed**:
-- `auth.tenant.created` - Initialize tenant in ERP system
-- `auth.tenant.updated` - Update tenant metadata
-- `auth.user.created` - Sync user reference (if needed)
-- `auth.user.updated` - Update user identity fields
-
-### Notifications Service
-
-**Integration Type**: Events (Celery/RabbitMQ) + REST API
-
-**Use Cases**:
-- Payroll notifications
-- Leave approval notifications
-- Order confirmations
-- Campaign emails
-- Lead notifications
-- PO notifications
-- Work order notifications
-
-**REST API Usage**:
-- `POST /api/v1/notifications/messages` - Send notification
-
-**Events Published**:
-- `erp.payroll.processed` - Payroll processed
-- `erp.leave.requested` - Leave request submitted
-- `erp.order.created` - Order created
-- `erp.campaign.sent` - Campaign email sent
-- `erp.lead.qualified` - Lead qualified
-- `erp.purchase_order.created` - PO created
-- `erp.work_order.completed` - Work order completed
-
-**Note**: ERP does NOT send notifications directly - all notifications are handled by notifications-service.
-
-### Treasury Service
-
-**Integration Type**: Events (Celery/RabbitMQ) + REST API
-
-**Use Cases**:
-- Invoice generation (from CRM opportunities)
-- Bill creation (from purchase orders)
-- Payment processing (for orders, payroll)
-- Expense recording (from HRM expenses)
-- Tax calculation and reporting
-- Financial reconciliation
-
-**REST API Usage**:
-- `POST /api/v1/treasury/invoices` - Create invoice
-- `POST /api/v1/treasury/bills` - Create bill
-- `POST /api/v1/treasury/payments` - Process payment
-- `POST /api/v1/treasury/expenses` - Record expense
-- `GET /api/v1/treasury/accounts` - Get bank accounts
-- `GET /api/v1/treasury/tax-codes` - Get tax codes
-
-**Events Published**:
-- `erp.opportunity.won` - Opportunity won (create invoice)
-- `erp.purchase_order.received` - PO received (create bill)
-- `erp.payroll.processed` - Payroll processed (create payments)
-- `erp.expense.approved` - Expense approved (record expense)
-
-**Events Consumed**:
-- `treasury.invoice.created` - Invoice created
-- `treasury.payment.processed` - Payment processed
-- `treasury.bill.created` - Bill created
-
-**Note**: ERP does NOT manage financial transactions, invoices, bills, payments, or accounting - all financial operations are handled by treasury-api.
-
-### Inventory Service
-
-**Integration Type**: Events (Celery/RabbitMQ) + REST API
-
-**Use Cases**:
-- Stock level queries (for e-commerce products)
-- Stock movements (for purchase orders, work orders)
-- Stock adjustments (for manufacturing)
-- Inventory reporting
-
-**REST API Usage**:
-- `GET /api/v1/inventory/items/{id}/stock` - Get stock levels
-- `POST /api/v1/inventory/movements` - Record stock movement
-- `POST /api/v1/inventory/adjustments` - Record stock adjustment
-- `GET /api/v1/inventory/warehouses` - Get warehouses
-
-**Events Published**:
-- `erp.order.created` - For inventory reservation
-- `erp.purchase_order.received` - For stock receipt
-- `erp.work_order.completed` - For finished goods
-- `erp.work_order.started` - For material consumption
-
-**Events Consumed**:
-- `inventory.stock.updated` - Stock level updated
-- `inventory.movement.recorded` - Stock movement recorded
-- `inventory.reservation.created` - Reservation created
-
-**Note**: ERP does NOT manage inventory balances or stock levels - all inventory management is handled by inventory-service.
-
-### Logistics Service
-
-**Integration Type**: Events (Celery/RabbitMQ) + REST API
-
-**Use Cases**:
-- Order fulfillment
-- Shipping and delivery tracking
-- Delivery notifications
-
-**REST API Usage**:
-- `POST /api/v1/logistics/shipments` - Create shipment
-- `GET /api/v1/logistics/shipments/{id}/tracking` - Get tracking info
-
-**Events Published**:
-- `erp.order.fulfilled` - Order ready for shipping
-
-**Events Consumed**:
-- `logistics.shipment.created` - Shipment created
-- `logistics.shipment.delivered` - Shipment delivered
-
-### POS Service
-
-**Integration Type**: Events (Celery/RabbitMQ) + REST API
-
-**Use Cases**:
-- Product catalog sync
-- Sales reporting
-- POS order synchronization
-
-**REST API Usage**:
-- `GET /api/v1/pos/products` - Get product catalog
-- `POST /api/v1/pos/orders` - Create POS order
-
-**Events Published**:
-- `erp.product.updated` - Product catalog updated
-
-**Events Consumed**:
-- `pos.order.created` - POS order created
-
-**Note**: ERP's e-commerce module manages product catalog, but POS operations are handled by pos-service.
-
-### IoT Service
-
-**Integration Type**: Events (Celery/RabbitMQ) + REST API
-
-**Use Cases**:
-- Production line monitoring (for manufacturing)
-- Environmental monitoring (for quality control)
-
-**REST API Usage**:
-- `GET /api/v1/iot/devices/{id}/telemetry` - Get device telemetry
-
-**Events Consumed**:
-- `iot.telemetry.received` - Device telemetry received
-- `iot.alert.triggered` - Device alert triggered
-
-### Projects Service
-
-**Integration Type**: Events (Celery/RabbitMQ) + REST API
-
-**Use Cases**:
-- Project expense tracking
-- Project budget management
-- Resource allocation
-
-**REST API Usage**:
-- `POST /api/v1/projects/{id}/expenses` - Record project expense
-- `GET /api/v1/projects/{id}/budget` - Get project budget
-
-**Events Published**:
-- `erp.expense.created` - Expense created (for project tracking)
-
-**Events Consumed**:
-- `projects.budget.updated` - Project budget updated
-
----
-
-## External Third-Party Integrations
-
-### Payment Gateways (via Treasury Service)
-
-**Purpose**: Payment processing for invoices, bills, and orders
-
-**Integration**: Handled via treasury-api, ERP publishes events
-
-**Configuration** (Tier 1 - in treasury-api):
-- Gateway credentials: Stored encrypted
-- API keys: Stored encrypted
-- Webhook endpoints: Configured
-
-### KRA iTax (via Treasury Service)
-
-**Purpose**: Tax compliance and reporting
-
-**Integration**: Handled via treasury-api, ERP publishes tax events
-
-**Configuration** (Tier 1 - in treasury-api):
-- KRA API credentials: Stored encrypted
-- Tax registration numbers: Stored encrypted
-
-### Email Providers (via Notifications Service)
-
-**Purpose**: Email notifications and campaigns
-
-**Integration**: Handled via notifications-service, ERP publishes events
-
-**Configuration** (Tier 1 - in notifications-service):
-- SMTP credentials: Stored encrypted
-- API keys: Stored encrypted
-
-### SMS Providers (via Notifications Service)
-
-**Purpose**: SMS notifications
-
-**Integration**: Handled via notifications-service, ERP publishes events
-
-**Configuration** (Tier 1 - in notifications-service):
-- SMS provider credentials: Stored encrypted
-- API keys: Stored encrypted
-
----
-
-## Integration Patterns
-
-### 1. REST API Pattern (Synchronous)
-
-**Use Case**: Data retrieval, immediate operations
-
-**Implementation**:
-- Django REST Framework HTTP client
-- Retry logic with exponential backoff
-- Circuit breaker pattern
-- Request timeout (10 seconds default)
-- Idempotency keys for mutations
-
-### 2. Event-Driven Pattern (Asynchronous)
-
-**Use Case**: Cross-service communication, notifications
-
-**Transport**: Celery with RabbitMQ/NATS
-
-**Flow**:
-1. Service publishes event to message broker
-2. Subscriber services consume event
-3. Process event and update local state
-4. Publish response events if needed
-
-**Reliability**:
-- At-least-once delivery
-- Event deduplication via event_id
-- Retry on failure
-- Dead letter queue for failed events
-
-### 3. Webhook Pattern (Callbacks)
-
-**Use Case**: External provider callbacks, ERP events
-
-**Implementation**:
-- Webhook endpoints in ERP service
-- Signature verification (HMAC-SHA256)
-- Retry logic for failed deliveries
-- Idempotency handling
-
-### 4. Database Polling (Avoided)
-
-**Note**: Polling is explicitly avoided. Use event-driven or webhook patterns instead.
-
----
-
-## Two-Tier Configuration Management
-
-### Tier 1: Developer/Superuser Configuration
-
-**Visibility**: Only developers and superusers
-
-**Configuration Items**:
-- Database credentials
-- External API credentials (for integrations)
-- Encryption keys
-- Service-to-service API keys
-
-**Storage**:
-- Encrypted at rest in database (AES-256-GCM)
-- K8s secrets for runtime
-- Vault for production secrets
-
-### Tier 2: Business User Configuration
-
-**Visibility**: Normal system users (tenant admins)
-
-**Configuration Items**:
-- Business settings
-- Tax rates (references from treasury-api)
-- Payment terms
-- Notification preferences
-- Report templates
-
-**Storage**:
-- Plain text in database (non-sensitive)
-- Tenant-specific configuration tables
-
----
-
-## Event-Driven Architecture
-
-### Event Catalog
-
-#### Outbound Events (Published by ERP Service)
-
-**erp.opportunity.won**
+### Envelope (`integrations/events.py:_envelope`)
 ```json
 {
-  "event_id": "uuid",
-  "event_type": "erp.opportunity.won",
-  "tenant_id": "tenant-uuid",
-  "timestamp": "2024-12-05T10:30:00Z",
-  "data": {
-    "opportunity_id": "opportunity-uuid",
-    "customer_id": "customer-uuid",
-    "amount": 10000.00,
-    "currency": "KES"
-  }
+  "id": "<uuid>",
+  "tenant_id": "<auth-api tenant uuid>",
+  "aggregate_type": "erp",
+  "aggregate_id": "<batch/object ref>",
+  "event_type": "payroll.processed",
+  "payload": { },
+  "timestamp": "<iso8601>",
+  "version": "1.0",
+  "source": "erp"
 }
 ```
+Subject = `{aggregate_type}.{event_type}` (e.g. `erp.payroll.processed`).
+All publishing/consuming gated by `EVENTS_ENABLED`. Drained by `manage.py drain_outbox`,
+consumed by `manage.py consume_events`.
 
-**erp.purchase_order.received**
-```json
-{
-  "event_id": "uuid",
-  "event_type": "erp.purchase_order.received",
-  "tenant_id": "tenant-uuid",
-  "timestamp": "2024-12-05T10:30:00Z",
-  "data": {
-    "purchase_order_id": "po-uuid",
-    "vendor_id": "vendor-uuid",
-    "total_amount": 5000.00,
-    "currency": "KES"
-  }
-}
-```
+### Subjects PUBLISHED by erp-api
 
-**erp.payroll.processed**
-```json
-{
-  "event_id": "uuid",
-  "event_type": "erp.payroll.processed",
-  "tenant_id": "tenant-uuid",
-  "timestamp": "2024-12-05T10:30:00Z",
-  "data": {
-    "payroll_id": "payroll-uuid",
-    "period": "2024-12",
-    "total_amount": 50000.00,
-    "employee_count": 10
-  }
-}
-```
+| Subject | Emitted by | Payload shape (key fields) | Consumed by |
+|---|---|---|---|
+| `erp.payroll.processed` | `hrm/payroll/treasury_integration.py:publish_and_disburse` | `{tenant_id, outlet_id, period, currency:"KES", totals:{gross,deductions,net}, lines:[{employee_id, employee_ref, gross, net_pay, statutory:{paye,nhif,nssf,housing}}], cost_center, batch_ref}` | treasury-api (posts GL: DR Salaries & Wages, CR Accrued Salary Payable + statutory liabilities) |
+| `erp.email.requested` | `integrations/notifications_client.py:EmailService.send_email` | `{subject, message, recipient_list[], html_message, from_email, cc[], bcc[], reply_to, attachments[{filename,content(base64),mimetype,encoding}]}` | notifications-api |
+| `erp.notification.requested` | `integrations/notifications_client.py:NotificationService.send_notification` | `{user_id, email, title, message, notification_type, channels[], data{}, image_url, action_url, email_subject, templates:{email,sms,push}, context{}}` | notifications-api |
 
-#### Inbound Events (Consumed by ERP Service)
+> Additional `erp.*` subjects can be emitted by any module via `publish_event(...)`. As of audit,
+> only the three above are wired. Payslip emailing and payroll notifications both flow through
+> `erp.email.requested` / `erp.notification.requested`.
 
-**treasury.invoice.created**
-```json
-{
-  "event_id": "uuid",
-  "event_type": "treasury.invoice.created",
-  "tenant_id": "tenant-uuid",
-  "timestamp": "2024-12-05T10:30:00Z",
-  "data": {
-    "invoice_id": "invoice-uuid",
-    "opportunity_id": "opportunity-uuid",
-    "status": "sent"
-  }
-}
-```
+### Subjects CONSUMED by erp-api
 
-**inventory.stock.updated**
-```json
-{
-  "event_id": "uuid",
-  "event_type": "inventory.stock.updated",
-  "tenant_id": "tenant-uuid",
-  "timestamp": "2024-12-05T10:30:00Z",
-  "data": {
-    "item_id": "item-uuid",
-    "stock_level": 100,
-    "warehouse_id": "warehouse-uuid"
-  }
-}
+Handlers registered into `integrations.events.CONSUMER_HANDLERS` by modules.
+
+| Subject(s) | Handler | Effect |
+|---|---|---|
+| `auth.tenant.*` (created/updated/…) | `integrations/tenant_sync.py:handle_tenant_event` | upsert `AuthTenant` shadow |
+| `auth.outlet.*` (created/updated/archived) | `integrations/tenant_sync.py:handle_outlet_event` | upsert/archive `AuthOutlet` shadow |
+| `treasury.payroll.disbursed` | `hrm/payroll/treasury_integration.py:handle_payroll_disbursed` | mark the period's payslips `published=True` (tenant-isolated by `employee__organisation__tenant_id`) |
+
+> **Gotcha**: `CONSUMER_HANDLERS` is populated lazily by module imports; if a module isn't imported,
+> its consumer silently does nothing and `consume_events` warns "No consumer handlers registered".
+> (See `gaps-and-bugs.md`.)
+
+---
+
+## 2. Service-to-service (S2S) HTTP
+
+Client: `integrations/service_client.py:ServiceClient` / `get_client(service, request=)`.
+- Auth headers: `X-API-Key: INTERNAL_SERVICE_KEY`; forwards caller `Authorization: Bearer <jwt>`
+  and `X-Tenant-ID` / `X-Tenant-Slug` / `X-Outlet-ID` from `request.auth_claims`.
+- Retry: `urllib3 Retry` total=`SERVICE_CLIENT_RETRIES` (2), backoff 0.3, on 502/503/504.
+- Base URLs from `settings.SERVICE_URLS` (auth, treasury, inventory, pos, ordering, notifications,
+  marketflow, subscriptions).
+
+### OUTBOUND calls erp-api makes
+
+| Target | Method + Path | Caller | Purpose |
+|---|---|---|---|
+| auth-api | `GET /api/v1/tenants/by-slug/{slug}` | `tenant_sync.ensure_tenant`, `branding.get_tenant_branding` | resolve tenant UUID + branding (logo/colors/KRA/address) |
+| auth-api | `GET /api/v1/tenants/{slug}/outlets` | `tenant_sync.sync_outlets` | list outlets to mirror |
+| auth-api | `GET /.well-known/jwks.json` | `authmanagement/sso.py` (PyJWKClient) | RS256 public keys for JWT validation |
+| treasury-api | `GET /api/v1/s2s/{tenant}/taxes` | `integrations/taxes.py:get_tax_codes` | tenant tax codes (cached 1h) |
+| treasury-api | `GET /api/v1/s2s/{tenant}/taxes/{code}` | `integrations/taxes.py:get_tax_code` | single tax code |
+| treasury-api | `POST /api/v1/s2s/{tenant}/payouts/disburse` | `hrm/payroll/treasury_integration.py:publish_and_disburse` | disburse net pay; body `{payouts:[{recipient_id, amount, currency:"KES", payment_method:"bank_transfer", reference_id, description}]}` |
+
+### INBOUND endpoints other services call on erp-api
+
+erp-api currently exposes NO dedicated `/api/v1/s2s/...` surface (HR data is not consumed S2S by
+others as of audit). Inbound integration is event-driven (`auth.*`, `treasury.payroll.disbursed`).
+Public/health endpoints:
+
+| Path | Auth | Purpose |
+|---|---|---|
+| `GET /api/v1/core/health/` | none | liveness/readiness (Docker/k8s) |
+| `GET /api/v1/integrations/health/` | none | integration subsystem health |
+| `GET /api/v1/business/public-branding/` | none | public branding for login page |
+| `GET /api/v1/auth/me/` | JWT | service RBAC profile (Trinity two-step) |
+
+> Revamp note: if other services later need HR data (e.g. employee directory), add a versioned
+> `/api/v1/s2s/{tenant}/...` surface guarded by `INTERNAL_SERVICE_KEY` (httpware API-key auth).
+
+---
+
+## 3. SSO / OIDC (auth-api as IdP)
+
+- `SSO_ENABLED` gates the whole flow. `authmanagement/sso.py`:
+  - `validate_token(jwt)` → JWKS RS256, requires `exp`+`sub`, optional `aud`/`iss`, leeway
+    `AUTH_JWT_LEEWAY` (30s). JWKS cached `AUTH_JWKS_TTL` (600s).
+  - `Claims` wrapper exposes: `sub, email, first/last_name, tenant_id, tenant_slug, outlet_id,
+    outlet_code, outlet_use_case, is_hq_user, roles[], permissions[], is_platform_owner,
+    is_superuser, sub_status, sub_features[], sub_limits{}, sub_expires, billing_mode, is_demo`.
+  - `get_or_provision_user(claims)` JIT-creates/links `CustomUser` by `external_id` then email;
+    sets unusable password; mirrors superuser/platform flags; assigns service roles
+    (`_assign_service_roles`: 1:1 name match to ERP groups, else generic fallback, else `staff`).
+- Middleware (`authmanagement/sso_middleware.py`):
+  - `SSOAuthenticationMiddleware` → `request.auth_claims`.
+  - `TenantOutletContextMiddleware` → `request.tenant_id` (platform-owner `?tenantId=` override),
+    `request.outlet_id`, JIT tenant/outlet shadow sync.
+- **Gotchas** (carry into Go): GET requests should not be blocked when claims are missing (public
+  routes); the OIDC token-endpoint / GET-auth-skip behavior is the documented source of spurious
+  401/403 in sibling services.
+
+### SSO login sequence
+
+```mermaid
+sequenceDiagram
+  participant UI as erp-ui
+  participant AUTH as auth-api (SSO)
+  participant ERP as erp-api
+  UI->>AUTH: login -> RS256 JWT (tenant/outlet/roles/sub_* claims)
+  UI->>ERP: GET /api/v1/... (Authorization: Bearer JWT)
+  ERP->>AUTH: GET /.well-known/jwks.json (cached)
+  ERP->>ERP: validate JWT, JIT-provision CustomUser shadow
+  ERP->>AUTH: GET /tenants/by-slug/{slug} (JIT tenant shadow, if missing)
+  UI->>ERP: GET /api/v1/auth/me/ (service roles + permissions)
+  ERP-->>UI: merged identity + ERP RBAC
 ```
 
 ---
 
-## Integration Security
+## 4. Subscription gating
 
-### Authentication
-
-**JWT Tokens**:
-- Validated via auth-service
-- Token claims include tenant_id for scoping
-
-**API Keys** (Service-to-Service):
-- Stored in K8s secrets
-- Rotated quarterly
-
-### Authorization
-
-**Tenant Isolation**:
-- All requests scoped by tenant_id
-- Data access isolated per tenant
-- Data isolation enforced at database level
-
-### Secrets Management
-
-**Encryption**:
-- Secrets encrypted at rest (AES-256-GCM)
-- Decrypted only when used
-- Key rotation every 90 days
+- `authmanagement/sso_middleware.py:SubscriptionGatingMiddleware` (gated by
+  `SUBSCRIPTION_GATING_ENABLED`).
+- **Mutations only**: GET/HEAD/OPTIONS/TRACE always pass. Exempt prefixes: `/health`,
+  `/api/v1/auth/`, `/api/v1/webhooks/`, `/swagger`, `/redoc`, `/static/`, `/media/`.
+- Pass if `is_superuser || is_platform_owner || claims.is_subscription_active()`.
+  `is_subscription_active()`: `billing_mode=="service_charge"` or `is_demo` → always active;
+  absent `sub_status` → active (non-gated tenants); else `sub_status ∈ {ACTIVE,TRIAL,TRIALING}`.
+- Block → `403 {error, code:"subscription_inactive", upgrade:true}`.
+- Feature checks: `claims.has_feature(code)` against `sub_features` baked into JWT by auth-api.
 
 ---
 
-## Error Handling & Resilience
+## 5. Notifications (notifications-api via events)
 
-### Retry Policies
-
-**Exponential Backoff**:
-- Initial delay: 1 second
-- Max delay: 30 seconds
-- Max retries: 3
-
-### Circuit Breaker
-
-**Implementation**:
-- Opens after 5 consecutive failures
-- Half-open after 60 seconds
-- Closes on successful request
-
-### Monitoring
-
-**Metrics**:
-- API call latency (p50, p95, p99)
-- API call success/failure rates
-- Event publishing success rates
-- Integration health status
-
-**Alerts**:
-- High failure rate (>5%)
-- Service unavailability
-- Event delivery failures
-- Integration timeout
+The ERP owns no templates/providers. `integrations/notifications_client.py` provides drop-in
+`EmailService` / `NotificationService` that publish `erp.email.requested` /
+`erp.notification.requested`. Attachments are base64-normalized. Best-effort; never raises on
+transport problems (durably enqueued in the outbox).
 
 ---
 
-## References
+## 6. Treasury (payroll GL + disbursement)
 
-- [Auth Service Integration](../auth-service/auth-service/docs/integrations.md)
-- [Treasury Service Integration](../finance-service/treasury-api/docs/integrations.md)
-- [Inventory Service Integration](../inventory-service/inventory-api/docs/integrations.md)
-- [Logistics Service Integration](../logistics-service/logistics-api/docs/integrations.md)
-- [Notifications Service Integration](../notifications-service/notifications-api/docs/integrations.md)
+`hrm/payroll/treasury_integration.py`. On payroll finalisation:
+1. `publish_event("payroll.processed", event, aggregate_id=batch_ref, tenant_id=...)` →
+   treasury posts the GL journal (DR Salaries & Wages; CR Accrued Salary Payable + PAYE/NHIF/NSSF/
+   Housing-Levy liabilities).
+2. `POST /api/v1/s2s/{tenant}/payouts/disburse` with per-employee net-pay payouts (best-effort;
+   transport failure does not roll back the GL event — treasury reconciles).
+3. Consume `treasury.payroll.disbursed` → mark payslips `published`.
 
+Treasury is the single source of truth for money + GL; the ERP never posts ledgers or moves cash.
+
+### Payroll → treasury sequence
+
+```mermaid
+sequenceDiagram
+  participant ERP as erp-api
+  participant OB as EventOutbox
+  participant NATS
+  participant TREAS as treasury-api
+  ERP->>OB: publish_event(erp.payroll.processed)  (in DB txn)
+  ERP->>TREAS: POST /s2s/{tenant}/payouts/disburse {payouts[]}
+  OB-->>NATS: drain_outbox -> erp.payroll.processed
+  NATS-->>TREAS: erp.payroll.processed (post GL)
+  TREAS-->>NATS: treasury.payroll.disbursed
+  NATS-->>ERP: consume_events -> mark payslips published
+```
+
+---
+
+## 7. Exchange-rate API (FX)
+
+- Config model `integrations/models.py:ExchangeRateAPISettings` (provider, endpoint, **encrypted**
+  `access_key` via `integrations/utils.py:Crypto`/Fernet, source + target currencies, schedule).
+- Celery Beat task `integrations/tasks.py:fetch_exchange_rates` runs daily 00:00; writes
+  `core.ExchangeRate` rows (forward + reverse pairs, `source="api"`). Manual trigger:
+  `manual_fetch_exchange_rates`. Default provider `exchangerate.host` (`/live` quotes format).
+- This is the only finance-adjacent config the ERP retains (HR/ops currency normalisation).
+
+---
+
+## 8. Branding & taxes (read-through caches)
+
+- `integrations/branding.py:get_tenant_branding(slug)` — fetches auth-api `GET /tenants/by-slug/{slug}`,
+  caches 6h. Returns `{name, slug, logo_url, primary_color, secondary_color, kra_pin, address}`.
+  The ERP must NOT own a branding editor (auth-api is SoT). Used by document/payslip PDFs + login.
+- `integrations/taxes.py` — treasury is SoT for sales tax; cached 1h. (Payroll statutory deductions
+  are computed locally — NOT fetched here.)
+
+---
+
+## 9. Contract summary tables
+
+### All event subjects
+| Subject | Direction | Counterparty |
+|---|---|---|
+| `erp.payroll.processed` | OUT | treasury-api |
+| `erp.email.requested` | OUT | notifications-api |
+| `erp.notification.requested` | OUT | notifications-api |
+| `auth.tenant.*` | IN | auth-api |
+| `auth.outlet.*` | IN | auth-api |
+| `treasury.payroll.disbursed` | IN | treasury-api |
+
+### All S2S HTTP contracts
+| Direction | Service | Method Path |
+|---|---|---|
+| OUT | auth-api | `GET /api/v1/tenants/by-slug/{slug}` |
+| OUT | auth-api | `GET /api/v1/tenants/{slug}/outlets` |
+| OUT | auth-api | `GET /.well-known/jwks.json` |
+| OUT | treasury-api | `GET /api/v1/s2s/{tenant}/taxes` |
+| OUT | treasury-api | `GET /api/v1/s2s/{tenant}/taxes/{code}` |
+| OUT | treasury-api | `POST /api/v1/s2s/{tenant}/payouts/disburse` |
+| IN | (k8s/UI) | `GET /api/v1/core/health/`, `GET /api/v1/integrations/health/`, `GET /api/v1/business/public-branding/`, `GET /api/v1/auth/me/` |
+
+---
+
+## 10. Go revamp mapping
+
+| Django piece | Go replacement |
+|---|---|
+| `integrations/events.py` + `EventOutbox` + `drain_outbox`/`consume_events` | `shared-events` `OutboxPoller` + NATS consumers in `modules/consumers` against an `outbox_events` Ent table |
+| `integrations/service_client.py` | `platform/auth`, `platform/treasury` typed S2S clients (httpware client + `INTERNAL_SERVICE_KEY`) |
+| `authmanagement/sso.py` + middleware | `shared-auth-client` (JWKS, Claims, middleware) + `services/usersync` JIT shadow |
+| `SubscriptionGatingMiddleware` | `platform/subscriptions` middleware (claims-based, mutations-only) — copy inventory-api |
+| `integrations/branding.py` / `taxes.py` | `platform/auth.GetBranding` / `platform/treasury.GetTaxCodes` (Redis-cached) |
+| `notifications_client.py` | thin `platform/notifications` publisher (`erp.email.requested` / `erp.notification.requested`) |
+| `integrations/tasks.fetch_exchange_rates` (Celery Beat) | cron goroutine / k8s CronJob calling `platform/fx` |
+| `treasury_integration.py` | `modules/payroll` finalize step → publish + S2S disburse + consumer |
+
+Keep subjects, payload shapes, and S2S paths byte-compatible so downstream services need no change.
