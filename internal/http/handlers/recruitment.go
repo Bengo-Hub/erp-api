@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/modules/recruitment"
+	"github.com/Bengo-Hub/erp-api/internal/platform/media"
 )
 
 // Recruitment RBAC permission codes.
@@ -19,12 +20,13 @@ const (
 
 // RecruitmentHandler serves /api/v1/hrm/recruitment/*.
 type RecruitmentHandler struct {
-	log *zap.Logger
-	svc *recruitment.Service
+	log   *zap.Logger
+	svc   *recruitment.Service
+	media *media.Store
 }
 
-func NewRecruitmentHandler(log *zap.Logger, svc *recruitment.Service) *RecruitmentHandler {
-	return &RecruitmentHandler{log: log.Named("hrm.recruitment"), svc: svc}
+func NewRecruitmentHandler(log *zap.Logger, svc *recruitment.Service, mediaStore *media.Store) *RecruitmentHandler {
+	return &RecruitmentHandler{log: log.Named("hrm.recruitment"), svc: svc, media: mediaStore}
 }
 
 func (h *RecruitmentHandler) RegisterRoutes(r chi.Router) {
@@ -35,6 +37,7 @@ func (h *RecruitmentHandler) RegisterRoutes(r chi.Router) {
 
 		rr.Get("/candidates", h.ListCandidates)
 		rr.Post("/candidates", h.CreateCandidate)
+		rr.Post("/candidates/{id}/resume", h.UploadResume)
 
 		rr.Get("/applications", h.ListApplications)
 		rr.Post("/applications", h.CreateApplication)
@@ -158,6 +161,50 @@ func (h *RecruitmentHandler) CreateCandidate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
+}
+
+// UploadResume accepts a multipart resume file for a candidate, stores it under the
+// per-tenant media path, and records the relative path on the candidate (deferred item).
+func (h *RecruitmentHandler) UploadResume(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permRecruitmentManage) {
+		return
+	}
+	if h.media == nil {
+		writeError(w, http.StatusServiceUnavailable, "media_unavailable", "media storage not configured")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	if _, err := h.svc.GetCandidate(r.Context(), scope.TenantID, id); err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "candidate not found")
+		return
+	}
+	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MiB cap
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid multipart form")
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "missing 'file' field")
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	rel, err := h.media.SaveResume(scope.TenantID, id, header.Filename, file)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "upload_failed", err.Error())
+		return
+	}
+	row, err := h.svc.SetCandidateResume(r.Context(), scope.TenantID, id, rel)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "save_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"candidate": row, "resume_url": h.media.URL(rel)})
 }
 
 // ---- Applications ----
