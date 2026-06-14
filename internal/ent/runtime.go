@@ -29,6 +29,11 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/idempotencykey"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavecategory"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leaveentitlement"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavelog"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
@@ -42,6 +47,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/project"
+	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
@@ -680,6 +686,116 @@ func init() {
 	jobtitleDescID := jobtitleFields[0].Descriptor()
 	// jobtitle.DefaultID holds the default value on creation for the id field.
 	jobtitle.DefaultID = jobtitleDescID.Default.(func() uuid.UUID)
+	leavebalanceFields := schema.LeaveBalance{}.Fields()
+	_ = leavebalanceFields
+	// leavebalanceDescDaysEntitled is the schema descriptor for days_entitled field.
+	leavebalanceDescDaysEntitled := leavebalanceFields[5].Descriptor()
+	// leavebalance.DefaultDaysEntitled holds the default value on creation for the days_entitled field.
+	leavebalance.DefaultDaysEntitled = leavebalanceDescDaysEntitled.Default.(decimal.Decimal)
+	// leavebalanceDescDaysTaken is the schema descriptor for days_taken field.
+	leavebalanceDescDaysTaken := leavebalanceFields[6].Descriptor()
+	// leavebalance.DefaultDaysTaken holds the default value on creation for the days_taken field.
+	leavebalance.DefaultDaysTaken = leavebalanceDescDaysTaken.Default.(decimal.Decimal)
+	// leavebalanceDescDaysRemaining is the schema descriptor for days_remaining field.
+	leavebalanceDescDaysRemaining := leavebalanceFields[7].Descriptor()
+	// leavebalance.DefaultDaysRemaining holds the default value on creation for the days_remaining field.
+	leavebalance.DefaultDaysRemaining = leavebalanceDescDaysRemaining.Default.(decimal.Decimal)
+	// leavebalanceDescCreatedAt is the schema descriptor for created_at field.
+	leavebalanceDescCreatedAt := leavebalanceFields[8].Descriptor()
+	// leavebalance.DefaultCreatedAt holds the default value on creation for the created_at field.
+	leavebalance.DefaultCreatedAt = leavebalanceDescCreatedAt.Default.(func() time.Time)
+	// leavebalanceDescUpdatedAt is the schema descriptor for updated_at field.
+	leavebalanceDescUpdatedAt := leavebalanceFields[9].Descriptor()
+	// leavebalance.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	leavebalance.DefaultUpdatedAt = leavebalanceDescUpdatedAt.Default.(func() time.Time)
+	// leavebalance.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	leavebalance.UpdateDefaultUpdatedAt = leavebalanceDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// leavebalanceDescID is the schema descriptor for id field.
+	leavebalanceDescID := leavebalanceFields[0].Descriptor()
+	// leavebalance.DefaultID holds the default value on creation for the id field.
+	leavebalance.DefaultID = leavebalanceDescID.Default.(func() uuid.UUID)
+	leavecategoryFields := schema.LeaveCategory{}.Fields()
+	_ = leavecategoryFields
+	// leavecategoryDescIsActive is the schema descriptor for is_active field.
+	leavecategoryDescIsActive := leavecategoryFields[4].Descriptor()
+	// leavecategory.DefaultIsActive holds the default value on creation for the is_active field.
+	leavecategory.DefaultIsActive = leavecategoryDescIsActive.Default.(bool)
+	// leavecategoryDescDefaultAnnualDays is the schema descriptor for default_annual_days field.
+	leavecategoryDescDefaultAnnualDays := leavecategoryFields[5].Descriptor()
+	// leavecategory.DefaultDefaultAnnualDays holds the default value on creation for the default_annual_days field.
+	leavecategory.DefaultDefaultAnnualDays = leavecategoryDescDefaultAnnualDays.Default.(decimal.Decimal)
+	// leavecategoryDescAllowCarryover is the schema descriptor for allow_carryover field.
+	leavecategoryDescAllowCarryover := leavecategoryFields[6].Descriptor()
+	// leavecategory.DefaultAllowCarryover holds the default value on creation for the allow_carryover field.
+	leavecategory.DefaultAllowCarryover = leavecategoryDescAllowCarryover.Default.(bool)
+	// leavecategoryDescMaxCarryoverDays is the schema descriptor for max_carryover_days field.
+	leavecategoryDescMaxCarryoverDays := leavecategoryFields[7].Descriptor()
+	// leavecategory.DefaultMaxCarryoverDays holds the default value on creation for the max_carryover_days field.
+	leavecategory.DefaultMaxCarryoverDays = leavecategoryDescMaxCarryoverDays.Default.(decimal.Decimal)
+	// leavecategoryDescCreatedAt is the schema descriptor for created_at field.
+	leavecategoryDescCreatedAt := leavecategoryFields[8].Descriptor()
+	// leavecategory.DefaultCreatedAt holds the default value on creation for the created_at field.
+	leavecategory.DefaultCreatedAt = leavecategoryDescCreatedAt.Default.(func() time.Time)
+	// leavecategoryDescUpdatedAt is the schema descriptor for updated_at field.
+	leavecategoryDescUpdatedAt := leavecategoryFields[9].Descriptor()
+	// leavecategory.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	leavecategory.DefaultUpdatedAt = leavecategoryDescUpdatedAt.Default.(func() time.Time)
+	// leavecategory.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	leavecategory.UpdateDefaultUpdatedAt = leavecategoryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// leavecategoryDescID is the schema descriptor for id field.
+	leavecategoryDescID := leavecategoryFields[0].Descriptor()
+	// leavecategory.DefaultID holds the default value on creation for the id field.
+	leavecategory.DefaultID = leavecategoryDescID.Default.(func() uuid.UUID)
+	leaveentitlementFields := schema.LeaveEntitlement{}.Fields()
+	_ = leaveentitlementFields
+	// leaveentitlementDescDaysEntitled is the schema descriptor for days_entitled field.
+	leaveentitlementDescDaysEntitled := leaveentitlementFields[4].Descriptor()
+	// leaveentitlement.DefaultDaysEntitled holds the default value on creation for the days_entitled field.
+	leaveentitlement.DefaultDaysEntitled = leaveentitlementDescDaysEntitled.Default.(decimal.Decimal)
+	// leaveentitlementDescCreatedAt is the schema descriptor for created_at field.
+	leaveentitlementDescCreatedAt := leaveentitlementFields[6].Descriptor()
+	// leaveentitlement.DefaultCreatedAt holds the default value on creation for the created_at field.
+	leaveentitlement.DefaultCreatedAt = leaveentitlementDescCreatedAt.Default.(func() time.Time)
+	// leaveentitlementDescUpdatedAt is the schema descriptor for updated_at field.
+	leaveentitlementDescUpdatedAt := leaveentitlementFields[7].Descriptor()
+	// leaveentitlement.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	leaveentitlement.DefaultUpdatedAt = leaveentitlementDescUpdatedAt.Default.(func() time.Time)
+	// leaveentitlement.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	leaveentitlement.UpdateDefaultUpdatedAt = leaveentitlementDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// leaveentitlementDescID is the schema descriptor for id field.
+	leaveentitlementDescID := leaveentitlementFields[0].Descriptor()
+	// leaveentitlement.DefaultID holds the default value on creation for the id field.
+	leaveentitlement.DefaultID = leaveentitlementDescID.Default.(func() uuid.UUID)
+	leavelogFields := schema.LeaveLog{}.Fields()
+	_ = leavelogFields
+	// leavelogDescCreatedAt is the schema descriptor for created_at field.
+	leavelogDescCreatedAt := leavelogFields[6].Descriptor()
+	// leavelog.DefaultCreatedAt holds the default value on creation for the created_at field.
+	leavelog.DefaultCreatedAt = leavelogDescCreatedAt.Default.(func() time.Time)
+	// leavelogDescID is the schema descriptor for id field.
+	leavelogDescID := leavelogFields[0].Descriptor()
+	// leavelog.DefaultID holds the default value on creation for the id field.
+	leavelog.DefaultID = leavelogDescID.Default.(func() uuid.UUID)
+	leaverequestFields := schema.LeaveRequest{}.Fields()
+	_ = leaverequestFields
+	// leaverequestDescDaysRequested is the schema descriptor for days_requested field.
+	leaverequestDescDaysRequested := leaverequestFields[6].Descriptor()
+	// leaverequest.DefaultDaysRequested holds the default value on creation for the days_requested field.
+	leaverequest.DefaultDaysRequested = leaverequestDescDaysRequested.Default.(decimal.Decimal)
+	// leaverequestDescCreatedAt is the schema descriptor for created_at field.
+	leaverequestDescCreatedAt := leaverequestFields[12].Descriptor()
+	// leaverequest.DefaultCreatedAt holds the default value on creation for the created_at field.
+	leaverequest.DefaultCreatedAt = leaverequestDescCreatedAt.Default.(func() time.Time)
+	// leaverequestDescUpdatedAt is the schema descriptor for updated_at field.
+	leaverequestDescUpdatedAt := leaverequestFields[13].Descriptor()
+	// leaverequest.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	leaverequest.DefaultUpdatedAt = leaverequestDescUpdatedAt.Default.(func() time.Time)
+	// leaverequest.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	leaverequest.UpdateDefaultUpdatedAt = leaverequestDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// leaverequestDescID is the schema descriptor for id field.
+	leaverequestDescID := leaverequestFields[0].Descriptor()
+	// leaverequest.DefaultID holds the default value on creation for the id field.
+	leaverequest.DefaultID = leaverequestDescID.Default.(func() uuid.UUID)
 	loantypeFields := schema.LoanType{}.Fields()
 	_ = loantypeFields
 	// loantypeDescTitle is the schema descriptor for title field.
@@ -1124,6 +1240,26 @@ func init() {
 	projectDescID := projectFields[0].Descriptor()
 	// project.DefaultID holds the default value on creation for the id field.
 	project.DefaultID = projectDescID.Default.(func() uuid.UUID)
+	publicholidayFields := schema.PublicHoliday{}.Fields()
+	_ = publicholidayFields
+	// publicholidayDescIsNational is the schema descriptor for is_national field.
+	publicholidayDescIsNational := publicholidayFields[4].Descriptor()
+	// publicholiday.DefaultIsNational holds the default value on creation for the is_national field.
+	publicholiday.DefaultIsNational = publicholidayDescIsNational.Default.(bool)
+	// publicholidayDescCreatedAt is the schema descriptor for created_at field.
+	publicholidayDescCreatedAt := publicholidayFields[6].Descriptor()
+	// publicholiday.DefaultCreatedAt holds the default value on creation for the created_at field.
+	publicholiday.DefaultCreatedAt = publicholidayDescCreatedAt.Default.(func() time.Time)
+	// publicholidayDescUpdatedAt is the schema descriptor for updated_at field.
+	publicholidayDescUpdatedAt := publicholidayFields[7].Descriptor()
+	// publicholiday.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	publicholiday.DefaultUpdatedAt = publicholidayDescUpdatedAt.Default.(func() time.Time)
+	// publicholiday.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	publicholiday.UpdateDefaultUpdatedAt = publicholidayDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// publicholidayDescID is the schema descriptor for id field.
+	publicholidayDescID := publicholidayFields[0].Descriptor()
+	// publicholiday.DefaultID holds the default value on creation for the id field.
+	publicholiday.DefaultID = publicholidayDescID.Default.(func() uuid.UUID)
 	regionFields := schema.Region{}.Fields()
 	_ = regionFields
 	// regionDescName is the schema descriptor for name field.

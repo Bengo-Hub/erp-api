@@ -36,6 +36,11 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/idempotencykey"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavecategory"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leaveentitlement"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavelog"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
@@ -50,6 +55,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/project"
+	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
@@ -96,6 +102,11 @@ const (
 	TypeIdempotencyKey      = "IdempotencyKey"
 	TypeJobGroup            = "JobGroup"
 	TypeJobTitle            = "JobTitle"
+	TypeLeaveBalance        = "LeaveBalance"
+	TypeLeaveCategory       = "LeaveCategory"
+	TypeLeaveEntitlement    = "LeaveEntitlement"
+	TypeLeaveLog            = "LeaveLog"
+	TypeLeaveRequest        = "LeaveRequest"
 	TypeLoanType            = "LoanType"
 	TypeLossAndDamage       = "LossAndDamage"
 	TypeNextOfKin           = "NextOfKin"
@@ -109,6 +120,7 @@ const (
 	TypePayslipAudit        = "PayslipAudit"
 	TypePermission          = "Permission"
 	TypeProject             = "Project"
+	TypePublicHoliday       = "PublicHoliday"
 	TypeRegion              = "Region"
 	TypeRepayOption         = "RepayOption"
 	TypeRole                = "Role"
@@ -21116,6 +21128,3986 @@ func (m *JobTitleMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown JobTitle edge %s", name)
 }
 
+// LeaveBalanceMutation represents an operation that mutates the LeaveBalance nodes in the graph.
+type LeaveBalanceMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	tenant_id      *uuid.UUID
+	employee_id    *uuid.UUID
+	category_id    *uuid.UUID
+	year           *int
+	addyear        *int
+	days_entitled  *decimal.Decimal
+	days_taken     *decimal.Decimal
+	days_remaining *decimal.Decimal
+	created_at     *time.Time
+	updated_at     *time.Time
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*LeaveBalance, error)
+	predicates     []predicate.LeaveBalance
+}
+
+var _ ent.Mutation = (*LeaveBalanceMutation)(nil)
+
+// leavebalanceOption allows management of the mutation configuration using functional options.
+type leavebalanceOption func(*LeaveBalanceMutation)
+
+// newLeaveBalanceMutation creates new mutation for the LeaveBalance entity.
+func newLeaveBalanceMutation(c config, op Op, opts ...leavebalanceOption) *LeaveBalanceMutation {
+	m := &LeaveBalanceMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeLeaveBalance,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withLeaveBalanceID sets the ID field of the mutation.
+func withLeaveBalanceID(id uuid.UUID) leavebalanceOption {
+	return func(m *LeaveBalanceMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *LeaveBalance
+		)
+		m.oldValue = func(ctx context.Context) (*LeaveBalance, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().LeaveBalance.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withLeaveBalance sets the old LeaveBalance of the mutation.
+func withLeaveBalance(node *LeaveBalance) leavebalanceOption {
+	return func(m *LeaveBalanceMutation) {
+		m.oldValue = func(context.Context) (*LeaveBalance, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m LeaveBalanceMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m LeaveBalanceMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of LeaveBalance entities.
+func (m *LeaveBalanceMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *LeaveBalanceMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *LeaveBalanceMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().LeaveBalance.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *LeaveBalanceMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *LeaveBalanceMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the LeaveBalance entity.
+// If the LeaveBalance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveBalanceMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *LeaveBalanceMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetEmployeeID sets the "employee_id" field.
+func (m *LeaveBalanceMutation) SetEmployeeID(u uuid.UUID) {
+	m.employee_id = &u
+}
+
+// EmployeeID returns the value of the "employee_id" field in the mutation.
+func (m *LeaveBalanceMutation) EmployeeID() (r uuid.UUID, exists bool) {
+	v := m.employee_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployeeID returns the old "employee_id" field's value of the LeaveBalance entity.
+// If the LeaveBalance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveBalanceMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployeeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployeeID: %w", err)
+	}
+	return oldValue.EmployeeID, nil
+}
+
+// ResetEmployeeID resets all changes to the "employee_id" field.
+func (m *LeaveBalanceMutation) ResetEmployeeID() {
+	m.employee_id = nil
+}
+
+// SetCategoryID sets the "category_id" field.
+func (m *LeaveBalanceMutation) SetCategoryID(u uuid.UUID) {
+	m.category_id = &u
+}
+
+// CategoryID returns the value of the "category_id" field in the mutation.
+func (m *LeaveBalanceMutation) CategoryID() (r uuid.UUID, exists bool) {
+	v := m.category_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCategoryID returns the old "category_id" field's value of the LeaveBalance entity.
+// If the LeaveBalance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveBalanceMutation) OldCategoryID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCategoryID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCategoryID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCategoryID: %w", err)
+	}
+	return oldValue.CategoryID, nil
+}
+
+// ResetCategoryID resets all changes to the "category_id" field.
+func (m *LeaveBalanceMutation) ResetCategoryID() {
+	m.category_id = nil
+}
+
+// SetYear sets the "year" field.
+func (m *LeaveBalanceMutation) SetYear(i int) {
+	m.year = &i
+	m.addyear = nil
+}
+
+// Year returns the value of the "year" field in the mutation.
+func (m *LeaveBalanceMutation) Year() (r int, exists bool) {
+	v := m.year
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldYear returns the old "year" field's value of the LeaveBalance entity.
+// If the LeaveBalance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveBalanceMutation) OldYear(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldYear is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldYear requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldYear: %w", err)
+	}
+	return oldValue.Year, nil
+}
+
+// AddYear adds i to the "year" field.
+func (m *LeaveBalanceMutation) AddYear(i int) {
+	if m.addyear != nil {
+		*m.addyear += i
+	} else {
+		m.addyear = &i
+	}
+}
+
+// AddedYear returns the value that was added to the "year" field in this mutation.
+func (m *LeaveBalanceMutation) AddedYear() (r int, exists bool) {
+	v := m.addyear
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetYear resets all changes to the "year" field.
+func (m *LeaveBalanceMutation) ResetYear() {
+	m.year = nil
+	m.addyear = nil
+}
+
+// SetDaysEntitled sets the "days_entitled" field.
+func (m *LeaveBalanceMutation) SetDaysEntitled(d decimal.Decimal) {
+	m.days_entitled = &d
+}
+
+// DaysEntitled returns the value of the "days_entitled" field in the mutation.
+func (m *LeaveBalanceMutation) DaysEntitled() (r decimal.Decimal, exists bool) {
+	v := m.days_entitled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDaysEntitled returns the old "days_entitled" field's value of the LeaveBalance entity.
+// If the LeaveBalance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveBalanceMutation) OldDaysEntitled(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDaysEntitled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDaysEntitled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDaysEntitled: %w", err)
+	}
+	return oldValue.DaysEntitled, nil
+}
+
+// ResetDaysEntitled resets all changes to the "days_entitled" field.
+func (m *LeaveBalanceMutation) ResetDaysEntitled() {
+	m.days_entitled = nil
+}
+
+// SetDaysTaken sets the "days_taken" field.
+func (m *LeaveBalanceMutation) SetDaysTaken(d decimal.Decimal) {
+	m.days_taken = &d
+}
+
+// DaysTaken returns the value of the "days_taken" field in the mutation.
+func (m *LeaveBalanceMutation) DaysTaken() (r decimal.Decimal, exists bool) {
+	v := m.days_taken
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDaysTaken returns the old "days_taken" field's value of the LeaveBalance entity.
+// If the LeaveBalance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveBalanceMutation) OldDaysTaken(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDaysTaken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDaysTaken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDaysTaken: %w", err)
+	}
+	return oldValue.DaysTaken, nil
+}
+
+// ResetDaysTaken resets all changes to the "days_taken" field.
+func (m *LeaveBalanceMutation) ResetDaysTaken() {
+	m.days_taken = nil
+}
+
+// SetDaysRemaining sets the "days_remaining" field.
+func (m *LeaveBalanceMutation) SetDaysRemaining(d decimal.Decimal) {
+	m.days_remaining = &d
+}
+
+// DaysRemaining returns the value of the "days_remaining" field in the mutation.
+func (m *LeaveBalanceMutation) DaysRemaining() (r decimal.Decimal, exists bool) {
+	v := m.days_remaining
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDaysRemaining returns the old "days_remaining" field's value of the LeaveBalance entity.
+// If the LeaveBalance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveBalanceMutation) OldDaysRemaining(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDaysRemaining is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDaysRemaining requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDaysRemaining: %w", err)
+	}
+	return oldValue.DaysRemaining, nil
+}
+
+// ResetDaysRemaining resets all changes to the "days_remaining" field.
+func (m *LeaveBalanceMutation) ResetDaysRemaining() {
+	m.days_remaining = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *LeaveBalanceMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *LeaveBalanceMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the LeaveBalance entity.
+// If the LeaveBalance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveBalanceMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *LeaveBalanceMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *LeaveBalanceMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *LeaveBalanceMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the LeaveBalance entity.
+// If the LeaveBalance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveBalanceMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *LeaveBalanceMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the LeaveBalanceMutation builder.
+func (m *LeaveBalanceMutation) Where(ps ...predicate.LeaveBalance) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the LeaveBalanceMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *LeaveBalanceMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LeaveBalance, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *LeaveBalanceMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *LeaveBalanceMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (LeaveBalance).
+func (m *LeaveBalanceMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *LeaveBalanceMutation) Fields() []string {
+	fields := make([]string, 0, 9)
+	if m.tenant_id != nil {
+		fields = append(fields, leavebalance.FieldTenantID)
+	}
+	if m.employee_id != nil {
+		fields = append(fields, leavebalance.FieldEmployeeID)
+	}
+	if m.category_id != nil {
+		fields = append(fields, leavebalance.FieldCategoryID)
+	}
+	if m.year != nil {
+		fields = append(fields, leavebalance.FieldYear)
+	}
+	if m.days_entitled != nil {
+		fields = append(fields, leavebalance.FieldDaysEntitled)
+	}
+	if m.days_taken != nil {
+		fields = append(fields, leavebalance.FieldDaysTaken)
+	}
+	if m.days_remaining != nil {
+		fields = append(fields, leavebalance.FieldDaysRemaining)
+	}
+	if m.created_at != nil {
+		fields = append(fields, leavebalance.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, leavebalance.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *LeaveBalanceMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case leavebalance.FieldTenantID:
+		return m.TenantID()
+	case leavebalance.FieldEmployeeID:
+		return m.EmployeeID()
+	case leavebalance.FieldCategoryID:
+		return m.CategoryID()
+	case leavebalance.FieldYear:
+		return m.Year()
+	case leavebalance.FieldDaysEntitled:
+		return m.DaysEntitled()
+	case leavebalance.FieldDaysTaken:
+		return m.DaysTaken()
+	case leavebalance.FieldDaysRemaining:
+		return m.DaysRemaining()
+	case leavebalance.FieldCreatedAt:
+		return m.CreatedAt()
+	case leavebalance.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *LeaveBalanceMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case leavebalance.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case leavebalance.FieldEmployeeID:
+		return m.OldEmployeeID(ctx)
+	case leavebalance.FieldCategoryID:
+		return m.OldCategoryID(ctx)
+	case leavebalance.FieldYear:
+		return m.OldYear(ctx)
+	case leavebalance.FieldDaysEntitled:
+		return m.OldDaysEntitled(ctx)
+	case leavebalance.FieldDaysTaken:
+		return m.OldDaysTaken(ctx)
+	case leavebalance.FieldDaysRemaining:
+		return m.OldDaysRemaining(ctx)
+	case leavebalance.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case leavebalance.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown LeaveBalance field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LeaveBalanceMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case leavebalance.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case leavebalance.FieldEmployeeID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployeeID(v)
+		return nil
+	case leavebalance.FieldCategoryID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCategoryID(v)
+		return nil
+	case leavebalance.FieldYear:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetYear(v)
+		return nil
+	case leavebalance.FieldDaysEntitled:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDaysEntitled(v)
+		return nil
+	case leavebalance.FieldDaysTaken:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDaysTaken(v)
+		return nil
+	case leavebalance.FieldDaysRemaining:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDaysRemaining(v)
+		return nil
+	case leavebalance.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case leavebalance.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveBalance field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *LeaveBalanceMutation) AddedFields() []string {
+	var fields []string
+	if m.addyear != nil {
+		fields = append(fields, leavebalance.FieldYear)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *LeaveBalanceMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case leavebalance.FieldYear:
+		return m.AddedYear()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LeaveBalanceMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case leavebalance.FieldYear:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddYear(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveBalance numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *LeaveBalanceMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *LeaveBalanceMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *LeaveBalanceMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown LeaveBalance nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *LeaveBalanceMutation) ResetField(name string) error {
+	switch name {
+	case leavebalance.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case leavebalance.FieldEmployeeID:
+		m.ResetEmployeeID()
+		return nil
+	case leavebalance.FieldCategoryID:
+		m.ResetCategoryID()
+		return nil
+	case leavebalance.FieldYear:
+		m.ResetYear()
+		return nil
+	case leavebalance.FieldDaysEntitled:
+		m.ResetDaysEntitled()
+		return nil
+	case leavebalance.FieldDaysTaken:
+		m.ResetDaysTaken()
+		return nil
+	case leavebalance.FieldDaysRemaining:
+		m.ResetDaysRemaining()
+		return nil
+	case leavebalance.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case leavebalance.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveBalance field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *LeaveBalanceMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *LeaveBalanceMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *LeaveBalanceMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *LeaveBalanceMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *LeaveBalanceMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *LeaveBalanceMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *LeaveBalanceMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown LeaveBalance unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *LeaveBalanceMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown LeaveBalance edge %s", name)
+}
+
+// LeaveCategoryMutation represents an operation that mutates the LeaveCategory nodes in the graph.
+type LeaveCategoryMutation struct {
+	config
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	tenant_id           *uuid.UUID
+	name                *string
+	description         *string
+	is_active           *bool
+	default_annual_days *decimal.Decimal
+	allow_carryover     *bool
+	max_carryover_days  *decimal.Decimal
+	created_at          *time.Time
+	updated_at          *time.Time
+	clearedFields       map[string]struct{}
+	done                bool
+	oldValue            func(context.Context) (*LeaveCategory, error)
+	predicates          []predicate.LeaveCategory
+}
+
+var _ ent.Mutation = (*LeaveCategoryMutation)(nil)
+
+// leavecategoryOption allows management of the mutation configuration using functional options.
+type leavecategoryOption func(*LeaveCategoryMutation)
+
+// newLeaveCategoryMutation creates new mutation for the LeaveCategory entity.
+func newLeaveCategoryMutation(c config, op Op, opts ...leavecategoryOption) *LeaveCategoryMutation {
+	m := &LeaveCategoryMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeLeaveCategory,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withLeaveCategoryID sets the ID field of the mutation.
+func withLeaveCategoryID(id uuid.UUID) leavecategoryOption {
+	return func(m *LeaveCategoryMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *LeaveCategory
+		)
+		m.oldValue = func(ctx context.Context) (*LeaveCategory, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().LeaveCategory.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withLeaveCategory sets the old LeaveCategory of the mutation.
+func withLeaveCategory(node *LeaveCategory) leavecategoryOption {
+	return func(m *LeaveCategoryMutation) {
+		m.oldValue = func(context.Context) (*LeaveCategory, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m LeaveCategoryMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m LeaveCategoryMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of LeaveCategory entities.
+func (m *LeaveCategoryMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *LeaveCategoryMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *LeaveCategoryMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().LeaveCategory.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *LeaveCategoryMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *LeaveCategoryMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the LeaveCategory entity.
+// If the LeaveCategory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveCategoryMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *LeaveCategoryMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetName sets the "name" field.
+func (m *LeaveCategoryMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *LeaveCategoryMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the LeaveCategory entity.
+// If the LeaveCategory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveCategoryMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *LeaveCategoryMutation) ResetName() {
+	m.name = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *LeaveCategoryMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *LeaveCategoryMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the LeaveCategory entity.
+// If the LeaveCategory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveCategoryMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ClearDescription clears the value of the "description" field.
+func (m *LeaveCategoryMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[leavecategory.FieldDescription] = struct{}{}
+}
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *LeaveCategoryMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[leavecategory.FieldDescription]
+	return ok
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *LeaveCategoryMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, leavecategory.FieldDescription)
+}
+
+// SetIsActive sets the "is_active" field.
+func (m *LeaveCategoryMutation) SetIsActive(b bool) {
+	m.is_active = &b
+}
+
+// IsActive returns the value of the "is_active" field in the mutation.
+func (m *LeaveCategoryMutation) IsActive() (r bool, exists bool) {
+	v := m.is_active
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsActive returns the old "is_active" field's value of the LeaveCategory entity.
+// If the LeaveCategory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveCategoryMutation) OldIsActive(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsActive is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsActive requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsActive: %w", err)
+	}
+	return oldValue.IsActive, nil
+}
+
+// ResetIsActive resets all changes to the "is_active" field.
+func (m *LeaveCategoryMutation) ResetIsActive() {
+	m.is_active = nil
+}
+
+// SetDefaultAnnualDays sets the "default_annual_days" field.
+func (m *LeaveCategoryMutation) SetDefaultAnnualDays(d decimal.Decimal) {
+	m.default_annual_days = &d
+}
+
+// DefaultAnnualDays returns the value of the "default_annual_days" field in the mutation.
+func (m *LeaveCategoryMutation) DefaultAnnualDays() (r decimal.Decimal, exists bool) {
+	v := m.default_annual_days
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDefaultAnnualDays returns the old "default_annual_days" field's value of the LeaveCategory entity.
+// If the LeaveCategory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveCategoryMutation) OldDefaultAnnualDays(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDefaultAnnualDays is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDefaultAnnualDays requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDefaultAnnualDays: %w", err)
+	}
+	return oldValue.DefaultAnnualDays, nil
+}
+
+// ResetDefaultAnnualDays resets all changes to the "default_annual_days" field.
+func (m *LeaveCategoryMutation) ResetDefaultAnnualDays() {
+	m.default_annual_days = nil
+}
+
+// SetAllowCarryover sets the "allow_carryover" field.
+func (m *LeaveCategoryMutation) SetAllowCarryover(b bool) {
+	m.allow_carryover = &b
+}
+
+// AllowCarryover returns the value of the "allow_carryover" field in the mutation.
+func (m *LeaveCategoryMutation) AllowCarryover() (r bool, exists bool) {
+	v := m.allow_carryover
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAllowCarryover returns the old "allow_carryover" field's value of the LeaveCategory entity.
+// If the LeaveCategory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveCategoryMutation) OldAllowCarryover(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAllowCarryover is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAllowCarryover requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAllowCarryover: %w", err)
+	}
+	return oldValue.AllowCarryover, nil
+}
+
+// ResetAllowCarryover resets all changes to the "allow_carryover" field.
+func (m *LeaveCategoryMutation) ResetAllowCarryover() {
+	m.allow_carryover = nil
+}
+
+// SetMaxCarryoverDays sets the "max_carryover_days" field.
+func (m *LeaveCategoryMutation) SetMaxCarryoverDays(d decimal.Decimal) {
+	m.max_carryover_days = &d
+}
+
+// MaxCarryoverDays returns the value of the "max_carryover_days" field in the mutation.
+func (m *LeaveCategoryMutation) MaxCarryoverDays() (r decimal.Decimal, exists bool) {
+	v := m.max_carryover_days
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxCarryoverDays returns the old "max_carryover_days" field's value of the LeaveCategory entity.
+// If the LeaveCategory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveCategoryMutation) OldMaxCarryoverDays(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaxCarryoverDays is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaxCarryoverDays requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxCarryoverDays: %w", err)
+	}
+	return oldValue.MaxCarryoverDays, nil
+}
+
+// ResetMaxCarryoverDays resets all changes to the "max_carryover_days" field.
+func (m *LeaveCategoryMutation) ResetMaxCarryoverDays() {
+	m.max_carryover_days = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *LeaveCategoryMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *LeaveCategoryMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the LeaveCategory entity.
+// If the LeaveCategory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveCategoryMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *LeaveCategoryMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *LeaveCategoryMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *LeaveCategoryMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the LeaveCategory entity.
+// If the LeaveCategory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveCategoryMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *LeaveCategoryMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the LeaveCategoryMutation builder.
+func (m *LeaveCategoryMutation) Where(ps ...predicate.LeaveCategory) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the LeaveCategoryMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *LeaveCategoryMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LeaveCategory, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *LeaveCategoryMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *LeaveCategoryMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (LeaveCategory).
+func (m *LeaveCategoryMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *LeaveCategoryMutation) Fields() []string {
+	fields := make([]string, 0, 9)
+	if m.tenant_id != nil {
+		fields = append(fields, leavecategory.FieldTenantID)
+	}
+	if m.name != nil {
+		fields = append(fields, leavecategory.FieldName)
+	}
+	if m.description != nil {
+		fields = append(fields, leavecategory.FieldDescription)
+	}
+	if m.is_active != nil {
+		fields = append(fields, leavecategory.FieldIsActive)
+	}
+	if m.default_annual_days != nil {
+		fields = append(fields, leavecategory.FieldDefaultAnnualDays)
+	}
+	if m.allow_carryover != nil {
+		fields = append(fields, leavecategory.FieldAllowCarryover)
+	}
+	if m.max_carryover_days != nil {
+		fields = append(fields, leavecategory.FieldMaxCarryoverDays)
+	}
+	if m.created_at != nil {
+		fields = append(fields, leavecategory.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, leavecategory.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *LeaveCategoryMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case leavecategory.FieldTenantID:
+		return m.TenantID()
+	case leavecategory.FieldName:
+		return m.Name()
+	case leavecategory.FieldDescription:
+		return m.Description()
+	case leavecategory.FieldIsActive:
+		return m.IsActive()
+	case leavecategory.FieldDefaultAnnualDays:
+		return m.DefaultAnnualDays()
+	case leavecategory.FieldAllowCarryover:
+		return m.AllowCarryover()
+	case leavecategory.FieldMaxCarryoverDays:
+		return m.MaxCarryoverDays()
+	case leavecategory.FieldCreatedAt:
+		return m.CreatedAt()
+	case leavecategory.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *LeaveCategoryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case leavecategory.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case leavecategory.FieldName:
+		return m.OldName(ctx)
+	case leavecategory.FieldDescription:
+		return m.OldDescription(ctx)
+	case leavecategory.FieldIsActive:
+		return m.OldIsActive(ctx)
+	case leavecategory.FieldDefaultAnnualDays:
+		return m.OldDefaultAnnualDays(ctx)
+	case leavecategory.FieldAllowCarryover:
+		return m.OldAllowCarryover(ctx)
+	case leavecategory.FieldMaxCarryoverDays:
+		return m.OldMaxCarryoverDays(ctx)
+	case leavecategory.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case leavecategory.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown LeaveCategory field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LeaveCategoryMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case leavecategory.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case leavecategory.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case leavecategory.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	case leavecategory.FieldIsActive:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsActive(v)
+		return nil
+	case leavecategory.FieldDefaultAnnualDays:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDefaultAnnualDays(v)
+		return nil
+	case leavecategory.FieldAllowCarryover:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAllowCarryover(v)
+		return nil
+	case leavecategory.FieldMaxCarryoverDays:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxCarryoverDays(v)
+		return nil
+	case leavecategory.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case leavecategory.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveCategory field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *LeaveCategoryMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *LeaveCategoryMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LeaveCategoryMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown LeaveCategory numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *LeaveCategoryMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(leavecategory.FieldDescription) {
+		fields = append(fields, leavecategory.FieldDescription)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *LeaveCategoryMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *LeaveCategoryMutation) ClearField(name string) error {
+	switch name {
+	case leavecategory.FieldDescription:
+		m.ClearDescription()
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveCategory nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *LeaveCategoryMutation) ResetField(name string) error {
+	switch name {
+	case leavecategory.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case leavecategory.FieldName:
+		m.ResetName()
+		return nil
+	case leavecategory.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case leavecategory.FieldIsActive:
+		m.ResetIsActive()
+		return nil
+	case leavecategory.FieldDefaultAnnualDays:
+		m.ResetDefaultAnnualDays()
+		return nil
+	case leavecategory.FieldAllowCarryover:
+		m.ResetAllowCarryover()
+		return nil
+	case leavecategory.FieldMaxCarryoverDays:
+		m.ResetMaxCarryoverDays()
+		return nil
+	case leavecategory.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case leavecategory.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveCategory field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *LeaveCategoryMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *LeaveCategoryMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *LeaveCategoryMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *LeaveCategoryMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *LeaveCategoryMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *LeaveCategoryMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *LeaveCategoryMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown LeaveCategory unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *LeaveCategoryMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown LeaveCategory edge %s", name)
+}
+
+// LeaveEntitlementMutation represents an operation that mutates the LeaveEntitlement nodes in the graph.
+type LeaveEntitlementMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	tenant_id     *uuid.UUID
+	employee_id   *uuid.UUID
+	category_id   *uuid.UUID
+	days_entitled *decimal.Decimal
+	year          *int
+	addyear       *int
+	created_at    *time.Time
+	updated_at    *time.Time
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*LeaveEntitlement, error)
+	predicates    []predicate.LeaveEntitlement
+}
+
+var _ ent.Mutation = (*LeaveEntitlementMutation)(nil)
+
+// leaveentitlementOption allows management of the mutation configuration using functional options.
+type leaveentitlementOption func(*LeaveEntitlementMutation)
+
+// newLeaveEntitlementMutation creates new mutation for the LeaveEntitlement entity.
+func newLeaveEntitlementMutation(c config, op Op, opts ...leaveentitlementOption) *LeaveEntitlementMutation {
+	m := &LeaveEntitlementMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeLeaveEntitlement,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withLeaveEntitlementID sets the ID field of the mutation.
+func withLeaveEntitlementID(id uuid.UUID) leaveentitlementOption {
+	return func(m *LeaveEntitlementMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *LeaveEntitlement
+		)
+		m.oldValue = func(ctx context.Context) (*LeaveEntitlement, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().LeaveEntitlement.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withLeaveEntitlement sets the old LeaveEntitlement of the mutation.
+func withLeaveEntitlement(node *LeaveEntitlement) leaveentitlementOption {
+	return func(m *LeaveEntitlementMutation) {
+		m.oldValue = func(context.Context) (*LeaveEntitlement, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m LeaveEntitlementMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m LeaveEntitlementMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of LeaveEntitlement entities.
+func (m *LeaveEntitlementMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *LeaveEntitlementMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *LeaveEntitlementMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().LeaveEntitlement.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *LeaveEntitlementMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *LeaveEntitlementMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the LeaveEntitlement entity.
+// If the LeaveEntitlement object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveEntitlementMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *LeaveEntitlementMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetEmployeeID sets the "employee_id" field.
+func (m *LeaveEntitlementMutation) SetEmployeeID(u uuid.UUID) {
+	m.employee_id = &u
+}
+
+// EmployeeID returns the value of the "employee_id" field in the mutation.
+func (m *LeaveEntitlementMutation) EmployeeID() (r uuid.UUID, exists bool) {
+	v := m.employee_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployeeID returns the old "employee_id" field's value of the LeaveEntitlement entity.
+// If the LeaveEntitlement object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveEntitlementMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployeeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployeeID: %w", err)
+	}
+	return oldValue.EmployeeID, nil
+}
+
+// ResetEmployeeID resets all changes to the "employee_id" field.
+func (m *LeaveEntitlementMutation) ResetEmployeeID() {
+	m.employee_id = nil
+}
+
+// SetCategoryID sets the "category_id" field.
+func (m *LeaveEntitlementMutation) SetCategoryID(u uuid.UUID) {
+	m.category_id = &u
+}
+
+// CategoryID returns the value of the "category_id" field in the mutation.
+func (m *LeaveEntitlementMutation) CategoryID() (r uuid.UUID, exists bool) {
+	v := m.category_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCategoryID returns the old "category_id" field's value of the LeaveEntitlement entity.
+// If the LeaveEntitlement object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveEntitlementMutation) OldCategoryID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCategoryID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCategoryID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCategoryID: %w", err)
+	}
+	return oldValue.CategoryID, nil
+}
+
+// ResetCategoryID resets all changes to the "category_id" field.
+func (m *LeaveEntitlementMutation) ResetCategoryID() {
+	m.category_id = nil
+}
+
+// SetDaysEntitled sets the "days_entitled" field.
+func (m *LeaveEntitlementMutation) SetDaysEntitled(d decimal.Decimal) {
+	m.days_entitled = &d
+}
+
+// DaysEntitled returns the value of the "days_entitled" field in the mutation.
+func (m *LeaveEntitlementMutation) DaysEntitled() (r decimal.Decimal, exists bool) {
+	v := m.days_entitled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDaysEntitled returns the old "days_entitled" field's value of the LeaveEntitlement entity.
+// If the LeaveEntitlement object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveEntitlementMutation) OldDaysEntitled(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDaysEntitled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDaysEntitled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDaysEntitled: %w", err)
+	}
+	return oldValue.DaysEntitled, nil
+}
+
+// ResetDaysEntitled resets all changes to the "days_entitled" field.
+func (m *LeaveEntitlementMutation) ResetDaysEntitled() {
+	m.days_entitled = nil
+}
+
+// SetYear sets the "year" field.
+func (m *LeaveEntitlementMutation) SetYear(i int) {
+	m.year = &i
+	m.addyear = nil
+}
+
+// Year returns the value of the "year" field in the mutation.
+func (m *LeaveEntitlementMutation) Year() (r int, exists bool) {
+	v := m.year
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldYear returns the old "year" field's value of the LeaveEntitlement entity.
+// If the LeaveEntitlement object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveEntitlementMutation) OldYear(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldYear is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldYear requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldYear: %w", err)
+	}
+	return oldValue.Year, nil
+}
+
+// AddYear adds i to the "year" field.
+func (m *LeaveEntitlementMutation) AddYear(i int) {
+	if m.addyear != nil {
+		*m.addyear += i
+	} else {
+		m.addyear = &i
+	}
+}
+
+// AddedYear returns the value that was added to the "year" field in this mutation.
+func (m *LeaveEntitlementMutation) AddedYear() (r int, exists bool) {
+	v := m.addyear
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetYear resets all changes to the "year" field.
+func (m *LeaveEntitlementMutation) ResetYear() {
+	m.year = nil
+	m.addyear = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *LeaveEntitlementMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *LeaveEntitlementMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the LeaveEntitlement entity.
+// If the LeaveEntitlement object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveEntitlementMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *LeaveEntitlementMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *LeaveEntitlementMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *LeaveEntitlementMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the LeaveEntitlement entity.
+// If the LeaveEntitlement object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveEntitlementMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *LeaveEntitlementMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the LeaveEntitlementMutation builder.
+func (m *LeaveEntitlementMutation) Where(ps ...predicate.LeaveEntitlement) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the LeaveEntitlementMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *LeaveEntitlementMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LeaveEntitlement, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *LeaveEntitlementMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *LeaveEntitlementMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (LeaveEntitlement).
+func (m *LeaveEntitlementMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *LeaveEntitlementMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.tenant_id != nil {
+		fields = append(fields, leaveentitlement.FieldTenantID)
+	}
+	if m.employee_id != nil {
+		fields = append(fields, leaveentitlement.FieldEmployeeID)
+	}
+	if m.category_id != nil {
+		fields = append(fields, leaveentitlement.FieldCategoryID)
+	}
+	if m.days_entitled != nil {
+		fields = append(fields, leaveentitlement.FieldDaysEntitled)
+	}
+	if m.year != nil {
+		fields = append(fields, leaveentitlement.FieldYear)
+	}
+	if m.created_at != nil {
+		fields = append(fields, leaveentitlement.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, leaveentitlement.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *LeaveEntitlementMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case leaveentitlement.FieldTenantID:
+		return m.TenantID()
+	case leaveentitlement.FieldEmployeeID:
+		return m.EmployeeID()
+	case leaveentitlement.FieldCategoryID:
+		return m.CategoryID()
+	case leaveentitlement.FieldDaysEntitled:
+		return m.DaysEntitled()
+	case leaveentitlement.FieldYear:
+		return m.Year()
+	case leaveentitlement.FieldCreatedAt:
+		return m.CreatedAt()
+	case leaveentitlement.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *LeaveEntitlementMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case leaveentitlement.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case leaveentitlement.FieldEmployeeID:
+		return m.OldEmployeeID(ctx)
+	case leaveentitlement.FieldCategoryID:
+		return m.OldCategoryID(ctx)
+	case leaveentitlement.FieldDaysEntitled:
+		return m.OldDaysEntitled(ctx)
+	case leaveentitlement.FieldYear:
+		return m.OldYear(ctx)
+	case leaveentitlement.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case leaveentitlement.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown LeaveEntitlement field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LeaveEntitlementMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case leaveentitlement.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case leaveentitlement.FieldEmployeeID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployeeID(v)
+		return nil
+	case leaveentitlement.FieldCategoryID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCategoryID(v)
+		return nil
+	case leaveentitlement.FieldDaysEntitled:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDaysEntitled(v)
+		return nil
+	case leaveentitlement.FieldYear:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetYear(v)
+		return nil
+	case leaveentitlement.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case leaveentitlement.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveEntitlement field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *LeaveEntitlementMutation) AddedFields() []string {
+	var fields []string
+	if m.addyear != nil {
+		fields = append(fields, leaveentitlement.FieldYear)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *LeaveEntitlementMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case leaveentitlement.FieldYear:
+		return m.AddedYear()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LeaveEntitlementMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case leaveentitlement.FieldYear:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddYear(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveEntitlement numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *LeaveEntitlementMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *LeaveEntitlementMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *LeaveEntitlementMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown LeaveEntitlement nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *LeaveEntitlementMutation) ResetField(name string) error {
+	switch name {
+	case leaveentitlement.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case leaveentitlement.FieldEmployeeID:
+		m.ResetEmployeeID()
+		return nil
+	case leaveentitlement.FieldCategoryID:
+		m.ResetCategoryID()
+		return nil
+	case leaveentitlement.FieldDaysEntitled:
+		m.ResetDaysEntitled()
+		return nil
+	case leaveentitlement.FieldYear:
+		m.ResetYear()
+		return nil
+	case leaveentitlement.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case leaveentitlement.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveEntitlement field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *LeaveEntitlementMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *LeaveEntitlementMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *LeaveEntitlementMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *LeaveEntitlementMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *LeaveEntitlementMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *LeaveEntitlementMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *LeaveEntitlementMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown LeaveEntitlement unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *LeaveEntitlementMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown LeaveEntitlement edge %s", name)
+}
+
+// LeaveLogMutation represents an operation that mutates the LeaveLog nodes in the graph.
+type LeaveLogMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *uuid.UUID
+	tenant_id        *uuid.UUID
+	leave_request_id *uuid.UUID
+	action           *leavelog.Action
+	description      *string
+	user_id          *uuid.UUID
+	created_at       *time.Time
+	clearedFields    map[string]struct{}
+	done             bool
+	oldValue         func(context.Context) (*LeaveLog, error)
+	predicates       []predicate.LeaveLog
+}
+
+var _ ent.Mutation = (*LeaveLogMutation)(nil)
+
+// leavelogOption allows management of the mutation configuration using functional options.
+type leavelogOption func(*LeaveLogMutation)
+
+// newLeaveLogMutation creates new mutation for the LeaveLog entity.
+func newLeaveLogMutation(c config, op Op, opts ...leavelogOption) *LeaveLogMutation {
+	m := &LeaveLogMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeLeaveLog,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withLeaveLogID sets the ID field of the mutation.
+func withLeaveLogID(id uuid.UUID) leavelogOption {
+	return func(m *LeaveLogMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *LeaveLog
+		)
+		m.oldValue = func(ctx context.Context) (*LeaveLog, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().LeaveLog.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withLeaveLog sets the old LeaveLog of the mutation.
+func withLeaveLog(node *LeaveLog) leavelogOption {
+	return func(m *LeaveLogMutation) {
+		m.oldValue = func(context.Context) (*LeaveLog, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m LeaveLogMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m LeaveLogMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of LeaveLog entities.
+func (m *LeaveLogMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *LeaveLogMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *LeaveLogMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().LeaveLog.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *LeaveLogMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *LeaveLogMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the LeaveLog entity.
+// If the LeaveLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveLogMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *LeaveLogMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetLeaveRequestID sets the "leave_request_id" field.
+func (m *LeaveLogMutation) SetLeaveRequestID(u uuid.UUID) {
+	m.leave_request_id = &u
+}
+
+// LeaveRequestID returns the value of the "leave_request_id" field in the mutation.
+func (m *LeaveLogMutation) LeaveRequestID() (r uuid.UUID, exists bool) {
+	v := m.leave_request_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLeaveRequestID returns the old "leave_request_id" field's value of the LeaveLog entity.
+// If the LeaveLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveLogMutation) OldLeaveRequestID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLeaveRequestID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLeaveRequestID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLeaveRequestID: %w", err)
+	}
+	return oldValue.LeaveRequestID, nil
+}
+
+// ResetLeaveRequestID resets all changes to the "leave_request_id" field.
+func (m *LeaveLogMutation) ResetLeaveRequestID() {
+	m.leave_request_id = nil
+}
+
+// SetAction sets the "action" field.
+func (m *LeaveLogMutation) SetAction(l leavelog.Action) {
+	m.action = &l
+}
+
+// Action returns the value of the "action" field in the mutation.
+func (m *LeaveLogMutation) Action() (r leavelog.Action, exists bool) {
+	v := m.action
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAction returns the old "action" field's value of the LeaveLog entity.
+// If the LeaveLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveLogMutation) OldAction(ctx context.Context) (v leavelog.Action, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAction is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAction requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAction: %w", err)
+	}
+	return oldValue.Action, nil
+}
+
+// ResetAction resets all changes to the "action" field.
+func (m *LeaveLogMutation) ResetAction() {
+	m.action = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *LeaveLogMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *LeaveLogMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the LeaveLog entity.
+// If the LeaveLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveLogMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ClearDescription clears the value of the "description" field.
+func (m *LeaveLogMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[leavelog.FieldDescription] = struct{}{}
+}
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *LeaveLogMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[leavelog.FieldDescription]
+	return ok
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *LeaveLogMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, leavelog.FieldDescription)
+}
+
+// SetUserID sets the "user_id" field.
+func (m *LeaveLogMutation) SetUserID(u uuid.UUID) {
+	m.user_id = &u
+}
+
+// UserID returns the value of the "user_id" field in the mutation.
+func (m *LeaveLogMutation) UserID() (r uuid.UUID, exists bool) {
+	v := m.user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserID returns the old "user_id" field's value of the LeaveLog entity.
+// If the LeaveLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveLogMutation) OldUserID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+	}
+	return oldValue.UserID, nil
+}
+
+// ClearUserID clears the value of the "user_id" field.
+func (m *LeaveLogMutation) ClearUserID() {
+	m.user_id = nil
+	m.clearedFields[leavelog.FieldUserID] = struct{}{}
+}
+
+// UserIDCleared returns if the "user_id" field was cleared in this mutation.
+func (m *LeaveLogMutation) UserIDCleared() bool {
+	_, ok := m.clearedFields[leavelog.FieldUserID]
+	return ok
+}
+
+// ResetUserID resets all changes to the "user_id" field.
+func (m *LeaveLogMutation) ResetUserID() {
+	m.user_id = nil
+	delete(m.clearedFields, leavelog.FieldUserID)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *LeaveLogMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *LeaveLogMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the LeaveLog entity.
+// If the LeaveLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveLogMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *LeaveLogMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// Where appends a list predicates to the LeaveLogMutation builder.
+func (m *LeaveLogMutation) Where(ps ...predicate.LeaveLog) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the LeaveLogMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *LeaveLogMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LeaveLog, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *LeaveLogMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *LeaveLogMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (LeaveLog).
+func (m *LeaveLogMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *LeaveLogMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.tenant_id != nil {
+		fields = append(fields, leavelog.FieldTenantID)
+	}
+	if m.leave_request_id != nil {
+		fields = append(fields, leavelog.FieldLeaveRequestID)
+	}
+	if m.action != nil {
+		fields = append(fields, leavelog.FieldAction)
+	}
+	if m.description != nil {
+		fields = append(fields, leavelog.FieldDescription)
+	}
+	if m.user_id != nil {
+		fields = append(fields, leavelog.FieldUserID)
+	}
+	if m.created_at != nil {
+		fields = append(fields, leavelog.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *LeaveLogMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case leavelog.FieldTenantID:
+		return m.TenantID()
+	case leavelog.FieldLeaveRequestID:
+		return m.LeaveRequestID()
+	case leavelog.FieldAction:
+		return m.Action()
+	case leavelog.FieldDescription:
+		return m.Description()
+	case leavelog.FieldUserID:
+		return m.UserID()
+	case leavelog.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *LeaveLogMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case leavelog.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case leavelog.FieldLeaveRequestID:
+		return m.OldLeaveRequestID(ctx)
+	case leavelog.FieldAction:
+		return m.OldAction(ctx)
+	case leavelog.FieldDescription:
+		return m.OldDescription(ctx)
+	case leavelog.FieldUserID:
+		return m.OldUserID(ctx)
+	case leavelog.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown LeaveLog field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LeaveLogMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case leavelog.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case leavelog.FieldLeaveRequestID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLeaveRequestID(v)
+		return nil
+	case leavelog.FieldAction:
+		v, ok := value.(leavelog.Action)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAction(v)
+		return nil
+	case leavelog.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	case leavelog.FieldUserID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserID(v)
+		return nil
+	case leavelog.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveLog field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *LeaveLogMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *LeaveLogMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LeaveLogMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown LeaveLog numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *LeaveLogMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(leavelog.FieldDescription) {
+		fields = append(fields, leavelog.FieldDescription)
+	}
+	if m.FieldCleared(leavelog.FieldUserID) {
+		fields = append(fields, leavelog.FieldUserID)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *LeaveLogMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *LeaveLogMutation) ClearField(name string) error {
+	switch name {
+	case leavelog.FieldDescription:
+		m.ClearDescription()
+		return nil
+	case leavelog.FieldUserID:
+		m.ClearUserID()
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveLog nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *LeaveLogMutation) ResetField(name string) error {
+	switch name {
+	case leavelog.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case leavelog.FieldLeaveRequestID:
+		m.ResetLeaveRequestID()
+		return nil
+	case leavelog.FieldAction:
+		m.ResetAction()
+		return nil
+	case leavelog.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case leavelog.FieldUserID:
+		m.ResetUserID()
+		return nil
+	case leavelog.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveLog field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *LeaveLogMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *LeaveLogMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *LeaveLogMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *LeaveLogMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *LeaveLogMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *LeaveLogMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *LeaveLogMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown LeaveLog unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *LeaveLogMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown LeaveLog edge %s", name)
+}
+
+// LeaveRequestMutation represents an operation that mutates the LeaveRequest nodes in the graph.
+type LeaveRequestMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *uuid.UUID
+	tenant_id        *uuid.UUID
+	employee_id      *uuid.UUID
+	category_id      *uuid.UUID
+	start_date       *time.Time
+	end_date         *time.Time
+	days_requested   *decimal.Decimal
+	reason           *string
+	status           *leaverequest.Status
+	approved_by      *uuid.UUID
+	approved_at      *time.Time
+	rejection_reason *string
+	created_at       *time.Time
+	updated_at       *time.Time
+	clearedFields    map[string]struct{}
+	done             bool
+	oldValue         func(context.Context) (*LeaveRequest, error)
+	predicates       []predicate.LeaveRequest
+}
+
+var _ ent.Mutation = (*LeaveRequestMutation)(nil)
+
+// leaverequestOption allows management of the mutation configuration using functional options.
+type leaverequestOption func(*LeaveRequestMutation)
+
+// newLeaveRequestMutation creates new mutation for the LeaveRequest entity.
+func newLeaveRequestMutation(c config, op Op, opts ...leaverequestOption) *LeaveRequestMutation {
+	m := &LeaveRequestMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeLeaveRequest,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withLeaveRequestID sets the ID field of the mutation.
+func withLeaveRequestID(id uuid.UUID) leaverequestOption {
+	return func(m *LeaveRequestMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *LeaveRequest
+		)
+		m.oldValue = func(ctx context.Context) (*LeaveRequest, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().LeaveRequest.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withLeaveRequest sets the old LeaveRequest of the mutation.
+func withLeaveRequest(node *LeaveRequest) leaverequestOption {
+	return func(m *LeaveRequestMutation) {
+		m.oldValue = func(context.Context) (*LeaveRequest, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m LeaveRequestMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m LeaveRequestMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of LeaveRequest entities.
+func (m *LeaveRequestMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *LeaveRequestMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *LeaveRequestMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().LeaveRequest.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *LeaveRequestMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *LeaveRequestMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *LeaveRequestMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetEmployeeID sets the "employee_id" field.
+func (m *LeaveRequestMutation) SetEmployeeID(u uuid.UUID) {
+	m.employee_id = &u
+}
+
+// EmployeeID returns the value of the "employee_id" field in the mutation.
+func (m *LeaveRequestMutation) EmployeeID() (r uuid.UUID, exists bool) {
+	v := m.employee_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployeeID returns the old "employee_id" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployeeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployeeID: %w", err)
+	}
+	return oldValue.EmployeeID, nil
+}
+
+// ResetEmployeeID resets all changes to the "employee_id" field.
+func (m *LeaveRequestMutation) ResetEmployeeID() {
+	m.employee_id = nil
+}
+
+// SetCategoryID sets the "category_id" field.
+func (m *LeaveRequestMutation) SetCategoryID(u uuid.UUID) {
+	m.category_id = &u
+}
+
+// CategoryID returns the value of the "category_id" field in the mutation.
+func (m *LeaveRequestMutation) CategoryID() (r uuid.UUID, exists bool) {
+	v := m.category_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCategoryID returns the old "category_id" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldCategoryID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCategoryID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCategoryID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCategoryID: %w", err)
+	}
+	return oldValue.CategoryID, nil
+}
+
+// ResetCategoryID resets all changes to the "category_id" field.
+func (m *LeaveRequestMutation) ResetCategoryID() {
+	m.category_id = nil
+}
+
+// SetStartDate sets the "start_date" field.
+func (m *LeaveRequestMutation) SetStartDate(t time.Time) {
+	m.start_date = &t
+}
+
+// StartDate returns the value of the "start_date" field in the mutation.
+func (m *LeaveRequestMutation) StartDate() (r time.Time, exists bool) {
+	v := m.start_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartDate returns the old "start_date" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldStartDate(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartDate: %w", err)
+	}
+	return oldValue.StartDate, nil
+}
+
+// ResetStartDate resets all changes to the "start_date" field.
+func (m *LeaveRequestMutation) ResetStartDate() {
+	m.start_date = nil
+}
+
+// SetEndDate sets the "end_date" field.
+func (m *LeaveRequestMutation) SetEndDate(t time.Time) {
+	m.end_date = &t
+}
+
+// EndDate returns the value of the "end_date" field in the mutation.
+func (m *LeaveRequestMutation) EndDate() (r time.Time, exists bool) {
+	v := m.end_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndDate returns the old "end_date" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldEndDate(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndDate: %w", err)
+	}
+	return oldValue.EndDate, nil
+}
+
+// ResetEndDate resets all changes to the "end_date" field.
+func (m *LeaveRequestMutation) ResetEndDate() {
+	m.end_date = nil
+}
+
+// SetDaysRequested sets the "days_requested" field.
+func (m *LeaveRequestMutation) SetDaysRequested(d decimal.Decimal) {
+	m.days_requested = &d
+}
+
+// DaysRequested returns the value of the "days_requested" field in the mutation.
+func (m *LeaveRequestMutation) DaysRequested() (r decimal.Decimal, exists bool) {
+	v := m.days_requested
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDaysRequested returns the old "days_requested" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldDaysRequested(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDaysRequested is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDaysRequested requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDaysRequested: %w", err)
+	}
+	return oldValue.DaysRequested, nil
+}
+
+// ResetDaysRequested resets all changes to the "days_requested" field.
+func (m *LeaveRequestMutation) ResetDaysRequested() {
+	m.days_requested = nil
+}
+
+// SetReason sets the "reason" field.
+func (m *LeaveRequestMutation) SetReason(s string) {
+	m.reason = &s
+}
+
+// Reason returns the value of the "reason" field in the mutation.
+func (m *LeaveRequestMutation) Reason() (r string, exists bool) {
+	v := m.reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReason returns the old "reason" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReason: %w", err)
+	}
+	return oldValue.Reason, nil
+}
+
+// ClearReason clears the value of the "reason" field.
+func (m *LeaveRequestMutation) ClearReason() {
+	m.reason = nil
+	m.clearedFields[leaverequest.FieldReason] = struct{}{}
+}
+
+// ReasonCleared returns if the "reason" field was cleared in this mutation.
+func (m *LeaveRequestMutation) ReasonCleared() bool {
+	_, ok := m.clearedFields[leaverequest.FieldReason]
+	return ok
+}
+
+// ResetReason resets all changes to the "reason" field.
+func (m *LeaveRequestMutation) ResetReason() {
+	m.reason = nil
+	delete(m.clearedFields, leaverequest.FieldReason)
+}
+
+// SetStatus sets the "status" field.
+func (m *LeaveRequestMutation) SetStatus(l leaverequest.Status) {
+	m.status = &l
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *LeaveRequestMutation) Status() (r leaverequest.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldStatus(ctx context.Context) (v leaverequest.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *LeaveRequestMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetApprovedBy sets the "approved_by" field.
+func (m *LeaveRequestMutation) SetApprovedBy(u uuid.UUID) {
+	m.approved_by = &u
+}
+
+// ApprovedBy returns the value of the "approved_by" field in the mutation.
+func (m *LeaveRequestMutation) ApprovedBy() (r uuid.UUID, exists bool) {
+	v := m.approved_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApprovedBy returns the old "approved_by" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldApprovedBy(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApprovedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApprovedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApprovedBy: %w", err)
+	}
+	return oldValue.ApprovedBy, nil
+}
+
+// ClearApprovedBy clears the value of the "approved_by" field.
+func (m *LeaveRequestMutation) ClearApprovedBy() {
+	m.approved_by = nil
+	m.clearedFields[leaverequest.FieldApprovedBy] = struct{}{}
+}
+
+// ApprovedByCleared returns if the "approved_by" field was cleared in this mutation.
+func (m *LeaveRequestMutation) ApprovedByCleared() bool {
+	_, ok := m.clearedFields[leaverequest.FieldApprovedBy]
+	return ok
+}
+
+// ResetApprovedBy resets all changes to the "approved_by" field.
+func (m *LeaveRequestMutation) ResetApprovedBy() {
+	m.approved_by = nil
+	delete(m.clearedFields, leaverequest.FieldApprovedBy)
+}
+
+// SetApprovedAt sets the "approved_at" field.
+func (m *LeaveRequestMutation) SetApprovedAt(t time.Time) {
+	m.approved_at = &t
+}
+
+// ApprovedAt returns the value of the "approved_at" field in the mutation.
+func (m *LeaveRequestMutation) ApprovedAt() (r time.Time, exists bool) {
+	v := m.approved_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApprovedAt returns the old "approved_at" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldApprovedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApprovedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApprovedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApprovedAt: %w", err)
+	}
+	return oldValue.ApprovedAt, nil
+}
+
+// ClearApprovedAt clears the value of the "approved_at" field.
+func (m *LeaveRequestMutation) ClearApprovedAt() {
+	m.approved_at = nil
+	m.clearedFields[leaverequest.FieldApprovedAt] = struct{}{}
+}
+
+// ApprovedAtCleared returns if the "approved_at" field was cleared in this mutation.
+func (m *LeaveRequestMutation) ApprovedAtCleared() bool {
+	_, ok := m.clearedFields[leaverequest.FieldApprovedAt]
+	return ok
+}
+
+// ResetApprovedAt resets all changes to the "approved_at" field.
+func (m *LeaveRequestMutation) ResetApprovedAt() {
+	m.approved_at = nil
+	delete(m.clearedFields, leaverequest.FieldApprovedAt)
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (m *LeaveRequestMutation) SetRejectionReason(s string) {
+	m.rejection_reason = &s
+}
+
+// RejectionReason returns the value of the "rejection_reason" field in the mutation.
+func (m *LeaveRequestMutation) RejectionReason() (r string, exists bool) {
+	v := m.rejection_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRejectionReason returns the old "rejection_reason" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldRejectionReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRejectionReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRejectionReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRejectionReason: %w", err)
+	}
+	return oldValue.RejectionReason, nil
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (m *LeaveRequestMutation) ClearRejectionReason() {
+	m.rejection_reason = nil
+	m.clearedFields[leaverequest.FieldRejectionReason] = struct{}{}
+}
+
+// RejectionReasonCleared returns if the "rejection_reason" field was cleared in this mutation.
+func (m *LeaveRequestMutation) RejectionReasonCleared() bool {
+	_, ok := m.clearedFields[leaverequest.FieldRejectionReason]
+	return ok
+}
+
+// ResetRejectionReason resets all changes to the "rejection_reason" field.
+func (m *LeaveRequestMutation) ResetRejectionReason() {
+	m.rejection_reason = nil
+	delete(m.clearedFields, leaverequest.FieldRejectionReason)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *LeaveRequestMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *LeaveRequestMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *LeaveRequestMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *LeaveRequestMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *LeaveRequestMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *LeaveRequestMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the LeaveRequestMutation builder.
+func (m *LeaveRequestMutation) Where(ps ...predicate.LeaveRequest) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the LeaveRequestMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *LeaveRequestMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LeaveRequest, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *LeaveRequestMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *LeaveRequestMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (LeaveRequest).
+func (m *LeaveRequestMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *LeaveRequestMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.tenant_id != nil {
+		fields = append(fields, leaverequest.FieldTenantID)
+	}
+	if m.employee_id != nil {
+		fields = append(fields, leaverequest.FieldEmployeeID)
+	}
+	if m.category_id != nil {
+		fields = append(fields, leaverequest.FieldCategoryID)
+	}
+	if m.start_date != nil {
+		fields = append(fields, leaverequest.FieldStartDate)
+	}
+	if m.end_date != nil {
+		fields = append(fields, leaverequest.FieldEndDate)
+	}
+	if m.days_requested != nil {
+		fields = append(fields, leaverequest.FieldDaysRequested)
+	}
+	if m.reason != nil {
+		fields = append(fields, leaverequest.FieldReason)
+	}
+	if m.status != nil {
+		fields = append(fields, leaverequest.FieldStatus)
+	}
+	if m.approved_by != nil {
+		fields = append(fields, leaverequest.FieldApprovedBy)
+	}
+	if m.approved_at != nil {
+		fields = append(fields, leaverequest.FieldApprovedAt)
+	}
+	if m.rejection_reason != nil {
+		fields = append(fields, leaverequest.FieldRejectionReason)
+	}
+	if m.created_at != nil {
+		fields = append(fields, leaverequest.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, leaverequest.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *LeaveRequestMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case leaverequest.FieldTenantID:
+		return m.TenantID()
+	case leaverequest.FieldEmployeeID:
+		return m.EmployeeID()
+	case leaverequest.FieldCategoryID:
+		return m.CategoryID()
+	case leaverequest.FieldStartDate:
+		return m.StartDate()
+	case leaverequest.FieldEndDate:
+		return m.EndDate()
+	case leaverequest.FieldDaysRequested:
+		return m.DaysRequested()
+	case leaverequest.FieldReason:
+		return m.Reason()
+	case leaverequest.FieldStatus:
+		return m.Status()
+	case leaverequest.FieldApprovedBy:
+		return m.ApprovedBy()
+	case leaverequest.FieldApprovedAt:
+		return m.ApprovedAt()
+	case leaverequest.FieldRejectionReason:
+		return m.RejectionReason()
+	case leaverequest.FieldCreatedAt:
+		return m.CreatedAt()
+	case leaverequest.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *LeaveRequestMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case leaverequest.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case leaverequest.FieldEmployeeID:
+		return m.OldEmployeeID(ctx)
+	case leaverequest.FieldCategoryID:
+		return m.OldCategoryID(ctx)
+	case leaverequest.FieldStartDate:
+		return m.OldStartDate(ctx)
+	case leaverequest.FieldEndDate:
+		return m.OldEndDate(ctx)
+	case leaverequest.FieldDaysRequested:
+		return m.OldDaysRequested(ctx)
+	case leaverequest.FieldReason:
+		return m.OldReason(ctx)
+	case leaverequest.FieldStatus:
+		return m.OldStatus(ctx)
+	case leaverequest.FieldApprovedBy:
+		return m.OldApprovedBy(ctx)
+	case leaverequest.FieldApprovedAt:
+		return m.OldApprovedAt(ctx)
+	case leaverequest.FieldRejectionReason:
+		return m.OldRejectionReason(ctx)
+	case leaverequest.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case leaverequest.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown LeaveRequest field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LeaveRequestMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case leaverequest.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case leaverequest.FieldEmployeeID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployeeID(v)
+		return nil
+	case leaverequest.FieldCategoryID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCategoryID(v)
+		return nil
+	case leaverequest.FieldStartDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartDate(v)
+		return nil
+	case leaverequest.FieldEndDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndDate(v)
+		return nil
+	case leaverequest.FieldDaysRequested:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDaysRequested(v)
+		return nil
+	case leaverequest.FieldReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReason(v)
+		return nil
+	case leaverequest.FieldStatus:
+		v, ok := value.(leaverequest.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case leaverequest.FieldApprovedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApprovedBy(v)
+		return nil
+	case leaverequest.FieldApprovedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApprovedAt(v)
+		return nil
+	case leaverequest.FieldRejectionReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRejectionReason(v)
+		return nil
+	case leaverequest.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case leaverequest.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveRequest field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *LeaveRequestMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *LeaveRequestMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LeaveRequestMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown LeaveRequest numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *LeaveRequestMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(leaverequest.FieldReason) {
+		fields = append(fields, leaverequest.FieldReason)
+	}
+	if m.FieldCleared(leaverequest.FieldApprovedBy) {
+		fields = append(fields, leaverequest.FieldApprovedBy)
+	}
+	if m.FieldCleared(leaverequest.FieldApprovedAt) {
+		fields = append(fields, leaverequest.FieldApprovedAt)
+	}
+	if m.FieldCleared(leaverequest.FieldRejectionReason) {
+		fields = append(fields, leaverequest.FieldRejectionReason)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *LeaveRequestMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *LeaveRequestMutation) ClearField(name string) error {
+	switch name {
+	case leaverequest.FieldReason:
+		m.ClearReason()
+		return nil
+	case leaverequest.FieldApprovedBy:
+		m.ClearApprovedBy()
+		return nil
+	case leaverequest.FieldApprovedAt:
+		m.ClearApprovedAt()
+		return nil
+	case leaverequest.FieldRejectionReason:
+		m.ClearRejectionReason()
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveRequest nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *LeaveRequestMutation) ResetField(name string) error {
+	switch name {
+	case leaverequest.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case leaverequest.FieldEmployeeID:
+		m.ResetEmployeeID()
+		return nil
+	case leaverequest.FieldCategoryID:
+		m.ResetCategoryID()
+		return nil
+	case leaverequest.FieldStartDate:
+		m.ResetStartDate()
+		return nil
+	case leaverequest.FieldEndDate:
+		m.ResetEndDate()
+		return nil
+	case leaverequest.FieldDaysRequested:
+		m.ResetDaysRequested()
+		return nil
+	case leaverequest.FieldReason:
+		m.ResetReason()
+		return nil
+	case leaverequest.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case leaverequest.FieldApprovedBy:
+		m.ResetApprovedBy()
+		return nil
+	case leaverequest.FieldApprovedAt:
+		m.ResetApprovedAt()
+		return nil
+	case leaverequest.FieldRejectionReason:
+		m.ResetRejectionReason()
+		return nil
+	case leaverequest.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case leaverequest.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown LeaveRequest field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *LeaveRequestMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *LeaveRequestMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *LeaveRequestMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *LeaveRequestMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *LeaveRequestMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *LeaveRequestMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *LeaveRequestMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown LeaveRequest unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *LeaveRequestMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown LeaveRequest edge %s", name)
+}
+
 // LoanTypeMutation represents an operation that mutates the LoanType nodes in the graph.
 type LoanTypeMutation struct {
 	config
@@ -34359,6 +38351,684 @@ func (m *ProjectMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ProjectMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Project edge %s", name)
+}
+
+// PublicHolidayMutation represents an operation that mutates the PublicHoliday nodes in the graph.
+type PublicHolidayMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	tenant_id     *uuid.UUID
+	name          *string
+	date          *time.Time
+	is_national   *bool
+	county        *string
+	created_at    *time.Time
+	updated_at    *time.Time
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*PublicHoliday, error)
+	predicates    []predicate.PublicHoliday
+}
+
+var _ ent.Mutation = (*PublicHolidayMutation)(nil)
+
+// publicholidayOption allows management of the mutation configuration using functional options.
+type publicholidayOption func(*PublicHolidayMutation)
+
+// newPublicHolidayMutation creates new mutation for the PublicHoliday entity.
+func newPublicHolidayMutation(c config, op Op, opts ...publicholidayOption) *PublicHolidayMutation {
+	m := &PublicHolidayMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePublicHoliday,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPublicHolidayID sets the ID field of the mutation.
+func withPublicHolidayID(id uuid.UUID) publicholidayOption {
+	return func(m *PublicHolidayMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *PublicHoliday
+		)
+		m.oldValue = func(ctx context.Context) (*PublicHoliday, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().PublicHoliday.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPublicHoliday sets the old PublicHoliday of the mutation.
+func withPublicHoliday(node *PublicHoliday) publicholidayOption {
+	return func(m *PublicHolidayMutation) {
+		m.oldValue = func(context.Context) (*PublicHoliday, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PublicHolidayMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PublicHolidayMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of PublicHoliday entities.
+func (m *PublicHolidayMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PublicHolidayMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PublicHolidayMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PublicHoliday.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *PublicHolidayMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *PublicHolidayMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the PublicHoliday entity.
+// If the PublicHoliday object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicHolidayMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *PublicHolidayMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetName sets the "name" field.
+func (m *PublicHolidayMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *PublicHolidayMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the PublicHoliday entity.
+// If the PublicHoliday object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicHolidayMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *PublicHolidayMutation) ResetName() {
+	m.name = nil
+}
+
+// SetDate sets the "date" field.
+func (m *PublicHolidayMutation) SetDate(t time.Time) {
+	m.date = &t
+}
+
+// Date returns the value of the "date" field in the mutation.
+func (m *PublicHolidayMutation) Date() (r time.Time, exists bool) {
+	v := m.date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDate returns the old "date" field's value of the PublicHoliday entity.
+// If the PublicHoliday object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicHolidayMutation) OldDate(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDate: %w", err)
+	}
+	return oldValue.Date, nil
+}
+
+// ResetDate resets all changes to the "date" field.
+func (m *PublicHolidayMutation) ResetDate() {
+	m.date = nil
+}
+
+// SetIsNational sets the "is_national" field.
+func (m *PublicHolidayMutation) SetIsNational(b bool) {
+	m.is_national = &b
+}
+
+// IsNational returns the value of the "is_national" field in the mutation.
+func (m *PublicHolidayMutation) IsNational() (r bool, exists bool) {
+	v := m.is_national
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsNational returns the old "is_national" field's value of the PublicHoliday entity.
+// If the PublicHoliday object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicHolidayMutation) OldIsNational(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsNational is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsNational requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsNational: %w", err)
+	}
+	return oldValue.IsNational, nil
+}
+
+// ResetIsNational resets all changes to the "is_national" field.
+func (m *PublicHolidayMutation) ResetIsNational() {
+	m.is_national = nil
+}
+
+// SetCounty sets the "county" field.
+func (m *PublicHolidayMutation) SetCounty(s string) {
+	m.county = &s
+}
+
+// County returns the value of the "county" field in the mutation.
+func (m *PublicHolidayMutation) County() (r string, exists bool) {
+	v := m.county
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCounty returns the old "county" field's value of the PublicHoliday entity.
+// If the PublicHoliday object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicHolidayMutation) OldCounty(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCounty is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCounty requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCounty: %w", err)
+	}
+	return oldValue.County, nil
+}
+
+// ClearCounty clears the value of the "county" field.
+func (m *PublicHolidayMutation) ClearCounty() {
+	m.county = nil
+	m.clearedFields[publicholiday.FieldCounty] = struct{}{}
+}
+
+// CountyCleared returns if the "county" field was cleared in this mutation.
+func (m *PublicHolidayMutation) CountyCleared() bool {
+	_, ok := m.clearedFields[publicholiday.FieldCounty]
+	return ok
+}
+
+// ResetCounty resets all changes to the "county" field.
+func (m *PublicHolidayMutation) ResetCounty() {
+	m.county = nil
+	delete(m.clearedFields, publicholiday.FieldCounty)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *PublicHolidayMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *PublicHolidayMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the PublicHoliday entity.
+// If the PublicHoliday object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicHolidayMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *PublicHolidayMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *PublicHolidayMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *PublicHolidayMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the PublicHoliday entity.
+// If the PublicHoliday object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PublicHolidayMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *PublicHolidayMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the PublicHolidayMutation builder.
+func (m *PublicHolidayMutation) Where(ps ...predicate.PublicHoliday) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the PublicHolidayMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PublicHolidayMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PublicHoliday, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *PublicHolidayMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PublicHolidayMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (PublicHoliday).
+func (m *PublicHolidayMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PublicHolidayMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.tenant_id != nil {
+		fields = append(fields, publicholiday.FieldTenantID)
+	}
+	if m.name != nil {
+		fields = append(fields, publicholiday.FieldName)
+	}
+	if m.date != nil {
+		fields = append(fields, publicholiday.FieldDate)
+	}
+	if m.is_national != nil {
+		fields = append(fields, publicholiday.FieldIsNational)
+	}
+	if m.county != nil {
+		fields = append(fields, publicholiday.FieldCounty)
+	}
+	if m.created_at != nil {
+		fields = append(fields, publicholiday.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, publicholiday.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PublicHolidayMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case publicholiday.FieldTenantID:
+		return m.TenantID()
+	case publicholiday.FieldName:
+		return m.Name()
+	case publicholiday.FieldDate:
+		return m.Date()
+	case publicholiday.FieldIsNational:
+		return m.IsNational()
+	case publicholiday.FieldCounty:
+		return m.County()
+	case publicholiday.FieldCreatedAt:
+		return m.CreatedAt()
+	case publicholiday.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PublicHolidayMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case publicholiday.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case publicholiday.FieldName:
+		return m.OldName(ctx)
+	case publicholiday.FieldDate:
+		return m.OldDate(ctx)
+	case publicholiday.FieldIsNational:
+		return m.OldIsNational(ctx)
+	case publicholiday.FieldCounty:
+		return m.OldCounty(ctx)
+	case publicholiday.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case publicholiday.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown PublicHoliday field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PublicHolidayMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case publicholiday.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case publicholiday.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case publicholiday.FieldDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDate(v)
+		return nil
+	case publicholiday.FieldIsNational:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsNational(v)
+		return nil
+	case publicholiday.FieldCounty:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCounty(v)
+		return nil
+	case publicholiday.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case publicholiday.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PublicHoliday field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PublicHolidayMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PublicHolidayMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PublicHolidayMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown PublicHoliday numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PublicHolidayMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(publicholiday.FieldCounty) {
+		fields = append(fields, publicholiday.FieldCounty)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PublicHolidayMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PublicHolidayMutation) ClearField(name string) error {
+	switch name {
+	case publicholiday.FieldCounty:
+		m.ClearCounty()
+		return nil
+	}
+	return fmt.Errorf("unknown PublicHoliday nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PublicHolidayMutation) ResetField(name string) error {
+	switch name {
+	case publicholiday.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case publicholiday.FieldName:
+		m.ResetName()
+		return nil
+	case publicholiday.FieldDate:
+		m.ResetDate()
+		return nil
+	case publicholiday.FieldIsNational:
+		m.ResetIsNational()
+		return nil
+	case publicholiday.FieldCounty:
+		m.ResetCounty()
+		return nil
+	case publicholiday.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case publicholiday.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown PublicHoliday field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PublicHolidayMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PublicHolidayMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PublicHolidayMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PublicHolidayMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PublicHolidayMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PublicHolidayMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PublicHolidayMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown PublicHoliday unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PublicHolidayMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown PublicHoliday edge %s", name)
 }
 
 // RegionMutation represents an operation that mutates the Region nodes in the graph.

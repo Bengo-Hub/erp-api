@@ -32,6 +32,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/http/handlers"
 	mw "github.com/Bengo-Hub/erp-api/internal/http/middleware"
 	"github.com/Bengo-Hub/erp-api/internal/modules/consumers"
+	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
+	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
 	"github.com/Bengo-Hub/erp-api/internal/modules/rbac"
 	"github.com/Bengo-Hub/erp-api/internal/platform/cache"
 	"github.com/Bengo-Hub/erp-api/internal/platform/database"
@@ -129,6 +131,16 @@ func run() error {
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
 	brandingHandler := handlers.NewBrandingHandler(log)
 
+	// HRM modules (Sprint 2 employees + Sprint 3 leave/attendance/recruitment/training/appraisals).
+	notifyPublisher := events.NewPublisher(orm, cfg.Events.SourceService)
+	employeesSvc := employees.NewService(orm)
+	employeesHandler := handlers.NewEmployeesHandler(log, employeesSvc)
+	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher))
+	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
+
+	// Leave accrual cron (Go replacement for the accrue_leave management command).
+	leave.NewAccrualCron(leaveSvc, log, cfg.Events.LeaveAccrualInterval).Start(ctx)
+
 	// --- Auth middleware (SSO JWKS + optional S2S API key) ---
 	authMiddleware, err := buildAuthMiddleware(cfg)
 	if err != nil {
@@ -151,6 +163,8 @@ func run() error {
 			priv.Use(authMiddleware.RequireAuth)
 			priv.Use(mw.OutletContext)
 			authHandler.RegisterRoutes(priv)
+			employeesHandler.RegisterRoutes(priv)
+			leaveHandler.RegisterRoutes(priv)
 		})
 	})
 

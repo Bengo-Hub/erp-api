@@ -74,6 +74,10 @@ type EventsConfig struct {
 	OutboxBatchSize  int           `envconfig:"OUTBOX_BATCH_SIZE" default:"100"`
 	OutboxPollPeriod time.Duration `envconfig:"OUTBOX_POLL_PERIOD" default:"5s"`
 	MaxAttempts      int           `envconfig:"EVENTS_MAX_ATTEMPTS" default:"10"`
+	// LeaveAccrualInterval is the period of the in-process leave-accrual cron
+	// (Go replacement for the accrue_leave management command). Idempotent, so a daily
+	// tick is safe. Disable via a very large value when running accrual as a k8s CronJob.
+	LeaveAccrualInterval time.Duration `envconfig:"LEAVE_ACCRUAL_INTERVAL" default:"24h"`
 }
 
 type AuthConfig struct {

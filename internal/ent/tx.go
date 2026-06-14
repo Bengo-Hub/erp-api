@@ -60,6 +60,16 @@ type Tx struct {
 	JobGroup *JobGroupClient
 	// JobTitle is the client for interacting with the JobTitle builders.
 	JobTitle *JobTitleClient
+	// LeaveBalance is the client for interacting with the LeaveBalance builders.
+	LeaveBalance *LeaveBalanceClient
+	// LeaveCategory is the client for interacting with the LeaveCategory builders.
+	LeaveCategory *LeaveCategoryClient
+	// LeaveEntitlement is the client for interacting with the LeaveEntitlement builders.
+	LeaveEntitlement *LeaveEntitlementClient
+	// LeaveLog is the client for interacting with the LeaveLog builders.
+	LeaveLog *LeaveLogClient
+	// LeaveRequest is the client for interacting with the LeaveRequest builders.
+	LeaveRequest *LeaveRequestClient
 	// LoanType is the client for interacting with the LoanType builders.
 	LoanType *LoanTypeClient
 	// LossAndDamage is the client for interacting with the LossAndDamage builders.
@@ -86,6 +96,8 @@ type Tx struct {
 	Permission *PermissionClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// PublicHoliday is the client for interacting with the PublicHoliday builders.
+	PublicHoliday *PublicHolidayClient
 	// Region is the client for interacting with the Region builders.
 	Region *RegionClient
 	// RepayOption is the client for interacting with the RepayOption builders.
@@ -257,6 +269,11 @@ func (tx *Tx) init() {
 	tx.IdempotencyKey = NewIdempotencyKeyClient(tx.config)
 	tx.JobGroup = NewJobGroupClient(tx.config)
 	tx.JobTitle = NewJobTitleClient(tx.config)
+	tx.LeaveBalance = NewLeaveBalanceClient(tx.config)
+	tx.LeaveCategory = NewLeaveCategoryClient(tx.config)
+	tx.LeaveEntitlement = NewLeaveEntitlementClient(tx.config)
+	tx.LeaveLog = NewLeaveLogClient(tx.config)
+	tx.LeaveRequest = NewLeaveRequestClient(tx.config)
 	tx.LoanType = NewLoanTypeClient(tx.config)
 	tx.LossAndDamage = NewLossAndDamageClient(tx.config)
 	tx.NextOfKin = NewNextOfKinClient(tx.config)
@@ -270,6 +287,7 @@ func (tx *Tx) init() {
 	tx.PayslipAudit = NewPayslipAuditClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
+	tx.PublicHoliday = NewPublicHolidayClient(tx.config)
 	tx.Region = NewRegionClient(tx.config)
 	tx.RepayOption = NewRepayOptionClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)

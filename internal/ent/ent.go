@@ -36,6 +36,11 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/idempotencykey"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavecategory"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leaveentitlement"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavelog"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
@@ -49,6 +54,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/project"
+	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
@@ -141,6 +147,11 @@ func checkColumn(t, c string) error {
 			idempotencykey.Table:      idempotencykey.ValidColumn,
 			jobgroup.Table:            jobgroup.ValidColumn,
 			jobtitle.Table:            jobtitle.ValidColumn,
+			leavebalance.Table:        leavebalance.ValidColumn,
+			leavecategory.Table:       leavecategory.ValidColumn,
+			leaveentitlement.Table:    leaveentitlement.ValidColumn,
+			leavelog.Table:            leavelog.ValidColumn,
+			leaverequest.Table:        leaverequest.ValidColumn,
 			loantype.Table:            loantype.ValidColumn,
 			lossanddamage.Table:       lossanddamage.ValidColumn,
 			nextofkin.Table:           nextofkin.ValidColumn,
@@ -154,6 +165,7 @@ func checkColumn(t, c string) error {
 			payslipaudit.Table:        payslipaudit.ValidColumn,
 			permission.Table:          permission.ValidColumn,
 			project.Table:             project.ValidColumn,
+			publicholiday.Table:       publicholiday.ValidColumn,
 			region.Table:              region.ValidColumn,
 			repayoption.Table:         repayoption.ValidColumn,
 			role.Table:                role.ValidColumn,

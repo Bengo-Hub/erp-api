@@ -40,6 +40,11 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/idempotencykey"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavecategory"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leaveentitlement"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leavelog"
+	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
@@ -53,6 +58,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/project"
+	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
@@ -116,6 +122,16 @@ type Client struct {
 	JobGroup *JobGroupClient
 	// JobTitle is the client for interacting with the JobTitle builders.
 	JobTitle *JobTitleClient
+	// LeaveBalance is the client for interacting with the LeaveBalance builders.
+	LeaveBalance *LeaveBalanceClient
+	// LeaveCategory is the client for interacting with the LeaveCategory builders.
+	LeaveCategory *LeaveCategoryClient
+	// LeaveEntitlement is the client for interacting with the LeaveEntitlement builders.
+	LeaveEntitlement *LeaveEntitlementClient
+	// LeaveLog is the client for interacting with the LeaveLog builders.
+	LeaveLog *LeaveLogClient
+	// LeaveRequest is the client for interacting with the LeaveRequest builders.
+	LeaveRequest *LeaveRequestClient
 	// LoanType is the client for interacting with the LoanType builders.
 	LoanType *LoanTypeClient
 	// LossAndDamage is the client for interacting with the LossAndDamage builders.
@@ -142,6 +158,8 @@ type Client struct {
 	Permission *PermissionClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// PublicHoliday is the client for interacting with the PublicHoliday builders.
+	PublicHoliday *PublicHolidayClient
 	// Region is the client for interacting with the Region builders.
 	Region *RegionClient
 	// RepayOption is the client for interacting with the RepayOption builders.
@@ -193,6 +211,11 @@ func (c *Client) init() {
 	c.IdempotencyKey = NewIdempotencyKeyClient(c.config)
 	c.JobGroup = NewJobGroupClient(c.config)
 	c.JobTitle = NewJobTitleClient(c.config)
+	c.LeaveBalance = NewLeaveBalanceClient(c.config)
+	c.LeaveCategory = NewLeaveCategoryClient(c.config)
+	c.LeaveEntitlement = NewLeaveEntitlementClient(c.config)
+	c.LeaveLog = NewLeaveLogClient(c.config)
+	c.LeaveRequest = NewLeaveRequestClient(c.config)
 	c.LoanType = NewLoanTypeClient(c.config)
 	c.LossAndDamage = NewLossAndDamageClient(c.config)
 	c.NextOfKin = NewNextOfKinClient(c.config)
@@ -206,6 +229,7 @@ func (c *Client) init() {
 	c.PayslipAudit = NewPayslipAuditClient(c.config)
 	c.Permission = NewPermissionClient(c.config)
 	c.Project = NewProjectClient(c.config)
+	c.PublicHoliday = NewPublicHolidayClient(c.config)
 	c.Region = NewRegionClient(c.config)
 	c.RepayOption = NewRepayOptionClient(c.config)
 	c.Role = NewRoleClient(c.config)
@@ -330,6 +354,11 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		IdempotencyKey:      NewIdempotencyKeyClient(cfg),
 		JobGroup:            NewJobGroupClient(cfg),
 		JobTitle:            NewJobTitleClient(cfg),
+		LeaveBalance:        NewLeaveBalanceClient(cfg),
+		LeaveCategory:       NewLeaveCategoryClient(cfg),
+		LeaveEntitlement:    NewLeaveEntitlementClient(cfg),
+		LeaveLog:            NewLeaveLogClient(cfg),
+		LeaveRequest:        NewLeaveRequestClient(cfg),
 		LoanType:            NewLoanTypeClient(cfg),
 		LossAndDamage:       NewLossAndDamageClient(cfg),
 		NextOfKin:           NewNextOfKinClient(cfg),
@@ -343,6 +372,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PayslipAudit:        NewPayslipAuditClient(cfg),
 		Permission:          NewPermissionClient(cfg),
 		Project:             NewProjectClient(cfg),
+		PublicHoliday:       NewPublicHolidayClient(cfg),
 		Region:              NewRegionClient(cfg),
 		RepayOption:         NewRepayOptionClient(cfg),
 		Role:                NewRoleClient(cfg),
@@ -394,6 +424,11 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		IdempotencyKey:      NewIdempotencyKeyClient(cfg),
 		JobGroup:            NewJobGroupClient(cfg),
 		JobTitle:            NewJobTitleClient(cfg),
+		LeaveBalance:        NewLeaveBalanceClient(cfg),
+		LeaveCategory:       NewLeaveCategoryClient(cfg),
+		LeaveEntitlement:    NewLeaveEntitlementClient(cfg),
+		LeaveLog:            NewLeaveLogClient(cfg),
+		LeaveRequest:        NewLeaveRequestClient(cfg),
 		LoanType:            NewLoanTypeClient(cfg),
 		LossAndDamage:       NewLossAndDamageClient(cfg),
 		NextOfKin:           NewNextOfKinClient(cfg),
@@ -407,6 +442,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PayslipAudit:        NewPayslipAuditClient(cfg),
 		Permission:          NewPermissionClient(cfg),
 		Project:             NewProjectClient(cfg),
+		PublicHoliday:       NewPublicHolidayClient(cfg),
 		Region:              NewRegionClient(cfg),
 		RepayOption:         NewRepayOptionClient(cfg),
 		Role:                NewRoleClient(cfg),
@@ -449,11 +485,12 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Contract, c.CustomUser, c.Department, c.Employee, c.EmployeeBankAccount,
 		c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan, c.ExpenseClaim,
 		c.GeneralHRSettings, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobTitle,
-		c.LoanType, c.LossAndDamage, c.NextOfKin, c.OutboxEvent, c.PayrollComponent,
-		c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio,
-		c.Payslip, c.PayslipAudit, c.Permission, c.Project, c.Region, c.RepayOption,
-		c.Role, c.RolePermission, c.SalaryDetails, c.UserRoleAssignment,
-		c.WithHoldingTax, c.WorkersUnion,
+		c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
+		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.NextOfKin, c.OutboxEvent,
+		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
+		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.Permission, c.Project,
+		c.PublicHoliday, c.Region, c.RepayOption, c.Role, c.RolePermission,
+		c.SalaryDetails, c.UserRoleAssignment, c.WithHoldingTax, c.WorkersUnion,
 	} {
 		n.Use(hooks...)
 	}
@@ -468,11 +505,12 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Contract, c.CustomUser, c.Department, c.Employee, c.EmployeeBankAccount,
 		c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan, c.ExpenseClaim,
 		c.GeneralHRSettings, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobTitle,
-		c.LoanType, c.LossAndDamage, c.NextOfKin, c.OutboxEvent, c.PayrollComponent,
-		c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio,
-		c.Payslip, c.PayslipAudit, c.Permission, c.Project, c.Region, c.RepayOption,
-		c.Role, c.RolePermission, c.SalaryDetails, c.UserRoleAssignment,
-		c.WithHoldingTax, c.WorkersUnion,
+		c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
+		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.NextOfKin, c.OutboxEvent,
+		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
+		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.Permission, c.Project,
+		c.PublicHoliday, c.Region, c.RepayOption, c.Role, c.RolePermission,
+		c.SalaryDetails, c.UserRoleAssignment, c.WithHoldingTax, c.WorkersUnion,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -529,6 +567,16 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.JobGroup.mutate(ctx, m)
 	case *JobTitleMutation:
 		return c.JobTitle.mutate(ctx, m)
+	case *LeaveBalanceMutation:
+		return c.LeaveBalance.mutate(ctx, m)
+	case *LeaveCategoryMutation:
+		return c.LeaveCategory.mutate(ctx, m)
+	case *LeaveEntitlementMutation:
+		return c.LeaveEntitlement.mutate(ctx, m)
+	case *LeaveLogMutation:
+		return c.LeaveLog.mutate(ctx, m)
+	case *LeaveRequestMutation:
+		return c.LeaveRequest.mutate(ctx, m)
 	case *LoanTypeMutation:
 		return c.LoanType.mutate(ctx, m)
 	case *LossAndDamageMutation:
@@ -555,6 +603,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Permission.mutate(ctx, m)
 	case *ProjectMutation:
 		return c.Project.mutate(ctx, m)
+	case *PublicHolidayMutation:
+		return c.PublicHoliday.mutate(ctx, m)
 	case *RegionMutation:
 		return c.Region.mutate(ctx, m)
 	case *RepayOptionMutation:
@@ -3848,6 +3898,671 @@ func (c *JobTitleClient) mutate(ctx context.Context, m *JobTitleMutation) (Value
 	}
 }
 
+// LeaveBalanceClient is a client for the LeaveBalance schema.
+type LeaveBalanceClient struct {
+	config
+}
+
+// NewLeaveBalanceClient returns a client for the LeaveBalance from the given config.
+func NewLeaveBalanceClient(c config) *LeaveBalanceClient {
+	return &LeaveBalanceClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `leavebalance.Hooks(f(g(h())))`.
+func (c *LeaveBalanceClient) Use(hooks ...Hook) {
+	c.hooks.LeaveBalance = append(c.hooks.LeaveBalance, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `leavebalance.Intercept(f(g(h())))`.
+func (c *LeaveBalanceClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LeaveBalance = append(c.inters.LeaveBalance, interceptors...)
+}
+
+// Create returns a builder for creating a LeaveBalance entity.
+func (c *LeaveBalanceClient) Create() *LeaveBalanceCreate {
+	mutation := newLeaveBalanceMutation(c.config, OpCreate)
+	return &LeaveBalanceCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LeaveBalance entities.
+func (c *LeaveBalanceClient) CreateBulk(builders ...*LeaveBalanceCreate) *LeaveBalanceCreateBulk {
+	return &LeaveBalanceCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LeaveBalanceClient) MapCreateBulk(slice any, setFunc func(*LeaveBalanceCreate, int)) *LeaveBalanceCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LeaveBalanceCreateBulk{err: fmt.Errorf("calling to LeaveBalanceClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LeaveBalanceCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LeaveBalanceCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LeaveBalance.
+func (c *LeaveBalanceClient) Update() *LeaveBalanceUpdate {
+	mutation := newLeaveBalanceMutation(c.config, OpUpdate)
+	return &LeaveBalanceUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LeaveBalanceClient) UpdateOne(_m *LeaveBalance) *LeaveBalanceUpdateOne {
+	mutation := newLeaveBalanceMutation(c.config, OpUpdateOne, withLeaveBalance(_m))
+	return &LeaveBalanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LeaveBalanceClient) UpdateOneID(id uuid.UUID) *LeaveBalanceUpdateOne {
+	mutation := newLeaveBalanceMutation(c.config, OpUpdateOne, withLeaveBalanceID(id))
+	return &LeaveBalanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LeaveBalance.
+func (c *LeaveBalanceClient) Delete() *LeaveBalanceDelete {
+	mutation := newLeaveBalanceMutation(c.config, OpDelete)
+	return &LeaveBalanceDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LeaveBalanceClient) DeleteOne(_m *LeaveBalance) *LeaveBalanceDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LeaveBalanceClient) DeleteOneID(id uuid.UUID) *LeaveBalanceDeleteOne {
+	builder := c.Delete().Where(leavebalance.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LeaveBalanceDeleteOne{builder}
+}
+
+// Query returns a query builder for LeaveBalance.
+func (c *LeaveBalanceClient) Query() *LeaveBalanceQuery {
+	return &LeaveBalanceQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLeaveBalance},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LeaveBalance entity by its id.
+func (c *LeaveBalanceClient) Get(ctx context.Context, id uuid.UUID) (*LeaveBalance, error) {
+	return c.Query().Where(leavebalance.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LeaveBalanceClient) GetX(ctx context.Context, id uuid.UUID) *LeaveBalance {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *LeaveBalanceClient) Hooks() []Hook {
+	return c.hooks.LeaveBalance
+}
+
+// Interceptors returns the client interceptors.
+func (c *LeaveBalanceClient) Interceptors() []Interceptor {
+	return c.inters.LeaveBalance
+}
+
+func (c *LeaveBalanceClient) mutate(ctx context.Context, m *LeaveBalanceMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LeaveBalanceCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LeaveBalanceUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LeaveBalanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LeaveBalanceDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LeaveBalance mutation op: %q", m.Op())
+	}
+}
+
+// LeaveCategoryClient is a client for the LeaveCategory schema.
+type LeaveCategoryClient struct {
+	config
+}
+
+// NewLeaveCategoryClient returns a client for the LeaveCategory from the given config.
+func NewLeaveCategoryClient(c config) *LeaveCategoryClient {
+	return &LeaveCategoryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `leavecategory.Hooks(f(g(h())))`.
+func (c *LeaveCategoryClient) Use(hooks ...Hook) {
+	c.hooks.LeaveCategory = append(c.hooks.LeaveCategory, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `leavecategory.Intercept(f(g(h())))`.
+func (c *LeaveCategoryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LeaveCategory = append(c.inters.LeaveCategory, interceptors...)
+}
+
+// Create returns a builder for creating a LeaveCategory entity.
+func (c *LeaveCategoryClient) Create() *LeaveCategoryCreate {
+	mutation := newLeaveCategoryMutation(c.config, OpCreate)
+	return &LeaveCategoryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LeaveCategory entities.
+func (c *LeaveCategoryClient) CreateBulk(builders ...*LeaveCategoryCreate) *LeaveCategoryCreateBulk {
+	return &LeaveCategoryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LeaveCategoryClient) MapCreateBulk(slice any, setFunc func(*LeaveCategoryCreate, int)) *LeaveCategoryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LeaveCategoryCreateBulk{err: fmt.Errorf("calling to LeaveCategoryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LeaveCategoryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LeaveCategoryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LeaveCategory.
+func (c *LeaveCategoryClient) Update() *LeaveCategoryUpdate {
+	mutation := newLeaveCategoryMutation(c.config, OpUpdate)
+	return &LeaveCategoryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LeaveCategoryClient) UpdateOne(_m *LeaveCategory) *LeaveCategoryUpdateOne {
+	mutation := newLeaveCategoryMutation(c.config, OpUpdateOne, withLeaveCategory(_m))
+	return &LeaveCategoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LeaveCategoryClient) UpdateOneID(id uuid.UUID) *LeaveCategoryUpdateOne {
+	mutation := newLeaveCategoryMutation(c.config, OpUpdateOne, withLeaveCategoryID(id))
+	return &LeaveCategoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LeaveCategory.
+func (c *LeaveCategoryClient) Delete() *LeaveCategoryDelete {
+	mutation := newLeaveCategoryMutation(c.config, OpDelete)
+	return &LeaveCategoryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LeaveCategoryClient) DeleteOne(_m *LeaveCategory) *LeaveCategoryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LeaveCategoryClient) DeleteOneID(id uuid.UUID) *LeaveCategoryDeleteOne {
+	builder := c.Delete().Where(leavecategory.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LeaveCategoryDeleteOne{builder}
+}
+
+// Query returns a query builder for LeaveCategory.
+func (c *LeaveCategoryClient) Query() *LeaveCategoryQuery {
+	return &LeaveCategoryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLeaveCategory},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LeaveCategory entity by its id.
+func (c *LeaveCategoryClient) Get(ctx context.Context, id uuid.UUID) (*LeaveCategory, error) {
+	return c.Query().Where(leavecategory.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LeaveCategoryClient) GetX(ctx context.Context, id uuid.UUID) *LeaveCategory {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *LeaveCategoryClient) Hooks() []Hook {
+	return c.hooks.LeaveCategory
+}
+
+// Interceptors returns the client interceptors.
+func (c *LeaveCategoryClient) Interceptors() []Interceptor {
+	return c.inters.LeaveCategory
+}
+
+func (c *LeaveCategoryClient) mutate(ctx context.Context, m *LeaveCategoryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LeaveCategoryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LeaveCategoryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LeaveCategoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LeaveCategoryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LeaveCategory mutation op: %q", m.Op())
+	}
+}
+
+// LeaveEntitlementClient is a client for the LeaveEntitlement schema.
+type LeaveEntitlementClient struct {
+	config
+}
+
+// NewLeaveEntitlementClient returns a client for the LeaveEntitlement from the given config.
+func NewLeaveEntitlementClient(c config) *LeaveEntitlementClient {
+	return &LeaveEntitlementClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `leaveentitlement.Hooks(f(g(h())))`.
+func (c *LeaveEntitlementClient) Use(hooks ...Hook) {
+	c.hooks.LeaveEntitlement = append(c.hooks.LeaveEntitlement, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `leaveentitlement.Intercept(f(g(h())))`.
+func (c *LeaveEntitlementClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LeaveEntitlement = append(c.inters.LeaveEntitlement, interceptors...)
+}
+
+// Create returns a builder for creating a LeaveEntitlement entity.
+func (c *LeaveEntitlementClient) Create() *LeaveEntitlementCreate {
+	mutation := newLeaveEntitlementMutation(c.config, OpCreate)
+	return &LeaveEntitlementCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LeaveEntitlement entities.
+func (c *LeaveEntitlementClient) CreateBulk(builders ...*LeaveEntitlementCreate) *LeaveEntitlementCreateBulk {
+	return &LeaveEntitlementCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LeaveEntitlementClient) MapCreateBulk(slice any, setFunc func(*LeaveEntitlementCreate, int)) *LeaveEntitlementCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LeaveEntitlementCreateBulk{err: fmt.Errorf("calling to LeaveEntitlementClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LeaveEntitlementCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LeaveEntitlementCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LeaveEntitlement.
+func (c *LeaveEntitlementClient) Update() *LeaveEntitlementUpdate {
+	mutation := newLeaveEntitlementMutation(c.config, OpUpdate)
+	return &LeaveEntitlementUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LeaveEntitlementClient) UpdateOne(_m *LeaveEntitlement) *LeaveEntitlementUpdateOne {
+	mutation := newLeaveEntitlementMutation(c.config, OpUpdateOne, withLeaveEntitlement(_m))
+	return &LeaveEntitlementUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LeaveEntitlementClient) UpdateOneID(id uuid.UUID) *LeaveEntitlementUpdateOne {
+	mutation := newLeaveEntitlementMutation(c.config, OpUpdateOne, withLeaveEntitlementID(id))
+	return &LeaveEntitlementUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LeaveEntitlement.
+func (c *LeaveEntitlementClient) Delete() *LeaveEntitlementDelete {
+	mutation := newLeaveEntitlementMutation(c.config, OpDelete)
+	return &LeaveEntitlementDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LeaveEntitlementClient) DeleteOne(_m *LeaveEntitlement) *LeaveEntitlementDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LeaveEntitlementClient) DeleteOneID(id uuid.UUID) *LeaveEntitlementDeleteOne {
+	builder := c.Delete().Where(leaveentitlement.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LeaveEntitlementDeleteOne{builder}
+}
+
+// Query returns a query builder for LeaveEntitlement.
+func (c *LeaveEntitlementClient) Query() *LeaveEntitlementQuery {
+	return &LeaveEntitlementQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLeaveEntitlement},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LeaveEntitlement entity by its id.
+func (c *LeaveEntitlementClient) Get(ctx context.Context, id uuid.UUID) (*LeaveEntitlement, error) {
+	return c.Query().Where(leaveentitlement.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LeaveEntitlementClient) GetX(ctx context.Context, id uuid.UUID) *LeaveEntitlement {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *LeaveEntitlementClient) Hooks() []Hook {
+	return c.hooks.LeaveEntitlement
+}
+
+// Interceptors returns the client interceptors.
+func (c *LeaveEntitlementClient) Interceptors() []Interceptor {
+	return c.inters.LeaveEntitlement
+}
+
+func (c *LeaveEntitlementClient) mutate(ctx context.Context, m *LeaveEntitlementMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LeaveEntitlementCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LeaveEntitlementUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LeaveEntitlementUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LeaveEntitlementDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LeaveEntitlement mutation op: %q", m.Op())
+	}
+}
+
+// LeaveLogClient is a client for the LeaveLog schema.
+type LeaveLogClient struct {
+	config
+}
+
+// NewLeaveLogClient returns a client for the LeaveLog from the given config.
+func NewLeaveLogClient(c config) *LeaveLogClient {
+	return &LeaveLogClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `leavelog.Hooks(f(g(h())))`.
+func (c *LeaveLogClient) Use(hooks ...Hook) {
+	c.hooks.LeaveLog = append(c.hooks.LeaveLog, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `leavelog.Intercept(f(g(h())))`.
+func (c *LeaveLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LeaveLog = append(c.inters.LeaveLog, interceptors...)
+}
+
+// Create returns a builder for creating a LeaveLog entity.
+func (c *LeaveLogClient) Create() *LeaveLogCreate {
+	mutation := newLeaveLogMutation(c.config, OpCreate)
+	return &LeaveLogCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LeaveLog entities.
+func (c *LeaveLogClient) CreateBulk(builders ...*LeaveLogCreate) *LeaveLogCreateBulk {
+	return &LeaveLogCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LeaveLogClient) MapCreateBulk(slice any, setFunc func(*LeaveLogCreate, int)) *LeaveLogCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LeaveLogCreateBulk{err: fmt.Errorf("calling to LeaveLogClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LeaveLogCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LeaveLogCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LeaveLog.
+func (c *LeaveLogClient) Update() *LeaveLogUpdate {
+	mutation := newLeaveLogMutation(c.config, OpUpdate)
+	return &LeaveLogUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LeaveLogClient) UpdateOne(_m *LeaveLog) *LeaveLogUpdateOne {
+	mutation := newLeaveLogMutation(c.config, OpUpdateOne, withLeaveLog(_m))
+	return &LeaveLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LeaveLogClient) UpdateOneID(id uuid.UUID) *LeaveLogUpdateOne {
+	mutation := newLeaveLogMutation(c.config, OpUpdateOne, withLeaveLogID(id))
+	return &LeaveLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LeaveLog.
+func (c *LeaveLogClient) Delete() *LeaveLogDelete {
+	mutation := newLeaveLogMutation(c.config, OpDelete)
+	return &LeaveLogDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LeaveLogClient) DeleteOne(_m *LeaveLog) *LeaveLogDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LeaveLogClient) DeleteOneID(id uuid.UUID) *LeaveLogDeleteOne {
+	builder := c.Delete().Where(leavelog.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LeaveLogDeleteOne{builder}
+}
+
+// Query returns a query builder for LeaveLog.
+func (c *LeaveLogClient) Query() *LeaveLogQuery {
+	return &LeaveLogQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLeaveLog},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LeaveLog entity by its id.
+func (c *LeaveLogClient) Get(ctx context.Context, id uuid.UUID) (*LeaveLog, error) {
+	return c.Query().Where(leavelog.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LeaveLogClient) GetX(ctx context.Context, id uuid.UUID) *LeaveLog {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *LeaveLogClient) Hooks() []Hook {
+	return c.hooks.LeaveLog
+}
+
+// Interceptors returns the client interceptors.
+func (c *LeaveLogClient) Interceptors() []Interceptor {
+	return c.inters.LeaveLog
+}
+
+func (c *LeaveLogClient) mutate(ctx context.Context, m *LeaveLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LeaveLogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LeaveLogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LeaveLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LeaveLogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LeaveLog mutation op: %q", m.Op())
+	}
+}
+
+// LeaveRequestClient is a client for the LeaveRequest schema.
+type LeaveRequestClient struct {
+	config
+}
+
+// NewLeaveRequestClient returns a client for the LeaveRequest from the given config.
+func NewLeaveRequestClient(c config) *LeaveRequestClient {
+	return &LeaveRequestClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `leaverequest.Hooks(f(g(h())))`.
+func (c *LeaveRequestClient) Use(hooks ...Hook) {
+	c.hooks.LeaveRequest = append(c.hooks.LeaveRequest, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `leaverequest.Intercept(f(g(h())))`.
+func (c *LeaveRequestClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LeaveRequest = append(c.inters.LeaveRequest, interceptors...)
+}
+
+// Create returns a builder for creating a LeaveRequest entity.
+func (c *LeaveRequestClient) Create() *LeaveRequestCreate {
+	mutation := newLeaveRequestMutation(c.config, OpCreate)
+	return &LeaveRequestCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LeaveRequest entities.
+func (c *LeaveRequestClient) CreateBulk(builders ...*LeaveRequestCreate) *LeaveRequestCreateBulk {
+	return &LeaveRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LeaveRequestClient) MapCreateBulk(slice any, setFunc func(*LeaveRequestCreate, int)) *LeaveRequestCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LeaveRequestCreateBulk{err: fmt.Errorf("calling to LeaveRequestClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LeaveRequestCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LeaveRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LeaveRequest.
+func (c *LeaveRequestClient) Update() *LeaveRequestUpdate {
+	mutation := newLeaveRequestMutation(c.config, OpUpdate)
+	return &LeaveRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LeaveRequestClient) UpdateOne(_m *LeaveRequest) *LeaveRequestUpdateOne {
+	mutation := newLeaveRequestMutation(c.config, OpUpdateOne, withLeaveRequest(_m))
+	return &LeaveRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LeaveRequestClient) UpdateOneID(id uuid.UUID) *LeaveRequestUpdateOne {
+	mutation := newLeaveRequestMutation(c.config, OpUpdateOne, withLeaveRequestID(id))
+	return &LeaveRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LeaveRequest.
+func (c *LeaveRequestClient) Delete() *LeaveRequestDelete {
+	mutation := newLeaveRequestMutation(c.config, OpDelete)
+	return &LeaveRequestDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LeaveRequestClient) DeleteOne(_m *LeaveRequest) *LeaveRequestDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LeaveRequestClient) DeleteOneID(id uuid.UUID) *LeaveRequestDeleteOne {
+	builder := c.Delete().Where(leaverequest.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LeaveRequestDeleteOne{builder}
+}
+
+// Query returns a query builder for LeaveRequest.
+func (c *LeaveRequestClient) Query() *LeaveRequestQuery {
+	return &LeaveRequestQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLeaveRequest},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LeaveRequest entity by its id.
+func (c *LeaveRequestClient) Get(ctx context.Context, id uuid.UUID) (*LeaveRequest, error) {
+	return c.Query().Where(leaverequest.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LeaveRequestClient) GetX(ctx context.Context, id uuid.UUID) *LeaveRequest {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *LeaveRequestClient) Hooks() []Hook {
+	return c.hooks.LeaveRequest
+}
+
+// Interceptors returns the client interceptors.
+func (c *LeaveRequestClient) Interceptors() []Interceptor {
+	return c.inters.LeaveRequest
+}
+
+func (c *LeaveRequestClient) mutate(ctx context.Context, m *LeaveRequestMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LeaveRequestCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LeaveRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LeaveRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LeaveRequestDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LeaveRequest mutation op: %q", m.Op())
+	}
+}
+
 // LoanTypeClient is a client for the LoanType schema.
 type LoanTypeClient struct {
 	config
@@ -5609,6 +6324,139 @@ func (c *ProjectClient) mutate(ctx context.Context, m *ProjectMutation) (Value, 
 	}
 }
 
+// PublicHolidayClient is a client for the PublicHoliday schema.
+type PublicHolidayClient struct {
+	config
+}
+
+// NewPublicHolidayClient returns a client for the PublicHoliday from the given config.
+func NewPublicHolidayClient(c config) *PublicHolidayClient {
+	return &PublicHolidayClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `publicholiday.Hooks(f(g(h())))`.
+func (c *PublicHolidayClient) Use(hooks ...Hook) {
+	c.hooks.PublicHoliday = append(c.hooks.PublicHoliday, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `publicholiday.Intercept(f(g(h())))`.
+func (c *PublicHolidayClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PublicHoliday = append(c.inters.PublicHoliday, interceptors...)
+}
+
+// Create returns a builder for creating a PublicHoliday entity.
+func (c *PublicHolidayClient) Create() *PublicHolidayCreate {
+	mutation := newPublicHolidayMutation(c.config, OpCreate)
+	return &PublicHolidayCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PublicHoliday entities.
+func (c *PublicHolidayClient) CreateBulk(builders ...*PublicHolidayCreate) *PublicHolidayCreateBulk {
+	return &PublicHolidayCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PublicHolidayClient) MapCreateBulk(slice any, setFunc func(*PublicHolidayCreate, int)) *PublicHolidayCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PublicHolidayCreateBulk{err: fmt.Errorf("calling to PublicHolidayClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PublicHolidayCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PublicHolidayCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PublicHoliday.
+func (c *PublicHolidayClient) Update() *PublicHolidayUpdate {
+	mutation := newPublicHolidayMutation(c.config, OpUpdate)
+	return &PublicHolidayUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PublicHolidayClient) UpdateOne(_m *PublicHoliday) *PublicHolidayUpdateOne {
+	mutation := newPublicHolidayMutation(c.config, OpUpdateOne, withPublicHoliday(_m))
+	return &PublicHolidayUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PublicHolidayClient) UpdateOneID(id uuid.UUID) *PublicHolidayUpdateOne {
+	mutation := newPublicHolidayMutation(c.config, OpUpdateOne, withPublicHolidayID(id))
+	return &PublicHolidayUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PublicHoliday.
+func (c *PublicHolidayClient) Delete() *PublicHolidayDelete {
+	mutation := newPublicHolidayMutation(c.config, OpDelete)
+	return &PublicHolidayDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PublicHolidayClient) DeleteOne(_m *PublicHoliday) *PublicHolidayDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PublicHolidayClient) DeleteOneID(id uuid.UUID) *PublicHolidayDeleteOne {
+	builder := c.Delete().Where(publicholiday.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PublicHolidayDeleteOne{builder}
+}
+
+// Query returns a query builder for PublicHoliday.
+func (c *PublicHolidayClient) Query() *PublicHolidayQuery {
+	return &PublicHolidayQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePublicHoliday},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PublicHoliday entity by its id.
+func (c *PublicHolidayClient) Get(ctx context.Context, id uuid.UUID) (*PublicHoliday, error) {
+	return c.Query().Where(publicholiday.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PublicHolidayClient) GetX(ctx context.Context, id uuid.UUID) *PublicHoliday {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PublicHolidayClient) Hooks() []Hook {
+	return c.hooks.PublicHoliday
+}
+
+// Interceptors returns the client interceptors.
+func (c *PublicHolidayClient) Interceptors() []Interceptor {
+	return c.inters.PublicHoliday
+}
+
+func (c *PublicHolidayClient) mutate(ctx context.Context, m *PublicHolidayMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PublicHolidayCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PublicHolidayUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PublicHolidayUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PublicHolidayDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PublicHoliday mutation op: %q", m.Op())
+	}
+}
+
 // RegionClient is a client for the Region schema.
 type RegionClient struct {
 	config
@@ -6792,10 +7640,11 @@ type (
 		BankInstitution, BenefitTax, ClaimItem, ContactDetails, Contract, CustomUser,
 		Department, Employee, EmployeeBankAccount, EmployeeBenefit, EmployeeDocument,
 		EmployeeLoan, ExpenseClaim, GeneralHRSettings, HRDetails, IdempotencyKey,
-		JobGroup, JobTitle, LoanType, LossAndDamage, NextOfKin, OutboxEvent,
+		JobGroup, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
+		LeaveRequest, LoanType, LossAndDamage, NextOfKin, OutboxEvent,
 		PayrollComponent, PayrollFormula, PayrollFormulaItem, PayrollRelief,
-		PayrollSplitRatio, Payslip, PayslipAudit, Permission, Project, Region,
-		RepayOption, Role, RolePermission, SalaryDetails, UserRoleAssignment,
+		PayrollSplitRatio, Payslip, PayslipAudit, Permission, Project, PublicHoliday,
+		Region, RepayOption, Role, RolePermission, SalaryDetails, UserRoleAssignment,
 		WithHoldingTax, WorkersUnion []ent.Hook
 	}
 	inters struct {
@@ -6803,10 +7652,11 @@ type (
 		BankInstitution, BenefitTax, ClaimItem, ContactDetails, Contract, CustomUser,
 		Department, Employee, EmployeeBankAccount, EmployeeBenefit, EmployeeDocument,
 		EmployeeLoan, ExpenseClaim, GeneralHRSettings, HRDetails, IdempotencyKey,
-		JobGroup, JobTitle, LoanType, LossAndDamage, NextOfKin, OutboxEvent,
+		JobGroup, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
+		LeaveRequest, LoanType, LossAndDamage, NextOfKin, OutboxEvent,
 		PayrollComponent, PayrollFormula, PayrollFormulaItem, PayrollRelief,
-		PayrollSplitRatio, Payslip, PayslipAudit, Permission, Project, Region,
-		RepayOption, Role, RolePermission, SalaryDetails, UserRoleAssignment,
+		PayrollSplitRatio, Payslip, PayslipAudit, Permission, Project, PublicHoliday,
+		Region, RepayOption, Role, RolePermission, SalaryDetails, UserRoleAssignment,
 		WithHoldingTax, WorkersUnion []ent.Interceptor
 	}
 )
