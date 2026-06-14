@@ -163,6 +163,32 @@ Insert in this order so FKs resolve. (`→` = depends on.)
   new PVC; rewrite `ImageField`/`FileField` paths to the Go service's relative convention.
 - **Sequences**: after backfill, if keeping any integer PKs, `setval` sequences past max.
   `DocumentSequence.current_sequence` must be carried so document numbering doesn't restart.
+- **Payroll settings (`payroll_settings_*`)**: the legacy tables are **global** (tenant-less
+  Django reference), so the migrator scopes them to `--default-tenant` (skipped without it, like
+  `jobtitles`/`leave_leavecategory`). FK order is **relief → components → formulas → formula
+  items**: `payroll_settings_payrollcomponents.applicable_relief_id` remaps to the migrated
+  `payroll_relief` UUID and `applicable_tax_formula_id` to the migrated `benefit_tax` UUID
+  (`payroll_settings_benefittaxes`); `payroll_settings_formulas.deduction_id` (FK→components)
+  remaps to `payroll_component.component_id`; `payroll_settings_formulaitems.formula_id` remaps
+  to `payroll_formula`. All money/rate columns go through `shopspring/decimal` (never float) and
+  `effective_from/effective_to/is_current/version` are carried exactly. The `deduction_order`
+  JSON is **not** carried (the engine re-derives phasing from component phase/priority).
+- **`regions` → `region`**: global reference; `Region.tenant_id` is nillable so they migrate as
+  system-wide rows (tenant NULL). The self-referential `parent_region_id` is remapped via the
+  deterministic UUIDv5.
+- **`appraisals_appraisalcycle` → `appraisal_cycle`**: tenant-less legacy table → scoped to
+  `--default-tenant`. `status` maps to the Ent enum (created|activated|closed|reopened, unknown
+  → created). `created_by` (CustomUser int FK) is **not** carried (SSO JIT re-forms user
+  shadows). The `appraisals_appraisalcycle_locations` M2M (cycle↔`core.Regions`) has **no
+  destination edge** on the Ent `AppraisalCycle` schema and is **intentionally skipped** (left
+  for manual reconciliation rather than mis-mapped).
+- **`taxes_tax` → `withholding_tax` (best-effort)**: this table is **not** in the reference
+  Django source (its only tax model is `business.TaxRates`→`taxrates`, a VAT/sales rate owned by
+  inventory/pos, not the HR/payroll domain). The migrator introspects the prod `taxes_tax`
+  columns and maps to `withholding_tax` **only** when a withholding-tax shape is present
+  (`title|name` + `rate|percentage`, optional `threshold`/`is_active`/`effective_*`); otherwise
+  it records a **skip** line in the reconcile report for manual reconciliation rather than
+  guessing. Scoped to `--default-tenant` (`WithHoldingTax.tenant_id` is NOT NULL).
 
 ---
 
