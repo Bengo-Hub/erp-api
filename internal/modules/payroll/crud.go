@@ -98,6 +98,13 @@ type RecoverableInput struct {
 	IsActive    bool
 }
 
+// GetEmployee returns a tenant-scoped employee (identity fields for payslip docs / the
+// self-or-manager download check). Returns an ent NotFound error when absent.
+func (s *Service) GetEmployee(ctx context.Context, tenantID, employeeID uuid.UUID) (*ent.Employee, error) {
+	return s.orm.Employee.Query().
+		Where(employee.ID(employeeID), employee.TenantID(tenantID)).Only(ctx)
+}
+
 func (s *Service) employeeBelongs(ctx context.Context, tenantID, employeeID uuid.UUID) error {
 	ok, err := s.orm.Employee.Query().Where(employee.ID(employeeID), employee.TenantID(tenantID)).Exist(ctx)
 	if err != nil {

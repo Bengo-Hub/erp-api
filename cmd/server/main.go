@@ -41,6 +41,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/business"
 	"github.com/Bengo-Hub/erp-api/internal/modules/consumers"
 	"github.com/Bengo-Hub/erp-api/internal/modules/contracts"
+	"github.com/Bengo-Hub/erp-api/internal/modules/docs"
+	"github.com/Bengo-Hub/erp-api/internal/modules/docs/sequence"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/modules/fx"
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
@@ -206,6 +208,13 @@ func run() error {
 	// Sprint 4: reporting layer (P9/P10A/statutory/bank/summaries) for the erp-ui report-runner.
 	reportsHandler := handlers.NewReportsHandler(log, reports.NewService(orm))
 
+	// Document generation (payslip PDF + report PDF/Excel export). Mirrors treasury-api's
+	// docs module: branded PDF/CSV/XLSX via fpdf/excelize + atomic doc-number sequences.
+	docService := &docs.DocumentService{}
+	docSeq := sequence.New(sqlDB, orm)
+	documentsHandler := handlers.NewDocumentsHandler(log, orm, brandingClient, payrollSvc, docService, docSeq)
+	reportsHandler.SetDocuments(documentsHandler) // enable /reports/{type}/export
+
 	// Sprint 4: slim business config (company settings + document numbering).
 	businessHandler := handlers.NewBusinessHandler(log, business.NewService(orm))
 
@@ -272,6 +281,7 @@ func run() error {
 			approvalsHandler.RegisterRoutes(priv)
 			tasksHandler.RegisterRoutes(priv)
 			reportsHandler.RegisterRoutes(priv)
+			documentsHandler.RegisterRoutes(priv)
 			businessHandler.RegisterRoutes(priv)
 			fxHandler.RegisterRoutes(priv)
 		})
