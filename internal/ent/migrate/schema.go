@@ -1222,9 +1222,9 @@ var (
 		PrimaryKey: []*schema.Column{ExchangeRatesColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "exchangerate_base_currency_quote_currency_rate_date",
+				Name:    "exchangerate_tenant_id_base_currency_quote_currency_rate_date",
 				Unique:  true,
-				Columns: []*schema.Column{ExchangeRatesColumns[2], ExchangeRatesColumns[3], ExchangeRatesColumns[5]},
+				Columns: []*schema.Column{ExchangeRatesColumns[1], ExchangeRatesColumns[2], ExchangeRatesColumns[3], ExchangeRatesColumns[5]},
 			},
 			{
 				Name:    "exchangerate_tenant_id",

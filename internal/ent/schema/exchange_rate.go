@@ -30,7 +30,9 @@ func (ExchangeRate) Fields() []ent.Field {
 
 func (ExchangeRate) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("base_currency", "quote_currency", "rate_date").Unique(),
+		// Tenant-scoped uniqueness: each tenant (and the platform, tenant_id NULL) may hold its own
+		// rate per currency-pair/date. (Was missing tenant_id — a multi-tenant FX bug.)
+		index.Fields("tenant_id", "base_currency", "quote_currency", "rate_date").Unique(),
 		index.Fields("tenant_id"),
 	}
 }

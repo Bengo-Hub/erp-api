@@ -196,6 +196,9 @@ func run() error {
 	// panic recovery, CORS — replaces the hand-rolled chi/CORS stack). ---
 	r := chi.NewRouter()
 	r.Use(chimw.RealIP)
+	// Tolerate DRF-style trailing slashes (erp-ui calls /api/v1/hrm/employees/) — chi routes are
+	// registered without trailing slashes, so strip before matching to avoid 404s.
+	r.Use(chimw.StripSlashes)
 	r.Use(httpware.RequestID)
 	r.Use(httpware.Logging(log))
 	r.Use(httpware.Recover(log))
