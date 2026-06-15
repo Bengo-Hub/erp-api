@@ -172,6 +172,7 @@ func run() error {
 	rbacService := rbac.NewService(orm, log)
 	handlers.SetRBACService(rbacService) // enable local erp-permission enforcement in requirePermission
 	authHandler := handlers.NewAuthHandler(log, rbacService)
+	rbacHandler := handlers.NewRBACHandler(log, rbacService)
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
 	// Branding read-through: auth-api SoT, Redis-cached (plan §0a-map).
 	brandingClient := platformauth.NewBrandingClient(cfg.Auth.ServiceURL, cacheAside, log)
@@ -291,6 +292,7 @@ func run() error {
 			documentsHandler.RegisterRoutes(priv)
 			businessHandler.RegisterRoutes(priv)
 			fxHandler.RegisterRoutes(priv)
+			rbacHandler.RegisterRoutes(priv) // service-level role/permission management
 		})
 	})
 
