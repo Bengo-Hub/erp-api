@@ -21,11 +21,16 @@ data. ERP = client only for all of them.
   read-through `GET /api/v1/tenants/by-slug/{slug}` (auth-api public route), cached 6h via the
   shared `cache` lib (`sharedcache.Aside.GetOrSet`) in `internal/platform/auth.BrandingClient`
   → surfaced on the public branding endpoint.
-  Tenant/outlet shadows synced from `auth.tenant.*` / `auth.outlet.created|updated` events.
+  Tenant/outlet shadows synced from `auth.tenant.*` / `auth.outlet.created|updated` events; users
+  projected into employees from `auth.user.created|updated` (2026-06-15, `modules/consumers/auth_user_sync`).
+  Outbound S2S to auth: `GET /api/v1/s2s/{tenant}/users` (one-time employee backfill, `cmd/sync-employees`)
+  and `POST /api/v1/s2s/roles/sync` (idempotent service-role registry push from `cmd/seed`).
 - **treasury (finance-service)** — payroll disbursement `POST /api/v1/s2s/{tenant}/payouts/disburse`
   (`internal/platform/treasury`, transport via `shared-service-client` with `X-API-Key:
   INTERNAL_SERVICE_KEY` + per-batch `Idempotency-Key`); ERP publishes `erp.payroll.processed` (treasury posts the GL
-  journal) and consumes `treasury.payroll.disbursed` to mark payslips published/paid. **Payroll
+  journal). **Disbursement is synchronous** — payslips are marked published on the S2S success
+  (2026-06-15: the old async `treasury.payroll.disbursed` consumer was removed; treasury actually
+  emits `treasury.payout.completed`, and the loop no longer depends on it). **Payroll
   tax stays ERP-owned**; treasury owns GL + payout rails + bank/payment reference.
 - **notifications-service** — ERP publishes `erp.email.requested` (supports base64 attachments,
   e.g. payslip PDFs) + `erp.notification.requested` (`internal/platform/events.Notifications`);
@@ -37,6 +42,15 @@ data. ERP = client only for all of them.
   inventory+treasury, customers → marketflow, orders/address_book/pickup_station/service_type →
   ordering, projects/tenders → projects-service, banks → treasury/payment-rail reference. ERP
   links to those only via UI menu (external), never their data/schemas.
+  - **Employee assets (if ever surfaced):** integrate, don't duplicate. inventory owns assets,
+    with `Asset.assigned_to` / `Asset.custodian_id` (user/employee) and `inventory.asset.*` events
+    (created/transfer_approved/disposed). ERP would project those events read-only or link to
+    inventory-ui — it must NOT define an `EmployeeAssets` schema. (An accidental one was caught +
+    removed 2026-06-15.)
+- **Tenant-scoped backups (erp-owned, 2026-06-15):** `internal/modules/backup` + `/api/v1/backups`
+  export ONLY the requesting tenant's rows — never a platform-wide DB dump. Platform owners scope
+  via the `?tenantId=` override (`scopeFromRequest`, gated on `IsPlatformOwner`). See
+  memory `feedback_tenant_scoped_backups`.
 - **Shared libs (latest tagged releases, plan §0d):**
   - `shared-auth-client v0.9.0` (via `replace … => github.com/Bengo-Hub/auth-client v0.9.0`) — JWKS/Claims/middleware.
   - `shared-events v0.5.0` — outbox `OutboxPoller` + NATS `QueueSubscribe` + `IdempotencyStore`.
@@ -85,9 +99,13 @@ Handlers registered into `integrations.events.CONSUMER_HANDLERS` by modules.
 
 | Subject(s) | Handler | Effect |
 |---|---|---|
-| `auth.tenant.*` (created/updated/…) | `integrations/tenant_sync.py:handle_tenant_event` | upsert `AuthTenant` shadow |
-| `auth.outlet.*` (created/updated/archived) | `integrations/tenant_sync.py:handle_outlet_event` | upsert/archive `AuthOutlet` shadow |
-| `treasury.payroll.disbursed` | `hrm/payroll/treasury_integration.py:handle_payroll_disbursed` | mark the period's payslips `published=True` (tenant-isolated by `employee__organisation__tenant_id`) |
+| `auth.tenant.*` (created/updated/…) | `modules/consumers/tenant_sync` | upsert `AuthTenant` shadow |
+| `auth.outlet.*` (created/updated/archived) | `modules/consumers/tenant_sync` | upsert/archive `AuthOutlet` shadow |
+| `auth.user.created` / `auth.user.updated` | `modules/consumers/auth_user_sync` | project the auth user into an `Employee` keyed on the CustomUser shadow (name/email/outlet); skips platform admins (2026-06-15) |
+
+> **Removed 2026-06-15:** the `treasury.payroll.disbursed` consumer. Treasury emits
+> `treasury.payout.completed` (not `…payroll.disbursed`), and the disburse flow now marks
+> payslips published synchronously on the S2S success — no async dependency.
 
 > **Gotcha**: `CONSUMER_HANDLERS` is populated lazily by module imports; if a module isn't imported,
 > its consumer silently does nothing and `consume_events` warns "No consumer handlers registered".
@@ -110,7 +128,9 @@ Client: `integrations/service_client.py:ServiceClient` / `get_client(service, re
 |---|---|---|---|
 | auth-api | `GET /api/v1/tenants/by-slug/{slug}` | `tenant_sync.ensure_tenant`, `branding.get_tenant_branding` | resolve tenant UUID + branding (logo/colors/KRA/address) |
 | auth-api | `GET /api/v1/tenants/{slug}/outlets` | `tenant_sync.sync_outlets` | list outlets to mirror |
-| auth-api | `GET /.well-known/jwks.json` | `authmanagement/sso.py` (PyJWKClient) | RS256 public keys for JWT validation |
+| auth-api | `GET /.well-known/jwks.json` | shared-auth-client | RS256 public keys for JWT validation |
+| auth-api | `GET /api/v1/s2s/{tenant}/users` | `cmd/sync-employees` | list a tenant's members to backfill employees (X-API-Key) |
+| auth-api | `POST /api/v1/s2s/roles/sync` | `cmd/seed` | idempotently push erp's service-role catalogue to the auth registry (X-API-Key) |
 | treasury-api | `GET /api/v1/s2s/{tenant}/taxes` | `integrations/taxes.py:get_tax_codes` | tenant tax codes (cached 1h) |
 | treasury-api | `GET /api/v1/s2s/{tenant}/taxes/{code}` | `integrations/taxes.py:get_tax_code` | single tax code |
 | treasury-api | `POST /api/v1/s2s/{tenant}/payouts/disburse` | `hrm/payroll/treasury_integration.py:publish_and_disburse` | disburse net pay; body `{payouts:[{recipient_id, amount, currency:"KES", payment_method:"bank_transfer", reference_id, description}]}` |
@@ -254,7 +274,7 @@ sequenceDiagram
 | `erp.notification.requested` | OUT | notifications-api |
 | `auth.tenant.*` | IN | auth-api |
 | `auth.outlet.*` | IN | auth-api |
-| `treasury.payroll.disbursed` | IN | treasury-api |
+| `auth.user.created` / `auth.user.updated` | IN | auth-api (→ employee projection) |
 
 ### All S2S HTTP contracts
 | Direction | Service | Method Path |
@@ -262,6 +282,8 @@ sequenceDiagram
 | OUT | auth-api | `GET /api/v1/tenants/by-slug/{slug}` |
 | OUT | auth-api | `GET /api/v1/tenants/{slug}/outlets` |
 | OUT | auth-api | `GET /.well-known/jwks.json` |
+| OUT | auth-api | `GET /api/v1/s2s/{tenant}/users` (employee backfill) |
+| OUT | auth-api | `POST /api/v1/s2s/roles/sync` (service-role registry) |
 | OUT | treasury-api | `GET /api/v1/s2s/{tenant}/taxes` |
 | OUT | treasury-api | `GET /api/v1/s2s/{tenant}/taxes/{code}` |
 | OUT | treasury-api | `POST /api/v1/s2s/{tenant}/payouts/disburse` |
