@@ -22,6 +22,7 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib" // register the "pgx" database/sql driver
 	"github.com/nats-io/nats.go"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"go.uber.org/zap"
 
 	sharedcache "github.com/Bengo-Hub/cache"
@@ -54,8 +55,20 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/platform/media"
 	"github.com/Bengo-Hub/erp-api/internal/services/usersync"
 	"github.com/Bengo-Hub/erp-api/internal/shared/logger"
+
+	_ "github.com/Bengo-Hub/erp-api/internal/http/docs" // generated OpenAPI/Swagger spec (swag init)
 )
 
+// @title           ERP API
+// @version         1.0
+// @description     Codevertex ERP (HR/Ops) backend — employees, payroll, leave, attendance,
+// @description     recruitment, training, appraisals, approvals, tasks, reports. Go rebuild of the
+// @description     legacy Django ERP. OAuth via SSO, notifications via notifications-service.
+// @BasePath        /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in              header
+// @name            Authorization
+// @description     JWT from auth-service (SSO). Format: "Bearer {token}".
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "erp-api: fatal: %v\n", err)
@@ -214,6 +227,11 @@ func run() error {
 	r.Get("/healthz", healthHandler.Liveness)
 	r.Get("/readyz", healthHandler.Readiness)
 	r.Get("/metrics", healthHandler.Metrics)
+	// API docs at the platform-standard /v1/docs/ (like all Go services); base URL redirects there.
+	r.Get("/v1/docs/*", httpSwagger.Handler(httpSwagger.URL("/v1/docs/doc.json")))
+	r.Get("/", func(w http.ResponseWriter, req *http.Request) {
+		http.Redirect(w, req, "/v1/docs/", http.StatusFound)
+	})
 	r.Route("/api/v1", func(api chi.Router) {
 		brandingHandler.RegisterRoutes(api) // public branding
 		// Authenticated surface.

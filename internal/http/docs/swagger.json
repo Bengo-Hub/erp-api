@@ -1,0 +1,19 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Codevertex ERP (HR/Ops) backend — employees, payroll, leave, attendance,\nrecruitment, training, appraisals, approvals, tasks, reports. Go rebuild of the\nlegacy Django ERP. OAuth via SSO, notifications via notifications-service.",
+        "title": "ERP API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api/v1",
+    "paths": {},
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "JWT from auth-service (SSO). Format: \"Bearer {token}\".",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}
