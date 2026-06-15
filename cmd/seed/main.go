@@ -55,10 +55,14 @@ var permissionCodes = []string{
 	"backups.view", "backups.manage",
 }
 
-// roleGrants maps a system role to the permission codes it holds. "*" grants all permissions.
-var roleGrants = map[string][]string{
-	"erp_admin": {"*"},
-	"hr_manager": {
+// Permission bundles — composed into roles below to keep mappings consistent + readable.
+var (
+	hrmViewAll = []string{
+		"hrm.employee.view", "hrm.leave.view", "hrm.attendance.view",
+		"hrm.recruitment.view", "hrm.training.view", "hrm.appraisal.view",
+		"hrm.performance.view", "hrm.payroll.view",
+	}
+	hrmManageAll = []string{
 		"hrm.employee.view", "hrm.employee.manage",
 		"hrm.leave.view", "hrm.leave.manage", "hrm.leave.approve",
 		"hrm.attendance.view", "hrm.attendance.manage",
@@ -66,21 +70,54 @@ var roleGrants = map[string][]string{
 		"hrm.training.view", "hrm.training.manage",
 		"hrm.appraisal.view", "hrm.appraisal.manage",
 		"hrm.performance.view", "hrm.performance.manage",
-		"hrm.payroll.view",
-		"approvals.view", "approvals.decide",
-		"tasks.view", "tasks.manage", "reports.view", "business.view",
-	},
-	"payroll_manager": {
-		"hrm.employee.view",
-		"hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process",
-		"reports.view", "approvals.view", "approvals.decide",
+	}
+	execOversight = []string{ // see-everything + decide, but not RBAC/backup admin
+		"hrm.payroll.view", "approvals.view", "approvals.decide",
+		"tasks.view", "tasks.manage", "reports.view",
 		"business.view", "business.manage", "fx.view",
-	},
-	"hr_viewer": {
-		"hrm.employee.view", "hrm.leave.view", "hrm.attendance.view",
-		"hrm.recruitment.view", "hrm.training.view", "hrm.appraisal.view",
-		"hrm.performance.view", "tasks.view", "reports.view",
-	},
+	}
+)
+
+func bundle(parts ...[]string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, p := range parts {
+		for _, c := range p {
+			if !seen[c] {
+				seen[c] = true
+				out = append(out, c)
+			}
+		}
+	}
+	return out
+}
+
+// roleGrants maps an erp service role to the permission codes it holds. "*" grants all.
+// Role codes mirror the GLOBAL/SSO role names auth-api issues for ERP tenants (CEO, CTO,
+// ICT, finance, ops, etc.) so global->service resolution + /auth/me work, and so the
+// catalogue pushed to the auth registry lets admins assign them. (Seed = source of truth.)
+var roleGrants = map[string][]string{
+	// Platform/admin
+	"erp_admin": {"*"},
+	"ceo":       bundle(hrmViewAll, hrmManageAll, execOversight, []string{"approvals.manage"}),
+	"cto":       bundle([]string{"hrm.employee.view", "reports.view", "business.view", "tasks.view", "tasks.manage", "approvals.view", "rbac.view", "rbac.manage", "backups.view", "backups.manage"}),
+	// ICT
+	"ict_manager": bundle([]string{"hrm.employee.view", "reports.view", "business.view", "business.manage", "tasks.view", "tasks.manage", "approvals.view", "rbac.view", "rbac.manage", "backups.view", "backups.manage"}),
+	"ict_officer": bundle([]string{"hrm.employee.view", "reports.view", "tasks.view", "tasks.manage", "backups.view", "rbac.view"}),
+	// HR
+	"hr_manager":   bundle(hrmManageAll, []string{"hrm.payroll.view", "approvals.view", "approvals.decide", "tasks.view", "tasks.manage", "reports.view", "business.view"}),
+	"hr_assistant": bundle([]string{"hrm.employee.view", "hrm.leave.view", "hrm.leave.manage", "hrm.attendance.view", "hrm.attendance.manage", "hrm.recruitment.view", "hrm.recruitment.manage", "hrm.training.view", "hrm.training.manage", "tasks.view", "reports.view"}),
+	"hr_viewer":    bundle(hrmViewAll, []string{"tasks.view", "reports.view"}),
+	// Payroll / Finance
+	"payroll_manager": bundle([]string{"hrm.employee.view", "hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "reports.view", "approvals.view", "approvals.decide", "business.view", "business.manage", "fx.view"}),
+	"finance_manager": bundle([]string{"hrm.employee.view", "hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "reports.view", "approvals.view", "approvals.decide", "business.view", "business.manage", "fx.view"}),
+	// Operations
+	"operations_manager": bundle([]string{"hrm.employee.view", "hrm.employee.manage", "hrm.leave.view", "hrm.leave.manage", "hrm.leave.approve", "hrm.attendance.view", "hrm.attendance.manage", "tasks.view", "tasks.manage", "approvals.view", "approvals.decide", "reports.view", "business.view"}),
+	// Procurement / Sales (thin in HR-scope ERP)
+	"procurement_manager": bundle([]string{"hrm.employee.view", "business.view", "business.manage", "reports.view", "tasks.view", "tasks.manage", "approvals.view", "approvals.decide"}),
+	"sales_manager":       bundle([]string{"hrm.employee.view", "business.view", "reports.view", "tasks.view", "tasks.manage", "approvals.view"}),
+	// Admin support
+	"secretary": bundle([]string{"hrm.employee.view", "hrm.leave.view", "hrm.attendance.view", "hrm.recruitment.view", "hrm.training.view", "tasks.view", "tasks.manage", "reports.view", "approvals.view"}),
 }
 
 func main() {
