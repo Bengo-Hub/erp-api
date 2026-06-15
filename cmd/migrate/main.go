@@ -12,7 +12,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -28,21 +27,15 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	dsn := os.Getenv("POSTGRES_MIGRATE_URL")
-	if dsn == "" {
-		dsn = os.Getenv("POSTGRES_URL")
+	// migrate connects DIRECTLY to postgresql (bypasses pgbouncer) per platform convention.
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("load config: %v", err)
 	}
+	dsn := cfg.Postgres.MigrateDSN()
 	if dsn == "" {
 		dsn = "postgres://postgres:postgres@localhost:5432/bengo_erp?sslmode=disable"
 	}
-
-	// The Go ERP lives in a dedicated schema (default "erp"), isolated from the legacy Django
-	// tables in public on the same bengo_erp DB. Pin search_path and ensure the schema exists.
-	schemaName := os.Getenv("DB_SCHEMA")
-	if schemaName == "" {
-		schemaName = "erp"
-	}
-	dsn = config.EnsureSearchPath(dsn, schemaName)
 
 	sqlDB, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -55,10 +48,6 @@ func main() {
 	}
 
 	ctx := context.Background()
-	if _, err := sqlDB.ExecContext(ctx, fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %q", schemaName)); err != nil {
-		log.Fatalf("create schema %q: %v", schemaName, err)
-	}
-
 	drv := entsql.OpenDB(dialect.Postgres, sqlDB)
 	client := ent.NewClient(ent.Driver(drv))
 	defer func() { _ = client.Close() }()

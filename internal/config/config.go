@@ -57,59 +57,43 @@ type PostgresConfig struct {
 	// Ent tables are isolated from the legacy Django tables that still occupy the public schema
 	// of the SAME bengo_erp database during/after cutover (16 table names collide). See
 	// docs/data-migration-runbook.md.
-	Schema string `envconfig:"DB_SCHEMA" default:"erp"`
-
-	// Direct-connection components. When Host is set (DB_HOST), the DSN is built from these
-	// instead of URL. This is REQUIRED in prod: POSTGRES_URL points at pgbouncer (transaction
-	// pooling), which resets the per-session search_path (breaking the erp schema) and breaks
-	// pgx prepared statements. The Go ERP therefore connects DIRECTLY to postgresql (small pool),
-	// pulling DB_USER/DB_PASSWORD/DB_NAME from the k8s secret and overriding DB_HOST to the
-	// postgresql service. See docs/data-migration-runbook.md.
-	Host     string `envconfig:"DB_HOST"`
-	Port     string `envconfig:"DB_PORT" default:"5432"`
-	User     string `envconfig:"DB_USER"`
-	Password string `envconfig:"DB_PASSWORD"`
-	Name     string `envconfig:"DB_NAME"`
-	SSLMode  string `envconfig:"DB_SSLMODE" default:"disable"`
+	// MigrateURL is the DIRECT postgresql connection (bypasses pgbouncer) for one-off migrate/seed
+	// commands. Platform convention: normal runtime connections go through pgbouncer (POSTGRES_URL);
+	// only migrate/seed connect directly. When empty, MigrateDSN() builds a direct DSN from the
+	// DB_* component vars below (DB_HOST overridden to the postgresql service in k8s).
+	MigrateURL string `envconfig:"POSTGRES_MIGRATE_URL"`
+	Host       string `envconfig:"DB_HOST"`
+	Port       string `envconfig:"DB_PORT" default:"5432"`
+	User       string `envconfig:"DB_USER"`
+	Password   string `envconfig:"DB_PASSWORD"`
+	Name       string `envconfig:"DB_NAME"`
+	SSLMode    string `envconfig:"DB_SSLMODE" default:"disable"`
 }
 
-// DSN returns the Postgres connection string with search_path pinned to the configured schema
-// (erp). When DB_HOST is set it builds a DIRECT postgresql DSN from the component vars (bypassing
-// pgbouncer — needed for persistent search_path + prepared statements); otherwise it falls back
-// to POSTGRES_URL.
-func (c PostgresConfig) DSN() string {
-	base := c.URL
+// DSN is the runtime connection string — POSTGRES_URL, which points at pgbouncer (transaction
+// pooling). The Go ERP lives in the default `public` schema (like every other service), so NO
+// search_path is set: pgbouncer's ignore_startup_parameters does not include search_path, and a
+// custom search_path startup param breaks pooling. pgbouncer's max_prepared_statements handles
+// pgx prepared statements.
+func (c PostgresConfig) DSN() string { return c.URL }
+
+// MigrateDSN is the DIRECT postgresql connection for migrate/seed (bypasses pgbouncer). Prefers
+// POSTGRES_MIGRATE_URL; otherwise builds a direct DSN from the DB_* components.
+func (c PostgresConfig) MigrateDSN() string {
+	if c.MigrateURL != "" {
+		return c.MigrateURL
+	}
 	if c.Host != "" {
 		u := url.URL{
-			Scheme: "postgres",
-			User:   url.UserPassword(c.User, c.Password),
-			Host:   c.Host + ":" + c.Port,
-			Path:   "/" + c.Name,
+			Scheme:   "postgres",
+			User:     url.UserPassword(c.User, c.Password),
+			Host:     c.Host + ":" + c.Port,
+			Path:     "/" + c.Name,
+			RawQuery: "sslmode=" + c.SSLMode,
 		}
-		q := url.Values{}
-		q.Set("sslmode", c.SSLMode)
-		u.RawQuery = q.Encode()
-		base = u.String()
+		return u.String()
 	}
-	return EnsureSearchPath(base, c.Schema)
-}
-
-// EnsureSearchPath returns dsn with its search_path query parameter set to schema.
-// pgx (used by both pgxpool and the database/sql stdlib driver) sends unknown URL query
-// params as Postgres runtime parameters, so search_path is honored on every connection.
-// If dsn can't be parsed, it's returned unchanged.
-func EnsureSearchPath(dsn, schema string) string {
-	if schema == "" {
-		return dsn
-	}
-	u, err := url.Parse(dsn)
-	if err != nil {
-		return dsn
-	}
-	q := u.Query()
-	q.Set("search_path", schema)
-	u.RawQuery = q.Encode()
-	return u.String()
+	return c.URL
 }
 
 type RedisConfig struct {
