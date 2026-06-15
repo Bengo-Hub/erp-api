@@ -47,7 +47,16 @@ func scopeFromRequest(w http.ResponseWriter, r *http.Request) (RequestScope, boo
 		writeError(w, http.StatusUnauthorized, "unauthorized", "missing or invalid tenant in token")
 		return RequestScope{}, false
 	}
-	scope := RequestScope{Claims: claims, TenantID: *tenantPtr, Ctx: r.Context()}
+	tenantID := *tenantPtr
+	// Platform-owner drill-in: a platform owner may scope the request to another tenant
+	// via ?tenantId= (or X-Tenant-ID). STRICTLY gated on IsPlatformOwner so a regular
+	// tenant user cannot spoof the header to reach another tenant's data.
+	if claims.IsPlatformOwner {
+		if ov := platformTenantOverride(r); ov != uuid.Nil {
+			tenantID = ov
+		}
+	}
+	scope := RequestScope{Claims: claims, TenantID: tenantID, Ctx: r.Context()}
 	if uid, uerr := claims.UserID(); uerr == nil {
 		scope.UserID = uid
 	}
@@ -57,6 +66,25 @@ func scopeFromRequest(w http.ResponseWriter, r *http.Request) (RequestScope, boo
 		}
 	}
 	return scope, true
+}
+
+// platformTenantOverride reads a platform owner's drilled-into tenant from the
+// ?tenantId=/?tenant_id= query param or the X-Tenant-ID header. Returns uuid.Nil if
+// absent/invalid. Callers MUST gate this on claims.IsPlatformOwner.
+func platformTenantOverride(r *http.Request) uuid.UUID {
+	for _, v := range []string{
+		r.URL.Query().Get("tenantId"),
+		r.URL.Query().Get("tenant_id"),
+		r.Header.Get("X-Tenant-ID"),
+	} {
+		if v == "" {
+			continue
+		}
+		if id, err := uuid.Parse(v); err == nil && id != uuid.Nil {
+			return id
+		}
+	}
+	return uuid.Nil
 }
 
 // requirePermission gates a handler on an RBAC permission code. Platform owners and
