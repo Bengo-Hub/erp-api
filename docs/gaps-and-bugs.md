@@ -323,10 +323,12 @@ UNIQUE index — the multi-tenant FX bug — was still present).
 tenant_id,base_currency,quote_currency,rate_date) as `admin_user`. FX multi-tenant uniqueness
 now matches the ent schema. (Table was empty — zero risk.)
 
-**Systemic follow-up (devops):** make migrations run as the table owner + baseline Atlas:
-- Add a migrate-only DSN (`POSTGRES_MIGRATE_URL`) using `admin_user` to the migrate Job (keep
-  the runtime `erp_user` least-privilege), OR `REASSIGN OWNED BY admin_user TO erp_user` within
-  `bengo_erp`.
-- Baseline the revisions table (`migrate apply --baseline` / Atlas `--allow-dirty`) so existing
-  schema is marked applied and only *new* migrations run.
-Until then, schema changes must be applied manually as `admin_user`.
+**RESOLVED 2026-06-15 (ownership transfer).** The migrate path is **online ent auto-migration**
+(`cmd/migrate` → `client.Schema.Create`), NOT versioned-replay — so there is no
+`atlas_schema_revisions` baseline to fix; the only blocker was table ownership. Fix applied as
+`admin_user`: transferred ownership of ALL `public` tables/sequences/views in `bengo_erp` to
+`erp_user` (96 tables). Now the migrate Job + the runtime auto-migrate (both connect as `erp_user`)
+can `ALTER`/`CREATE INDEX` freely. Verified: `erp-migrate` exits 0 ("migrations applied
+successfully"). No migrate-secret / `POSTGRES_MIGRATE_URL` change needed (runtime stays `erp_user`,
+now also the schema owner — normal for a per-service DB). Future additive schema changes apply
+automatically; the manual-as-`admin_user` workaround is no longer required.
