@@ -10,10 +10,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 	"strings"
+	"time"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -44,6 +49,8 @@ var permissionCodes = []string{
 	"reports.view",
 	"business.view", "business.manage",
 	"fx.view",
+	// Service-level RBAC management (erp owns its roles/permissions).
+	"rbac.view", "rbac.manage",
 }
 
 // roleGrants maps a system role to the permission codes it holds. "*" grants all permissions.
@@ -100,6 +107,53 @@ func main() {
 		log.Fatalf("seed: %v", err)
 	}
 	log.Println("erp-api RBAC seed complete")
+
+	// Push the erp role catalogue to the auth-api registry (idempotent upsert by
+	// role_code) so auth keeps a copy for assignment + global->service resolution.
+	// Non-fatal: a registry hiccup must not fail the seed Job.
+	if err := pushRolesToAuthRegistry(ctx, cfg.Auth.ServiceURL, cfg.Auth.APIKey); err != nil {
+		log.Printf("warn: push roles to auth registry failed (non-fatal): %v", err)
+	}
+}
+
+// pushRolesToAuthRegistry POSTs erp's role catalogue to auth-api POST /api/v1/s2s/roles/sync.
+// Idempotent on the auth side (upsert by unique role_code) — safe to call every deploy.
+func pushRolesToAuthRegistry(ctx context.Context, authURL, apiKey string) error {
+	authURL = strings.TrimRight(strings.TrimSpace(authURL), "/")
+	if authURL == "" || strings.TrimSpace(apiKey) == "" {
+		log.Println("skip role-registry push: AUTH_SERVICE_URL or INTERNAL_SERVICE_KEY unset")
+		return nil
+	}
+	type roleEntry struct {
+		RoleCode    string `json:"role_code"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Scope       string `json:"scope"`
+	}
+	roles := make([]roleEntry, 0, len(roleGrants))
+	for code := range roleGrants {
+		roles = append(roles, roleEntry{RoleCode: code, Name: humanize(code), Scope: "erp"})
+	}
+	body, _ := json.Marshal(map[string]any{"service": "erp", "roles": roles})
+
+	reqCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, authURL+"/api/v1/s2s/roles/sync", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", apiKey)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("auth registry returned %d", resp.StatusCode)
+	}
+	log.Printf("pushed %d erp roles to auth registry", len(roles))
+	return nil
 }
 
 func seed(ctx context.Context, client *ent.Client) error {
