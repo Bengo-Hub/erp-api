@@ -132,6 +132,16 @@ func (d *Disburser) Disburse(ctx context.Context, p DisburseParams) (DisburseRes
 			d.log.Warn("treasury disburse failed (GL event already published)", zap.String("batch", batchRef), zap.Error(err))
 		} else {
 			res.Disbursed = true
+			// Confirmation loop: mark the batch's payslips published on synchronous treasury
+			// success. treasury's disburse is synchronous (we have the result here), so we do
+			// NOT depend on an async treasury.payout.completed event to close the loop. Leave
+			// payslips unpublished on disburse failure so a later run can retry the payout.
+			if _, err := d.orm.Payslip.Update().
+				Where(payslip.IDIn(ids...)).
+				SetPublished(true).
+				Save(ctx); err != nil {
+				d.log.Warn("mark payslips published failed (payout succeeded)", zap.String("batch", batchRef), zap.Error(err))
+			}
 		}
 	}
 	return res, nil
