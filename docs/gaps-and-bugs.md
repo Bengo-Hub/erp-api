@@ -301,3 +301,32 @@ Filter by the batch's outlet (or carry payslip IDs in the event).
 | §6–8 ops/test debt | pinned Go deps, structured zap logging, real test suites incl. money paths | all |
 
 See `revamp-plan.md` for the executive plan and `sprints/` for sequencing.
+
+---
+
+## Prod migrate-ownership + Atlas-revisions baseline (discovered 2026-06-15)
+
+**Bug:** Versioned migrations never apply in prod. Root cause chain:
+1. There is **no `atlas_schema_revisions` table** in prod `bengo_erp` — the schema was created
+   by the cutover (as `admin_user`), so Atlas has no baseline and tries to replay *all*
+   migrations from scratch on every deploy.
+2. The migrate Job connects as **`erp_user`** (the legacy Django role, from the reused
+   `erp-api-env` secret), which has DML but **does not own** the tables (`admin_user` owns all
+   93). The first DDL (`CREATE INDEX` on `exchange_rates`) fails: `must be owner … (42501)`.
+
+**Impact:** any versioned migration silently fails in prod. E.g. the FX tenant-scoped unique
+index never landed (the old non-tenant `exchangerate_base_currency_quote_currency_rate_date`
+UNIQUE index — the multi-tenant FX bug — was still present).
+
+**Applied now (targeted):** dropped the old non-tenant unique index and created
+`exchangerate_tenant_id_base_currency_quote_currency_rate_date` (UNIQUE on
+tenant_id,base_currency,quote_currency,rate_date) as `admin_user`. FX multi-tenant uniqueness
+now matches the ent schema. (Table was empty — zero risk.)
+
+**Systemic follow-up (devops):** make migrations run as the table owner + baseline Atlas:
+- Add a migrate-only DSN (`POSTGRES_MIGRATE_URL`) using `admin_user` to the migrate Job (keep
+  the runtime `erp_user` least-privilege), OR `REASSIGN OWNED BY admin_user TO erp_user` within
+  `bengo_erp`.
+- Baseline the revisions table (`migrate apply --baseline` / Atlas `--allow-dirty`) so existing
+  schema is marked applied and only *new* migrations run.
+Until then, schema changes must be applied manually as `admin_user`.
