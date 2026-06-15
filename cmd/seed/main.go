@@ -13,7 +13,6 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"os"
 	"strings"
 
 	"entgo.io/ent/dialect"
@@ -73,19 +72,15 @@ var roleGrants = map[string][]string{
 
 func main() {
 	_ = godotenv.Load()
-	dsn := os.Getenv("POSTGRES_URL")
-	if dsn == "" {
-		dsn = os.Getenv("POSTGRES_MIGRATE_URL")
+	// seed connects DIRECTLY to postgresql (bypasses pgbouncer) per platform convention.
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("load config: %v", err)
 	}
+	dsn := cfg.Postgres.MigrateDSN()
 	if dsn == "" {
 		dsn = "postgres://postgres:postgres@localhost:5432/bengo_erp?sslmode=disable"
 	}
-	// Seed into the erp schema (not public — see config.DSN / data-migration-runbook).
-	schemaName := os.Getenv("DB_SCHEMA")
-	if schemaName == "" {
-		schemaName = "erp"
-	}
-	dsn = config.EnsureSearchPath(dsn, schemaName)
 
 	sqlDB, err := sql.Open("pgx", dsn)
 	if err != nil {

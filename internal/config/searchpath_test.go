@@ -2,36 +2,47 @@ package config
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 )
 
-func TestEnsureSearchPath(t *testing.T) {
-	cases := []struct{ dsn, schema, want string }{
-		{"postgres://u:p@h:5432/bengo_erp?sslmode=disable", "erp", "erp"},
-		{"postgres://u:p@h:5432/bengo_erp?sslmode=disable", "public", "public"},
-		{"postgres://u:p@h:5432/bengo_erp", "erp", "erp"},
-		{"postgres://u:p@h:5432/bengo_erp?search_path=public&sslmode=disable", "erp", "erp"}, // overrides existing
+// DSN is the runtime connection (pgbouncer): returns POSTGRES_URL verbatim, no search_path.
+func TestDSNIsPgbouncerURLNoSearchPath(t *testing.T) {
+	c := PostgresConfig{URL: "postgres://u:p@pgbouncer.infra:5432/bengo_erp?sslmode=disable"}
+	if got := c.DSN(); got != c.URL {
+		t.Errorf("DSN()=%q, want %q (verbatim URL)", got, c.URL)
 	}
-	for _, c := range cases {
-		got := EnsureSearchPath(c.dsn, c.schema)
-		u, err := url.Parse(got)
-		if err != nil {
-			t.Fatalf("EnsureSearchPath(%q,%q) produced unparseable dsn %q: %v", c.dsn, c.schema, got, err)
-		}
-		if sp := u.Query().Get("search_path"); sp != c.want {
-			t.Errorf("EnsureSearchPath(%q,%q) search_path=%q, want %q (full: %q)", c.dsn, c.schema, sp, c.want, got)
-		}
-	}
-	// empty schema returns dsn unchanged
-	if got := EnsureSearchPath("postgres://x/y", ""); got != "postgres://x/y" {
-		t.Errorf("empty schema should pass through, got %q", got)
+	if strings.Contains(c.DSN(), "search_path") {
+		t.Errorf("DSN must not set search_path (breaks pgbouncer pooling): %q", c.DSN())
 	}
 }
 
-func TestPostgresDSNUsesSchema(t *testing.T) {
-	c := PostgresConfig{URL: "postgres://u:p@h:5432/bengo_erp?sslmode=disable", Schema: "erp"}
-	u, _ := url.Parse(c.DSN())
-	if sp := u.Query().Get("search_path"); sp != "erp" {
-		t.Errorf("DSN search_path=%q, want erp", sp)
+// MigrateDSN prefers POSTGRES_MIGRATE_URL, else builds a direct DSN from DB_* components.
+func TestMigrateDSN(t *testing.T) {
+	// explicit migrate URL wins
+	c := PostgresConfig{URL: "x", MigrateURL: "postgres://direct/db"}
+	if got := c.MigrateDSN(); got != "postgres://direct/db" {
+		t.Errorf("MigrateDSN with MigrateURL=%q", got)
+	}
+	// built from components when Host set
+	c = PostgresConfig{URL: "pgb", Host: "postgresql.infra", Port: "5432", User: "admin_user", Password: "pw", Name: "bengo_erp", SSLMode: "disable"}
+	got := c.MigrateDSN()
+	u, err := url.Parse(got)
+	if err != nil {
+		t.Fatalf("MigrateDSN unparseable: %q (%v)", got, err)
+	}
+	if u.Host != "postgresql.infra:5432" {
+		t.Errorf("host=%q want postgresql.infra:5432", u.Host)
+	}
+	if u.Path != "/bengo_erp" {
+		t.Errorf("path=%q want /bengo_erp", u.Path)
+	}
+	if u.Query().Get("sslmode") != "disable" {
+		t.Errorf("sslmode=%q want disable", u.Query().Get("sslmode"))
+	}
+	// fallback to URL when no Host/MigrateURL
+	c = PostgresConfig{URL: "pgb"}
+	if got := c.MigrateDSN(); got != "pgb" {
+		t.Errorf("MigrateDSN fallback=%q want pgb", got)
 	}
 }
