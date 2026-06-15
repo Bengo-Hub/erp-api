@@ -36,6 +36,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/http/handlers"
 	mw "github.com/Bengo-Hub/erp-api/internal/http/middleware"
 	"github.com/Bengo-Hub/erp-api/internal/modules/appraisals"
+	"github.com/Bengo-Hub/erp-api/internal/modules/backup"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/business"
@@ -173,6 +174,7 @@ func run() error {
 	handlers.SetRBACService(rbacService) // enable local erp-permission enforcement in requirePermission
 	authHandler := handlers.NewAuthHandler(log, rbacService)
 	rbacHandler := handlers.NewRBACHandler(log, rbacService)
+	backupsHandler := handlers.NewBackupsHandler(log, backup.NewService(sqlDB, cfg.Media.Root, log))
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
 	// Branding read-through: auth-api SoT, Redis-cached (plan §0a-map).
 	brandingClient := platformauth.NewBrandingClient(cfg.Auth.ServiceURL, cacheAside, log)
@@ -292,7 +294,8 @@ func run() error {
 			documentsHandler.RegisterRoutes(priv)
 			businessHandler.RegisterRoutes(priv)
 			fxHandler.RegisterRoutes(priv)
-			rbacHandler.RegisterRoutes(priv) // service-level role/permission management
+			rbacHandler.RegisterRoutes(priv)    // service-level role/permission management
+			backupsHandler.RegisterRoutes(priv) // tenant-scoped backups (this tenant's data only)
 		})
 	})
 

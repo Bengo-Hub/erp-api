@@ -51,6 +51,8 @@ var permissionCodes = []string{
 	"fx.view",
 	// Service-level RBAC management (erp owns its roles/permissions).
 	"rbac.view", "rbac.manage",
+	// Tenant-scoped backups (this tenant's data only).
+	"backups.view", "backups.manage",
 }
 
 // roleGrants maps a system role to the permission codes it holds. "*" grants all permissions.
