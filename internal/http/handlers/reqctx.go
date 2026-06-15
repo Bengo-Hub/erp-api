@@ -20,6 +20,35 @@ var rbacService *rbac.Service
 // from main.go before mounting routes.
 func SetRBACService(svc *rbac.Service) { rbacService = svc }
 
+// employeeResolver resolves a caller's OWN employee id from their SSO subject, for ESS
+// self-scoping (?mine=true). Set once at startup via SetEmployeeResolver.
+type employeeResolver func(ctx context.Context, tenantID uuid.UUID, externalID string) (uuid.UUID, bool)
+
+var resolveSelfEmployee employeeResolver
+
+// SetEmployeeResolver wires the self-employee resolver (employees.Service.EmployeeIDForExternalUser).
+func SetEmployeeResolver(f employeeResolver) { resolveSelfEmployee = f }
+
+// selfOrParamEmployeeID returns the caller's OWN employee id when ?mine=true (ESS), else
+// the employee_id query param. When mine=true but the caller has no employee record, it
+// returns uuid.Nil so the query matches nothing (an employee never sees others' data).
+func selfOrParamEmployeeID(r *http.Request, scope RequestScope) *uuid.UUID {
+	if r.URL.Query().Get("mine") == "true" {
+		if resolveSelfEmployee != nil && scope.Claims != nil {
+			ctx := scope.Ctx
+			if ctx == nil {
+				ctx = context.Background()
+			}
+			if id, ok := resolveSelfEmployee(ctx, scope.TenantID, scope.Claims.Subject); ok {
+				return &id
+			}
+		}
+		nilID := uuid.Nil
+		return &nilID
+	}
+	return optionalUUIDParam(r, "employee_id")
+}
+
 // RequestScope is the resolved tenant/outlet/identity for an authenticated request.
 // Every HRM handler derives one and filters all queries by TenantID (gaps §2 isolation).
 type RequestScope struct {

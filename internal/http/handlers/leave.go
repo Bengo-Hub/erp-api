@@ -236,10 +236,16 @@ func (h *LeaveHandler) UpsertEntitlement(w http.ResponseWriter, r *http.Request)
 
 func (h *LeaveHandler) ListBalances(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
-	if !ok || !requirePermission(w, scope, permLeaveView) {
+	if !ok {
 		return
 	}
-	empID := optionalUUIDParam(r, "employee_id")
+	// ESS: ?mine=true is self-service (scoped to the caller's own employee) and bypasses
+	// the manager view permission; otherwise the manager perm is required.
+	mine := r.URL.Query().Get("mine") == "true"
+	if !mine && !requirePermission(w, scope, permLeaveView) {
+		return
+	}
+	empID := selfOrParamEmployeeID(r, scope)
 	year, _ := strconv.Atoi(r.URL.Query().Get("year"))
 	rows, err := h.svc.ListBalances(r.Context(), scope.TenantID, empID, year)
 	if err != nil {
