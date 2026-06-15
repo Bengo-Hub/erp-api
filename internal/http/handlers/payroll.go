@@ -114,21 +114,22 @@ type payslipView struct {
 }
 
 func (h *PayrollHandler) payslipView(ctx context.Context, tenantID uuid.UUID, ps *ent.Payslip) payslipView {
-	nssf := ps.NssfEmployeeTier1.Add(ps.NssfEmployeeTier2)
-	deductions := ps.GrossPay.Sub(ps.NetPay)
+	// Single source of truth for the earnings/deductions/net figures (shared with the
+	// PDF document adapter so the JSON view and the payslip PDF never drift).
+	b := payroll.BuildPayslipBreakdown(ps)
 	v := payslipView{
 		ID:              ps.ID,
 		Employee:        ps.EmployeeID,
 		EmployeeID:      ps.EmployeeID,
-		GrossPay:        ps.GrossPay.StringFixed(2),
-		BasicSalary:     ps.GrossPay.StringFixed(2),
-		TotalEarnings:   ps.GrossPay.StringFixed(2),
-		TotalDeductions: deductions.StringFixed(2),
-		Paye:            ps.Paye.StringFixed(2),
-		Nssf:            nssf.StringFixed(2),
-		Shif:            ps.ShifOrNhifContribution.StringFixed(2),
-		HousingLevy:     ps.HousingLevy.StringFixed(2),
-		NetPay:          ps.NetPay.StringFixed(2),
+		GrossPay:        b.GrossPay.StringFixed(2),
+		BasicSalary:     b.BasicSalary.StringFixed(2),
+		TotalEarnings:   b.TotalEarnings.StringFixed(2),
+		TotalDeductions: b.TotalDeductions.StringFixed(2),
+		Paye:            b.PAYE.StringFixed(2),
+		Nssf:            b.NSSF.StringFixed(2),
+		Shif:            b.SHIF.StringFixed(2),
+		HousingLevy:     b.HousingLevy.StringFixed(2),
+		NetPay:          b.NetPay.StringFixed(2),
 		Status:          ps.ApprovalStatus,
 		Currency:        "KES",
 		CreatedAt:       ps.CreatedAt.Format(time.RFC3339),
