@@ -174,7 +174,15 @@ func run() error {
 	handlers.SetRBACService(rbacService) // enable local erp-permission enforcement in requirePermission
 	authHandler := handlers.NewAuthHandler(log, rbacService)
 	rbacHandler := handlers.NewRBACHandler(log, rbacService)
-	backupsHandler := handlers.NewBackupsHandler(log, backup.NewService(sqlDB, cfg.Media.Root, log))
+	backupSvc := backup.NewService(sqlDB, orm, cfg.Media.Root, log)
+	backupsHandler := handlers.NewBackupsHandler(log, backupSvc, cfg.Backup.RetentionDays)
+	// Daily tenant-scoped auto-backup (02:00) + retention churn (file + DB row). Multi-replica
+	// safe via a Postgres advisory lock so only one replica runs it.
+	backup.NewScheduler(backupSvc, backup.SchedulerConfig{
+		Enabled:       cfg.Backup.ScheduleEnabled,
+		Hour:          cfg.Backup.ScheduleHour,
+		RetentionDays: cfg.Backup.RetentionDays,
+	}, log).Start(ctx)
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
 	// Branding read-through: auth-api SoT, Redis-cached (plan §0a-map).
 	brandingClient := platformauth.NewBrandingClient(cfg.Auth.ServiceURL, cacheAside, log)

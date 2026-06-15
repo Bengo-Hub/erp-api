@@ -1,4 +1,4 @@
-h1:bwsiX0+CPbLEoGUrKTKFvSls8mWZ5rNUrjK/uoHFjH8=
+h1:mDNjK9/4X6h/aes++aJyDykcbW/cxRu/4yL8f0Tc80k=
 20260614111624_initial_schema.sql h1:tduj8h0RdEm+lMEI2bb30y3PuaaHSJmw5kPoJ1kC5jk=
 20260614165124_leave_schema.sql h1:nMX5BEZkndFmBfl63yvqIKFsnuuMwtZ90snrBefIfrE=
 20260614170337_attendance_schema.sql h1:z7tsaY/igRA6rGJJoBcVLgeuNS6Y8d8wR5vwdeQboAw=
@@ -9,3 +9,4 @@ h1:bwsiX0+CPbLEoGUrKTKFvSls8mWZ5rNUrjK/uoHFjH8=
 20260614193158_fx_exchange_rate_schema.sql h1:XdTmo2ILPuaUAMRBGbutxq2R5U+UlE7sqzDY6cTT3eY=
 20260615082709_fx_unique_index_tenant.sql h1:KzFp7peKvn6yxdDyl0GRhxkJIV1WISzhGGHa7OqrTTg=
 20260615180148_add_employee_subentities.sql h1:7+GWHb3OTZWbBAZyJT+SXMuXHPlaGFDTAJIky55Qxr8=
+20260615215542_add_backup_tracking.sql h1:Cd+lxQoVk/y84MApujd3jS3+ze/M8exGLQMfUOTQrBA=

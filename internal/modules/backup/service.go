@@ -1,8 +1,13 @@
 // Package backup produces TENANT-SCOPED logical exports of erp's own data. A backup
 // contains only the requesting tenant's rows (every erp table that carries tenant_id),
 // gzipped JSON, stored under a per-tenant media path. It is NEVER a platform-wide DB
-// dump — see memory feedback_tenant_scoped_backups. Designed to be extracted into a
-// shared lib once a second service adopts it.
+// dump — see memory feedback_tenant_scoped_backups.
+//
+// Artifacts are tracked in the `backups` ent table (DB row per file): Generate inserts a
+// row, List joins the DB rows with on-disk existence, Delete removes the file AND its row.
+// A daily scheduler (scheduler.go) backs up every tenant at 02:00 and a retention churn
+// (churn.go) prunes files + rows older than the retention window. This module is the
+// reference every other Go tenant service copies.
 package backup
 
 import (
@@ -14,29 +19,36 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+
+	"github.com/Bengo-Hub/erp-api/internal/ent"
+	entbackup "github.com/Bengo-Hub/erp-api/internal/ent/backup"
 )
 
-// Service generates + serves tenant-scoped backups from the local media root.
+// Service generates + serves tenant-scoped backups from the local media root, tracked in
+// the `backups` ent table.
 type Service struct {
 	db   *sql.DB
+	orm  *ent.Client
 	root string // {MEDIA_ROOT}/backups
 	log  *zap.Logger
 }
 
-func NewService(db *sql.DB, mediaRoot string, log *zap.Logger) *Service {
-	return &Service{db: db, root: filepath.Join(mediaRoot, "backups"), log: log.Named("backup.Service")}
+// NewService wires the backup service. orm is the ent client used for DB tracking.
+func NewService(db *sql.DB, orm *ent.Client, mediaRoot string, log *zap.Logger) *Service {
+	return &Service{db: db, orm: orm, root: filepath.Join(mediaRoot, "backups"), log: log.Named("backup.Service")}
 }
 
-// Info describes one stored backup artifact.
+// Info describes one stored backup artifact (DB row + file).
 type Info struct {
+	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Size      int64     `json:"size"`
+	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -65,7 +77,8 @@ func (s *Service) tenantScopedTables(ctx context.Context) ([]string, error) {
 	return tables, rows.Err()
 }
 
-// Generate writes a gzipped JSON export of the tenant's rows and returns its filename.
+// Generate writes a gzipped JSON export of the tenant's rows, records a tracking row, and
+// returns its Info.
 func (s *Service) Generate(ctx context.Context, tenantID uuid.UUID) (Info, error) {
 	tables, err := s.tenantScopedTables(ctx)
 	if err != nil {
@@ -101,43 +114,55 @@ func (s *Service) Generate(ctx context.Context, tenantID uuid.UUID) (Info, error
 	if err != nil {
 		return Info{}, fmt.Errorf("create: %w", err)
 	}
-	defer func() { _ = f.Close() }()
 	gz := gzip.NewWriter(f)
 	if err := json.NewEncoder(gz).Encode(export); err != nil {
 		_ = gz.Close()
+		_ = f.Close()
 		_ = os.Remove(path)
 		return Info{}, fmt.Errorf("encode: %w", err)
 	}
 	if err := gz.Close(); err != nil {
+		_ = f.Close()
 		_ = os.Remove(path)
 		return Info{}, fmt.Errorf("gzip close: %w", err)
 	}
 	st, _ := f.Stat()
+	size := sizeOf(st)
+	_ = f.Close()
+
+	row, err := s.orm.Backup.Create().
+		SetTenantID(tenantID).
+		SetName(name).
+		SetPath(path).
+		SetSizeBytes(size).
+		SetStatus("completed").
+		Save(ctx)
+	if err != nil {
+		// File is written but tracking failed — keep the file, surface the error.
+		s.log.Warn("backup: track row insert failed", zap.String("file", name), zap.Error(err))
+		return Info{Name: name, Size: size, Status: "completed", CreatedAt: time.Now().UTC()}, nil
+	}
+
 	s.log.Info("tenant backup generated", zap.String("tenant", tenantID.String()), zap.String("file", name))
-	return Info{Name: name, Size: sizeOf(st), CreatedAt: time.Now().UTC()}, nil
+	return toInfo(row), nil
 }
 
-// List returns the tenant's backups, newest first.
+// List returns the tenant's tracked backups whose file still exists, newest first.
 func (s *Service) List(ctx context.Context, tenantID uuid.UUID) ([]Info, error) {
-	entries, err := os.ReadDir(s.tenantDir(tenantID))
-	if os.IsNotExist(err) {
-		return []Info{}, nil
-	}
+	rows, err := s.orm.Backup.Query().
+		Where(entbackup.TenantID(tenantID)).
+		Order(ent.Desc(entbackup.FieldCreatedAt)).
+		All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]Info, 0, len(entries))
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
+	out := make([]Info, 0, len(rows))
+	for _, r := range rows {
+		if _, statErr := os.Stat(r.Path); statErr != nil {
+			continue // file gone (churned/manually removed) — hide stale row
 		}
-		fi, err := e.Info()
-		if err != nil {
-			continue
-		}
-		out = append(out, Info{Name: e.Name(), Size: fi.Size(), CreatedAt: fi.ModTime().UTC()})
+		out = append(out, toInfo(r))
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
 	return out, nil
 }
 
@@ -155,12 +180,29 @@ func (s *Service) Open(tenantID uuid.UUID, name string) (io.ReadCloser, error) {
 	return os.Open(path)
 }
 
-// Delete removes one of the tenant's backups (same ownership guard as Open).
-func (s *Service) Delete(tenantID uuid.UUID, name string) error {
+// Delete removes one of the tenant's backups (file + tracking row), same ownership guard.
+func (s *Service) Delete(ctx context.Context, tenantID uuid.UUID, name string) error {
 	if name == "" || name != filepath.Base(name) || strings.Contains(name, "..") {
 		return fmt.Errorf("invalid backup name")
 	}
-	return os.Remove(filepath.Join(s.tenantDir(tenantID), name))
+	path := filepath.Join(s.tenantDir(tenantID), name)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	_, _ = s.orm.Backup.Delete().
+		Where(entbackup.TenantID(tenantID), entbackup.Name(name)).
+		Exec(ctx)
+	return nil
+}
+
+func toInfo(r *ent.Backup) Info {
+	return Info{
+		ID:        r.ID.String(),
+		Name:      r.Name,
+		Size:      r.SizeBytes,
+		Status:    r.Status,
+		CreatedAt: r.CreatedAt.UTC(),
+	}
 }
 
 func sizeOf(st os.FileInfo) int64 {
