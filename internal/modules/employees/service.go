@@ -4,11 +4,13 @@ package employees
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
@@ -85,8 +87,15 @@ type CreateInput struct {
 	ResidentialStatus string
 }
 
+// ErrNameRequired is returned by Create when first_name or last_name is blank. The HTTP
+// layer maps it to 400 validation_failed (this is what allowed the blank placeholder rows).
+var ErrNameRequired = fmt.Errorf("first_name and last_name are required")
+
 // Create inserts a tenant-scoped employee.
 func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, in CreateInput) (*ent.Employee, error) {
+	if strings.TrimSpace(in.FirstName) == "" || strings.TrimSpace(in.LastName) == "" {
+		return nil, ErrNameRequired
+	}
 	b := s.orm.Employee.Create().
 		SetTenantID(tenantID).
 		SetEmployeeNumber(in.EmployeeNumber).
@@ -112,6 +121,159 @@ func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, in CreateInput
 		return nil, fmt.Errorf("employees: create: %w", err)
 	}
 	return row, nil
+}
+
+// UpsertFromAuthUser projects an auth-api user into an erp Employee, keyed (verifiable)
+// on the auth user id. It is idempotent: re-running updates the same row rather than
+// creating duplicates. Steps:
+//  1. resolve/create the erp CustomUser shadow for this auth user (keyed on external_id =
+//     authUserID), mirroring rbac.EnsureUserFromToken's provisioning;
+//  2. find the employee by user_id == customUser.id (the CustomUser shadow id) and upsert
+//     name/email/outlet, generating a stable employee_number when none exists.
+//
+// isPlatformAdmin lets the caller skip projecting the platform superuser (the global
+// codevertexitsolutions.com owner) into a tenant's employee roster — see the guard below.
+func (s *Service) UpsertFromAuthUser(ctx context.Context, tenantID, authUserID uuid.UUID, email, fullName string, outletID *uuid.UUID, isPlatformAdmin bool) (*ent.Employee, error) {
+	if tenantID == uuid.Nil || authUserID == uuid.Nil {
+		return nil, fmt.Errorf("employees: upsert-from-auth requires tenant_id and auth_user_id")
+	}
+	// Guard: never turn the PLATFORM owner/superuser into a tenant employee. The caller
+	// passes isPlatformAdmin (heuristic: platform email domain AND a superuser/admin role).
+	if isPlatformAdmin {
+		return nil, nil
+	}
+
+	cu, err := s.ensureCustomUser(ctx, tenantID, authUserID, email, fullName)
+	if err != nil {
+		return nil, err
+	}
+
+	first, last := splitName(fullName)
+
+	existing, err := s.orm.Employee.Query().
+		Where(employee.TenantID(tenantID), employee.UserID(cu.ID)).
+		First(ctx)
+	if ent.IsNotFound(err) {
+		b := s.orm.Employee.Create().
+			SetTenantID(tenantID).
+			SetUserID(cu.ID).
+			SetFirstName(first).
+			SetLastName(last).
+			SetEmail(email).
+			SetEmployeeNumber(employeeNumberFromEmail(email, authUserID))
+		if outletID != nil {
+			b = b.SetOutletID(*outletID)
+		}
+		return b.Save(ctx)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("employees: upsert lookup: %w", err)
+	}
+
+	upd := existing.Update()
+	if first != "" {
+		upd = upd.SetFirstName(first)
+	}
+	if last != "" {
+		upd = upd.SetLastName(last)
+	}
+	if email != "" {
+		upd = upd.SetEmail(email)
+	}
+	if outletID != nil {
+		upd = upd.SetOutletID(*outletID)
+	}
+	if existing.EmployeeNumber == nil || *existing.EmployeeNumber == "" {
+		upd = upd.SetEmployeeNumber(employeeNumberFromEmail(email, authUserID))
+	}
+	return upd.Save(ctx)
+}
+
+// ensureCustomUser resolves the erp CustomUser shadow keyed on external_id (= auth user id),
+// creating it if absent. Mirrors rbac.EnsureUserFromToken's provisioning (without role
+// reconciliation, which the auth.user consumer/backfill does not need).
+func (s *Service) ensureCustomUser(ctx context.Context, tenantID, authUserID uuid.UUID, email, fullName string) (*ent.CustomUser, error) {
+	externalID := authUserID.String()
+	first, last := splitName(fullName)
+
+	u, err := s.orm.CustomUser.Query().
+		Where(customuser.ExternalID(externalID)).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		// CustomUser.email is NotEmpty in the schema; fall back to a stable placeholder.
+		if strings.TrimSpace(email) == "" {
+			email = externalID + "@unknown.local"
+		}
+		return s.orm.CustomUser.Create().
+			SetTenantID(tenantID).
+			SetExternalID(externalID).
+			SetEmail(email).
+			SetFirstName(first).
+			SetLastName(last).
+			Save(ctx)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("employees: query custom_user: %w", err)
+	}
+	upd := u.Update()
+	if email != "" && email != u.Email {
+		upd = upd.SetEmail(email)
+	}
+	if first != "" {
+		upd = upd.SetFirstName(first)
+	}
+	if last != "" {
+		upd = upd.SetLastName(last)
+	}
+	if u.TenantID == uuid.Nil && tenantID != uuid.Nil {
+		upd = upd.SetTenantID(tenantID)
+	}
+	return upd.Save(ctx)
+}
+
+// SoftDeleteBlankPlaceholders soft-deletes keyless junk employees for a tenant: rows with no
+// SSO link (user_id IS NULL) AND empty first_name/last_name/email. Returns the count deleted.
+// Used by the one-time backfill after projecting real auth users (cmd/sync-employees).
+func (s *Service) SoftDeleteBlankPlaceholders(ctx context.Context, tenantID uuid.UUID) (int, error) {
+	return s.orm.Employee.Update().
+		Where(
+			employee.TenantID(tenantID),
+			employee.UserIDIsNil(),
+			employee.FirstName(""),
+			employee.LastName(""),
+			employee.Email(""),
+			employee.Deleted(false),
+		).
+		SetDeleted(true).
+		Save(ctx)
+}
+
+// splitName splits a full name on the first space: first token = first_name, the remainder
+// (trimmed) = last_name. "Jane" -> ("Jane",""); "Jane Mary Doe" -> ("Jane","Mary Doe").
+func splitName(full string) (first, last string) {
+	full = strings.TrimSpace(full)
+	if full == "" {
+		return "", ""
+	}
+	if i := strings.IndexByte(full, ' '); i >= 0 {
+		return strings.TrimSpace(full[:i]), strings.TrimSpace(full[i+1:])
+	}
+	return full, ""
+}
+
+// employeeNumberFromEmail derives a stable employee number from the email local-part, falling
+// back to a short slice of the auth user id when the email has no usable local-part. Stable so
+// re-running the backfill/consumer does not churn the value.
+func employeeNumberFromEmail(email string, authUserID uuid.UUID) string {
+	local := email
+	if i := strings.IndexByte(email, '@'); i > 0 {
+		local = email[:i]
+	}
+	local = strings.TrimSpace(local)
+	if local != "" {
+		return "EMP-" + strings.ToUpper(local)
+	}
+	return "EMP-" + strings.ToUpper(strings.ReplaceAll(authUserID.String(), "-", "")[:8])
 }
 
 // SoftDelete marks an employee deleted (tenant-scoped).

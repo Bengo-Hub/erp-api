@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/Bengo-Hub/pagination"
@@ -493,6 +494,10 @@ func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	row, err := h.svc.Create(r.Context(), scope.TenantID, in)
+	if errors.Is(err, employees.ErrNameRequired) {
+		writeError(w, http.StatusBadRequest, "validation_failed", "first_name and last_name are required")
+		return
+	}
 	if err != nil {
 		h.log.Warn("create employee", zap.Error(err))
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
