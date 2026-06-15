@@ -46,6 +46,8 @@ type Tx struct {
 	AuthOutlet *AuthOutletClient
 	// AuthTenant is the client for interacting with the AuthTenant builders.
 	AuthTenant *AuthTenantClient
+	// Backup is the client for interacting with the Backup builders.
+	Backup *BackupClient
 	// BenefitTax is the client for interacting with the BenefitTax builders.
 	BenefitTax *BenefitTaxClient
 	// Candidate is the client for interacting with the Candidate builders.
@@ -352,6 +354,7 @@ func (tx *Tx) init() {
 	tx.AttendanceRule = NewAttendanceRuleClient(tx.config)
 	tx.AuthOutlet = NewAuthOutletClient(tx.config)
 	tx.AuthTenant = NewAuthTenantClient(tx.config)
+	tx.Backup = NewBackupClient(tx.config)
 	tx.BenefitTax = NewBenefitTaxClient(tx.config)
 	tx.Candidate = NewCandidateClient(tx.config)
 	tx.ClaimItem = NewClaimItemClient(tx.config)

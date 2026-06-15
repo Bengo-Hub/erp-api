@@ -21,18 +21,23 @@ const (
 // only). Replaces the old platform-wide DB-dump listing. Platform owners operate on
 // their resolved tenant (the ?tenantId= override scopes the whole request).
 type BackupsHandler struct {
-	log *zap.Logger
-	svc *backup.Service
+	log           *zap.Logger
+	svc           *backup.Service
+	retentionDays int
 }
 
-func NewBackupsHandler(log *zap.Logger, svc *backup.Service) *BackupsHandler {
-	return &BackupsHandler{log: log.Named("backups.Handler"), svc: svc}
+func NewBackupsHandler(log *zap.Logger, svc *backup.Service, retentionDays int) *BackupsHandler {
+	if retentionDays <= 0 {
+		retentionDays = backup.DefaultRetentionDays
+	}
+	return &BackupsHandler{log: log.Named("backups.Handler"), svc: svc, retentionDays: retentionDays}
 }
 
 func (h *BackupsHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/backups", func(br chi.Router) {
 		br.Get("/", h.List)
 		br.Post("/", h.Create)
+		br.Post("/churn", h.Churn)
 		br.Get("/{name}/download", h.Download)
 		br.Delete("/{name}", h.Delete)
 	})
@@ -65,6 +70,23 @@ func (h *BackupsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, info)
 }
 
+// Churn manually triggers retention cleanup (deletes files + tracking rows older than the
+// configured retention window across the cluster). Admin/manage-gated. The daily scheduler
+// runs this automatically; this endpoint is for on-demand pruning.
+func (h *BackupsHandler) Churn(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permBackupsManage) {
+		return
+	}
+	removed, err := h.svc.Churn(r.Context(), h.retentionDays)
+	if err != nil {
+		h.log.Error("churn backups", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "churn_failed", "failed to churn backups")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"removed": removed, "retention_days": h.retentionDays})
+}
+
 func (h *BackupsHandler) Download(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permBackupsView) {
@@ -89,7 +111,7 @@ func (h *BackupsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if !ok || !requirePermission(w, scope, permBackupsManage) {
 		return
 	}
-	if err := h.svc.Delete(scope.TenantID, chi.URLParam(r, "name")); err != nil {
+	if err := h.svc.Delete(r.Context(), scope.TenantID, chi.URLParam(r, "name")); err != nil {
 		writeError(w, http.StatusBadRequest, "delete_failed", err.Error())
 		return
 	}
