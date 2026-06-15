@@ -59,6 +59,8 @@ func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 		kr.Patch("/{id}", h.UpdateNextOfKin)
 		kr.Delete("/{id}", h.DeleteNextOfKin)
 	})
+	// Education / employment-history / disciplinary sub-records (employee_records.go).
+	h.registerRecordRoutes(r)
 }
 
 type updateEmployeeBody struct {
