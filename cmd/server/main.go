@@ -161,6 +161,7 @@ func run() error {
 
 	// --- RBAC + handlers ---
 	rbacService := rbac.NewService(orm, log)
+	handlers.SetRBACService(rbacService) // enable local erp-permission enforcement in requirePermission
 	authHandler := handlers.NewAuthHandler(log, rbacService)
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
 	// Branding read-through: auth-api SoT, Redis-cached (plan §0a-map).
@@ -255,6 +256,7 @@ func run() error {
 		api.Group(func(priv chi.Router) {
 			priv.Use(authMiddleware.RequireAuth)
 			priv.Use(mw.OutletContext)
+			priv.Use(mw.EnsureServiceUser(rbacService, log)) // Trinity Layer 3: JIT-sync erp roles from SSO
 			authHandler.RegisterRoutes(priv)
 			employeesHandler.RegisterRoutes(priv)
 			orgSettingsHandler.RegisterRoutes(priv)
