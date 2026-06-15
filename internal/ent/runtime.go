@@ -34,10 +34,13 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeedisciplinary"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeedocument"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeeeducation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeonboarding"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employmenthistory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerateapisettings"
@@ -908,6 +911,26 @@ func init() {
 	employeebenefitDescID := employeebenefitFields[0].Descriptor()
 	// employeebenefit.DefaultID holds the default value on creation for the id field.
 	employeebenefit.DefaultID = employeebenefitDescID.Default.(func() uuid.UUID)
+	employeedisciplinaryFields := schema.EmployeeDisciplinary{}.Fields()
+	_ = employeedisciplinaryFields
+	// employeedisciplinaryDescStatus is the schema descriptor for status field.
+	employeedisciplinaryDescStatus := employeedisciplinaryFields[7].Descriptor()
+	// employeedisciplinary.DefaultStatus holds the default value on creation for the status field.
+	employeedisciplinary.DefaultStatus = employeedisciplinaryDescStatus.Default.(string)
+	// employeedisciplinaryDescCreatedAt is the schema descriptor for created_at field.
+	employeedisciplinaryDescCreatedAt := employeedisciplinaryFields[9].Descriptor()
+	// employeedisciplinary.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employeedisciplinary.DefaultCreatedAt = employeedisciplinaryDescCreatedAt.Default.(func() time.Time)
+	// employeedisciplinaryDescUpdatedAt is the schema descriptor for updated_at field.
+	employeedisciplinaryDescUpdatedAt := employeedisciplinaryFields[10].Descriptor()
+	// employeedisciplinary.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employeedisciplinary.DefaultUpdatedAt = employeedisciplinaryDescUpdatedAt.Default.(func() time.Time)
+	// employeedisciplinary.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employeedisciplinary.UpdateDefaultUpdatedAt = employeedisciplinaryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employeedisciplinaryDescID is the schema descriptor for id field.
+	employeedisciplinaryDescID := employeedisciplinaryFields[0].Descriptor()
+	// employeedisciplinary.DefaultID holds the default value on creation for the id field.
+	employeedisciplinary.DefaultID = employeedisciplinaryDescID.Default.(func() uuid.UUID)
 	employeedocumentFields := schema.EmployeeDocument{}.Fields()
 	_ = employeedocumentFields
 	// employeedocumentDescTitle is the schema descriptor for title field.
@@ -928,6 +951,26 @@ func init() {
 	employeedocumentDescID := employeedocumentFields[0].Descriptor()
 	// employeedocument.DefaultID holds the default value on creation for the id field.
 	employeedocument.DefaultID = employeedocumentDescID.Default.(func() uuid.UUID)
+	employeeeducationFields := schema.EmployeeEducation{}.Fields()
+	_ = employeeeducationFields
+	// employeeeducationDescInstitution is the schema descriptor for institution field.
+	employeeeducationDescInstitution := employeeeducationFields[3].Descriptor()
+	// employeeeducation.InstitutionValidator is a validator for the "institution" field. It is called by the builders before save.
+	employeeeducation.InstitutionValidator = employeeeducationDescInstitution.Validators[0].(func(string) error)
+	// employeeeducationDescCreatedAt is the schema descriptor for created_at field.
+	employeeeducationDescCreatedAt := employeeeducationFields[10].Descriptor()
+	// employeeeducation.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employeeeducation.DefaultCreatedAt = employeeeducationDescCreatedAt.Default.(func() time.Time)
+	// employeeeducationDescUpdatedAt is the schema descriptor for updated_at field.
+	employeeeducationDescUpdatedAt := employeeeducationFields[11].Descriptor()
+	// employeeeducation.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employeeeducation.DefaultUpdatedAt = employeeeducationDescUpdatedAt.Default.(func() time.Time)
+	// employeeeducation.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employeeeducation.UpdateDefaultUpdatedAt = employeeeducationDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employeeeducationDescID is the schema descriptor for id field.
+	employeeeducationDescID := employeeeducationFields[0].Descriptor()
+	// employeeeducation.DefaultID holds the default value on creation for the id field.
+	employeeeducation.DefaultID = employeeeducationDescID.Default.(func() uuid.UUID)
 	employeeloanFields := schema.EmployeeLoan{}.Fields()
 	_ = employeeloanFields
 	// employeeloanDescPrincipalAmount is the schema descriptor for principal_amount field.
@@ -1004,6 +1047,26 @@ func init() {
 	employeeonboardingDescID := employeeonboardingFields[0].Descriptor()
 	// employeeonboarding.DefaultID holds the default value on creation for the id field.
 	employeeonboarding.DefaultID = employeeonboardingDescID.Default.(func() uuid.UUID)
+	employmenthistoryFields := schema.EmploymentHistory{}.Fields()
+	_ = employmenthistoryFields
+	// employmenthistoryDescEmployer is the schema descriptor for employer field.
+	employmenthistoryDescEmployer := employmenthistoryFields[3].Descriptor()
+	// employmenthistory.EmployerValidator is a validator for the "employer" field. It is called by the builders before save.
+	employmenthistory.EmployerValidator = employmenthistoryDescEmployer.Validators[0].(func(string) error)
+	// employmenthistoryDescCreatedAt is the schema descriptor for created_at field.
+	employmenthistoryDescCreatedAt := employmenthistoryFields[8].Descriptor()
+	// employmenthistory.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employmenthistory.DefaultCreatedAt = employmenthistoryDescCreatedAt.Default.(func() time.Time)
+	// employmenthistoryDescUpdatedAt is the schema descriptor for updated_at field.
+	employmenthistoryDescUpdatedAt := employmenthistoryFields[9].Descriptor()
+	// employmenthistory.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employmenthistory.DefaultUpdatedAt = employmenthistoryDescUpdatedAt.Default.(func() time.Time)
+	// employmenthistory.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employmenthistory.UpdateDefaultUpdatedAt = employmenthistoryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employmenthistoryDescID is the schema descriptor for id field.
+	employmenthistoryDescID := employmenthistoryFields[0].Descriptor()
+	// employmenthistory.DefaultID holds the default value on creation for the id field.
+	employmenthistory.DefaultID = employmenthistoryDescID.Default.(func() uuid.UUID)
 	exchangerateFields := schema.ExchangeRate{}.Fields()
 	_ = exchangerateFields
 	// exchangerateDescBaseCurrency is the schema descriptor for base_currency field.

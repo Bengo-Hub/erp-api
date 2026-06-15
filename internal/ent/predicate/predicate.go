@@ -96,8 +96,14 @@ type EmployeeBankAccount func(*sql.Selector)
 // EmployeeBenefit is the predicate function for employeebenefit builders.
 type EmployeeBenefit func(*sql.Selector)
 
+// EmployeeDisciplinary is the predicate function for employeedisciplinary builders.
+type EmployeeDisciplinary func(*sql.Selector)
+
 // EmployeeDocument is the predicate function for employeedocument builders.
 type EmployeeDocument func(*sql.Selector)
+
+// EmployeeEducation is the predicate function for employeeeducation builders.
+type EmployeeEducation func(*sql.Selector)
 
 // EmployeeLoan is the predicate function for employeeloan builders.
 type EmployeeLoan func(*sql.Selector)
@@ -107,6 +113,9 @@ type EmployeeMetric func(*sql.Selector)
 
 // EmployeeOnboarding is the predicate function for employeeonboarding builders.
 type EmployeeOnboarding func(*sql.Selector)
+
+// EmploymentHistory is the predicate function for employmenthistory builders.
+type EmploymentHistory func(*sql.Selector)
 
 // ExchangeRate is the predicate function for exchangerate builders.
 type ExchangeRate func(*sql.Selector)

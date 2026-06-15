@@ -41,10 +41,13 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeedisciplinary"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeedocument"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeeeducation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeonboarding"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employmenthistory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerateapisettings"
@@ -195,10 +198,13 @@ func checkColumn(t, c string) error {
 			employee.Table:                employee.ValidColumn,
 			employeebankaccount.Table:     employeebankaccount.ValidColumn,
 			employeebenefit.Table:         employeebenefit.ValidColumn,
+			employeedisciplinary.Table:    employeedisciplinary.ValidColumn,
 			employeedocument.Table:        employeedocument.ValidColumn,
+			employeeeducation.Table:       employeeeducation.ValidColumn,
 			employeeloan.Table:            employeeloan.ValidColumn,
 			employeemetric.Table:          employeemetric.ValidColumn,
 			employeeonboarding.Table:      employeeonboarding.ValidColumn,
+			employmenthistory.Table:       employmenthistory.ValidColumn,
 			exchangerate.Table:            exchangerate.ValidColumn,
 			exchangerateapisettings.Table: exchangerateapisettings.ValidColumn,
 			expenseclaim.Table:            expenseclaim.ValidColumn,
