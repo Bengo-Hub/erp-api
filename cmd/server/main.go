@@ -183,6 +183,7 @@ func run() error {
 	// HRM modules (Sprint 2 employees + Sprint 3 leave/attendance/recruitment/training/appraisals).
 	notifyPublisher := events.NewPublisher(orm, cfg.Events.SourceService)
 	employeesSvc := employees.NewService(orm)
+	handlers.SetEmployeeResolver(employeesSvc.EmployeeIDForExternalUser) // ESS self-scoping (?mine=true)
 	employeesHandler := handlers.NewEmployeesHandler(log, employeesSvc)
 	orgSettingsHandler := handlers.NewOrgSettingsHandler(log, orgsettings.NewService(orm))
 	contractsHandler := handlers.NewContractsHandler(log, contracts.NewService(orm))

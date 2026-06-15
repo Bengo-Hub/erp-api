@@ -152,14 +152,20 @@ func (h *PayrollHandler) payslipView(ctx context.Context, tenantID uuid.UUID, ps
 
 func (h *PayrollHandler) ListPayslips(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
-	if !ok || !requirePermission(w, scope, permPayrollView) {
+	if !ok {
+		return
+	}
+	// ESS: ?mine=true is self-service (caller's own payslips only) and bypasses the
+	// manager payroll-view permission; otherwise the manager perm is required.
+	mine := r.URL.Query().Get("mine") == "true"
+	if !mine && !requirePermission(w, scope, permPayrollView) {
 		return
 	}
 	var period *time.Time
 	if p, has := parsePeriod(r.URL.Query().Get("payment_period")); has {
 		period = &p
 	}
-	empID := optionalUUIDParam(r, "employee_id")
+	empID := selfOrParamEmployeeID(r, scope)
 	p := pagination.Parse(r)
 	rows, total, err := h.svc.ListPayslips(r.Context(), scope.TenantID, period, empID, p.Limit, p.Offset)
 	if err != nil {

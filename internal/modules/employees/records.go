@@ -8,10 +8,32 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeedisciplinary"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeeducation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employmenthistory"
 )
+
+// EmployeeIDForExternalUser resolves the caller's OWN employee id from their SSO subject
+// (JWT sub → CustomUser shadow by external_id → Employee by user_id). Used by ESS
+// (mine=true) so an employee sees only their own leave/payslips without HR permissions.
+func (s *Service) EmployeeIDForExternalUser(ctx context.Context, tenantID uuid.UUID, externalID string) (uuid.UUID, bool) {
+	if externalID == "" {
+		return uuid.Nil, false
+	}
+	cu, err := s.orm.CustomUser.Query().Where(customuser.ExternalID(externalID)).Only(ctx)
+	if err != nil {
+		return uuid.Nil, false
+	}
+	emp, err := s.orm.Employee.Query().
+		Where(employee.TenantID(tenantID), employee.UserID(cu.ID), employee.Deleted(false)).
+		First(ctx)
+	if err != nil {
+		return uuid.Nil, false
+	}
+	return emp.ID, true
+}
 
 // records.go — CRUD for the HR-owned employee sub-records (education, employment
 // history, disciplinary). All tenant + employee scoped; mirrors subresources.go.
