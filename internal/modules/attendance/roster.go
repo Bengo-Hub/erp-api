@@ -135,6 +135,19 @@ func (s *Service) ListAssignments(ctx context.Context, tenantID uuid.UUID, emplo
 	return q.Order(ent.Desc(shiftassignment.FieldStartDate)).All(ctx)
 }
 
+// DeleteAssignment removes a tenant-scoped roster assignment.
+func (s *Service) DeleteAssignment(ctx context.Context, tenantID, id uuid.UUID) error {
+	n, err := s.orm.ShiftAssignment.Delete().
+		Where(shiftassignment.ID(id), shiftassignment.TenantID(tenantID)).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("attendance: delete assignment: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("attendance: assignment not found")
+	}
+	return nil
+}
+
 // ---- Staff shift overrides ----
 
 // OverrideInput is the create payload for a date-specific shift override.

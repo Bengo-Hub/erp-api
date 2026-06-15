@@ -50,6 +50,8 @@ func (h *LeaveHandler) RegisterRoutes(r chi.Router) {
 		lr.Post("/holidays", h.CreateHoliday)
 		lr.Delete("/holidays/{id}", h.DeleteHoliday)
 
+		lr.Get("/logs", h.ListLogs)
+
 		lr.Get("/requests", h.ListRequests)
 		lr.Post("/requests", h.CreateRequest)
 		lr.Get("/requests/{id}", h.GetRequest)
@@ -326,6 +328,26 @@ func (h *LeaveHandler) DeleteHoliday(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ---- Logs ----
+
+// ListLogs returns the leave audit trail (optionally filtered by leave_request_id).
+func (h *LeaveHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveView) {
+		return
+	}
+	reqID := optionalUUIDParam(r, "leave_request_id")
+	if reqID == nil {
+		reqID = optionalUUIDParam(r, "request_id")
+	}
+	rows, err := h.svc.ListLogs(r.Context(), scope.TenantID, reqID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list leave logs")
+		return
+	}
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 // ---- Requests ----
