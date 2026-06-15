@@ -20,6 +20,7 @@ func (h *AttendanceHandler) registerRosterRoutes(ar chi.Router) {
 	ar.Put("/rosters/{id}/slots", h.UpsertSlot)
 	ar.Get("/assignments", h.ListAssignments)
 	ar.Post("/assignments", h.AssignRoster)
+	ar.Delete("/assignments/{id}", h.DeleteAssignment)
 	ar.Get("/overrides", h.ListOverrides)
 	ar.Post("/overrides", h.CreateOverride)
 }
@@ -200,6 +201,23 @@ func (h *AttendanceHandler) AssignRoster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
+}
+
+func (h *AttendanceHandler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAttendanceManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	if err := h.svc.DeleteAssignment(r.Context(), scope.TenantID, id); err != nil {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ---- Overrides ----
