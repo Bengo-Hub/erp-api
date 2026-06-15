@@ -1068,6 +1068,38 @@ var (
 			},
 		},
 	}
+	// EmployeeDisciplinariesColumns holds the columns for the "employee_disciplinaries" table.
+	EmployeeDisciplinariesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "incident_date", Type: field.TypeTime, Nullable: true},
+		{Name: "category", Type: field.TypeString, Nullable: true},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "action_taken", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeString, Default: "open"},
+		{Name: "document_url", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// EmployeeDisciplinariesTable holds the schema information for the "employee_disciplinaries" table.
+	EmployeeDisciplinariesTable = &schema.Table{
+		Name:       "employee_disciplinaries",
+		Columns:    EmployeeDisciplinariesColumns,
+		PrimaryKey: []*schema.Column{EmployeeDisciplinariesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "employeedisciplinary_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{EmployeeDisciplinariesColumns[1]},
+			},
+			{
+				Name:    "employeedisciplinary_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{EmployeeDisciplinariesColumns[2]},
+			},
+		},
+	}
 	// EmployeeDocumentsColumns holds the columns for the "employee_documents" table.
 	EmployeeDocumentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1095,6 +1127,39 @@ var (
 				Name:    "employeedocument_employee_id",
 				Unique:  false,
 				Columns: []*schema.Column{EmployeeDocumentsColumns[2]},
+			},
+		},
+	}
+	// EmployeeEducationsColumns holds the columns for the "employee_educations" table.
+	EmployeeEducationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "institution", Type: field.TypeString},
+		{Name: "qualification", Type: field.TypeString, Nullable: true},
+		{Name: "field_of_study", Type: field.TypeString, Nullable: true},
+		{Name: "grade", Type: field.TypeString, Nullable: true},
+		{Name: "start_date", Type: field.TypeTime, Nullable: true},
+		{Name: "end_date", Type: field.TypeTime, Nullable: true},
+		{Name: "certificate_url", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// EmployeeEducationsTable holds the schema information for the "employee_educations" table.
+	EmployeeEducationsTable = &schema.Table{
+		Name:       "employee_educations",
+		Columns:    EmployeeEducationsColumns,
+		PrimaryKey: []*schema.Column{EmployeeEducationsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "employeeeducation_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{EmployeeEducationsColumns[1]},
+			},
+			{
+				Name:    "employeeeducation_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{EmployeeEducationsColumns[2]},
 			},
 		},
 	}
@@ -1201,6 +1266,37 @@ var (
 				Name:    "employeeonboarding_tenant_id_employee_id",
 				Unique:  false,
 				Columns: []*schema.Column{EmployeeOnboardingsColumns[1], EmployeeOnboardingsColumns[2]},
+			},
+		},
+	}
+	// EmploymentHistoriesColumns holds the columns for the "employment_histories" table.
+	EmploymentHistoriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "employer", Type: field.TypeString},
+		{Name: "designation", Type: field.TypeString, Nullable: true},
+		{Name: "start_date", Type: field.TypeTime, Nullable: true},
+		{Name: "end_date", Type: field.TypeTime, Nullable: true},
+		{Name: "reason_for_leaving", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// EmploymentHistoriesTable holds the schema information for the "employment_histories" table.
+	EmploymentHistoriesTable = &schema.Table{
+		Name:       "employment_histories",
+		Columns:    EmploymentHistoriesColumns,
+		PrimaryKey: []*schema.Column{EmploymentHistoriesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "employmenthistory_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{EmploymentHistoriesColumns[1]},
+			},
+			{
+				Name:    "employmenthistory_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{EmploymentHistoriesColumns[2]},
 			},
 		},
 	}
@@ -3242,10 +3338,13 @@ var (
 		EmployeesTable,
 		EmployeeBankAccountsTable,
 		EmployeeBenefitsTable,
+		EmployeeDisciplinariesTable,
 		EmployeeDocumentsTable,
+		EmployeeEducationsTable,
 		EmployeeLoansTable,
 		EmployeeMetricsTable,
 		EmployeeOnboardingsTable,
+		EmploymentHistoriesTable,
 		ExchangeRatesTable,
 		ExchangeRateAPISettingsTable,
 		ExpenseClaimsTable,

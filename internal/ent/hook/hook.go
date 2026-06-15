@@ -369,6 +369,18 @@ func (f EmployeeBenefitFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeBenefitMutation", m)
 }
 
+// The EmployeeDisciplinaryFunc type is an adapter to allow the use of ordinary
+// function as EmployeeDisciplinary mutator.
+type EmployeeDisciplinaryFunc func(context.Context, *ent.EmployeeDisciplinaryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EmployeeDisciplinaryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.EmployeeDisciplinaryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeDisciplinaryMutation", m)
+}
+
 // The EmployeeDocumentFunc type is an adapter to allow the use of ordinary
 // function as EmployeeDocument mutator.
 type EmployeeDocumentFunc func(context.Context, *ent.EmployeeDocumentMutation) (ent.Value, error)
@@ -379,6 +391,18 @@ func (f EmployeeDocumentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.V
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeDocumentMutation", m)
+}
+
+// The EmployeeEducationFunc type is an adapter to allow the use of ordinary
+// function as EmployeeEducation mutator.
+type EmployeeEducationFunc func(context.Context, *ent.EmployeeEducationMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EmployeeEducationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.EmployeeEducationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeEducationMutation", m)
 }
 
 // The EmployeeLoanFunc type is an adapter to allow the use of ordinary
@@ -415,6 +439,18 @@ func (f EmployeeOnboardingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeOnboardingMutation", m)
+}
+
+// The EmploymentHistoryFunc type is an adapter to allow the use of ordinary
+// function as EmploymentHistory mutator.
+type EmploymentHistoryFunc func(context.Context, *ent.EmploymentHistoryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EmploymentHistoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.EmploymentHistoryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmploymentHistoryMutation", m)
 }
 
 // The ExchangeRateFunc type is an adapter to allow the use of ordinary

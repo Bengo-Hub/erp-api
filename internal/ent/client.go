@@ -45,10 +45,13 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeedisciplinary"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeedocument"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeeeducation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeonboarding"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employmenthistory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerateapisettings"
@@ -176,14 +179,20 @@ type Client struct {
 	EmployeeBankAccount *EmployeeBankAccountClient
 	// EmployeeBenefit is the client for interacting with the EmployeeBenefit builders.
 	EmployeeBenefit *EmployeeBenefitClient
+	// EmployeeDisciplinary is the client for interacting with the EmployeeDisciplinary builders.
+	EmployeeDisciplinary *EmployeeDisciplinaryClient
 	// EmployeeDocument is the client for interacting with the EmployeeDocument builders.
 	EmployeeDocument *EmployeeDocumentClient
+	// EmployeeEducation is the client for interacting with the EmployeeEducation builders.
+	EmployeeEducation *EmployeeEducationClient
 	// EmployeeLoan is the client for interacting with the EmployeeLoan builders.
 	EmployeeLoan *EmployeeLoanClient
 	// EmployeeMetric is the client for interacting with the EmployeeMetric builders.
 	EmployeeMetric *EmployeeMetricClient
 	// EmployeeOnboarding is the client for interacting with the EmployeeOnboarding builders.
 	EmployeeOnboarding *EmployeeOnboardingClient
+	// EmploymentHistory is the client for interacting with the EmploymentHistory builders.
+	EmploymentHistory *EmploymentHistoryClient
 	// ExchangeRate is the client for interacting with the ExchangeRate builders.
 	ExchangeRate *ExchangeRateClient
 	// ExchangeRateAPISettings is the client for interacting with the ExchangeRateAPISettings builders.
@@ -343,10 +352,13 @@ func (c *Client) init() {
 	c.Employee = NewEmployeeClient(c.config)
 	c.EmployeeBankAccount = NewEmployeeBankAccountClient(c.config)
 	c.EmployeeBenefit = NewEmployeeBenefitClient(c.config)
+	c.EmployeeDisciplinary = NewEmployeeDisciplinaryClient(c.config)
 	c.EmployeeDocument = NewEmployeeDocumentClient(c.config)
+	c.EmployeeEducation = NewEmployeeEducationClient(c.config)
 	c.EmployeeLoan = NewEmployeeLoanClient(c.config)
 	c.EmployeeMetric = NewEmployeeMetricClient(c.config)
 	c.EmployeeOnboarding = NewEmployeeOnboardingClient(c.config)
+	c.EmploymentHistory = NewEmploymentHistoryClient(c.config)
 	c.ExchangeRate = NewExchangeRateClient(c.config)
 	c.ExchangeRateAPISettings = NewExchangeRateAPISettingsClient(c.config)
 	c.ExpenseClaim = NewExpenseClaimClient(c.config)
@@ -528,10 +540,13 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Employee:                NewEmployeeClient(cfg),
 		EmployeeBankAccount:     NewEmployeeBankAccountClient(cfg),
 		EmployeeBenefit:         NewEmployeeBenefitClient(cfg),
+		EmployeeDisciplinary:    NewEmployeeDisciplinaryClient(cfg),
 		EmployeeDocument:        NewEmployeeDocumentClient(cfg),
+		EmployeeEducation:       NewEmployeeEducationClient(cfg),
 		EmployeeLoan:            NewEmployeeLoanClient(cfg),
 		EmployeeMetric:          NewEmployeeMetricClient(cfg),
 		EmployeeOnboarding:      NewEmployeeOnboardingClient(cfg),
+		EmploymentHistory:       NewEmploymentHistoryClient(cfg),
 		ExchangeRate:            NewExchangeRateClient(cfg),
 		ExchangeRateAPISettings: NewExchangeRateAPISettingsClient(cfg),
 		ExpenseClaim:            NewExpenseClaimClient(cfg),
@@ -640,10 +655,13 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Employee:                NewEmployeeClient(cfg),
 		EmployeeBankAccount:     NewEmployeeBankAccountClient(cfg),
 		EmployeeBenefit:         NewEmployeeBenefitClient(cfg),
+		EmployeeDisciplinary:    NewEmployeeDisciplinaryClient(cfg),
 		EmployeeDocument:        NewEmployeeDocumentClient(cfg),
+		EmployeeEducation:       NewEmployeeEducationClient(cfg),
 		EmployeeLoan:            NewEmployeeLoanClient(cfg),
 		EmployeeMetric:          NewEmployeeMetricClient(cfg),
 		EmployeeOnboarding:      NewEmployeeOnboardingClient(cfg),
+		EmploymentHistory:       NewEmploymentHistoryClient(cfg),
 		ExchangeRate:            NewExchangeRateClient(cfg),
 		ExchangeRateAPISettings: NewExchangeRateAPISettingsClient(cfg),
 		ExpenseClaim:            NewExpenseClaimClient(cfg),
@@ -739,8 +757,9 @@ func (c *Client) Use(hooks ...Hook) {
 		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.BenefitTax, c.Candidate,
 		c.ClaimItem, c.CompanySettings, c.ContactDetails, c.Contract, c.CustomUser,
 		c.Department, c.DocumentSequence, c.ESSSettings, c.Employee,
-		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan,
-		c.EmployeeMetric, c.EmployeeOnboarding, c.ExchangeRate,
+		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
+		c.EmployeeDocument, c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric,
+		c.EmployeeOnboarding, c.EmploymentHistory, c.ExchangeRate,
 		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
 		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
 		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
@@ -770,8 +789,9 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.BenefitTax, c.Candidate,
 		c.ClaimItem, c.CompanySettings, c.ContactDetails, c.Contract, c.CustomUser,
 		c.Department, c.DocumentSequence, c.ESSSettings, c.Employee,
-		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDocument, c.EmployeeLoan,
-		c.EmployeeMetric, c.EmployeeOnboarding, c.ExchangeRate,
+		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
+		c.EmployeeDocument, c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric,
+		c.EmployeeOnboarding, c.EmploymentHistory, c.ExchangeRate,
 		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
 		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
 		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
@@ -853,14 +873,20 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.EmployeeBankAccount.mutate(ctx, m)
 	case *EmployeeBenefitMutation:
 		return c.EmployeeBenefit.mutate(ctx, m)
+	case *EmployeeDisciplinaryMutation:
+		return c.EmployeeDisciplinary.mutate(ctx, m)
 	case *EmployeeDocumentMutation:
 		return c.EmployeeDocument.mutate(ctx, m)
+	case *EmployeeEducationMutation:
+		return c.EmployeeEducation.mutate(ctx, m)
 	case *EmployeeLoanMutation:
 		return c.EmployeeLoan.mutate(ctx, m)
 	case *EmployeeMetricMutation:
 		return c.EmployeeMetric.mutate(ctx, m)
 	case *EmployeeOnboardingMutation:
 		return c.EmployeeOnboarding.mutate(ctx, m)
+	case *EmploymentHistoryMutation:
+		return c.EmploymentHistory.mutate(ctx, m)
 	case *ExchangeRateMutation:
 		return c.ExchangeRate.mutate(ctx, m)
 	case *ExchangeRateAPISettingsMutation:
@@ -5086,6 +5112,139 @@ func (c *EmployeeBenefitClient) mutate(ctx context.Context, m *EmployeeBenefitMu
 	}
 }
 
+// EmployeeDisciplinaryClient is a client for the EmployeeDisciplinary schema.
+type EmployeeDisciplinaryClient struct {
+	config
+}
+
+// NewEmployeeDisciplinaryClient returns a client for the EmployeeDisciplinary from the given config.
+func NewEmployeeDisciplinaryClient(c config) *EmployeeDisciplinaryClient {
+	return &EmployeeDisciplinaryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `employeedisciplinary.Hooks(f(g(h())))`.
+func (c *EmployeeDisciplinaryClient) Use(hooks ...Hook) {
+	c.hooks.EmployeeDisciplinary = append(c.hooks.EmployeeDisciplinary, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `employeedisciplinary.Intercept(f(g(h())))`.
+func (c *EmployeeDisciplinaryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.EmployeeDisciplinary = append(c.inters.EmployeeDisciplinary, interceptors...)
+}
+
+// Create returns a builder for creating a EmployeeDisciplinary entity.
+func (c *EmployeeDisciplinaryClient) Create() *EmployeeDisciplinaryCreate {
+	mutation := newEmployeeDisciplinaryMutation(c.config, OpCreate)
+	return &EmployeeDisciplinaryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of EmployeeDisciplinary entities.
+func (c *EmployeeDisciplinaryClient) CreateBulk(builders ...*EmployeeDisciplinaryCreate) *EmployeeDisciplinaryCreateBulk {
+	return &EmployeeDisciplinaryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *EmployeeDisciplinaryClient) MapCreateBulk(slice any, setFunc func(*EmployeeDisciplinaryCreate, int)) *EmployeeDisciplinaryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &EmployeeDisciplinaryCreateBulk{err: fmt.Errorf("calling to EmployeeDisciplinaryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*EmployeeDisciplinaryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &EmployeeDisciplinaryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for EmployeeDisciplinary.
+func (c *EmployeeDisciplinaryClient) Update() *EmployeeDisciplinaryUpdate {
+	mutation := newEmployeeDisciplinaryMutation(c.config, OpUpdate)
+	return &EmployeeDisciplinaryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *EmployeeDisciplinaryClient) UpdateOne(_m *EmployeeDisciplinary) *EmployeeDisciplinaryUpdateOne {
+	mutation := newEmployeeDisciplinaryMutation(c.config, OpUpdateOne, withEmployeeDisciplinary(_m))
+	return &EmployeeDisciplinaryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *EmployeeDisciplinaryClient) UpdateOneID(id uuid.UUID) *EmployeeDisciplinaryUpdateOne {
+	mutation := newEmployeeDisciplinaryMutation(c.config, OpUpdateOne, withEmployeeDisciplinaryID(id))
+	return &EmployeeDisciplinaryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for EmployeeDisciplinary.
+func (c *EmployeeDisciplinaryClient) Delete() *EmployeeDisciplinaryDelete {
+	mutation := newEmployeeDisciplinaryMutation(c.config, OpDelete)
+	return &EmployeeDisciplinaryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *EmployeeDisciplinaryClient) DeleteOne(_m *EmployeeDisciplinary) *EmployeeDisciplinaryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *EmployeeDisciplinaryClient) DeleteOneID(id uuid.UUID) *EmployeeDisciplinaryDeleteOne {
+	builder := c.Delete().Where(employeedisciplinary.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &EmployeeDisciplinaryDeleteOne{builder}
+}
+
+// Query returns a query builder for EmployeeDisciplinary.
+func (c *EmployeeDisciplinaryClient) Query() *EmployeeDisciplinaryQuery {
+	return &EmployeeDisciplinaryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeEmployeeDisciplinary},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a EmployeeDisciplinary entity by its id.
+func (c *EmployeeDisciplinaryClient) Get(ctx context.Context, id uuid.UUID) (*EmployeeDisciplinary, error) {
+	return c.Query().Where(employeedisciplinary.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *EmployeeDisciplinaryClient) GetX(ctx context.Context, id uuid.UUID) *EmployeeDisciplinary {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *EmployeeDisciplinaryClient) Hooks() []Hook {
+	return c.hooks.EmployeeDisciplinary
+}
+
+// Interceptors returns the client interceptors.
+func (c *EmployeeDisciplinaryClient) Interceptors() []Interceptor {
+	return c.inters.EmployeeDisciplinary
+}
+
+func (c *EmployeeDisciplinaryClient) mutate(ctx context.Context, m *EmployeeDisciplinaryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&EmployeeDisciplinaryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&EmployeeDisciplinaryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&EmployeeDisciplinaryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&EmployeeDisciplinaryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown EmployeeDisciplinary mutation op: %q", m.Op())
+	}
+}
+
 // EmployeeDocumentClient is a client for the EmployeeDocument schema.
 type EmployeeDocumentClient struct {
 	config
@@ -5216,6 +5375,139 @@ func (c *EmployeeDocumentClient) mutate(ctx context.Context, m *EmployeeDocument
 		return (&EmployeeDocumentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown EmployeeDocument mutation op: %q", m.Op())
+	}
+}
+
+// EmployeeEducationClient is a client for the EmployeeEducation schema.
+type EmployeeEducationClient struct {
+	config
+}
+
+// NewEmployeeEducationClient returns a client for the EmployeeEducation from the given config.
+func NewEmployeeEducationClient(c config) *EmployeeEducationClient {
+	return &EmployeeEducationClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `employeeeducation.Hooks(f(g(h())))`.
+func (c *EmployeeEducationClient) Use(hooks ...Hook) {
+	c.hooks.EmployeeEducation = append(c.hooks.EmployeeEducation, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `employeeeducation.Intercept(f(g(h())))`.
+func (c *EmployeeEducationClient) Intercept(interceptors ...Interceptor) {
+	c.inters.EmployeeEducation = append(c.inters.EmployeeEducation, interceptors...)
+}
+
+// Create returns a builder for creating a EmployeeEducation entity.
+func (c *EmployeeEducationClient) Create() *EmployeeEducationCreate {
+	mutation := newEmployeeEducationMutation(c.config, OpCreate)
+	return &EmployeeEducationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of EmployeeEducation entities.
+func (c *EmployeeEducationClient) CreateBulk(builders ...*EmployeeEducationCreate) *EmployeeEducationCreateBulk {
+	return &EmployeeEducationCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *EmployeeEducationClient) MapCreateBulk(slice any, setFunc func(*EmployeeEducationCreate, int)) *EmployeeEducationCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &EmployeeEducationCreateBulk{err: fmt.Errorf("calling to EmployeeEducationClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*EmployeeEducationCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &EmployeeEducationCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for EmployeeEducation.
+func (c *EmployeeEducationClient) Update() *EmployeeEducationUpdate {
+	mutation := newEmployeeEducationMutation(c.config, OpUpdate)
+	return &EmployeeEducationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *EmployeeEducationClient) UpdateOne(_m *EmployeeEducation) *EmployeeEducationUpdateOne {
+	mutation := newEmployeeEducationMutation(c.config, OpUpdateOne, withEmployeeEducation(_m))
+	return &EmployeeEducationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *EmployeeEducationClient) UpdateOneID(id uuid.UUID) *EmployeeEducationUpdateOne {
+	mutation := newEmployeeEducationMutation(c.config, OpUpdateOne, withEmployeeEducationID(id))
+	return &EmployeeEducationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for EmployeeEducation.
+func (c *EmployeeEducationClient) Delete() *EmployeeEducationDelete {
+	mutation := newEmployeeEducationMutation(c.config, OpDelete)
+	return &EmployeeEducationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *EmployeeEducationClient) DeleteOne(_m *EmployeeEducation) *EmployeeEducationDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *EmployeeEducationClient) DeleteOneID(id uuid.UUID) *EmployeeEducationDeleteOne {
+	builder := c.Delete().Where(employeeeducation.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &EmployeeEducationDeleteOne{builder}
+}
+
+// Query returns a query builder for EmployeeEducation.
+func (c *EmployeeEducationClient) Query() *EmployeeEducationQuery {
+	return &EmployeeEducationQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeEmployeeEducation},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a EmployeeEducation entity by its id.
+func (c *EmployeeEducationClient) Get(ctx context.Context, id uuid.UUID) (*EmployeeEducation, error) {
+	return c.Query().Where(employeeeducation.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *EmployeeEducationClient) GetX(ctx context.Context, id uuid.UUID) *EmployeeEducation {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *EmployeeEducationClient) Hooks() []Hook {
+	return c.hooks.EmployeeEducation
+}
+
+// Interceptors returns the client interceptors.
+func (c *EmployeeEducationClient) Interceptors() []Interceptor {
+	return c.inters.EmployeeEducation
+}
+
+func (c *EmployeeEducationClient) mutate(ctx context.Context, m *EmployeeEducationMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&EmployeeEducationCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&EmployeeEducationUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&EmployeeEducationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&EmployeeEducationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown EmployeeEducation mutation op: %q", m.Op())
 	}
 }
 
@@ -5615,6 +5907,139 @@ func (c *EmployeeOnboardingClient) mutate(ctx context.Context, m *EmployeeOnboar
 		return (&EmployeeOnboardingDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown EmployeeOnboarding mutation op: %q", m.Op())
+	}
+}
+
+// EmploymentHistoryClient is a client for the EmploymentHistory schema.
+type EmploymentHistoryClient struct {
+	config
+}
+
+// NewEmploymentHistoryClient returns a client for the EmploymentHistory from the given config.
+func NewEmploymentHistoryClient(c config) *EmploymentHistoryClient {
+	return &EmploymentHistoryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `employmenthistory.Hooks(f(g(h())))`.
+func (c *EmploymentHistoryClient) Use(hooks ...Hook) {
+	c.hooks.EmploymentHistory = append(c.hooks.EmploymentHistory, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `employmenthistory.Intercept(f(g(h())))`.
+func (c *EmploymentHistoryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.EmploymentHistory = append(c.inters.EmploymentHistory, interceptors...)
+}
+
+// Create returns a builder for creating a EmploymentHistory entity.
+func (c *EmploymentHistoryClient) Create() *EmploymentHistoryCreate {
+	mutation := newEmploymentHistoryMutation(c.config, OpCreate)
+	return &EmploymentHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of EmploymentHistory entities.
+func (c *EmploymentHistoryClient) CreateBulk(builders ...*EmploymentHistoryCreate) *EmploymentHistoryCreateBulk {
+	return &EmploymentHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *EmploymentHistoryClient) MapCreateBulk(slice any, setFunc func(*EmploymentHistoryCreate, int)) *EmploymentHistoryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &EmploymentHistoryCreateBulk{err: fmt.Errorf("calling to EmploymentHistoryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*EmploymentHistoryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &EmploymentHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for EmploymentHistory.
+func (c *EmploymentHistoryClient) Update() *EmploymentHistoryUpdate {
+	mutation := newEmploymentHistoryMutation(c.config, OpUpdate)
+	return &EmploymentHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *EmploymentHistoryClient) UpdateOne(_m *EmploymentHistory) *EmploymentHistoryUpdateOne {
+	mutation := newEmploymentHistoryMutation(c.config, OpUpdateOne, withEmploymentHistory(_m))
+	return &EmploymentHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *EmploymentHistoryClient) UpdateOneID(id uuid.UUID) *EmploymentHistoryUpdateOne {
+	mutation := newEmploymentHistoryMutation(c.config, OpUpdateOne, withEmploymentHistoryID(id))
+	return &EmploymentHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for EmploymentHistory.
+func (c *EmploymentHistoryClient) Delete() *EmploymentHistoryDelete {
+	mutation := newEmploymentHistoryMutation(c.config, OpDelete)
+	return &EmploymentHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *EmploymentHistoryClient) DeleteOne(_m *EmploymentHistory) *EmploymentHistoryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *EmploymentHistoryClient) DeleteOneID(id uuid.UUID) *EmploymentHistoryDeleteOne {
+	builder := c.Delete().Where(employmenthistory.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &EmploymentHistoryDeleteOne{builder}
+}
+
+// Query returns a query builder for EmploymentHistory.
+func (c *EmploymentHistoryClient) Query() *EmploymentHistoryQuery {
+	return &EmploymentHistoryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeEmploymentHistory},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a EmploymentHistory entity by its id.
+func (c *EmploymentHistoryClient) Get(ctx context.Context, id uuid.UUID) (*EmploymentHistory, error) {
+	return c.Query().Where(employmenthistory.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *EmploymentHistoryClient) GetX(ctx context.Context, id uuid.UUID) *EmploymentHistory {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *EmploymentHistoryClient) Hooks() []Hook {
+	return c.hooks.EmploymentHistory
+}
+
+// Interceptors returns the client interceptors.
+func (c *EmploymentHistoryClient) Interceptors() []Interceptor {
+	return c.inters.EmploymentHistory
+}
+
+func (c *EmploymentHistoryClient) mutate(ctx context.Context, m *EmploymentHistoryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&EmploymentHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&EmploymentHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&EmploymentHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&EmploymentHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown EmploymentHistory mutation op: %q", m.Op())
 	}
 }
 
@@ -13682,19 +14107,20 @@ type (
 		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, ClaimItem,
 		CompanySettings, ContactDetails, Contract, CustomUser, Department,
 		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
-		EmployeeDocument, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
-		ExchangeRate, ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal,
-		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
-		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
-		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
-		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
-		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
-		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
-		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
-		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
-		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
-		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
-		WithHoldingTax, WorkShift, WorkShiftSchedule, WorkersUnion []ent.Hook
+		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
+		EmployeeMetric, EmployeeOnboarding, EmploymentHistory, ExchangeRate,
+		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
+		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
+		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
+		LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay, OnboardingTask,
+		OutboxEvent, PayrollComponent, PayrollFormula, PayrollFormulaItem,
+		PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit, PerformanceMetric,
+		PerformanceReview, Permission, PublicHoliday, Region, RepayOption,
+		ReviewMetric, Role, RolePermission, SalaryDetails, ShiftAssignment,
+		ShiftRoster, ShiftRosterSlot, ShiftRotation, StaffShiftOverride, Task,
+		TaskComment, TaskLog, Timesheet, TimesheetEntry, TrainingCourse,
+		TrainingEnrollment, TrainingEvaluation, UserRoleAssignment, WithHoldingTax,
+		WorkShift, WorkShiftSchedule, WorkersUnion []ent.Hook
 	}
 	inters struct {
 		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
@@ -13703,18 +14129,19 @@ type (
 		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, ClaimItem,
 		CompanySettings, ContactDetails, Contract, CustomUser, Department,
 		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
-		EmployeeDocument, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
-		ExchangeRate, ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal,
-		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
-		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
-		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
-		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
-		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
-		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
-		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
-		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
-		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
-		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
-		WithHoldingTax, WorkShift, WorkShiftSchedule, WorkersUnion []ent.Interceptor
+		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
+		EmployeeMetric, EmployeeOnboarding, EmploymentHistory, ExchangeRate,
+		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
+		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
+		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
+		LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay, OnboardingTask,
+		OutboxEvent, PayrollComponent, PayrollFormula, PayrollFormulaItem,
+		PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit, PerformanceMetric,
+		PerformanceReview, Permission, PublicHoliday, Region, RepayOption,
+		ReviewMetric, Role, RolePermission, SalaryDetails, ShiftAssignment,
+		ShiftRoster, ShiftRosterSlot, ShiftRotation, StaffShiftOverride, Task,
+		TaskComment, TaskLog, Timesheet, TimesheetEntry, TrainingCourse,
+		TrainingEnrollment, TrainingEvaluation, UserRoleAssignment, WithHoldingTax,
+		WorkShift, WorkShiftSchedule, WorkersUnion []ent.Interceptor
 	}
 )

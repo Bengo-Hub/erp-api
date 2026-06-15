@@ -72,14 +72,20 @@ type Tx struct {
 	EmployeeBankAccount *EmployeeBankAccountClient
 	// EmployeeBenefit is the client for interacting with the EmployeeBenefit builders.
 	EmployeeBenefit *EmployeeBenefitClient
+	// EmployeeDisciplinary is the client for interacting with the EmployeeDisciplinary builders.
+	EmployeeDisciplinary *EmployeeDisciplinaryClient
 	// EmployeeDocument is the client for interacting with the EmployeeDocument builders.
 	EmployeeDocument *EmployeeDocumentClient
+	// EmployeeEducation is the client for interacting with the EmployeeEducation builders.
+	EmployeeEducation *EmployeeEducationClient
 	// EmployeeLoan is the client for interacting with the EmployeeLoan builders.
 	EmployeeLoan *EmployeeLoanClient
 	// EmployeeMetric is the client for interacting with the EmployeeMetric builders.
 	EmployeeMetric *EmployeeMetricClient
 	// EmployeeOnboarding is the client for interacting with the EmployeeOnboarding builders.
 	EmployeeOnboarding *EmployeeOnboardingClient
+	// EmploymentHistory is the client for interacting with the EmploymentHistory builders.
+	EmploymentHistory *EmploymentHistoryClient
 	// ExchangeRate is the client for interacting with the ExchangeRate builders.
 	ExchangeRate *ExchangeRateClient
 	// ExchangeRateAPISettings is the client for interacting with the ExchangeRateAPISettings builders.
@@ -359,10 +365,13 @@ func (tx *Tx) init() {
 	tx.Employee = NewEmployeeClient(tx.config)
 	tx.EmployeeBankAccount = NewEmployeeBankAccountClient(tx.config)
 	tx.EmployeeBenefit = NewEmployeeBenefitClient(tx.config)
+	tx.EmployeeDisciplinary = NewEmployeeDisciplinaryClient(tx.config)
 	tx.EmployeeDocument = NewEmployeeDocumentClient(tx.config)
+	tx.EmployeeEducation = NewEmployeeEducationClient(tx.config)
 	tx.EmployeeLoan = NewEmployeeLoanClient(tx.config)
 	tx.EmployeeMetric = NewEmployeeMetricClient(tx.config)
 	tx.EmployeeOnboarding = NewEmployeeOnboardingClient(tx.config)
+	tx.EmploymentHistory = NewEmploymentHistoryClient(tx.config)
 	tx.ExchangeRate = NewExchangeRateClient(tx.config)
 	tx.ExchangeRateAPISettings = NewExchangeRateAPISettingsClient(tx.config)
 	tx.ExpenseClaim = NewExpenseClaimClient(tx.config)
