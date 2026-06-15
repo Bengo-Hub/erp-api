@@ -283,6 +283,11 @@ func run() error {
 		// Authenticated surface.
 		api.Group(func(priv chi.Router) {
 			priv.Use(authMiddleware.RequireAuth)
+			// Subscription gate: block mutations for tenants without an active subscription
+			// (reads still pass). Superusers, platform owners, demo + service-charge tenants
+			// bypass via the shared IsSubscriptionActive funnel. Matches the inline enforcement
+			// in logistics/marketflow/projects + TruLoad's SubscriptionEnforcementMiddleware.
+			priv.Use(authclient.RequireActiveSubscriptionForMutations())
 			priv.Use(mw.OutletContext)
 			priv.Use(mw.EnsureServiceUser(rbacService, log)) // Trinity Layer 3: JIT-sync erp roles from SSO
 			authHandler.RegisterRoutes(priv)
