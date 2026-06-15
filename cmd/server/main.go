@@ -19,6 +19,7 @@ import (
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib" // register the "pgx" database/sql driver
 	"github.com/nats-io/nats.go"
@@ -44,6 +45,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/fx"
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
 	"github.com/Bengo-Hub/erp-api/internal/modules/orgsettings"
+	"github.com/Bengo-Hub/erp-api/internal/modules/payroll"
+	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
 	"github.com/Bengo-Hub/erp-api/internal/modules/performance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/rbac"
 	"github.com/Bengo-Hub/erp-api/internal/modules/recruitment"
@@ -55,6 +58,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/platform/database"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
 	"github.com/Bengo-Hub/erp-api/internal/platform/media"
+	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 	"github.com/Bengo-Hub/erp-api/internal/services/usersync"
 	"github.com/Bengo-Hub/erp-api/internal/shared/logger"
 
@@ -169,6 +173,15 @@ func run() error {
 	employeesHandler := handlers.NewEmployeesHandler(log, employeesSvc)
 	orgSettingsHandler := handlers.NewOrgSettingsHandler(log, orgsettings.NewService(orm))
 	contractsHandler := handlers.NewContractsHandler(log, contracts.NewService(orm))
+
+	// Payroll: engine service (reuses payroll-settings for rate resolution) + disburser
+	// (publishes the GL event + best-effort treasury S2S payout).
+	payrollSettingsSvc := payrollsettings.NewService(orm, uuid.Nil)
+	payrollSvc := payroll.NewService(orm, payrollSettingsSvc)
+	treasuryClient := treasury.NewClient(cfg.Services.TreasuryURL, cfg.Auth.APIKey, log)
+	payrollDisburser := payroll.NewDisburser(orm, notifyPublisher, treasuryClient, log)
+	payrollHandler := handlers.NewPayrollHandler(log, payrollSvc, payrollDisburser)
+	payrollSettingsHandler := handlers.NewPayrollSettingsHandler(log, payrollSettingsSvc, orm)
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher))
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
@@ -246,6 +259,8 @@ func run() error {
 			employeesHandler.RegisterRoutes(priv)
 			orgSettingsHandler.RegisterRoutes(priv)
 			contractsHandler.RegisterRoutes(priv)
+			payrollHandler.RegisterRoutes(priv)
+			payrollSettingsHandler.RegisterRoutes(priv)
 			leaveHandler.RegisterRoutes(priv)
 			attendanceHandler.RegisterRoutes(priv)
 			recruitmentHandler.RegisterRoutes(priv)
