@@ -58,11 +58,41 @@ type PostgresConfig struct {
 	// of the SAME bengo_erp database during/after cutover (16 table names collide). See
 	// docs/data-migration-runbook.md.
 	Schema string `envconfig:"DB_SCHEMA" default:"erp"`
+
+	// Direct-connection components. When Host is set (DB_HOST), the DSN is built from these
+	// instead of URL. This is REQUIRED in prod: POSTGRES_URL points at pgbouncer (transaction
+	// pooling), which resets the per-session search_path (breaking the erp schema) and breaks
+	// pgx prepared statements. The Go ERP therefore connects DIRECTLY to postgresql (small pool),
+	// pulling DB_USER/DB_PASSWORD/DB_NAME from the k8s secret and overriding DB_HOST to the
+	// postgresql service. See docs/data-migration-runbook.md.
+	Host     string `envconfig:"DB_HOST"`
+	Port     string `envconfig:"DB_PORT" default:"5432"`
+	User     string `envconfig:"DB_USER"`
+	Password string `envconfig:"DB_PASSWORD"`
+	Name     string `envconfig:"DB_NAME"`
+	SSLMode  string `envconfig:"DB_SSLMODE" default:"disable"`
 }
 
-// DSN returns the Postgres connection string with search_path pinned to the configured
-// schema (erp), so every connection in the service reads/writes the Go ERP's own tables.
-func (c PostgresConfig) DSN() string { return EnsureSearchPath(c.URL, c.Schema) }
+// DSN returns the Postgres connection string with search_path pinned to the configured schema
+// (erp). When DB_HOST is set it builds a DIRECT postgresql DSN from the component vars (bypassing
+// pgbouncer — needed for persistent search_path + prepared statements); otherwise it falls back
+// to POSTGRES_URL.
+func (c PostgresConfig) DSN() string {
+	base := c.URL
+	if c.Host != "" {
+		u := url.URL{
+			Scheme: "postgres",
+			User:   url.UserPassword(c.User, c.Password),
+			Host:   c.Host + ":" + c.Port,
+			Path:   "/" + c.Name,
+		}
+		q := url.Values{}
+		q.Set("sslmode", c.SSLMode)
+		u.RawQuery = q.Encode()
+		base = u.String()
+	}
+	return EnsureSearchPath(base, c.Schema)
+}
 
 // EnsureSearchPath returns dsn with its search_path query parameter set to schema.
 // pgx (used by both pgxpool and the database/sql stdlib driver) sends unknown URL query
