@@ -153,11 +153,18 @@ func run() error {
 	}
 
 	tenantSyncer := usersync.NewTenantSyncer(orm, log)
+	authUserEmployeesSvc := employees.NewService(orm)
 	if natsConn != nil {
 		idem := eventslib.NewIdempotencyStore(sqlDB)
 		tenantConsumer := consumers.NewTenantSyncConsumer(log, tenantSyncer, idem)
 		if err := tenantConsumer.Start(ctx, natsConn); err != nil {
 			log.Warn("tenant-sync consumer start failed", zap.Error(err))
+		}
+		// Project auth-api users into erp employees (keyed on the auth user id) so a
+		// tenant's employee roster is populated from SSO instead of empty placeholders.
+		authUserConsumer := consumers.NewAuthUserSyncConsumer(log, authUserEmployeesSvc, idem)
+		if err := authUserConsumer.Start(ctx, natsConn); err != nil {
+			log.Warn("auth-user-sync consumer start failed", zap.Error(err))
 		}
 	}
 
