@@ -37,6 +37,7 @@ var permissionCodes = []string{
 	"hrm.training.view", "hrm.training.manage",
 	"hrm.appraisal.view", "hrm.appraisal.manage",
 	"hrm.performance.view", "hrm.performance.manage",
+	"hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process",
 	// Cross-cutting
 	"approvals.view", "approvals.manage", "approvals.decide",
 	"tasks.view", "tasks.manage",
@@ -56,11 +57,14 @@ var roleGrants = map[string][]string{
 		"hrm.training.view", "hrm.training.manage",
 		"hrm.appraisal.view", "hrm.appraisal.manage",
 		"hrm.performance.view", "hrm.performance.manage",
+		"hrm.payroll.view",
 		"approvals.view", "approvals.decide",
 		"tasks.view", "tasks.manage", "reports.view", "business.view",
 	},
 	"payroll_manager": {
-		"hrm.employee.view", "reports.view", "approvals.view", "approvals.decide",
+		"hrm.employee.view",
+		"hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process",
+		"reports.view", "approvals.view", "approvals.decide",
 		"business.view", "business.manage", "fx.view",
 	},
 	"hr_viewer": {
