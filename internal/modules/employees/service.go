@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
@@ -15,6 +16,14 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 )
+
+// blankOrNull matches a string column that is NULL or empty (junk placeholder rows
+// from the legacy migration stored NULL, not ""), so the predicate must cover both.
+func blankOrNull(col string) func(*entsql.Selector) {
+	return func(s *entsql.Selector) {
+		s.Where(entsql.Or(entsql.IsNull(s.C(col)), entsql.EQ(s.C(col), "")))
+	}
+}
 
 // Service holds employee CRUD + derived-field recomputation. Every query is filtered by
 // tenant_id; callers pass the tenant from the request scope (gaps §2 isolation).
@@ -239,10 +248,9 @@ func (s *Service) SoftDeleteBlankPlaceholders(ctx context.Context, tenantID uuid
 		Where(
 			employee.TenantID(tenantID),
 			employee.UserIDIsNil(),
-			employee.FirstName(""),
-			employee.LastName(""),
-			employee.Email(""),
 			employee.Deleted(false),
+			blankOrNull(employee.FieldFirstName),
+			blankOrNull(employee.FieldLastName),
 		).
 		SetDeleted(true).
 		Save(ctx)
