@@ -42,6 +42,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/modules/fx"
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
+	"github.com/Bengo-Hub/erp-api/internal/modules/orgsettings"
 	"github.com/Bengo-Hub/erp-api/internal/modules/performance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/rbac"
 	"github.com/Bengo-Hub/erp-api/internal/modules/recruitment"
@@ -165,6 +166,7 @@ func run() error {
 	notifyPublisher := events.NewPublisher(orm, cfg.Events.SourceService)
 	employeesSvc := employees.NewService(orm)
 	employeesHandler := handlers.NewEmployeesHandler(log, employeesSvc)
+	orgSettingsHandler := handlers.NewOrgSettingsHandler(log, orgsettings.NewService(orm))
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher))
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
@@ -240,6 +242,7 @@ func run() error {
 			priv.Use(mw.OutletContext)
 			authHandler.RegisterRoutes(priv)
 			employeesHandler.RegisterRoutes(priv)
+			orgSettingsHandler.RegisterRoutes(priv)
 			leaveHandler.RegisterRoutes(priv)
 			attendanceHandler.RegisterRoutes(priv)
 			recruitmentHandler.RegisterRoutes(priv)
