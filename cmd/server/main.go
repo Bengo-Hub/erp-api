@@ -39,6 +39,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/business"
 	"github.com/Bengo-Hub/erp-api/internal/modules/consumers"
+	"github.com/Bengo-Hub/erp-api/internal/modules/contracts"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/modules/fx"
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
@@ -167,6 +168,7 @@ func run() error {
 	employeesSvc := employees.NewService(orm)
 	employeesHandler := handlers.NewEmployeesHandler(log, employeesSvc)
 	orgSettingsHandler := handlers.NewOrgSettingsHandler(log, orgsettings.NewService(orm))
+	contractsHandler := handlers.NewContractsHandler(log, contracts.NewService(orm))
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher))
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
@@ -243,6 +245,7 @@ func run() error {
 			authHandler.RegisterRoutes(priv)
 			employeesHandler.RegisterRoutes(priv)
 			orgSettingsHandler.RegisterRoutes(priv)
+			contractsHandler.RegisterRoutes(priv)
 			leaveHandler.RegisterRoutes(priv)
 			attendanceHandler.RegisterRoutes(priv)
 			recruitmentHandler.RegisterRoutes(priv)
