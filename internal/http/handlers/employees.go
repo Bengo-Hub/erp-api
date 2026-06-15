@@ -34,6 +34,7 @@ func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/hrm/employees", func(er chi.Router) {
 		er.Get("/", h.List)
 		er.Post("/", h.Create)
+		er.Post("/import", h.Import) // bulk CSV import (handler in employees_import.go)
 		er.Get("/{id}", h.Get)
 		er.Put("/{id}", h.Update)
 		er.Patch("/{id}", h.Update)
