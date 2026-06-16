@@ -646,6 +646,22 @@ var (
 			},
 		},
 	}
+	// BackupSettingsColumns holds the columns for the "backup_settings" table.
+	BackupSettingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID, Unique: true},
+		{Name: "auto_enabled", Type: field.TypeBool, Default: false},
+		{Name: "schedule_hour", Type: field.TypeInt, Default: 2},
+		{Name: "retention_days", Type: field.TypeInt, Default: 4},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// BackupSettingsTable holds the schema information for the "backup_settings" table.
+	BackupSettingsTable = &schema.Table{
+		Name:       "backup_settings",
+		Columns:    BackupSettingsColumns,
+		PrimaryKey: []*schema.Column{BackupSettingsColumns[0]},
+	}
 	// BenefitTaxesColumns holds the columns for the "benefit_taxes" table.
 	BenefitTaxesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -3354,6 +3370,7 @@ var (
 		AuthOutletsTable,
 		AuthTenantsTable,
 		BackupsTable,
+		BackupSettingsTable,
 		BenefitTaxesTable,
 		CandidatesTable,
 		ClaimItemsTable,
