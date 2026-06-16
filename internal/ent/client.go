@@ -34,6 +34,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
 	"github.com/Bengo-Hub/erp-api/internal/ent/backup"
+	"github.com/Bengo-Hub/erp-api/internal/ent/backupsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
@@ -156,6 +157,8 @@ type Client struct {
 	AuthTenant *AuthTenantClient
 	// Backup is the client for interacting with the Backup builders.
 	Backup *BackupClient
+	// BackupSetting is the client for interacting with the BackupSetting builders.
+	BackupSetting *BackupSettingClient
 	// BenefitTax is the client for interacting with the BenefitTax builders.
 	BenefitTax *BenefitTaxClient
 	// Candidate is the client for interacting with the Candidate builders.
@@ -343,6 +346,7 @@ func (c *Client) init() {
 	c.AuthOutlet = NewAuthOutletClient(c.config)
 	c.AuthTenant = NewAuthTenantClient(c.config)
 	c.Backup = NewBackupClient(c.config)
+	c.BackupSetting = NewBackupSettingClient(c.config)
 	c.BenefitTax = NewBenefitTaxClient(c.config)
 	c.Candidate = NewCandidateClient(c.config)
 	c.ClaimItem = NewClaimItemClient(c.config)
@@ -532,6 +536,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		AuthOutlet:              NewAuthOutletClient(cfg),
 		AuthTenant:              NewAuthTenantClient(cfg),
 		Backup:                  NewBackupClient(cfg),
+		BackupSetting:           NewBackupSettingClient(cfg),
 		BenefitTax:              NewBenefitTaxClient(cfg),
 		Candidate:               NewCandidateClient(cfg),
 		ClaimItem:               NewClaimItemClient(cfg),
@@ -648,6 +653,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		AuthOutlet:              NewAuthOutletClient(cfg),
 		AuthTenant:              NewAuthTenantClient(cfg),
 		Backup:                  NewBackupClient(cfg),
+		BackupSetting:           NewBackupSettingClient(cfg),
 		BenefitTax:              NewBenefitTaxClient(cfg),
 		Candidate:               NewCandidateClient(cfg),
 		ClaimItem:               NewClaimItemClient(cfg),
@@ -760,10 +766,10 @@ func (c *Client) Use(hooks ...Hook) {
 		c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
-		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BenefitTax,
-		c.Candidate, c.ClaimItem, c.CompanySettings, c.ContactDetails, c.Contract,
-		c.CustomUser, c.Department, c.DocumentSequence, c.ESSSettings, c.Employee,
-		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
+		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BackupSetting,
+		c.BenefitTax, c.Candidate, c.ClaimItem, c.CompanySettings, c.ContactDetails,
+		c.Contract, c.CustomUser, c.Department, c.DocumentSequence, c.ESSSettings,
+		c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
 		c.EmployeeDocument, c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric,
 		c.EmployeeOnboarding, c.EmploymentHistory, c.ExchangeRate,
 		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
@@ -792,10 +798,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
-		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BenefitTax,
-		c.Candidate, c.ClaimItem, c.CompanySettings, c.ContactDetails, c.Contract,
-		c.CustomUser, c.Department, c.DocumentSequence, c.ESSSettings, c.Employee,
-		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
+		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BackupSetting,
+		c.BenefitTax, c.Candidate, c.ClaimItem, c.CompanySettings, c.ContactDetails,
+		c.Contract, c.CustomUser, c.Department, c.DocumentSequence, c.ESSSettings,
+		c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
 		c.EmployeeDocument, c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric,
 		c.EmployeeOnboarding, c.EmploymentHistory, c.ExchangeRate,
 		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
@@ -855,6 +861,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.AuthTenant.mutate(ctx, m)
 	case *BackupMutation:
 		return c.Backup.mutate(ctx, m)
+	case *BackupSettingMutation:
+		return c.BackupSetting.mutate(ctx, m)
 	case *BenefitTaxMutation:
 		return c.BenefitTax.mutate(ctx, m)
 	case *CandidateMutation:
@@ -3505,6 +3513,139 @@ func (c *BackupClient) mutate(ctx context.Context, m *BackupMutation) (Value, er
 		return (&BackupDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Backup mutation op: %q", m.Op())
+	}
+}
+
+// BackupSettingClient is a client for the BackupSetting schema.
+type BackupSettingClient struct {
+	config
+}
+
+// NewBackupSettingClient returns a client for the BackupSetting from the given config.
+func NewBackupSettingClient(c config) *BackupSettingClient {
+	return &BackupSettingClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `backupsetting.Hooks(f(g(h())))`.
+func (c *BackupSettingClient) Use(hooks ...Hook) {
+	c.hooks.BackupSetting = append(c.hooks.BackupSetting, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `backupsetting.Intercept(f(g(h())))`.
+func (c *BackupSettingClient) Intercept(interceptors ...Interceptor) {
+	c.inters.BackupSetting = append(c.inters.BackupSetting, interceptors...)
+}
+
+// Create returns a builder for creating a BackupSetting entity.
+func (c *BackupSettingClient) Create() *BackupSettingCreate {
+	mutation := newBackupSettingMutation(c.config, OpCreate)
+	return &BackupSettingCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of BackupSetting entities.
+func (c *BackupSettingClient) CreateBulk(builders ...*BackupSettingCreate) *BackupSettingCreateBulk {
+	return &BackupSettingCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BackupSettingClient) MapCreateBulk(slice any, setFunc func(*BackupSettingCreate, int)) *BackupSettingCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BackupSettingCreateBulk{err: fmt.Errorf("calling to BackupSettingClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BackupSettingCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BackupSettingCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for BackupSetting.
+func (c *BackupSettingClient) Update() *BackupSettingUpdate {
+	mutation := newBackupSettingMutation(c.config, OpUpdate)
+	return &BackupSettingUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BackupSettingClient) UpdateOne(_m *BackupSetting) *BackupSettingUpdateOne {
+	mutation := newBackupSettingMutation(c.config, OpUpdateOne, withBackupSetting(_m))
+	return &BackupSettingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BackupSettingClient) UpdateOneID(id uuid.UUID) *BackupSettingUpdateOne {
+	mutation := newBackupSettingMutation(c.config, OpUpdateOne, withBackupSettingID(id))
+	return &BackupSettingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for BackupSetting.
+func (c *BackupSettingClient) Delete() *BackupSettingDelete {
+	mutation := newBackupSettingMutation(c.config, OpDelete)
+	return &BackupSettingDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BackupSettingClient) DeleteOne(_m *BackupSetting) *BackupSettingDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BackupSettingClient) DeleteOneID(id uuid.UUID) *BackupSettingDeleteOne {
+	builder := c.Delete().Where(backupsetting.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BackupSettingDeleteOne{builder}
+}
+
+// Query returns a query builder for BackupSetting.
+func (c *BackupSettingClient) Query() *BackupSettingQuery {
+	return &BackupSettingQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBackupSetting},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a BackupSetting entity by its id.
+func (c *BackupSettingClient) Get(ctx context.Context, id uuid.UUID) (*BackupSetting, error) {
+	return c.Query().Where(backupsetting.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BackupSettingClient) GetX(ctx context.Context, id uuid.UUID) *BackupSetting {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *BackupSettingClient) Hooks() []Hook {
+	return c.hooks.BackupSetting
+}
+
+// Interceptors returns the client interceptors.
+func (c *BackupSettingClient) Interceptors() []Interceptor {
+	return c.inters.BackupSetting
+}
+
+func (c *BackupSettingClient) mutate(ctx context.Context, m *BackupSettingMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BackupSettingCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BackupSettingUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BackupSettingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BackupSettingDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown BackupSetting mutation op: %q", m.Op())
 	}
 }
 
@@ -14245,44 +14386,44 @@ type (
 		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
 		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
-		AttendanceRule, AuthOutlet, AuthTenant, Backup, BenefitTax, Candidate,
-		ClaimItem, CompanySettings, ContactDetails, Contract, CustomUser, Department,
-		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
-		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
-		EmployeeMetric, EmployeeOnboarding, EmploymentHistory, ExchangeRate,
-		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
-		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
-		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
-		LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay, OnboardingTask,
-		OutboxEvent, PayrollComponent, PayrollFormula, PayrollFormulaItem,
-		PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit, PerformanceMetric,
-		PerformanceReview, Permission, PublicHoliday, Region, RepayOption,
-		ReviewMetric, Role, RolePermission, SalaryDetails, ShiftAssignment,
-		ShiftRoster, ShiftRosterSlot, ShiftRotation, StaffShiftOverride, Task,
-		TaskComment, TaskLog, Timesheet, TimesheetEntry, TrainingCourse,
-		TrainingEnrollment, TrainingEvaluation, UserRoleAssignment, WithHoldingTax,
-		WorkShift, WorkShiftSchedule, WorkersUnion []ent.Hook
+		AttendanceRule, AuthOutlet, AuthTenant, Backup, BackupSetting, BenefitTax,
+		Candidate, ClaimItem, CompanySettings, ContactDetails, Contract, CustomUser,
+		Department, DocumentSequence, ESSSettings, Employee, EmployeeBankAccount,
+		EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument, EmployeeEducation,
+		EmployeeLoan, EmployeeMetric, EmployeeOnboarding, EmploymentHistory,
+		ExchangeRate, ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal,
+		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
+		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
+		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
+		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
+		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
+		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
+		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
+		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
+		WithHoldingTax, WorkShift, WorkShiftSchedule, WorkersUnion []ent.Hook
 	}
 	inters struct {
 		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
 		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
-		AttendanceRule, AuthOutlet, AuthTenant, Backup, BenefitTax, Candidate,
-		ClaimItem, CompanySettings, ContactDetails, Contract, CustomUser, Department,
-		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
-		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
-		EmployeeMetric, EmployeeOnboarding, EmploymentHistory, ExchangeRate,
-		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
-		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
-		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
-		LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay, OnboardingTask,
-		OutboxEvent, PayrollComponent, PayrollFormula, PayrollFormulaItem,
-		PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit, PerformanceMetric,
-		PerformanceReview, Permission, PublicHoliday, Region, RepayOption,
-		ReviewMetric, Role, RolePermission, SalaryDetails, ShiftAssignment,
-		ShiftRoster, ShiftRosterSlot, ShiftRotation, StaffShiftOverride, Task,
-		TaskComment, TaskLog, Timesheet, TimesheetEntry, TrainingCourse,
-		TrainingEnrollment, TrainingEvaluation, UserRoleAssignment, WithHoldingTax,
-		WorkShift, WorkShiftSchedule, WorkersUnion []ent.Interceptor
+		AttendanceRule, AuthOutlet, AuthTenant, Backup, BackupSetting, BenefitTax,
+		Candidate, ClaimItem, CompanySettings, ContactDetails, Contract, CustomUser,
+		Department, DocumentSequence, ESSSettings, Employee, EmployeeBankAccount,
+		EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument, EmployeeEducation,
+		EmployeeLoan, EmployeeMetric, EmployeeOnboarding, EmploymentHistory,
+		ExchangeRate, ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal,
+		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
+		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
+		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
+		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
+		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
+		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
+		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
+		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
+		WithHoldingTax, WorkShift, WorkShiftSchedule, WorkersUnion []ent.Interceptor
 	}
 )

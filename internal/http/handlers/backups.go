@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,10 +38,53 @@ func (h *BackupsHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/backups", func(br chi.Router) {
 		br.Get("/", h.List)
 		br.Post("/", h.Create)
+		br.Get("/settings", h.GetSettings)
+		br.Put("/settings", h.UpdateSettings)
 		br.Post("/churn", h.Churn)
 		br.Get("/{name}/download", h.Download)
 		br.Delete("/{name}", h.Delete)
 	})
+}
+
+// GetSettings returns the tenant's auto-backup settings (auto_enabled defaults to false).
+func (h *BackupsHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permBackupsView) {
+		return
+	}
+	settings, err := h.svc.GetSettings(r.Context(), scope.TenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to load backup settings")
+		return
+	}
+	writeJSON(w, http.StatusOK, settings)
+}
+
+type backupSettingsBody struct {
+	AutoEnabled   bool `json:"auto_enabled"`
+	ScheduleHour  int  `json:"schedule_hour"`
+	RetentionDays int  `json:"retention_days"`
+}
+
+// UpdateSettings activates/deactivates auto-backup + sets schedule hour + retention.
+func (h *BackupsHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permBackupsManage) {
+		return
+	}
+	var b backupSettingsBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	settings, err := h.svc.UpsertSettings(r.Context(), scope.TenantID, backup.Settings{
+		AutoEnabled: b.AutoEnabled, ScheduleHour: b.ScheduleHour, RetentionDays: b.RetentionDays,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "save_failed", "failed to save backup settings")
+		return
+	}
+	writeJSON(w, http.StatusOK, settings)
 }
 
 func (h *BackupsHandler) List(w http.ResponseWriter, r *http.Request) {

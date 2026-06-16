@@ -30,6 +30,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
 	"github.com/Bengo-Hub/erp-api/internal/ent/backup"
+	"github.com/Bengo-Hub/erp-api/internal/ent/backupsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
@@ -187,6 +188,7 @@ func checkColumn(t, c string) error {
 			authoutlet.Table:              authoutlet.ValidColumn,
 			authtenant.Table:              authtenant.ValidColumn,
 			backup.Table:                  backup.ValidColumn,
+			backupsetting.Table:           backupsetting.ValidColumn,
 			benefittax.Table:              benefittax.ValidColumn,
 			candidate.Table:               candidate.ValidColumn,
 			claimitem.Table:               claimitem.ValidColumn,
