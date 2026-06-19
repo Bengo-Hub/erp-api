@@ -12,6 +12,8 @@ RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/erp-seed ./cmd/seed
 RUN GOTOOLCHAIN=auto CGO_ENABLED=0 go build -o /out/erp-sync-employees ./cmd/sync-employees
 
 FROM alpine:3.20
+# rclone: powers pluggable backup-destination mirroring off the local PVC.
+RUN apk add --no-cache ca-certificates rclone
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --from=builder /out/erp-api /usr/local/bin/erp-api

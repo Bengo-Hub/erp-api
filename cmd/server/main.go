@@ -19,8 +19,8 @@ import (
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib" // register the "pgx" database/sql driver
 	"github.com/nats-io/nats.go"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
@@ -36,9 +36,10 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/http/handlers"
 	mw "github.com/Bengo-Hub/erp-api/internal/http/middleware"
 	"github.com/Bengo-Hub/erp-api/internal/modules/appraisals"
-	"github.com/Bengo-Hub/erp-api/internal/modules/backup"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
+	"github.com/Bengo-Hub/erp-api/internal/modules/backup"
+	"github.com/Bengo-Hub/erp-api/internal/modules/backup/destination"
 	"github.com/Bengo-Hub/erp-api/internal/modules/business"
 	"github.com/Bengo-Hub/erp-api/internal/modules/consumers"
 	"github.com/Bengo-Hub/erp-api/internal/modules/contracts"
@@ -174,7 +175,16 @@ func run() error {
 	handlers.SetRBACService(rbacService) // enable local erp-permission enforcement in requirePermission
 	authHandler := handlers.NewAuthHandler(log, rbacService)
 	rbacHandler := handlers.NewRBACHandler(log, rbacService)
-	backupSvc := backup.NewService(sqlDB, orm, cfg.Media.Root, log)
+	// Pluggable backup destination (OneDrive/GDrive/S3/WebDAV/SFTP/SMB) — encrypted
+	// at rest with a SECRET_KEY-derived AES-256 key. The Store is shared between the
+	// management handler and the backup service's Mirrorer so every PVC backup is
+	// additionally mirrored best-effort to the configured remote.
+	backupDestStore := destination.NewStore(orm, destination.NewSecretKeyCipher(), log)
+	backupDestUploader := destination.NewUploader(backupDestStore, log)
+	backupDestHandler := handlers.NewBackupDestinationHandler(backupDestStore, backupDestUploader, log)
+
+	backupSvc := backup.NewService(sqlDB, orm, cfg.Media.Root, log).
+		WithMirrorer(backupDestUploader)
 	backupsHandler := handlers.NewBackupsHandler(log, backupSvc, cfg.Backup.RetentionDays)
 	// Daily tenant-scoped auto-backup (02:00) + retention churn (file + DB row). Multi-replica
 	// safe via a Postgres advisory lock so only one replica runs it.
@@ -308,8 +318,10 @@ func run() error {
 			documentsHandler.RegisterRoutes(priv)
 			businessHandler.RegisterRoutes(priv)
 			fxHandler.RegisterRoutes(priv)
-			rbacHandler.RegisterRoutes(priv)    // service-level role/permission management
-			backupsHandler.RegisterRoutes(priv) // tenant-scoped backups (this tenant's data only)
+			rbacHandler.RegisterRoutes(priv)               // service-level role/permission management
+			backupsHandler.RegisterRoutes(priv)            // tenant-scoped backups (this tenant's data only)
+			backupDestHandler.RegisterRoutes(priv)         // per-tenant backup-destination override (backups.view/manage)
+			backupDestHandler.RegisterPlatformRoutes(priv) // platform-default backup destination (platform-owner gated)
 		})
 	})
 
