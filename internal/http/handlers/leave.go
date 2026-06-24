@@ -434,9 +434,17 @@ func (h *LeaveHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid end_date")
 		return
 	}
+	if end.Before(start) {
+		writeError(w, http.StatusBadRequest, "bad_request", "end_date must not be before start_date")
+		return
+	}
 	days, err := decimal.NewFromString(body.Days)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid days_requested")
+		return
+	}
+	if !days.IsPositive() {
+		writeError(w, http.StatusBadRequest, "bad_request", "days_requested must be greater than zero")
 		return
 	}
 	uid := scope.UserID

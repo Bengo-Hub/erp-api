@@ -157,7 +157,7 @@ func (h *EmployeesHandler) ListBankAccounts(w http.ResponseWriter, r *http.Reque
 	for _, a := range rows {
 		out = append(out, bankAccountView(a))
 	}
-	writeJSON(w, http.StatusOK, out)
+	writePagedSlice(w, out, pagination.Parse(r))
 }
 
 type bankAccountBody struct {
@@ -287,7 +287,7 @@ func (h *EmployeesHandler) ListNextOfKin(w http.ResponseWriter, r *http.Request)
 	for _, k := range rows {
 		out = append(out, kinView(k))
 	}
-	writeJSON(w, http.StatusOK, out)
+	writePagedSlice(w, out, pagination.Parse(r))
 }
 
 type kinBody struct {

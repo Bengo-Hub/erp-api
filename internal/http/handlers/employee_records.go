@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
@@ -100,7 +101,7 @@ func (h *EmployeesHandler) ListEducation(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list education")
 		return
 	}
-	writeJSON(w, http.StatusOK, rows)
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 func (h *EmployeesHandler) CreateEducation(w http.ResponseWriter, r *http.Request) {
@@ -204,7 +205,7 @@ func (h *EmployeesHandler) ListEmploymentHistory(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list employment history")
 		return
 	}
-	writeJSON(w, http.StatusOK, rows)
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 func (h *EmployeesHandler) CreateEmploymentHistory(w http.ResponseWriter, r *http.Request) {
@@ -308,7 +309,7 @@ func (h *EmployeesHandler) ListDisciplinary(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list disciplinary")
 		return
 	}
-	writeJSON(w, http.StatusOK, rows)
+	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
 func (h *EmployeesHandler) CreateDisciplinary(w http.ResponseWriter, r *http.Request) {

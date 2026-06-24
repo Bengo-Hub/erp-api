@@ -48,7 +48,7 @@ var permissionCodes = []string{
 	"tasks.view", "tasks.manage",
 	"reports.view",
 	"business.view", "business.manage",
-	"fx.view",
+	"fx.view", "fx.manage",
 	// Service-level RBAC management (erp owns its roles/permissions).
 	"rbac.view", "rbac.manage",
 	// Tenant-scoped backups (this tenant's data only).
@@ -74,7 +74,7 @@ var (
 	execOversight = []string{ // see-everything + decide, but not RBAC/backup admin
 		"hrm.payroll.view", "approvals.view", "approvals.decide",
 		"tasks.view", "tasks.manage", "reports.view",
-		"business.view", "business.manage", "fx.view",
+		"business.view", "business.manage", "fx.view", "fx.manage",
 	}
 )
 
@@ -109,8 +109,8 @@ var roleGrants = map[string][]string{
 	"hr_assistant": bundle([]string{"hrm.employee.view", "hrm.leave.view", "hrm.leave.manage", "hrm.attendance.view", "hrm.attendance.manage", "hrm.recruitment.view", "hrm.recruitment.manage", "hrm.training.view", "hrm.training.manage", "tasks.view", "reports.view"}),
 	"hr_viewer":    bundle(hrmViewAll, []string{"tasks.view", "reports.view"}),
 	// Payroll / Finance
-	"payroll_manager": bundle([]string{"hrm.employee.view", "hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "reports.view", "approvals.view", "approvals.decide", "business.view", "business.manage", "fx.view"}),
-	"finance_manager": bundle([]string{"hrm.employee.view", "hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "reports.view", "approvals.view", "approvals.decide", "business.view", "business.manage", "fx.view"}),
+	"payroll_manager": bundle([]string{"hrm.employee.view", "hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "reports.view", "approvals.view", "approvals.decide", "business.view", "business.manage", "fx.view", "fx.manage"}),
+	"finance_manager": bundle([]string{"hrm.employee.view", "hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "reports.view", "approvals.view", "approvals.decide", "business.view", "business.manage", "fx.view", "fx.manage"}),
 	// Operations
 	"operations_manager": bundle([]string{"hrm.employee.view", "hrm.employee.manage", "hrm.leave.view", "hrm.leave.manage", "hrm.leave.approve", "hrm.attendance.view", "hrm.attendance.manage", "tasks.view", "tasks.manage", "approvals.view", "approvals.decide", "reports.view", "business.view"}),
 	// Procurement / Sales (thin in HR-scope ERP)
