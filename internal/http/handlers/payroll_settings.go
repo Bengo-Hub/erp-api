@@ -357,9 +357,26 @@ func (h *PayrollSettingsHandler) CreateLoan(w http.ResponseWriter, r *http.Reque
 	if principalStr == "" {
 		principalStr = b.MaxAmount
 	}
-	principal, _ := parseDecimalDefault(principalStr)
-	install, _ := parseDecimalDefault(b.MonthlyInstallment)
-	rate, _ := parseDecimalDefault(b.InterestRate)
+	principal, err := parsePositiveDecimal(principalStr, "principal_amount")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	install, err := parseRequiredDecimal(b.MonthlyInstallment, "monthly_installment")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	// Interest rate is optional (0 = interest-free loan); only reject if present and invalid.
+	rate, err := parseDecimalDefault(b.InterestRate)
+	if err != nil || rate.IsNegative() {
+		writeError(w, http.StatusBadRequest, "bad_request", "interest_rate must be a valid non-negative number")
+		return
+	}
+	if derr := validateDateOrder(b.StartDate, b.EndDate); derr != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", derr.Error())
+		return
+	}
 	c := h.orm.EmployeeLoan.Create().
 		SetTenantID(scope.TenantID).
 		SetEmployeeID(empID).
@@ -408,19 +425,32 @@ func (h *PayrollSettingsHandler) UpdateLoan(w http.ResponseWriter, r *http.Reque
 	}
 	u := existing.Update()
 	if b.PrincipalAmount != "" {
-		if d, e := decimal.NewFromString(b.PrincipalAmount); e == nil {
-			u = u.SetPrincipalAmount(d)
+		d, e := parsePositiveDecimal(b.PrincipalAmount, "principal_amount")
+		if e != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", e.Error())
+			return
 		}
+		u = u.SetPrincipalAmount(d)
 	}
 	if b.MonthlyInstallment != "" {
-		if d, e := decimal.NewFromString(b.MonthlyInstallment); e == nil {
-			u = u.SetMonthlyInstallment(d)
+		d, e := parseRequiredDecimal(b.MonthlyInstallment, "monthly_installment")
+		if e != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", e.Error())
+			return
 		}
+		u = u.SetMonthlyInstallment(d)
 	}
 	if b.InterestRate != "" {
-		if d, e := decimal.NewFromString(b.InterestRate); e == nil {
-			u = u.SetInterestRate(d)
+		d, e := parseRequiredDecimal(b.InterestRate, "interest_rate")
+		if e != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", e.Error())
+			return
 		}
+		u = u.SetInterestRate(d)
+	}
+	if derr := validateDateOrder(b.StartDate, b.EndDate); derr != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", derr.Error())
+		return
 	}
 	if b.IsActive != nil {
 		u = u.SetIsActive(*b.IsActive)

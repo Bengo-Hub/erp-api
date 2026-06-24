@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -132,6 +133,17 @@ func run() error {
 	redisClient := cache.NewClient(cfg.Redis)
 	defer func() { _ = redisClient.Close() }()
 	cacheAside := sharedcache.New(redisClient, log)
+
+	// Distributed rate limiter (Redis sliding-window). Ported from ordering-backend — the
+	// best-in-class model in the monorepo: smooth (no fixed-window cliff), multi-tenant/per-
+	// endpoint granularity, works across replicas, fails open on a Redis outage.
+	rateLimiter := mw.NewRateLimiter(redisClient, cfg.RateLimit, log)
+	if cfg.RateLimit.Enabled {
+		log.Info("rate limiting enabled",
+			zap.Int("per_minute", cfg.RateLimit.RequestsPerMinute),
+			zap.Int("per_hour", cfg.RateLimit.RequestsPerHour),
+			zap.Int("sensitive_per_minute", cfg.RateLimit.PaymentRequestsPerMinute))
+	}
 
 	// --- NATS + transactional outbox + tenant-sync consumers ---
 	natsConn := mustNATS(log, cfg)
@@ -271,6 +283,13 @@ func run() error {
 	r.Use(httpware.RequestID)
 	r.Use(httpware.Logging(log))
 	r.Use(httpware.Recover(log))
+	// Guard against a credentialed wildcard CORS misconfiguration: AllowCredentials:true with
+	// Origin "*" lets any site make authenticated cross-origin calls. Fail fast at boot.
+	for _, o := range cfg.HTTP.AllowedOrigins {
+		if strings.TrimSpace(o) == "*" {
+			return fmt.Errorf("config: HTTP_ALLOWED_ORIGINS must not contain \"*\" with credentialed CORS")
+		}
+	}
 	r.Use(httpware.CORS(httpware.CORSConfig{
 		AllowedOrigins:   cfg.HTTP.AllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -293,6 +312,11 @@ func run() error {
 		// Authenticated surface.
 		api.Group(func(priv chi.Router) {
 			priv.Use(authMiddleware.RequireAuth)
+			// Per-tenant sliding-window limiter: the fair multi-tenant default so one busy
+			// tenant cannot starve others. Runs after RequireAuth so the tenant is resolved
+			// from validated JWT claims (falls back to IP for unauthenticated edge cases).
+			priv.Use(rateLimiter.TenantRateLimiter(cfg.RateLimit.RequestsPerMinute, time.Minute))
+			priv.Use(rateLimiter.IPRateLimiter(cfg.RateLimit.RequestsPerHour, time.Hour))
 			// Subscription gate: block mutations for tenants without an active subscription
 			// (reads still pass). Superusers, platform owners, demo + service-charge tenants
 			// bypass via the shared IsSubscriptionActive funnel. Matches the inline enforcement
@@ -304,7 +328,6 @@ func run() error {
 			employeesHandler.RegisterRoutes(priv)
 			orgSettingsHandler.RegisterRoutes(priv)
 			contractsHandler.RegisterRoutes(priv)
-			payrollHandler.RegisterRoutes(priv)
 			payrollSettingsHandler.RegisterRoutes(priv)
 			leaveHandler.RegisterRoutes(priv)
 			attendanceHandler.RegisterRoutes(priv)
@@ -317,11 +340,25 @@ func run() error {
 			reportsHandler.RegisterRoutes(priv)
 			documentsHandler.RegisterRoutes(priv)
 			businessHandler.RegisterRoutes(priv)
-			fxHandler.RegisterRoutes(priv)
 			rbacHandler.RegisterRoutes(priv)               // service-level role/permission management
-			backupsHandler.RegisterRoutes(priv)            // tenant-scoped backups (this tenant's data only)
-			backupDestHandler.RegisterRoutes(priv)         // per-tenant backup-destination override (backups.view/manage)
 			backupDestHandler.RegisterPlatformRoutes(priv) // platform-default backup destination (platform-owner gated)
+
+			// Sensitive surfaces (money paths + external fetches + bulk backup operations) get
+			// an ADDITIONAL stricter per-endpoint+IP limiter on top of the per-tenant budget.
+			sensitiveLimit := cfg.RateLimit.PaymentRequestsPerMinute
+			priv.Group(func(s chi.Router) {
+				s.Use(rateLimiter.EndpointRateLimiter("payroll", sensitiveLimit, time.Minute))
+				payrollHandler.RegisterRoutes(s)
+			})
+			priv.Group(func(s chi.Router) {
+				s.Use(rateLimiter.EndpointRateLimiter("fx", sensitiveLimit, time.Minute))
+				fxHandler.RegisterRoutes(s)
+			})
+			priv.Group(func(s chi.Router) {
+				s.Use(rateLimiter.EndpointRateLimiter("backups", sensitiveLimit, time.Minute))
+				backupsHandler.RegisterRoutes(s)    // tenant-scoped backups (this tenant's data only)
+				backupDestHandler.RegisterRoutes(s) // per-tenant backup-destination override (backups.view/manage)
+			})
 		})
 	})
 

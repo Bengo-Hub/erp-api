@@ -10,7 +10,10 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/fx"
 )
 
-const permFxView = "fx.view"
+const (
+	permFxView   = "fx.view"
+	permFxManage = "fx.manage"
+)
 
 // FXHandler serves /api/v1/fx/* â€” stored exchange rates + an on-demand refresh.
 type FXHandler struct {
@@ -44,7 +47,8 @@ func (h *FXHandler) ListRates(w http.ResponseWriter, r *http.Request) {
 
 func (h *FXHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
-	if !ok || !requirePermission(w, scope, permFxView) {
+	// Refresh mutates stored rates (external fetch) — gate on manage, not view.
+	if !ok || !requirePermission(w, scope, permFxManage) {
 		return
 	}
 	n, err := h.svc.FetchAllActive(r.Context())

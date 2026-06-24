@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Bengo-Hub/pagination"
@@ -63,6 +65,56 @@ func parseDecimalDefault(s string) (decimal.Decimal, error) {
 		return decimal.Zero, nil
 	}
 	return decimal.NewFromString(s)
+}
+
+// parseRequiredDecimal parses a money/rate field that MUST be present and a valid, non-negative
+// number. Unlike parseDecimalDefault (which silently coerces a parse error to zero), this
+// surfaces a validation error so callers can return a 400 instead of persisting a silent zero.
+func parseRequiredDecimal(s, field string) (decimal.Decimal, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return decimal.Zero, fmt.Errorf("%s is required", field)
+	}
+	d, err := decimal.NewFromString(s)
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("%s must be a valid number", field)
+	}
+	if d.IsNegative() {
+		return decimal.Zero, fmt.Errorf("%s must not be negative", field)
+	}
+	return d, nil
+}
+
+// parsePositiveDecimal is parseRequiredDecimal plus a strictly-greater-than-zero check.
+func parsePositiveDecimal(s, field string) (decimal.Decimal, error) {
+	d, err := parseRequiredDecimal(s, field)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	if !d.IsPositive() {
+		return decimal.Zero, fmt.Errorf("%s must be greater than zero", field)
+	}
+	return d, nil
+}
+
+// validateDateOrder ensures end is not before start when both are present (YYYY-MM-DD/RFC3339).
+// Empty values are skipped (the field is optional at this layer).
+func validateDateOrder(startStr, endStr string) error {
+	if startStr == "" || endStr == "" {
+		return nil
+	}
+	start, err := parseDate(startStr)
+	if err != nil {
+		return fmt.Errorf("invalid start date")
+	}
+	end, err := parseDate(endStr)
+	if err != nil {
+		return fmt.Errorf("invalid end date")
+	}
+	if end.Before(start) {
+		return fmt.Errorf("end date must not be before start date")
+	}
+	return nil
 }
 
 // parseDate parses a YYYY-MM-DD (or RFC3339) date string to a UTC time.

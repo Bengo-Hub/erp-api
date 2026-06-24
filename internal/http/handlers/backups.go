@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
@@ -97,7 +98,7 @@ func (h *BackupsHandler) List(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list backups")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"backups": items})
+	writePagedSlice(w, items, pagination.Parse(r))
 }
 
 func (h *BackupsHandler) Create(w http.ResponseWriter, r *http.Request) {

@@ -7,6 +7,8 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+
+	mw "github.com/Bengo-Hub/erp-api/internal/http/middleware"
 )
 
 const namespace = ""
@@ -21,8 +23,9 @@ type Config struct {
 	Events   EventsConfig
 	Auth     AuthConfig
 	Services ServicesConfig
-	Media    MediaConfig
-	Backup   BackupConfig
+	Media     MediaConfig
+	Backup    BackupConfig
+	RateLimit mw.RateLimitConfig
 }
 
 // BackupConfig controls the tenant-scoped backup scheduler + retention churn.
