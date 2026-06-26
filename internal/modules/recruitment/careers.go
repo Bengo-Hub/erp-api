@@ -126,5 +126,14 @@ func (s *Service) PublicApply(ctx context.Context, tenantID uuid.UUID, in Public
 	if in.CoverLetter != "" {
 		b = b.SetCoverLetter(in.CoverLetter)
 	}
-	return b.Save(ctx)
+	app, err := b.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Confirm receipt to the applicant (best-effort).
+	s.emailCandidate(ctx, tenantID, app.ID.String(), cand.Email,
+		"Application received: "+post.Title,
+		"Hi "+cand.FullName+",\n\nThank you for applying for the "+post.Title+" position. "+
+			"We have received your application and will be in touch if your profile matches our needs.\n\nBest regards,\nRecruitment Team")
+	return app, nil
 }

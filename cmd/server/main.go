@@ -234,7 +234,7 @@ func run() error {
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
 	mediaStore := media.NewStore(cfg.Media.Root, cfg.Media.URLBase)
-	recruitmentSvc := recruitment.NewService(orm)
+	recruitmentSvc := recruitment.NewService(orm).WithNotifier(events.NewNotifications(notifyPublisher))
 	recruitmentHandler := handlers.NewRecruitmentHandler(log, recruitmentSvc, mediaStore)
 	careersHandler := handlers.NewCareersHandler(log, recruitmentSvc) // PUBLIC careers portal
 	trainingHandler := handlers.NewTrainingHandler(log, training.NewService(orm))

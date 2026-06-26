@@ -60,6 +60,7 @@ func (s *Service) Transition(ctx context.Context, tenantID, id uuid.UUID, to str
 			return res, fmt.Errorf("recruitment: transition: %w", uerr)
 		}
 		res.Application = updated
+		s.notifyStatus(ctx, tenantID, app.CandidateID, updated.ID.String(), to)
 		return res, nil
 	}
 
@@ -96,5 +97,39 @@ func (s *Service) Transition(ctx context.Context, tenantID, id uuid.UUID, to str
 	res.Application = updated
 	res.EmployeeID = &emp.ID
 	res.OnboardingID = &onb.ID
+	s.emailCandidate(ctx, tenantID, updated.ID.String(), cand.Email,
+		"Welcome aboard!",
+		"Hi "+cand.FullName+",\n\nCongratulations — we're delighted to offer you the role. "+
+			"Our HR team will reach out shortly with your onboarding details.\n\nWelcome to the team!")
 	return res, nil
+}
+
+// notifyStatus emails the candidate a stage update for non-hire transitions (interview/offer/
+// rejected). Loads the candidate's email; best-effort.
+func (s *Service) notifyStatus(ctx context.Context, tenantID, candidateID uuid.UUID, aggregateID, to string) {
+	if s.notify == nil {
+		return
+	}
+	cand, err := s.orm.Candidate.Get(ctx, candidateID)
+	if err != nil {
+		return
+	}
+	var subject, body string
+	switch to {
+	case "interview":
+		subject = "Your application is progressing"
+		body = "Hi " + cand.FullName + ",\n\nGood news — your application has progressed to the interview stage. " +
+			"Our team will contact you to arrange the details.\n\nBest regards,\nRecruitment Team"
+	case "offered":
+		subject = "An offer is on its way"
+		body = "Hi " + cand.FullName + ",\n\nWe'd like to extend an offer for the role. Our HR team will be in touch " +
+			"with the details shortly.\n\nBest regards,\nRecruitment Team"
+	case "rejected":
+		subject = "Update on your application"
+		body = "Hi " + cand.FullName + ",\n\nThank you for your interest. After careful consideration we won't be " +
+			"progressing your application at this time. We wish you the best in your search.\n\nRecruitment Team"
+	default:
+		return
+	}
+	s.emailCandidate(ctx, tenantID, aggregateID, cand.Email, subject, body)
 }
