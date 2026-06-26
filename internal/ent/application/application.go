@@ -31,6 +31,12 @@ const (
 	FieldCoverLetter = "cover_letter"
 	// FieldSource holds the string denoting the source field in the database.
 	FieldSource = "source"
+	// FieldInterviewDate holds the string denoting the interview_date field in the database.
+	FieldInterviewDate = "interview_date"
+	// FieldOfferDetails holds the string denoting the offer_details field in the database.
+	FieldOfferDetails = "offer_details"
+	// FieldRejectionReason holds the string denoting the rejection_reason field in the database.
+	FieldRejectionReason = "rejection_reason"
 	// FieldHiredEmployeeID holds the string denoting the hired_employee_id field in the database.
 	FieldHiredEmployeeID = "hired_employee_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -52,6 +58,9 @@ var Columns = []string{
 	FieldNotes,
 	FieldCoverLetter,
 	FieldSource,
+	FieldInterviewDate,
+	FieldOfferDetails,
+	FieldRejectionReason,
 	FieldHiredEmployeeID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -156,6 +165,21 @@ func ByCoverLetter(opts ...sql.OrderTermOption) OrderOption {
 // BySource orders the results by the source field.
 func BySource(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSource, opts...).ToFunc()
+}
+
+// ByInterviewDate orders the results by the interview_date field.
+func ByInterviewDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInterviewDate, opts...).ToFunc()
+}
+
+// ByOfferDetails orders the results by the offer_details field.
+func ByOfferDetails(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOfferDetails, opts...).ToFunc()
+}
+
+// ByRejectionReason orders the results by the rejection_reason field.
+func ByRejectionReason(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRejectionReason, opts...).ToFunc()
 }
 
 // ByHiredEmployeeID orders the results by the hired_employee_id field.

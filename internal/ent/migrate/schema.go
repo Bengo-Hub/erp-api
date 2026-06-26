@@ -120,6 +120,9 @@ var (
 		{Name: "notes", Type: field.TypeString, Nullable: true},
 		{Name: "cover_letter", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "source", Type: field.TypeString, Nullable: true},
+		{Name: "interview_date", Type: field.TypeTime, Nullable: true},
+		{Name: "offer_details", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "rejection_reason", Type: field.TypeString, Nullable: true},
 		{Name: "hired_employee_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -2132,6 +2135,7 @@ var (
 		{Name: "is_done", Type: field.TypeBool, Default: false},
 		{Name: "done_at", Type: field.TypeTime, Nullable: true},
 		{Name: "assigned_to", Type: field.TypeUUID, Nullable: true},
+		{Name: "due_date", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// OnboardingTasksTable holds the schema information for the "onboarding_tasks" table.

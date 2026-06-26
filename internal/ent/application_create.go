@@ -112,6 +112,48 @@ func (_c *ApplicationCreate) SetNillableSource(v *string) *ApplicationCreate {
 	return _c
 }
 
+// SetInterviewDate sets the "interview_date" field.
+func (_c *ApplicationCreate) SetInterviewDate(v time.Time) *ApplicationCreate {
+	_c.mutation.SetInterviewDate(v)
+	return _c
+}
+
+// SetNillableInterviewDate sets the "interview_date" field if the given value is not nil.
+func (_c *ApplicationCreate) SetNillableInterviewDate(v *time.Time) *ApplicationCreate {
+	if v != nil {
+		_c.SetInterviewDate(*v)
+	}
+	return _c
+}
+
+// SetOfferDetails sets the "offer_details" field.
+func (_c *ApplicationCreate) SetOfferDetails(v string) *ApplicationCreate {
+	_c.mutation.SetOfferDetails(v)
+	return _c
+}
+
+// SetNillableOfferDetails sets the "offer_details" field if the given value is not nil.
+func (_c *ApplicationCreate) SetNillableOfferDetails(v *string) *ApplicationCreate {
+	if v != nil {
+		_c.SetOfferDetails(*v)
+	}
+	return _c
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (_c *ApplicationCreate) SetRejectionReason(v string) *ApplicationCreate {
+	_c.mutation.SetRejectionReason(v)
+	return _c
+}
+
+// SetNillableRejectionReason sets the "rejection_reason" field if the given value is not nil.
+func (_c *ApplicationCreate) SetNillableRejectionReason(v *string) *ApplicationCreate {
+	if v != nil {
+		_c.SetRejectionReason(*v)
+	}
+	return _c
+}
+
 // SetHiredEmployeeID sets the "hired_employee_id" field.
 func (_c *ApplicationCreate) SetHiredEmployeeID(v uuid.UUID) *ApplicationCreate {
 	_c.mutation.SetHiredEmployeeID(v)
@@ -321,6 +363,18 @@ func (_c *ApplicationCreate) createSpec() (*Application, *sqlgraph.CreateSpec) {
 		_spec.SetField(application.FieldSource, field.TypeString, value)
 		_node.Source = &value
 	}
+	if value, ok := _c.mutation.InterviewDate(); ok {
+		_spec.SetField(application.FieldInterviewDate, field.TypeTime, value)
+		_node.InterviewDate = &value
+	}
+	if value, ok := _c.mutation.OfferDetails(); ok {
+		_spec.SetField(application.FieldOfferDetails, field.TypeString, value)
+		_node.OfferDetails = &value
+	}
+	if value, ok := _c.mutation.RejectionReason(); ok {
+		_spec.SetField(application.FieldRejectionReason, field.TypeString, value)
+		_node.RejectionReason = &value
+	}
 	if value, ok := _c.mutation.HiredEmployeeID(); ok {
 		_spec.SetField(application.FieldHiredEmployeeID, field.TypeUUID, value)
 		_node.HiredEmployeeID = &value
@@ -496,6 +550,60 @@ func (u *ApplicationUpsert) UpdateSource() *ApplicationUpsert {
 // ClearSource clears the value of the "source" field.
 func (u *ApplicationUpsert) ClearSource() *ApplicationUpsert {
 	u.SetNull(application.FieldSource)
+	return u
+}
+
+// SetInterviewDate sets the "interview_date" field.
+func (u *ApplicationUpsert) SetInterviewDate(v time.Time) *ApplicationUpsert {
+	u.Set(application.FieldInterviewDate, v)
+	return u
+}
+
+// UpdateInterviewDate sets the "interview_date" field to the value that was provided on create.
+func (u *ApplicationUpsert) UpdateInterviewDate() *ApplicationUpsert {
+	u.SetExcluded(application.FieldInterviewDate)
+	return u
+}
+
+// ClearInterviewDate clears the value of the "interview_date" field.
+func (u *ApplicationUpsert) ClearInterviewDate() *ApplicationUpsert {
+	u.SetNull(application.FieldInterviewDate)
+	return u
+}
+
+// SetOfferDetails sets the "offer_details" field.
+func (u *ApplicationUpsert) SetOfferDetails(v string) *ApplicationUpsert {
+	u.Set(application.FieldOfferDetails, v)
+	return u
+}
+
+// UpdateOfferDetails sets the "offer_details" field to the value that was provided on create.
+func (u *ApplicationUpsert) UpdateOfferDetails() *ApplicationUpsert {
+	u.SetExcluded(application.FieldOfferDetails)
+	return u
+}
+
+// ClearOfferDetails clears the value of the "offer_details" field.
+func (u *ApplicationUpsert) ClearOfferDetails() *ApplicationUpsert {
+	u.SetNull(application.FieldOfferDetails)
+	return u
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (u *ApplicationUpsert) SetRejectionReason(v string) *ApplicationUpsert {
+	u.Set(application.FieldRejectionReason, v)
+	return u
+}
+
+// UpdateRejectionReason sets the "rejection_reason" field to the value that was provided on create.
+func (u *ApplicationUpsert) UpdateRejectionReason() *ApplicationUpsert {
+	u.SetExcluded(application.FieldRejectionReason)
+	return u
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (u *ApplicationUpsert) ClearRejectionReason() *ApplicationUpsert {
+	u.SetNull(application.FieldRejectionReason)
 	return u
 }
 
@@ -710,6 +818,69 @@ func (u *ApplicationUpsertOne) UpdateSource() *ApplicationUpsertOne {
 func (u *ApplicationUpsertOne) ClearSource() *ApplicationUpsertOne {
 	return u.Update(func(s *ApplicationUpsert) {
 		s.ClearSource()
+	})
+}
+
+// SetInterviewDate sets the "interview_date" field.
+func (u *ApplicationUpsertOne) SetInterviewDate(v time.Time) *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.SetInterviewDate(v)
+	})
+}
+
+// UpdateInterviewDate sets the "interview_date" field to the value that was provided on create.
+func (u *ApplicationUpsertOne) UpdateInterviewDate() *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.UpdateInterviewDate()
+	})
+}
+
+// ClearInterviewDate clears the value of the "interview_date" field.
+func (u *ApplicationUpsertOne) ClearInterviewDate() *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.ClearInterviewDate()
+	})
+}
+
+// SetOfferDetails sets the "offer_details" field.
+func (u *ApplicationUpsertOne) SetOfferDetails(v string) *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.SetOfferDetails(v)
+	})
+}
+
+// UpdateOfferDetails sets the "offer_details" field to the value that was provided on create.
+func (u *ApplicationUpsertOne) UpdateOfferDetails() *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.UpdateOfferDetails()
+	})
+}
+
+// ClearOfferDetails clears the value of the "offer_details" field.
+func (u *ApplicationUpsertOne) ClearOfferDetails() *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.ClearOfferDetails()
+	})
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (u *ApplicationUpsertOne) SetRejectionReason(v string) *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.SetRejectionReason(v)
+	})
+}
+
+// UpdateRejectionReason sets the "rejection_reason" field to the value that was provided on create.
+func (u *ApplicationUpsertOne) UpdateRejectionReason() *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.UpdateRejectionReason()
+	})
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (u *ApplicationUpsertOne) ClearRejectionReason() *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.ClearRejectionReason()
 	})
 }
 
@@ -1096,6 +1267,69 @@ func (u *ApplicationUpsertBulk) UpdateSource() *ApplicationUpsertBulk {
 func (u *ApplicationUpsertBulk) ClearSource() *ApplicationUpsertBulk {
 	return u.Update(func(s *ApplicationUpsert) {
 		s.ClearSource()
+	})
+}
+
+// SetInterviewDate sets the "interview_date" field.
+func (u *ApplicationUpsertBulk) SetInterviewDate(v time.Time) *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.SetInterviewDate(v)
+	})
+}
+
+// UpdateInterviewDate sets the "interview_date" field to the value that was provided on create.
+func (u *ApplicationUpsertBulk) UpdateInterviewDate() *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.UpdateInterviewDate()
+	})
+}
+
+// ClearInterviewDate clears the value of the "interview_date" field.
+func (u *ApplicationUpsertBulk) ClearInterviewDate() *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.ClearInterviewDate()
+	})
+}
+
+// SetOfferDetails sets the "offer_details" field.
+func (u *ApplicationUpsertBulk) SetOfferDetails(v string) *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.SetOfferDetails(v)
+	})
+}
+
+// UpdateOfferDetails sets the "offer_details" field to the value that was provided on create.
+func (u *ApplicationUpsertBulk) UpdateOfferDetails() *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.UpdateOfferDetails()
+	})
+}
+
+// ClearOfferDetails clears the value of the "offer_details" field.
+func (u *ApplicationUpsertBulk) ClearOfferDetails() *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.ClearOfferDetails()
+	})
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (u *ApplicationUpsertBulk) SetRejectionReason(v string) *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.SetRejectionReason(v)
+	})
+}
+
+// UpdateRejectionReason sets the "rejection_reason" field to the value that was provided on create.
+func (u *ApplicationUpsertBulk) UpdateRejectionReason() *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.UpdateRejectionReason()
+	})
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (u *ApplicationUpsertBulk) ClearRejectionReason() *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.ClearRejectionReason()
 	})
 }
 

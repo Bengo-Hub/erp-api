@@ -3,6 +3,7 @@ package recruitment
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -39,9 +40,36 @@ type TransitionResult struct {
 }
 
 // Transition moves an application to the next pipeline stage, rejecting invalid transitions.
+// TransitionMeta carries optional stage context recorded at the transition (interview date set
+// when moving to interview, offer terms when offered, reason when rejected).
+type TransitionMeta struct {
+	InterviewDate   *time.Time
+	OfferDetails    string
+	RejectionReason string
+}
+
+// applyMeta sets the stage-context fields appropriate to the target status on an update builder.
+func applyMeta(u *ent.ApplicationUpdateOne, target application.Status, m TransitionMeta) *ent.ApplicationUpdateOne {
+	switch target {
+	case application.StatusInterview:
+		if m.InterviewDate != nil {
+			u = u.SetInterviewDate(*m.InterviewDate)
+		}
+	case application.StatusOffered:
+		if m.OfferDetails != "" {
+			u = u.SetOfferDetails(m.OfferDetails)
+		}
+	case application.StatusRejected:
+		if m.RejectionReason != "" {
+			u = u.SetRejectionReason(m.RejectionReason)
+		}
+	}
+	return u
+}
+
 // On hire it optionally creates an Employee (from the candidate) and seeds onboarding.
 // candidateName/email are read from the candidate to populate the new employee row.
-func (s *Service) Transition(ctx context.Context, tenantID, id uuid.UUID, to string, createEmployee bool) (TransitionResult, error) {
+func (s *Service) Transition(ctx context.Context, tenantID, id uuid.UUID, to string, createEmployee bool, meta TransitionMeta) (TransitionResult, error) {
 	var res TransitionResult
 	target := application.Status(to)
 
@@ -55,7 +83,7 @@ func (s *Service) Transition(ctx context.Context, tenantID, id uuid.UUID, to str
 	}
 
 	if target != application.StatusHired || !createEmployee {
-		updated, uerr := app.Update().SetStatus(target).Save(ctx)
+		updated, uerr := applyMeta(app.Update().SetStatus(target), target, meta).Save(ctx)
 		if uerr != nil {
 			return res, fmt.Errorf("recruitment: transition: %w", uerr)
 		}

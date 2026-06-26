@@ -112,6 +112,20 @@ func (_c *OnboardingTaskCreate) SetNillableAssignedTo(v *uuid.UUID) *OnboardingT
 	return _c
 }
 
+// SetDueDate sets the "due_date" field.
+func (_c *OnboardingTaskCreate) SetDueDate(v time.Time) *OnboardingTaskCreate {
+	_c.mutation.SetDueDate(v)
+	return _c
+}
+
+// SetNillableDueDate sets the "due_date" field if the given value is not nil.
+func (_c *OnboardingTaskCreate) SetNillableDueDate(v *time.Time) *OnboardingTaskCreate {
+	if v != nil {
+		_c.SetDueDate(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *OnboardingTaskCreate) SetCreatedAt(v time.Time) *OnboardingTaskCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -293,6 +307,10 @@ func (_c *OnboardingTaskCreate) createSpec() (*OnboardingTask, *sqlgraph.CreateS
 		_spec.SetField(onboardingtask.FieldAssignedTo, field.TypeUUID, value)
 		_node.AssignedTo = &value
 	}
+	if value, ok := _c.mutation.DueDate(); ok {
+		_spec.SetField(onboardingtask.FieldDueDate, field.TypeTime, value)
+		_node.DueDate = &value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(onboardingtask.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -460,6 +478,24 @@ func (u *OnboardingTaskUpsert) UpdateAssignedTo() *OnboardingTaskUpsert {
 // ClearAssignedTo clears the value of the "assigned_to" field.
 func (u *OnboardingTaskUpsert) ClearAssignedTo() *OnboardingTaskUpsert {
 	u.SetNull(onboardingtask.FieldAssignedTo)
+	return u
+}
+
+// SetDueDate sets the "due_date" field.
+func (u *OnboardingTaskUpsert) SetDueDate(v time.Time) *OnboardingTaskUpsert {
+	u.Set(onboardingtask.FieldDueDate, v)
+	return u
+}
+
+// UpdateDueDate sets the "due_date" field to the value that was provided on create.
+func (u *OnboardingTaskUpsert) UpdateDueDate() *OnboardingTaskUpsert {
+	u.SetExcluded(onboardingtask.FieldDueDate)
+	return u
+}
+
+// ClearDueDate clears the value of the "due_date" field.
+func (u *OnboardingTaskUpsert) ClearDueDate() *OnboardingTaskUpsert {
+	u.SetNull(onboardingtask.FieldDueDate)
 	return u
 }
 
@@ -644,6 +680,27 @@ func (u *OnboardingTaskUpsertOne) UpdateAssignedTo() *OnboardingTaskUpsertOne {
 func (u *OnboardingTaskUpsertOne) ClearAssignedTo() *OnboardingTaskUpsertOne {
 	return u.Update(func(s *OnboardingTaskUpsert) {
 		s.ClearAssignedTo()
+	})
+}
+
+// SetDueDate sets the "due_date" field.
+func (u *OnboardingTaskUpsertOne) SetDueDate(v time.Time) *OnboardingTaskUpsertOne {
+	return u.Update(func(s *OnboardingTaskUpsert) {
+		s.SetDueDate(v)
+	})
+}
+
+// UpdateDueDate sets the "due_date" field to the value that was provided on create.
+func (u *OnboardingTaskUpsertOne) UpdateDueDate() *OnboardingTaskUpsertOne {
+	return u.Update(func(s *OnboardingTaskUpsert) {
+		s.UpdateDueDate()
+	})
+}
+
+// ClearDueDate clears the value of the "due_date" field.
+func (u *OnboardingTaskUpsertOne) ClearDueDate() *OnboardingTaskUpsertOne {
+	return u.Update(func(s *OnboardingTaskUpsert) {
+		s.ClearDueDate()
 	})
 }
 
@@ -995,6 +1052,27 @@ func (u *OnboardingTaskUpsertBulk) UpdateAssignedTo() *OnboardingTaskUpsertBulk 
 func (u *OnboardingTaskUpsertBulk) ClearAssignedTo() *OnboardingTaskUpsertBulk {
 	return u.Update(func(s *OnboardingTaskUpsert) {
 		s.ClearAssignedTo()
+	})
+}
+
+// SetDueDate sets the "due_date" field.
+func (u *OnboardingTaskUpsertBulk) SetDueDate(v time.Time) *OnboardingTaskUpsertBulk {
+	return u.Update(func(s *OnboardingTaskUpsert) {
+		s.SetDueDate(v)
+	})
+}
+
+// UpdateDueDate sets the "due_date" field to the value that was provided on create.
+func (u *OnboardingTaskUpsertBulk) UpdateDueDate() *OnboardingTaskUpsertBulk {
+	return u.Update(func(s *OnboardingTaskUpsert) {
+		s.UpdateDueDate()
+	})
+}
+
+// ClearDueDate clears the value of the "due_date" field.
+func (u *OnboardingTaskUpsertBulk) ClearDueDate() *OnboardingTaskUpsertBulk {
+	return u.Update(func(s *OnboardingTaskUpsert) {
+		s.ClearDueDate()
 	})
 }
 

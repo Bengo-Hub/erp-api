@@ -26,6 +26,7 @@ func (OnboardingTask) Fields() []ent.Field {
 		field.Bool("is_done").Default(false),
 		field.Time("done_at").Optional().Nillable(),
 		field.UUID("assigned_to", uuid.UUID{}).Optional().Nillable(),
+		field.Time("due_date").Optional().Nillable().Comment("Target completion date (drives overdue flagging)"),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

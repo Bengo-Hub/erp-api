@@ -34,6 +34,12 @@ type Application struct {
 	CoverLetter *string `json:"cover_letter,omitempty"`
 	// careers_portal | referral | direct | agency
 	Source *string `json:"source,omitempty"`
+	// InterviewDate holds the value of the "interview_date" field.
+	InterviewDate *time.Time `json:"interview_date,omitempty"`
+	// Salary/start-date/terms summary recorded at offer
+	OfferDetails *string `json:"offer_details,omitempty"`
+	// RejectionReason holds the value of the "rejection_reason" field.
+	RejectionReason *string `json:"rejection_reason,omitempty"`
 	// Employee created on hire (links recruitment -> onboarding)
 	HiredEmployeeID *uuid.UUID `json:"hired_employee_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -50,9 +56,9 @@ func (*Application) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case application.FieldHiredEmployeeID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case application.FieldStatus, application.FieldNotes, application.FieldCoverLetter, application.FieldSource:
+		case application.FieldStatus, application.FieldNotes, application.FieldCoverLetter, application.FieldSource, application.FieldOfferDetails, application.FieldRejectionReason:
 			values[i] = new(sql.NullString)
-		case application.FieldAppliedAt, application.FieldCreatedAt, application.FieldUpdatedAt:
+		case application.FieldAppliedAt, application.FieldInterviewDate, application.FieldCreatedAt, application.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case application.FieldID, application.FieldTenantID, application.FieldJobID, application.FieldCandidateID:
 			values[i] = new(uuid.UUID)
@@ -127,6 +133,27 @@ func (_m *Application) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Source = new(string)
 				*_m.Source = value.String
+			}
+		case application.FieldInterviewDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field interview_date", values[i])
+			} else if value.Valid {
+				_m.InterviewDate = new(time.Time)
+				*_m.InterviewDate = value.Time
+			}
+		case application.FieldOfferDetails:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field offer_details", values[i])
+			} else if value.Valid {
+				_m.OfferDetails = new(string)
+				*_m.OfferDetails = value.String
+			}
+		case application.FieldRejectionReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field rejection_reason", values[i])
+			} else if value.Valid {
+				_m.RejectionReason = new(string)
+				*_m.RejectionReason = value.String
 			}
 		case application.FieldHiredEmployeeID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -210,6 +237,21 @@ func (_m *Application) String() string {
 	builder.WriteString(", ")
 	if v := _m.Source; v != nil {
 		builder.WriteString("source=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.InterviewDate; v != nil {
+		builder.WriteString("interview_date=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.OfferDetails; v != nil {
+		builder.WriteString("offer_details=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.RejectionReason; v != nil {
+		builder.WriteString("rejection_reason=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
