@@ -49,6 +49,9 @@ func (h *PayrollSettingsHandler) RegisterRoutes(r chi.Router) {
 		pr.Get("/formulas", h.ListFormulas)
 		pr.Get("/formulas/relief-status", h.ReliefStatus)
 		pr.Post("/formula-management", h.FormulaManagement)
+		pr.Post("/formulas", h.CreateFormula)
+		pr.Get("/formulas/{id}", h.GetFormula)
+		pr.Put("/formulas/{id}", h.UpdateFormula)
 
 		pr.Get("/general-hr-settings", h.GetGeneralHR)
 		pr.Post("/general-hr-settings", h.UpsertGeneralHR)
