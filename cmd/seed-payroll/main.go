@@ -92,6 +92,7 @@ func seed(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
 	// Effective dates use the public KRA commencement dates for each levy.
 	formulas := []statutoryFormula{
 		{"income", "primary", "P.A.Y.E. (Finance Act 2023)", "Finance Act 2023", def.Income, date(2023, 7, 1), true},
+		{"income", "secondary", "P.A.Y.E. — Secondary Employment", "Finance Act 2023", def.IncomeSecondary, date(2023, 7, 1), false},
 		{"deduction", "social_security_fund", "N.S.S.F.", "NSSF Act 2013", def.NSSF, date(2024, 2, 1), false},
 		{"deduction", "shif", "S.H.I.F.", "SHIF Act 2023", def.SHIF, date(2024, 10, 1), false},
 		{"deduction", "housing_levy", "Affordable Housing Levy", "Affordable Housing Act 2024", def.HousingLevy, date(2024, 3, 1), false},

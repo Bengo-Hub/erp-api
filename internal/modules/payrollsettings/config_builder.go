@@ -39,6 +39,12 @@ func (s *Service) BuildEngineConfig(ctx context.Context, tenantID uuid.UUID, per
 	}
 	cfg.Income = income
 
+	// Optional secondary-employment PAYE table (flat top-rate, no relief). Absent for tenants
+	// that don't employ secondary staff — secondary employees then fall back to primary bands.
+	if sec, e := s.resolveRates(ctx, tenantID, "income", "secondary", period, false); e == nil {
+		cfg.IncomeSecondary = sec
+	}
+
 	nssf, err := s.resolveRates(ctx, tenantID, "deduction", "social_security_fund", period, false)
 	if err != nil {
 		return cfg, fmt.Errorf("NSSF: %w", err)

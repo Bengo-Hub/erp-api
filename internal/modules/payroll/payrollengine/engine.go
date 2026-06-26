@@ -165,7 +165,13 @@ func applyPAYE(res *PayslipResult, cfg Config, in EmployeeInput) error {
 		return nil
 	}
 
-	gross, err := CalculateIncomeTax(cfg.Income, taxable)
+	// Secondary employees use the dedicated secondary table (flat top-rate, no relief) when one is
+	// configured; otherwise they fall back to the primary bands with relief suppressed.
+	table := cfg.Income
+	if in.TaxCategory == "secondary" && cfg.IncomeSecondary != nil {
+		table = cfg.IncomeSecondary
+	}
+	gross, err := CalculateIncomeTax(table, taxable)
 	if err != nil {
 		return err
 	}

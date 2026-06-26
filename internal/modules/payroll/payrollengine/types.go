@@ -67,7 +67,12 @@ type Recoverable struct {
 // statutory item makes the engine fail loud.
 type Config struct {
 	Income      *FormulaRates // PAYE bands + personal relief (required)
-	NSSF        *FormulaRates // tiered NSSF (required)
+	// IncomeSecondary is the PAYE table for secondary employees (a second employer): income is
+	// taxed at the top marginal rate (a flat band, no personal relief) because the primary
+	// employer already consumed the lower bands + relief. Optional — when nil, secondary
+	// employees fall back to the primary bands with relief suppressed (legacy behaviour).
+	IncomeSecondary *FormulaRates
+	NSSF            *FormulaRates // tiered NSSF (required)
 	SHIF        *FormulaRates // SHIF (set when SHIF is effective)
 	NHIF        *FormulaRates // legacy NHIF (set when NHIF is effective)
 	HousingLevy *FormulaRates // housing levy (required)
