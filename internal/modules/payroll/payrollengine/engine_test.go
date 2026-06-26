@@ -94,6 +94,43 @@ func TestSecondaryNoRelief(t *testing.T) {
 	}
 }
 
+// TestSecondaryFlatRate: a secondary employee is taxed at the flat top rate (35%) on the whole
+// taxable amount with NO relief, using the dedicated IncomeSecondary table — NOT the primary
+// progressive bands. Gross 100k -> taxable 91,430 -> PAYE 32,000.50 (vs primary's 19,812.35).
+func TestSecondaryFlatRate(t *testing.T) {
+	res, err := Compute(kra2025Config(), EmployeeInput{GrossPay: d("100000"), TaxCategory: "secondary"})
+	if err != nil {
+		t.Fatalf("compute: %v", err)
+	}
+	if !res.PersonalRelief.IsZero() {
+		t.Errorf("secondary relief should be 0, got %s", res.PersonalRelief)
+	}
+	if !res.PAYE.Equal(d("32000.50")) {
+		t.Errorf("secondary PAYE: got %s want 32000.50 (35%% of 91,430)", res.PAYE)
+	}
+	// Must be strictly higher than the primary run (the under-taxing bug we fixed).
+	primary, _ := Compute(kra2025Config(), EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	if !res.PAYE.GreaterThan(primary.PAYE) {
+		t.Errorf("secondary PAYE %s should exceed primary %s", res.PAYE, primary.PAYE)
+	}
+}
+
+// TestSecondaryFallback_NoSecondaryTable: when no IncomeSecondary table is configured, a
+// secondary employee falls back to the primary bands with relief suppressed (legacy behaviour).
+func TestSecondaryFallback_NoSecondaryTable(t *testing.T) {
+	cfg := kra2025Config()
+	cfg.IncomeSecondary = nil
+	res, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "secondary"})
+	if err != nil {
+		t.Fatalf("compute: %v", err)
+	}
+	// Primary gross tax on 91,430 minus zero relief = 19,812.35 + 2,400 relief that primary
+	// would have applied => 22,212.35 (primary progressive bands, no relief).
+	if !res.PAYE.Equal(d("22212.35")) {
+		t.Errorf("secondary fallback PAYE: got %s want 22212.35 (primary bands, no relief)", res.PAYE)
+	}
+}
+
 // TestTaxableAllowances_IncreaseGrossAndPAYE verifies that taxable allowances add to gross,
 // statutory base, taxable pay and net pay (additive lane for per-diem/mileage excess etc.).
 func TestTaxableAllowances_IncreaseGrossAndPAYE(t *testing.T) {

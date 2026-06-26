@@ -25,6 +25,12 @@ func KRADefaults() Config {
 			},
 			PersonalRelief: mustDec("2400"),
 		},
+		// Secondary employment: taxed at the top marginal rate (35%) on the whole amount, no
+		// relief (the primary employer already used the lower bands + relief). Mirrors the
+		// Wingubox "P.A.Y.E. Kenya (Secondary Employee)" table.
+		IncomeSecondary: &FormulaRates{
+			Bands: []Band{{From: mustDec("0"), To: Inf, Rate: mustDec("0.35")}},
+		},
 		NSSF: &FormulaRates{
 			Bands: []Band{
 				{From: mustDec("0"), To: mustDec("8000"), Rate: mustDec("0.06")},
