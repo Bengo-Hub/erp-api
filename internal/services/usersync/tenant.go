@@ -70,6 +70,31 @@ func (s *TenantSyncer) UpsertTenant(ctx context.Context, in TenantInput) (*ent.A
 	return upd.Save(ctx)
 }
 
+// EnsureTenantSlug guarantees a tenant shadow exists for (id, slug) WITHOUT clobbering a
+// name/status already set by the auth.tenant.* event consumer. Used by the per-request JIT
+// projection (middleware): on create it seeds name=slug; on an existing row it only refreshes
+// the slug + synced_at. Cheap no-op when the slug already matches.
+func (s *TenantSyncer) EnsureTenantSlug(ctx context.Context, id uuid.UUID, slug string) error {
+	if id == uuid.Nil || slug == "" {
+		return nil
+	}
+	now := time.Now().UTC()
+	existing, err := s.orm.AuthTenant.Get(ctx, id)
+	if ent.IsNotFound(err) {
+		_, cerr := s.orm.AuthTenant.Create().
+			SetID(id).SetSlug(slug).SetName(slug).SetStatus("active").SetSyncedAt(now).Save(ctx)
+		return cerr
+	}
+	if err != nil {
+		return err
+	}
+	if existing.Slug == slug {
+		return nil
+	}
+	_, uerr := existing.Update().SetSlug(slug).SetSyncedAt(now).Save(ctx)
+	return uerr
+}
+
 // OutletInput is the minimal data needed to upsert an outlet shadow.
 type OutletInput struct {
 	ID       uuid.UUID

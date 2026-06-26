@@ -332,7 +332,7 @@ func run() error {
 			// in logistics/marketflow/projects + TruLoad's SubscriptionEnforcementMiddleware.
 			priv.Use(authclient.RequireActiveSubscriptionForMutations())
 			priv.Use(mw.OutletContext)
-			priv.Use(mw.EnsureServiceUser(rbacService, log)) // Trinity Layer 3: JIT-sync erp roles from SSO
+			priv.Use(mw.EnsureServiceUser(rbacService, tenantSyncer, log)) // Trinity L3: JIT-sync erp roles + tenant shadow from SSO
 			authHandler.RegisterRoutes(priv)
 			employeesHandler.RegisterRoutes(priv)
 			orgSettingsHandler.RegisterRoutes(priv)
