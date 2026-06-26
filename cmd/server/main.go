@@ -223,6 +223,7 @@ func run() error {
 	payrollSettingsSvc := payrollsettings.NewService(orm, uuid.Nil)
 	payrollSvc := payroll.NewService(orm, payrollSettingsSvc).WithPublisher(notifyPublisher)
 	treasuryClient := treasury.NewClient(cfg.Services.TreasuryURL, cfg.Auth.APIKey, log)
+	employeesHandler.WithTreasury(treasuryClient) // enables /hrm/banks/* verify proxy
 	payrollDisburser := payroll.NewDisburser(orm, notifyPublisher, treasuryClient, log)
 	payrollHandler := handlers.NewPayrollHandler(log, payrollSvc, payrollDisburser)
 	payrollSettingsHandler := handlers.NewPayrollSettingsHandler(log, payrollSettingsSvc, orm)

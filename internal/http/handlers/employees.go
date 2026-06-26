@@ -13,6 +13,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
+	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 )
 
 // HRM RBAC permission codes (bare codenames matching auth-api perms).
@@ -23,12 +24,19 @@ const (
 
 // EmployeesHandler serves /api/v1/hrm/employees.
 type EmployeesHandler struct {
-	log *zap.Logger
-	svc *employees.Service
+	log      *zap.Logger
+	svc      *employees.Service
+	treasury *treasury.Client
 }
 
 func NewEmployeesHandler(log *zap.Logger, svc *employees.Service) *EmployeesHandler {
 	return &EmployeesHandler{log: log.Named("hrm.employees"), svc: svc}
+}
+
+// WithTreasury injects the treasury S2S client used to verify employee bank accounts (Paystack).
+func (h *EmployeesHandler) WithTreasury(c *treasury.Client) *EmployeesHandler {
+	h.treasury = c
+	return h
 }
 
 func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
@@ -59,6 +67,10 @@ func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 		kr.Patch("/{id}", h.UpdateNextOfKin)
 		kr.Delete("/{id}", h.DeleteNextOfKin)
 	})
+	// Bank list + account verification (proxied to treasury S2S Paystack) so employee bank
+	// accounts are verified before saving — accurate payroll payouts.
+	r.Get("/hrm/banks/{country}", h.ListBanks)
+	r.Get("/hrm/banks/resolve", h.ResolveBankAccount)
 	// Employee ↔ project allocations (consultants on multiple projects, % / fixed split).
 	r.Route("/hrm/project-allocations", func(pa chi.Router) {
 		pa.Get("/", h.ListAllocations)
