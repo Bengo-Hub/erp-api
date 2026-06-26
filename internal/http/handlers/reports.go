@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"encoding/csv"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -50,6 +52,7 @@ func (h *ReportsHandler) producers() map[string]periodReport {
 		"payroll-variance": h.svc.PayrollVariance,
 		"payroll-summary":  h.svc.PayrollSummary,
 		"muster-roll":      h.svc.MusterRoll,
+		"housing-levy":     h.svc.HousingLevy,
 	}
 }
 
@@ -68,6 +71,7 @@ func (h *ReportsHandler) RegisterRoutes(r chi.Router) {
 		rr.Get("/payroll-variance", h.period(h.svc.PayrollVariance))
 		rr.Get("/payroll-summary", h.period(h.svc.PayrollSummary))
 		rr.Get("/muster-roll", h.period(h.svc.MusterRoll))
+		rr.Get("/housing-levy", h.period(h.svc.HousingLevy))
 
 		// Non-period summaries.
 		rr.Get("/headcount-summary", h.Headcount)
@@ -78,16 +82,12 @@ func (h *ReportsHandler) RegisterRoutes(r chi.Router) {
 	})
 }
 
-// Export runs the report named by {type} and streams it as a PDF (format=pdf) or Excel
-// (format=excel|xlsx) document. It reuses the same period-scoped producers as the GET
-// endpoints, then adapts the Report → Document → Generate via the documents handler.
+// Export runs the report named by {type} and streams it as a PDF (format=pdf), Excel
+// (format=excel|xlsx) or CSV (format=csv — the KRA iTax-upload / spreadsheet format). It reuses
+// the same period-scoped producers as the GET endpoints.
 func (h *ReportsHandler) Export(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permReportsView) {
-		return
-	}
-	if h.docs == nil {
-		writeError(w, http.StatusServiceUnavailable, "unavailable", "export not configured")
 		return
 	}
 	reportType := chi.URLParam(r, "type")
@@ -97,12 +97,7 @@ func (h *ReportsHandler) Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	format, err := docs.FormatFromString(defaultStr(r.URL.Query().Get("format"), "pdf"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
-		return
-	}
-
+	rawFormat := defaultStr(r.URL.Query().Get("format"), "pdf")
 	year := atoiDefault(r.URL.Query().Get("year"), 0)
 	month := atoiDefault(r.URL.Query().Get("month"), 0)
 	if year == 0 {
@@ -122,6 +117,25 @@ func (h *ReportsHandler) Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// CSV (iTax / spreadsheet) is rendered straight from the Report envelope — no docs dependency.
+	if rawFormat == "csv" {
+		name := reportType + "-" + strconv.Itoa(year)
+		if month > 0 {
+			name += "-" + strconv.Itoa(month)
+		}
+		writeReportCSV(w, rep, name+".csv")
+		return
+	}
+
+	if h.docs == nil {
+		writeError(w, http.StatusServiceUnavailable, "unavailable", "export not configured")
+		return
+	}
+	format, err := docs.FormatFromString(rawFormat)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
 	body, mime, filename, err := h.docs.GenerateReport(r.Context(), scope.TenantID, rep, format)
 	if err != nil {
 		h.log.Error("report export render", zap.Error(err))
@@ -129,6 +143,25 @@ func (h *ReportsHandler) Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	streamDownload(w, body, mime, filename)
+}
+
+// writeReportCSV streams a Report as CSV using its column order (header row = column keys, then
+// one row per Report.Rows entry). Missing cells render empty.
+func writeReportCSV(w http.ResponseWriter, rep *reports.Report, filename string) {
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	cw := csv.NewWriter(w)
+	_ = cw.Write(rep.Columns)
+	for _, row := range rep.Rows {
+		rec := make([]string, len(rep.Columns))
+		for i, col := range rep.Columns {
+			if v, ok := row[col]; ok && v != nil {
+				rec[i] = fmt.Sprintf("%v", v)
+			}
+		}
+		_ = cw.Write(rec)
+	}
+	cw.Flush()
 }
 
 // defaultStr returns def when s is empty.
