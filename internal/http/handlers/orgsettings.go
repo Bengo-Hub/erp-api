@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
@@ -218,7 +219,12 @@ func (h *OrgSettingsHandler) DeleteDepartment(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if err := h.svc.DeleteDepartment(r.Context(), scope.TenantID, id); err != nil {
-		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		if strings.Contains(err.Error(), "not found") {
+			writeError(w, http.StatusNotFound, "not_found", "department not found")
+			return
+		}
+		h.log.Error("delete department failed", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "delete_failed", "failed to delete department")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

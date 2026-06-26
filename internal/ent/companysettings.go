@@ -42,6 +42,10 @@ type CompanySettings struct {
 	DefaultCurrency string `json:"default_currency,omitempty"`
 	// Timezone holds the value of the "timezone" field.
 	Timezone string `json:"timezone,omitempty"`
+	// Moment-style date token, e.g. DD/MM/YYYY
+	DateFormat string `json:"date_format,omitempty"`
+	// Moment-style time token, e.g. HH:mm / hh:mm A
+	TimeFormat string `json:"time_format,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -56,7 +60,7 @@ func (*CompanySettings) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case companysettings.FieldFinancialYearStartMonth:
 			values[i] = new(sql.NullInt64)
-		case companysettings.FieldLegalName, companysettings.FieldKraPin, companysettings.FieldNssfEmployerNo, companysettings.FieldShifEmployerNo, companysettings.FieldContactEmail, companysettings.FieldContactPhone, companysettings.FieldPostalAddress, companysettings.FieldPhysicalAddress, companysettings.FieldDefaultCurrency, companysettings.FieldTimezone:
+		case companysettings.FieldLegalName, companysettings.FieldKraPin, companysettings.FieldNssfEmployerNo, companysettings.FieldShifEmployerNo, companysettings.FieldContactEmail, companysettings.FieldContactPhone, companysettings.FieldPostalAddress, companysettings.FieldPhysicalAddress, companysettings.FieldDefaultCurrency, companysettings.FieldTimezone, companysettings.FieldDateFormat, companysettings.FieldTimeFormat:
 			values[i] = new(sql.NullString)
 		case companysettings.FieldCreatedAt, companysettings.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -155,6 +159,18 @@ func (_m *CompanySettings) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Timezone = value.String
 			}
+		case companysettings.FieldDateFormat:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field date_format", values[i])
+			} else if value.Valid {
+				_m.DateFormat = value.String
+			}
+		case companysettings.FieldTimeFormat:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field time_format", values[i])
+			} else if value.Valid {
+				_m.TimeFormat = value.String
+			}
 		case companysettings.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -238,6 +254,12 @@ func (_m *CompanySettings) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("timezone=")
 	builder.WriteString(_m.Timezone)
+	builder.WriteString(", ")
+	builder.WriteString("date_format=")
+	builder.WriteString(_m.DateFormat)
+	builder.WriteString(", ")
+	builder.WriteString("time_format=")
+	builder.WriteString(_m.TimeFormat)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

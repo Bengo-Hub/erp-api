@@ -21801,6 +21801,8 @@ type CompanySettingsMutation struct {
 	addfinancial_year_start_month *int
 	default_currency              *string
 	timezone                      *string
+	date_format                   *string
+	time_format                   *string
 	created_at                    *time.Time
 	updated_at                    *time.Time
 	clearedFields                 map[string]struct{}
@@ -22469,6 +22471,78 @@ func (m *CompanySettingsMutation) ResetTimezone() {
 	m.timezone = nil
 }
 
+// SetDateFormat sets the "date_format" field.
+func (m *CompanySettingsMutation) SetDateFormat(s string) {
+	m.date_format = &s
+}
+
+// DateFormat returns the value of the "date_format" field in the mutation.
+func (m *CompanySettingsMutation) DateFormat() (r string, exists bool) {
+	v := m.date_format
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDateFormat returns the old "date_format" field's value of the CompanySettings entity.
+// If the CompanySettings object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompanySettingsMutation) OldDateFormat(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDateFormat is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDateFormat requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDateFormat: %w", err)
+	}
+	return oldValue.DateFormat, nil
+}
+
+// ResetDateFormat resets all changes to the "date_format" field.
+func (m *CompanySettingsMutation) ResetDateFormat() {
+	m.date_format = nil
+}
+
+// SetTimeFormat sets the "time_format" field.
+func (m *CompanySettingsMutation) SetTimeFormat(s string) {
+	m.time_format = &s
+}
+
+// TimeFormat returns the value of the "time_format" field in the mutation.
+func (m *CompanySettingsMutation) TimeFormat() (r string, exists bool) {
+	v := m.time_format
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTimeFormat returns the old "time_format" field's value of the CompanySettings entity.
+// If the CompanySettings object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompanySettingsMutation) OldTimeFormat(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTimeFormat is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTimeFormat requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTimeFormat: %w", err)
+	}
+	return oldValue.TimeFormat, nil
+}
+
+// ResetTimeFormat resets all changes to the "time_format" field.
+func (m *CompanySettingsMutation) ResetTimeFormat() {
+	m.time_format = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *CompanySettingsMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -22575,7 +22649,7 @@ func (m *CompanySettingsMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CompanySettingsMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 16)
 	if m.tenant_id != nil {
 		fields = append(fields, companysettings.FieldTenantID)
 	}
@@ -22611,6 +22685,12 @@ func (m *CompanySettingsMutation) Fields() []string {
 	}
 	if m.timezone != nil {
 		fields = append(fields, companysettings.FieldTimezone)
+	}
+	if m.date_format != nil {
+		fields = append(fields, companysettings.FieldDateFormat)
+	}
+	if m.time_format != nil {
+		fields = append(fields, companysettings.FieldTimeFormat)
 	}
 	if m.created_at != nil {
 		fields = append(fields, companysettings.FieldCreatedAt)
@@ -22650,6 +22730,10 @@ func (m *CompanySettingsMutation) Field(name string) (ent.Value, bool) {
 		return m.DefaultCurrency()
 	case companysettings.FieldTimezone:
 		return m.Timezone()
+	case companysettings.FieldDateFormat:
+		return m.DateFormat()
+	case companysettings.FieldTimeFormat:
+		return m.TimeFormat()
 	case companysettings.FieldCreatedAt:
 		return m.CreatedAt()
 	case companysettings.FieldUpdatedAt:
@@ -22687,6 +22771,10 @@ func (m *CompanySettingsMutation) OldField(ctx context.Context, name string) (en
 		return m.OldDefaultCurrency(ctx)
 	case companysettings.FieldTimezone:
 		return m.OldTimezone(ctx)
+	case companysettings.FieldDateFormat:
+		return m.OldDateFormat(ctx)
+	case companysettings.FieldTimeFormat:
+		return m.OldTimeFormat(ctx)
 	case companysettings.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case companysettings.FieldUpdatedAt:
@@ -22783,6 +22871,20 @@ func (m *CompanySettingsMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTimezone(v)
+		return nil
+	case companysettings.FieldDateFormat:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDateFormat(v)
+		return nil
+	case companysettings.FieldTimeFormat:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTimeFormat(v)
 		return nil
 	case companysettings.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -22948,6 +23050,12 @@ func (m *CompanySettingsMutation) ResetField(name string) error {
 		return nil
 	case companysettings.FieldTimezone:
 		m.ResetTimezone()
+		return nil
+	case companysettings.FieldDateFormat:
+		m.ResetDateFormat()
+		return nil
+	case companysettings.FieldTimeFormat:
+		m.ResetTimeFormat()
 		return nil
 	case companysettings.FieldCreatedAt:
 		m.ResetCreatedAt()

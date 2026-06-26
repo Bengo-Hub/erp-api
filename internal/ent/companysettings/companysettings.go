@@ -38,6 +38,10 @@ const (
 	FieldDefaultCurrency = "default_currency"
 	// FieldTimezone holds the string denoting the timezone field in the database.
 	FieldTimezone = "timezone"
+	// FieldDateFormat holds the string denoting the date_format field in the database.
+	FieldDateFormat = "date_format"
+	// FieldTimeFormat holds the string denoting the time_format field in the database.
+	FieldTimeFormat = "time_format"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -61,6 +65,8 @@ var Columns = []string{
 	FieldFinancialYearStartMonth,
 	FieldDefaultCurrency,
 	FieldTimezone,
+	FieldDateFormat,
+	FieldTimeFormat,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -82,6 +88,10 @@ var (
 	DefaultDefaultCurrency string
 	// DefaultTimezone holds the default value on creation for the "timezone" field.
 	DefaultTimezone string
+	// DefaultDateFormat holds the default value on creation for the "date_format" field.
+	DefaultDateFormat string
+	// DefaultTimeFormat holds the default value on creation for the "time_format" field.
+	DefaultTimeFormat string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -158,6 +168,16 @@ func ByDefaultCurrency(opts ...sql.OrderTermOption) OrderOption {
 // ByTimezone orders the results by the timezone field.
 func ByTimezone(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTimezone, opts...).ToFunc()
+}
+
+// ByDateFormat orders the results by the date_format field.
+func ByDateFormat(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDateFormat, opts...).ToFunc()
+}
+
+// ByTimeFormat orders the results by the time_format field.
+func ByTimeFormat(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTimeFormat, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

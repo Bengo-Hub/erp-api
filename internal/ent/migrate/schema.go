@@ -812,6 +812,8 @@ var (
 		{Name: "financial_year_start_month", Type: field.TypeInt, Default: 1},
 		{Name: "default_currency", Type: field.TypeString, Default: "KES"},
 		{Name: "timezone", Type: field.TypeString, Default: "Africa/Nairobi"},
+		{Name: "date_format", Type: field.TypeString, Default: "DD/MM/YYYY"},
+		{Name: "time_format", Type: field.TypeString, Default: "HH:mm"},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}

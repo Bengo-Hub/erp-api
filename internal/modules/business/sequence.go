@@ -19,7 +19,14 @@ const (
 	DocTypePayrollReport = "payroll_report"
 	DocTypeP9            = "p9"
 	DocTypeP10A          = "p10a"
+	DocTypeMusterRoll    = "muster_roll"
 )
+
+// defaultDocTypes is the canonical set of document sequences every tenant should have.
+// Used by EnsureDefaults (tenant bootstrap / cmd/seed-defaults).
+var defaultDocTypes = []string{
+	DocTypePayslip, DocTypeP9, DocTypeP10A, DocTypePayrollReport, DocTypeMusterRoll,
+}
 
 type seqConfig struct {
 	Prefix     string
@@ -34,6 +41,7 @@ var seqDefaults = map[string]seqConfig{
 	DocTypePayrollReport: {Prefix: "RPT", Separator: "-", DateFormat: "YYMMDD", Padding: 6, ResetFreq: "never"},
 	DocTypeP9:            {Prefix: "P9", Separator: "-", DateFormat: "YYYY", Padding: 6, ResetFreq: "yearly"},
 	DocTypeP10A:          {Prefix: "P10A", Separator: "-", DateFormat: "YYYY", Padding: 6, ResetFreq: "yearly"},
+	DocTypeMusterRoll:    {Prefix: "MR", Separator: "-", DateFormat: "YYMMDD", Padding: 6, ResetFreq: "monthly"},
 }
 
 // SequenceService generates per-tenant atomic document numbers via optimistic compare-and-set
@@ -47,6 +55,18 @@ func NewSequenceService(client *ent.Client) *SequenceService { return &SequenceS
 // List returns the tenant's sequence configs.
 func (s *SequenceService) List(ctx context.Context, tenantID uuid.UUID) ([]*ent.DocumentSequence, error) {
 	return s.ent.DocumentSequence.Query().Where(entdocseq.TenantID(tenantID)).All(ctx)
+}
+
+// EnsureDefaults idempotently creates the default document sequences (payslip, p9, p10a,
+// payroll_report, muster_roll) for a tenant. Safe to call repeatedly — getOrCreate is a no-op
+// when the (tenant, doc_type) row already exists. Used by tenant bootstrap + cmd/seed-defaults.
+func (s *SequenceService) EnsureDefaults(ctx context.Context, tenantID uuid.UUID) error {
+	for _, dt := range defaultDocTypes {
+		if _, err := s.getOrCreate(ctx, tenantID, dt); err != nil {
+			return fmt.Errorf("business: ensure default sequence %q: %w", dt, err)
+		}
+	}
+	return nil
 }
 
 // UpsertConfig sets the formatting for a (tenant, doc_type) sequence (preserving current_val).

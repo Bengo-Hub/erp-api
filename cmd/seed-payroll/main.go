@@ -32,6 +32,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/config"
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
+	"github.com/Bengo-Hub/erp-api/internal/modules/defaults"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 )
 
@@ -114,6 +115,13 @@ func seed(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
 		}
 		log.Printf("  seeded %s/%s (%d bands)", f.ftype, f.category, len(f.rates.Bands))
 	}
+
+	// Seed the default KRA reliefs (personal, insurance, AHL, disability, pension) under the
+	// system tenant. Idempotent (skips by title). Per-tenant reuse via defaults.EnsureReliefs.
+	if err := defaults.EnsureReliefsWithClient(ctx, client, tenantID); err != nil {
+		return err
+	}
+	log.Printf("  seeded default KRA reliefs")
 	return nil
 }
 

@@ -36,6 +36,12 @@ func (CompanySettings) Fields() []ent.Field {
 		field.String("default_currency").Default("KES"),
 		field.String("timezone").Default("Africa/Nairobi"),
 
+		// Display formats for HR/payroll documents + the erp-ui. Stored as moment-style tokens
+		// (e.g. DD/MM/YYYY, HH:mm) so the frontend can apply them directly. String fields with a
+		// SQL DEFAULT apply cleanly via online additive auto-migrate (per memory rules).
+		field.String("date_format").Default("DD/MM/YYYY").Comment("Moment-style date token, e.g. DD/MM/YYYY"),
+		field.String("time_format").Default("HH:mm").Comment("Moment-style time token, e.g. HH:mm / hh:mm A"),
+
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

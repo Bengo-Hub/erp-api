@@ -175,6 +175,11 @@ if [[ -n ${KUBE_CONFIG:-} ]]; then
   fi
   if [[ "$RUN_SEED" == "true" ]] && kubectl -n "$NAMESPACE" get secret "$ENV_SECRET_NAME" >/dev/null 2>&1; then
     run_oneoff seed /usr/local/bin/erp-seed || warn "seed job skipped/failed (idempotent, non-fatal)"
+    # Global statutory payroll rates + KRA reliefs under the system tenant (idempotent).
+    run_oneoff seed-payroll /usr/local/bin/erp-seed-payroll || warn "seed-payroll job skipped/failed (idempotent, non-fatal)"
+    # Per-tenant HR/Ops reference defaults: job groups, leave categories, appraisal template,
+    # document sequences, reliefs (idempotent; skips existing rows for every tenant shadow).
+    run_oneoff seed-defaults /usr/local/bin/erp-seed-defaults || warn "seed-defaults job skipped/failed (idempotent, non-fatal)"
   else
     info "Skipping seed (RUN_SEED=${RUN_SEED} or secret ${ENV_SECRET_NAME} absent)"
   fi

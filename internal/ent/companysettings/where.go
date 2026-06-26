@@ -115,6 +115,16 @@ func Timezone(v string) predicate.CompanySettings {
 	return predicate.CompanySettings(sql.FieldEQ(FieldTimezone, v))
 }
 
+// DateFormat applies equality check predicate on the "date_format" field. It's identical to DateFormatEQ.
+func DateFormat(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldEQ(FieldDateFormat, v))
+}
+
+// TimeFormat applies equality check predicate on the "time_format" field. It's identical to TimeFormatEQ.
+func TimeFormat(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldEQ(FieldTimeFormat, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.CompanySettings {
 	return predicate.CompanySettings(sql.FieldEQ(FieldCreatedAt, v))
@@ -933,6 +943,136 @@ func TimezoneEqualFold(v string) predicate.CompanySettings {
 // TimezoneContainsFold applies the ContainsFold predicate on the "timezone" field.
 func TimezoneContainsFold(v string) predicate.CompanySettings {
 	return predicate.CompanySettings(sql.FieldContainsFold(FieldTimezone, v))
+}
+
+// DateFormatEQ applies the EQ predicate on the "date_format" field.
+func DateFormatEQ(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldEQ(FieldDateFormat, v))
+}
+
+// DateFormatNEQ applies the NEQ predicate on the "date_format" field.
+func DateFormatNEQ(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldNEQ(FieldDateFormat, v))
+}
+
+// DateFormatIn applies the In predicate on the "date_format" field.
+func DateFormatIn(vs ...string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldIn(FieldDateFormat, vs...))
+}
+
+// DateFormatNotIn applies the NotIn predicate on the "date_format" field.
+func DateFormatNotIn(vs ...string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldNotIn(FieldDateFormat, vs...))
+}
+
+// DateFormatGT applies the GT predicate on the "date_format" field.
+func DateFormatGT(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldGT(FieldDateFormat, v))
+}
+
+// DateFormatGTE applies the GTE predicate on the "date_format" field.
+func DateFormatGTE(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldGTE(FieldDateFormat, v))
+}
+
+// DateFormatLT applies the LT predicate on the "date_format" field.
+func DateFormatLT(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldLT(FieldDateFormat, v))
+}
+
+// DateFormatLTE applies the LTE predicate on the "date_format" field.
+func DateFormatLTE(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldLTE(FieldDateFormat, v))
+}
+
+// DateFormatContains applies the Contains predicate on the "date_format" field.
+func DateFormatContains(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldContains(FieldDateFormat, v))
+}
+
+// DateFormatHasPrefix applies the HasPrefix predicate on the "date_format" field.
+func DateFormatHasPrefix(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldHasPrefix(FieldDateFormat, v))
+}
+
+// DateFormatHasSuffix applies the HasSuffix predicate on the "date_format" field.
+func DateFormatHasSuffix(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldHasSuffix(FieldDateFormat, v))
+}
+
+// DateFormatEqualFold applies the EqualFold predicate on the "date_format" field.
+func DateFormatEqualFold(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldEqualFold(FieldDateFormat, v))
+}
+
+// DateFormatContainsFold applies the ContainsFold predicate on the "date_format" field.
+func DateFormatContainsFold(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldContainsFold(FieldDateFormat, v))
+}
+
+// TimeFormatEQ applies the EQ predicate on the "time_format" field.
+func TimeFormatEQ(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldEQ(FieldTimeFormat, v))
+}
+
+// TimeFormatNEQ applies the NEQ predicate on the "time_format" field.
+func TimeFormatNEQ(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldNEQ(FieldTimeFormat, v))
+}
+
+// TimeFormatIn applies the In predicate on the "time_format" field.
+func TimeFormatIn(vs ...string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldIn(FieldTimeFormat, vs...))
+}
+
+// TimeFormatNotIn applies the NotIn predicate on the "time_format" field.
+func TimeFormatNotIn(vs ...string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldNotIn(FieldTimeFormat, vs...))
+}
+
+// TimeFormatGT applies the GT predicate on the "time_format" field.
+func TimeFormatGT(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldGT(FieldTimeFormat, v))
+}
+
+// TimeFormatGTE applies the GTE predicate on the "time_format" field.
+func TimeFormatGTE(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldGTE(FieldTimeFormat, v))
+}
+
+// TimeFormatLT applies the LT predicate on the "time_format" field.
+func TimeFormatLT(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldLT(FieldTimeFormat, v))
+}
+
+// TimeFormatLTE applies the LTE predicate on the "time_format" field.
+func TimeFormatLTE(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldLTE(FieldTimeFormat, v))
+}
+
+// TimeFormatContains applies the Contains predicate on the "time_format" field.
+func TimeFormatContains(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldContains(FieldTimeFormat, v))
+}
+
+// TimeFormatHasPrefix applies the HasPrefix predicate on the "time_format" field.
+func TimeFormatHasPrefix(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldHasPrefix(FieldTimeFormat, v))
+}
+
+// TimeFormatHasSuffix applies the HasSuffix predicate on the "time_format" field.
+func TimeFormatHasSuffix(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldHasSuffix(FieldTimeFormat, v))
+}
+
+// TimeFormatEqualFold applies the EqualFold predicate on the "time_format" field.
+func TimeFormatEqualFold(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldEqualFold(FieldTimeFormat, v))
+}
+
+// TimeFormatContainsFold applies the ContainsFold predicate on the "time_format" field.
+func TimeFormatContainsFold(v string) predicate.CompanySettings {
+	return predicate.CompanySettings(sql.FieldContainsFold(FieldTimeFormat, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
