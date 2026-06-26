@@ -38804,6 +38804,10 @@ type ExpenseClaimMutation struct {
 	employee_id         *uuid.UUID
 	approver_id         *uuid.UUID
 	approved            *bool
+	project_id          *uuid.UUID
+	cost_center_id      *uuid.UUID
+	claim_type          *string
+	taxable             *bool
 	category            *string
 	application_date    *time.Time
 	payment_date        *time.Time
@@ -39080,6 +39084,176 @@ func (m *ExpenseClaimMutation) OldApproved(ctx context.Context) (v bool, err err
 // ResetApproved resets all changes to the "approved" field.
 func (m *ExpenseClaimMutation) ResetApproved() {
 	m.approved = nil
+}
+
+// SetProjectID sets the "project_id" field.
+func (m *ExpenseClaimMutation) SetProjectID(u uuid.UUID) {
+	m.project_id = &u
+}
+
+// ProjectID returns the value of the "project_id" field in the mutation.
+func (m *ExpenseClaimMutation) ProjectID() (r uuid.UUID, exists bool) {
+	v := m.project_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProjectID returns the old "project_id" field's value of the ExpenseClaim entity.
+// If the ExpenseClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExpenseClaimMutation) OldProjectID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProjectID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProjectID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProjectID: %w", err)
+	}
+	return oldValue.ProjectID, nil
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (m *ExpenseClaimMutation) ClearProjectID() {
+	m.project_id = nil
+	m.clearedFields[expenseclaim.FieldProjectID] = struct{}{}
+}
+
+// ProjectIDCleared returns if the "project_id" field was cleared in this mutation.
+func (m *ExpenseClaimMutation) ProjectIDCleared() bool {
+	_, ok := m.clearedFields[expenseclaim.FieldProjectID]
+	return ok
+}
+
+// ResetProjectID resets all changes to the "project_id" field.
+func (m *ExpenseClaimMutation) ResetProjectID() {
+	m.project_id = nil
+	delete(m.clearedFields, expenseclaim.FieldProjectID)
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (m *ExpenseClaimMutation) SetCostCenterID(u uuid.UUID) {
+	m.cost_center_id = &u
+}
+
+// CostCenterID returns the value of the "cost_center_id" field in the mutation.
+func (m *ExpenseClaimMutation) CostCenterID() (r uuid.UUID, exists bool) {
+	v := m.cost_center_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostCenterID returns the old "cost_center_id" field's value of the ExpenseClaim entity.
+// If the ExpenseClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExpenseClaimMutation) OldCostCenterID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostCenterID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostCenterID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostCenterID: %w", err)
+	}
+	return oldValue.CostCenterID, nil
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (m *ExpenseClaimMutation) ClearCostCenterID() {
+	m.cost_center_id = nil
+	m.clearedFields[expenseclaim.FieldCostCenterID] = struct{}{}
+}
+
+// CostCenterIDCleared returns if the "cost_center_id" field was cleared in this mutation.
+func (m *ExpenseClaimMutation) CostCenterIDCleared() bool {
+	_, ok := m.clearedFields[expenseclaim.FieldCostCenterID]
+	return ok
+}
+
+// ResetCostCenterID resets all changes to the "cost_center_id" field.
+func (m *ExpenseClaimMutation) ResetCostCenterID() {
+	m.cost_center_id = nil
+	delete(m.clearedFields, expenseclaim.FieldCostCenterID)
+}
+
+// SetClaimType sets the "claim_type" field.
+func (m *ExpenseClaimMutation) SetClaimType(s string) {
+	m.claim_type = &s
+}
+
+// ClaimType returns the value of the "claim_type" field in the mutation.
+func (m *ExpenseClaimMutation) ClaimType() (r string, exists bool) {
+	v := m.claim_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClaimType returns the old "claim_type" field's value of the ExpenseClaim entity.
+// If the ExpenseClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExpenseClaimMutation) OldClaimType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClaimType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClaimType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClaimType: %w", err)
+	}
+	return oldValue.ClaimType, nil
+}
+
+// ResetClaimType resets all changes to the "claim_type" field.
+func (m *ExpenseClaimMutation) ResetClaimType() {
+	m.claim_type = nil
+}
+
+// SetTaxable sets the "taxable" field.
+func (m *ExpenseClaimMutation) SetTaxable(b bool) {
+	m.taxable = &b
+}
+
+// Taxable returns the value of the "taxable" field in the mutation.
+func (m *ExpenseClaimMutation) Taxable() (r bool, exists bool) {
+	v := m.taxable
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaxable returns the old "taxable" field's value of the ExpenseClaim entity.
+// If the ExpenseClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExpenseClaimMutation) OldTaxable(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaxable is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaxable requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaxable: %w", err)
+	}
+	return oldValue.Taxable, nil
+}
+
+// ResetTaxable resets all changes to the "taxable" field.
+func (m *ExpenseClaimMutation) ResetTaxable() {
+	m.taxable = nil
 }
 
 // SetCategory sets the "category" field.
@@ -39564,7 +39738,7 @@ func (m *ExpenseClaimMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ExpenseClaimMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 19)
 	if m.tenant_id != nil {
 		fields = append(fields, expenseclaim.FieldTenantID)
 	}
@@ -39576,6 +39750,18 @@ func (m *ExpenseClaimMutation) Fields() []string {
 	}
 	if m.approved != nil {
 		fields = append(fields, expenseclaim.FieldApproved)
+	}
+	if m.project_id != nil {
+		fields = append(fields, expenseclaim.FieldProjectID)
+	}
+	if m.cost_center_id != nil {
+		fields = append(fields, expenseclaim.FieldCostCenterID)
+	}
+	if m.claim_type != nil {
+		fields = append(fields, expenseclaim.FieldClaimType)
+	}
+	if m.taxable != nil {
+		fields = append(fields, expenseclaim.FieldTaxable)
 	}
 	if m.category != nil {
 		fields = append(fields, expenseclaim.FieldCategory)
@@ -39626,6 +39812,14 @@ func (m *ExpenseClaimMutation) Field(name string) (ent.Value, bool) {
 		return m.ApproverID()
 	case expenseclaim.FieldApproved:
 		return m.Approved()
+	case expenseclaim.FieldProjectID:
+		return m.ProjectID()
+	case expenseclaim.FieldCostCenterID:
+		return m.CostCenterID()
+	case expenseclaim.FieldClaimType:
+		return m.ClaimType()
+	case expenseclaim.FieldTaxable:
+		return m.Taxable()
 	case expenseclaim.FieldCategory:
 		return m.Category()
 	case expenseclaim.FieldApplicationDate:
@@ -39665,6 +39859,14 @@ func (m *ExpenseClaimMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldApproverID(ctx)
 	case expenseclaim.FieldApproved:
 		return m.OldApproved(ctx)
+	case expenseclaim.FieldProjectID:
+		return m.OldProjectID(ctx)
+	case expenseclaim.FieldCostCenterID:
+		return m.OldCostCenterID(ctx)
+	case expenseclaim.FieldClaimType:
+		return m.OldClaimType(ctx)
+	case expenseclaim.FieldTaxable:
+		return m.OldTaxable(ctx)
 	case expenseclaim.FieldCategory:
 		return m.OldCategory(ctx)
 	case expenseclaim.FieldApplicationDate:
@@ -39723,6 +39925,34 @@ func (m *ExpenseClaimMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetApproved(v)
+		return nil
+	case expenseclaim.FieldProjectID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProjectID(v)
+		return nil
+	case expenseclaim.FieldCostCenterID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostCenterID(v)
+		return nil
+	case expenseclaim.FieldClaimType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClaimType(v)
+		return nil
+	case expenseclaim.FieldTaxable:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaxable(v)
 		return nil
 	case expenseclaim.FieldCategory:
 		v, ok := value.(string)
@@ -39834,6 +40064,12 @@ func (m *ExpenseClaimMutation) ClearedFields() []string {
 	if m.FieldCleared(expenseclaim.FieldApproverID) {
 		fields = append(fields, expenseclaim.FieldApproverID)
 	}
+	if m.FieldCleared(expenseclaim.FieldProjectID) {
+		fields = append(fields, expenseclaim.FieldProjectID)
+	}
+	if m.FieldCleared(expenseclaim.FieldCostCenterID) {
+		fields = append(fields, expenseclaim.FieldCostCenterID)
+	}
 	if m.FieldCleared(expenseclaim.FieldCategory) {
 		fields = append(fields, expenseclaim.FieldCategory)
 	}
@@ -39862,6 +40098,12 @@ func (m *ExpenseClaimMutation) ClearField(name string) error {
 	switch name {
 	case expenseclaim.FieldApproverID:
 		m.ClearApproverID()
+		return nil
+	case expenseclaim.FieldProjectID:
+		m.ClearProjectID()
+		return nil
+	case expenseclaim.FieldCostCenterID:
+		m.ClearCostCenterID()
 		return nil
 	case expenseclaim.FieldCategory:
 		m.ClearCategory()
@@ -39894,6 +40136,18 @@ func (m *ExpenseClaimMutation) ResetField(name string) error {
 		return nil
 	case expenseclaim.FieldApproved:
 		m.ResetApproved()
+		return nil
+	case expenseclaim.FieldProjectID:
+		m.ResetProjectID()
+		return nil
+	case expenseclaim.FieldCostCenterID:
+		m.ResetCostCenterID()
+		return nil
+	case expenseclaim.FieldClaimType:
+		m.ResetClaimType()
+		return nil
+	case expenseclaim.FieldTaxable:
+		m.ResetTaxable()
 		return nil
 	case expenseclaim.FieldCategory:
 		m.ResetCategory()

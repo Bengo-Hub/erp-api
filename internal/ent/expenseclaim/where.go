@@ -76,6 +76,26 @@ func Approved(v bool) predicate.ExpenseClaim {
 	return predicate.ExpenseClaim(sql.FieldEQ(FieldApproved, v))
 }
 
+// ProjectID applies equality check predicate on the "project_id" field. It's identical to ProjectIDEQ.
+func ProjectID(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldEQ(FieldProjectID, v))
+}
+
+// CostCenterID applies equality check predicate on the "cost_center_id" field. It's identical to CostCenterIDEQ.
+func CostCenterID(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldEQ(FieldCostCenterID, v))
+}
+
+// ClaimType applies equality check predicate on the "claim_type" field. It's identical to ClaimTypeEQ.
+func ClaimType(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldEQ(FieldClaimType, v))
+}
+
+// Taxable applies equality check predicate on the "taxable" field. It's identical to TaxableEQ.
+func Taxable(v bool) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldEQ(FieldTaxable, v))
+}
+
 // Category applies equality check predicate on the "category" field. It's identical to CategoryEQ.
 func Category(v string) predicate.ExpenseClaim {
 	return predicate.ExpenseClaim(sql.FieldEQ(FieldCategory, v))
@@ -269,6 +289,181 @@ func ApprovedEQ(v bool) predicate.ExpenseClaim {
 // ApprovedNEQ applies the NEQ predicate on the "approved" field.
 func ApprovedNEQ(v bool) predicate.ExpenseClaim {
 	return predicate.ExpenseClaim(sql.FieldNEQ(FieldApproved, v))
+}
+
+// ProjectIDEQ applies the EQ predicate on the "project_id" field.
+func ProjectIDEQ(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldEQ(FieldProjectID, v))
+}
+
+// ProjectIDNEQ applies the NEQ predicate on the "project_id" field.
+func ProjectIDNEQ(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldNEQ(FieldProjectID, v))
+}
+
+// ProjectIDIn applies the In predicate on the "project_id" field.
+func ProjectIDIn(vs ...uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldIn(FieldProjectID, vs...))
+}
+
+// ProjectIDNotIn applies the NotIn predicate on the "project_id" field.
+func ProjectIDNotIn(vs ...uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldNotIn(FieldProjectID, vs...))
+}
+
+// ProjectIDGT applies the GT predicate on the "project_id" field.
+func ProjectIDGT(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldGT(FieldProjectID, v))
+}
+
+// ProjectIDGTE applies the GTE predicate on the "project_id" field.
+func ProjectIDGTE(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldGTE(FieldProjectID, v))
+}
+
+// ProjectIDLT applies the LT predicate on the "project_id" field.
+func ProjectIDLT(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldLT(FieldProjectID, v))
+}
+
+// ProjectIDLTE applies the LTE predicate on the "project_id" field.
+func ProjectIDLTE(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldLTE(FieldProjectID, v))
+}
+
+// ProjectIDIsNil applies the IsNil predicate on the "project_id" field.
+func ProjectIDIsNil() predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldIsNull(FieldProjectID))
+}
+
+// ProjectIDNotNil applies the NotNil predicate on the "project_id" field.
+func ProjectIDNotNil() predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldNotNull(FieldProjectID))
+}
+
+// CostCenterIDEQ applies the EQ predicate on the "cost_center_id" field.
+func CostCenterIDEQ(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldEQ(FieldCostCenterID, v))
+}
+
+// CostCenterIDNEQ applies the NEQ predicate on the "cost_center_id" field.
+func CostCenterIDNEQ(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldNEQ(FieldCostCenterID, v))
+}
+
+// CostCenterIDIn applies the In predicate on the "cost_center_id" field.
+func CostCenterIDIn(vs ...uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldIn(FieldCostCenterID, vs...))
+}
+
+// CostCenterIDNotIn applies the NotIn predicate on the "cost_center_id" field.
+func CostCenterIDNotIn(vs ...uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldNotIn(FieldCostCenterID, vs...))
+}
+
+// CostCenterIDGT applies the GT predicate on the "cost_center_id" field.
+func CostCenterIDGT(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldGT(FieldCostCenterID, v))
+}
+
+// CostCenterIDGTE applies the GTE predicate on the "cost_center_id" field.
+func CostCenterIDGTE(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldGTE(FieldCostCenterID, v))
+}
+
+// CostCenterIDLT applies the LT predicate on the "cost_center_id" field.
+func CostCenterIDLT(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldLT(FieldCostCenterID, v))
+}
+
+// CostCenterIDLTE applies the LTE predicate on the "cost_center_id" field.
+func CostCenterIDLTE(v uuid.UUID) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldLTE(FieldCostCenterID, v))
+}
+
+// CostCenterIDIsNil applies the IsNil predicate on the "cost_center_id" field.
+func CostCenterIDIsNil() predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldIsNull(FieldCostCenterID))
+}
+
+// CostCenterIDNotNil applies the NotNil predicate on the "cost_center_id" field.
+func CostCenterIDNotNil() predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldNotNull(FieldCostCenterID))
+}
+
+// ClaimTypeEQ applies the EQ predicate on the "claim_type" field.
+func ClaimTypeEQ(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldEQ(FieldClaimType, v))
+}
+
+// ClaimTypeNEQ applies the NEQ predicate on the "claim_type" field.
+func ClaimTypeNEQ(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldNEQ(FieldClaimType, v))
+}
+
+// ClaimTypeIn applies the In predicate on the "claim_type" field.
+func ClaimTypeIn(vs ...string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldIn(FieldClaimType, vs...))
+}
+
+// ClaimTypeNotIn applies the NotIn predicate on the "claim_type" field.
+func ClaimTypeNotIn(vs ...string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldNotIn(FieldClaimType, vs...))
+}
+
+// ClaimTypeGT applies the GT predicate on the "claim_type" field.
+func ClaimTypeGT(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldGT(FieldClaimType, v))
+}
+
+// ClaimTypeGTE applies the GTE predicate on the "claim_type" field.
+func ClaimTypeGTE(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldGTE(FieldClaimType, v))
+}
+
+// ClaimTypeLT applies the LT predicate on the "claim_type" field.
+func ClaimTypeLT(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldLT(FieldClaimType, v))
+}
+
+// ClaimTypeLTE applies the LTE predicate on the "claim_type" field.
+func ClaimTypeLTE(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldLTE(FieldClaimType, v))
+}
+
+// ClaimTypeContains applies the Contains predicate on the "claim_type" field.
+func ClaimTypeContains(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldContains(FieldClaimType, v))
+}
+
+// ClaimTypeHasPrefix applies the HasPrefix predicate on the "claim_type" field.
+func ClaimTypeHasPrefix(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldHasPrefix(FieldClaimType, v))
+}
+
+// ClaimTypeHasSuffix applies the HasSuffix predicate on the "claim_type" field.
+func ClaimTypeHasSuffix(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldHasSuffix(FieldClaimType, v))
+}
+
+// ClaimTypeEqualFold applies the EqualFold predicate on the "claim_type" field.
+func ClaimTypeEqualFold(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldEqualFold(FieldClaimType, v))
+}
+
+// ClaimTypeContainsFold applies the ContainsFold predicate on the "claim_type" field.
+func ClaimTypeContainsFold(v string) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldContainsFold(FieldClaimType, v))
+}
+
+// TaxableEQ applies the EQ predicate on the "taxable" field.
+func TaxableEQ(v bool) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldEQ(FieldTaxable, v))
+}
+
+// TaxableNEQ applies the NEQ predicate on the "taxable" field.
+func TaxableNEQ(v bool) predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldNEQ(FieldTaxable, v))
 }
 
 // CategoryEQ applies the EQ predicate on the "category" field.

@@ -252,6 +252,12 @@ type ClaimInput struct {
 	Amount          decimal.Decimal
 	Category        string
 	ApplicationDate *time.Time
+	// Analytic + tax linkage (additive). ClaimType drives tax treatment; Taxable marks the
+	// (portion treated as) taxable income. ProjectID/CostCenterID tag the cost for treasury.
+	ProjectID    *uuid.UUID
+	CostCenterID *uuid.UUID
+	ClaimType    string
+	Taxable      *bool
 }
 
 func (s *Service) ListClaims(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, limit, offset int) ([]*ent.ExpenseClaim, int, error) {
@@ -286,9 +292,17 @@ func (s *Service) CreateClaim(ctx context.Context, tenantID uuid.UUID, in ClaimI
 	b := s.orm.ExpenseClaim.Create().
 		SetTenantID(tenantID).
 		SetEmployeeID(in.EmployeeID).
-		SetAmount(in.Amount)
+		SetAmount(in.Amount).
+		SetNillableProjectID(in.ProjectID).
+		SetNillableCostCenterID(in.CostCenterID)
 	if in.Category != "" {
 		b = b.SetCategory(in.Category)
+	}
+	if in.ClaimType != "" {
+		b = b.SetClaimType(in.ClaimType)
+	}
+	if in.Taxable != nil {
+		b = b.SetTaxable(*in.Taxable)
 	}
 	if in.ApplicationDate != nil {
 		b = b.SetApplicationDate(*in.ApplicationDate)
@@ -308,10 +322,67 @@ func (s *Service) UpdateClaim(ctx context.Context, tenantID, id uuid.UUID, in Cl
 	if in.Category != "" {
 		u = u.SetCategory(in.Category)
 	}
+	if in.ClaimType != "" {
+		u = u.SetClaimType(in.ClaimType)
+	}
+	if in.Taxable != nil {
+		u = u.SetTaxable(*in.Taxable)
+	}
+	if in.ProjectID != nil {
+		u = u.SetProjectID(*in.ProjectID)
+	}
+	if in.CostCenterID != nil {
+		u = u.SetCostCenterID(*in.CostCenterID)
+	}
 	if in.ApplicationDate != nil {
 		u = u.SetApplicationDate(*in.ApplicationDate)
 	}
 	return u.Save(ctx)
+}
+
+// ApproveClaim approves an expense claim and emits erp.expense_claim.approved so treasury posts
+// the reimbursement to the GL. The NON-taxable amount is paid via treasury AP (employee payable),
+// NOT through payroll gross — so it never inflates PAYE; the taxable portion (when taxable=true)
+// is handled through the payslip taxable lane. Idempotent: re-approving an already-approved claim
+// does not re-emit.
+func (s *Service) ApproveClaim(ctx context.Context, tenantID, id, approverID uuid.UUID) (*ent.ExpenseClaim, error) {
+	existing, err := s.GetClaim(ctx, tenantID, id)
+	if err != nil {
+		return nil, err
+	}
+	if existing.Approved {
+		return existing, nil // already approved — idempotent, no re-emit
+	}
+	updated, err := existing.Update().
+		SetApproved(true).
+		SetNillableApproverID(&approverID).
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("payroll: approve claim: %w", err)
+	}
+	if s.publisher != nil {
+		payload := map[string]any{
+			"claim_id":    updated.ID.String(),
+			"tenant_id":   tenantID.String(),
+			"employee_id": updated.EmployeeID.String(),
+			"amount":      updated.Amount.String(),
+			"currency":    "KES",
+			"claim_type":  updated.ClaimType,
+			"taxable":     updated.Taxable,
+			"category":    updated.Category,
+		}
+		if updated.ProjectID != nil {
+			payload["project_id"] = updated.ProjectID.String()
+		}
+		if updated.CostCenterID != nil {
+			payload["cost_center_id"] = updated.CostCenterID.String()
+		}
+		if err := s.publisher.Publish(ctx, tenantID, updated.ID.String(), "expense_claim.approved", payload); err != nil {
+			// Approval persisted; event failure is logged by the caller. Surface so caller can retry.
+			return updated, fmt.Errorf("payroll: publish expense_claim.approved: %w", err)
+		}
+	}
+	return updated, nil
 }
 
 func (s *Service) DeleteClaim(ctx context.Context, tenantID, id uuid.UUID) error {

@@ -22,6 +22,18 @@ func (ExpenseClaim) Fields() []ent.Field {
 		field.UUID("approver_id", uuid.UUID{}).Optional().Nillable(),
 
 		field.Bool("approved").Default(false),
+		// project_id + cost_center_id tag the claim to an analytic dimension so the cost posts
+		// against a project / cost-center in treasury (projects-expense integration is delivered
+		// via project-tagged ERP claims — projects-api owns no expense module).
+		field.UUID("project_id", uuid.UUID{}).Optional().Nillable().Comment("projects-service project id"),
+		field.UUID("cost_center_id", uuid.UUID{}).Optional().Nillable().Comment("treasury cost-center id"),
+		// claim_type drives tax treatment: per_diem/mileage have KRA caps (excess is taxable),
+		// reimbursement is a bona-fide non-taxable business expense, other defaults taxable=false.
+		field.String("claim_type").Default("reimbursement").
+			Comment("per_diem | mileage | reimbursement | other"),
+		// taxable marks the (portion treated as) taxable income — the taxable amount flows to the
+		// payslip for PAYE; the non-taxable remainder is reimbursed via treasury AP (not payroll).
+		field.Bool("taxable").Default(false),
 		field.String("category").Optional().Comment("Other | Mileage"),
 		field.Time("application_date").Optional().Nillable(),
 		field.Time("payment_date").Optional().Nillable(),

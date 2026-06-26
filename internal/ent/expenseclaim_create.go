@@ -65,6 +65,62 @@ func (_c *ExpenseClaimCreate) SetNillableApproved(v *bool) *ExpenseClaimCreate {
 	return _c
 }
 
+// SetProjectID sets the "project_id" field.
+func (_c *ExpenseClaimCreate) SetProjectID(v uuid.UUID) *ExpenseClaimCreate {
+	_c.mutation.SetProjectID(v)
+	return _c
+}
+
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_c *ExpenseClaimCreate) SetNillableProjectID(v *uuid.UUID) *ExpenseClaimCreate {
+	if v != nil {
+		_c.SetProjectID(*v)
+	}
+	return _c
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (_c *ExpenseClaimCreate) SetCostCenterID(v uuid.UUID) *ExpenseClaimCreate {
+	_c.mutation.SetCostCenterID(v)
+	return _c
+}
+
+// SetNillableCostCenterID sets the "cost_center_id" field if the given value is not nil.
+func (_c *ExpenseClaimCreate) SetNillableCostCenterID(v *uuid.UUID) *ExpenseClaimCreate {
+	if v != nil {
+		_c.SetCostCenterID(*v)
+	}
+	return _c
+}
+
+// SetClaimType sets the "claim_type" field.
+func (_c *ExpenseClaimCreate) SetClaimType(v string) *ExpenseClaimCreate {
+	_c.mutation.SetClaimType(v)
+	return _c
+}
+
+// SetNillableClaimType sets the "claim_type" field if the given value is not nil.
+func (_c *ExpenseClaimCreate) SetNillableClaimType(v *string) *ExpenseClaimCreate {
+	if v != nil {
+		_c.SetClaimType(*v)
+	}
+	return _c
+}
+
+// SetTaxable sets the "taxable" field.
+func (_c *ExpenseClaimCreate) SetTaxable(v bool) *ExpenseClaimCreate {
+	_c.mutation.SetTaxable(v)
+	return _c
+}
+
+// SetNillableTaxable sets the "taxable" field if the given value is not nil.
+func (_c *ExpenseClaimCreate) SetNillableTaxable(v *bool) *ExpenseClaimCreate {
+	if v != nil {
+		_c.SetTaxable(*v)
+	}
+	return _c
+}
+
 // SetCategory sets the "category" field.
 func (_c *ExpenseClaimCreate) SetCategory(v string) *ExpenseClaimCreate {
 	_c.mutation.SetCategory(v)
@@ -272,6 +328,14 @@ func (_c *ExpenseClaimCreate) defaults() {
 		v := expenseclaim.DefaultApproved
 		_c.mutation.SetApproved(v)
 	}
+	if _, ok := _c.mutation.ClaimType(); !ok {
+		v := expenseclaim.DefaultClaimType
+		_c.mutation.SetClaimType(v)
+	}
+	if _, ok := _c.mutation.Taxable(); !ok {
+		v := expenseclaim.DefaultTaxable
+		_c.mutation.SetTaxable(v)
+	}
 	if _, ok := _c.mutation.Amount(); !ok {
 		v := expenseclaim.DefaultAmount
 		_c.mutation.SetAmount(v)
@@ -316,6 +380,12 @@ func (_c *ExpenseClaimCreate) check() error {
 	}
 	if _, ok := _c.mutation.Approved(); !ok {
 		return &ValidationError{Name: "approved", err: errors.New(`ent: missing required field "ExpenseClaim.approved"`)}
+	}
+	if _, ok := _c.mutation.ClaimType(); !ok {
+		return &ValidationError{Name: "claim_type", err: errors.New(`ent: missing required field "ExpenseClaim.claim_type"`)}
+	}
+	if _, ok := _c.mutation.Taxable(); !ok {
+		return &ValidationError{Name: "taxable", err: errors.New(`ent: missing required field "ExpenseClaim.taxable"`)}
 	}
 	if _, ok := _c.mutation.Amount(); !ok {
 		return &ValidationError{Name: "amount", err: errors.New(`ent: missing required field "ExpenseClaim.amount"`)}
@@ -389,6 +459,22 @@ func (_c *ExpenseClaimCreate) createSpec() (*ExpenseClaim, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.Approved(); ok {
 		_spec.SetField(expenseclaim.FieldApproved, field.TypeBool, value)
 		_node.Approved = value
+	}
+	if value, ok := _c.mutation.ProjectID(); ok {
+		_spec.SetField(expenseclaim.FieldProjectID, field.TypeUUID, value)
+		_node.ProjectID = &value
+	}
+	if value, ok := _c.mutation.CostCenterID(); ok {
+		_spec.SetField(expenseclaim.FieldCostCenterID, field.TypeUUID, value)
+		_node.CostCenterID = &value
+	}
+	if value, ok := _c.mutation.ClaimType(); ok {
+		_spec.SetField(expenseclaim.FieldClaimType, field.TypeString, value)
+		_node.ClaimType = value
+	}
+	if value, ok := _c.mutation.Taxable(); ok {
+		_spec.SetField(expenseclaim.FieldTaxable, field.TypeBool, value)
+		_node.Taxable = value
 	}
 	if value, ok := _c.mutation.Category(); ok {
 		_spec.SetField(expenseclaim.FieldCategory, field.TypeString, value)
@@ -537,6 +623,66 @@ func (u *ExpenseClaimUpsert) SetApproved(v bool) *ExpenseClaimUpsert {
 // UpdateApproved sets the "approved" field to the value that was provided on create.
 func (u *ExpenseClaimUpsert) UpdateApproved() *ExpenseClaimUpsert {
 	u.SetExcluded(expenseclaim.FieldApproved)
+	return u
+}
+
+// SetProjectID sets the "project_id" field.
+func (u *ExpenseClaimUpsert) SetProjectID(v uuid.UUID) *ExpenseClaimUpsert {
+	u.Set(expenseclaim.FieldProjectID, v)
+	return u
+}
+
+// UpdateProjectID sets the "project_id" field to the value that was provided on create.
+func (u *ExpenseClaimUpsert) UpdateProjectID() *ExpenseClaimUpsert {
+	u.SetExcluded(expenseclaim.FieldProjectID)
+	return u
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (u *ExpenseClaimUpsert) ClearProjectID() *ExpenseClaimUpsert {
+	u.SetNull(expenseclaim.FieldProjectID)
+	return u
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (u *ExpenseClaimUpsert) SetCostCenterID(v uuid.UUID) *ExpenseClaimUpsert {
+	u.Set(expenseclaim.FieldCostCenterID, v)
+	return u
+}
+
+// UpdateCostCenterID sets the "cost_center_id" field to the value that was provided on create.
+func (u *ExpenseClaimUpsert) UpdateCostCenterID() *ExpenseClaimUpsert {
+	u.SetExcluded(expenseclaim.FieldCostCenterID)
+	return u
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (u *ExpenseClaimUpsert) ClearCostCenterID() *ExpenseClaimUpsert {
+	u.SetNull(expenseclaim.FieldCostCenterID)
+	return u
+}
+
+// SetClaimType sets the "claim_type" field.
+func (u *ExpenseClaimUpsert) SetClaimType(v string) *ExpenseClaimUpsert {
+	u.Set(expenseclaim.FieldClaimType, v)
+	return u
+}
+
+// UpdateClaimType sets the "claim_type" field to the value that was provided on create.
+func (u *ExpenseClaimUpsert) UpdateClaimType() *ExpenseClaimUpsert {
+	u.SetExcluded(expenseclaim.FieldClaimType)
+	return u
+}
+
+// SetTaxable sets the "taxable" field.
+func (u *ExpenseClaimUpsert) SetTaxable(v bool) *ExpenseClaimUpsert {
+	u.Set(expenseclaim.FieldTaxable, v)
+	return u
+}
+
+// UpdateTaxable sets the "taxable" field to the value that was provided on create.
+func (u *ExpenseClaimUpsert) UpdateTaxable() *ExpenseClaimUpsert {
+	u.SetExcluded(expenseclaim.FieldTaxable)
 	return u
 }
 
@@ -795,6 +941,76 @@ func (u *ExpenseClaimUpsertOne) SetApproved(v bool) *ExpenseClaimUpsertOne {
 func (u *ExpenseClaimUpsertOne) UpdateApproved() *ExpenseClaimUpsertOne {
 	return u.Update(func(s *ExpenseClaimUpsert) {
 		s.UpdateApproved()
+	})
+}
+
+// SetProjectID sets the "project_id" field.
+func (u *ExpenseClaimUpsertOne) SetProjectID(v uuid.UUID) *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.SetProjectID(v)
+	})
+}
+
+// UpdateProjectID sets the "project_id" field to the value that was provided on create.
+func (u *ExpenseClaimUpsertOne) UpdateProjectID() *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.UpdateProjectID()
+	})
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (u *ExpenseClaimUpsertOne) ClearProjectID() *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.ClearProjectID()
+	})
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (u *ExpenseClaimUpsertOne) SetCostCenterID(v uuid.UUID) *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.SetCostCenterID(v)
+	})
+}
+
+// UpdateCostCenterID sets the "cost_center_id" field to the value that was provided on create.
+func (u *ExpenseClaimUpsertOne) UpdateCostCenterID() *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.UpdateCostCenterID()
+	})
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (u *ExpenseClaimUpsertOne) ClearCostCenterID() *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.ClearCostCenterID()
+	})
+}
+
+// SetClaimType sets the "claim_type" field.
+func (u *ExpenseClaimUpsertOne) SetClaimType(v string) *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.SetClaimType(v)
+	})
+}
+
+// UpdateClaimType sets the "claim_type" field to the value that was provided on create.
+func (u *ExpenseClaimUpsertOne) UpdateClaimType() *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.UpdateClaimType()
+	})
+}
+
+// SetTaxable sets the "taxable" field.
+func (u *ExpenseClaimUpsertOne) SetTaxable(v bool) *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.SetTaxable(v)
+	})
+}
+
+// UpdateTaxable sets the "taxable" field to the value that was provided on create.
+func (u *ExpenseClaimUpsertOne) UpdateTaxable() *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.UpdateTaxable()
 	})
 }
 
@@ -1244,6 +1460,76 @@ func (u *ExpenseClaimUpsertBulk) SetApproved(v bool) *ExpenseClaimUpsertBulk {
 func (u *ExpenseClaimUpsertBulk) UpdateApproved() *ExpenseClaimUpsertBulk {
 	return u.Update(func(s *ExpenseClaimUpsert) {
 		s.UpdateApproved()
+	})
+}
+
+// SetProjectID sets the "project_id" field.
+func (u *ExpenseClaimUpsertBulk) SetProjectID(v uuid.UUID) *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.SetProjectID(v)
+	})
+}
+
+// UpdateProjectID sets the "project_id" field to the value that was provided on create.
+func (u *ExpenseClaimUpsertBulk) UpdateProjectID() *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.UpdateProjectID()
+	})
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (u *ExpenseClaimUpsertBulk) ClearProjectID() *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.ClearProjectID()
+	})
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (u *ExpenseClaimUpsertBulk) SetCostCenterID(v uuid.UUID) *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.SetCostCenterID(v)
+	})
+}
+
+// UpdateCostCenterID sets the "cost_center_id" field to the value that was provided on create.
+func (u *ExpenseClaimUpsertBulk) UpdateCostCenterID() *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.UpdateCostCenterID()
+	})
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (u *ExpenseClaimUpsertBulk) ClearCostCenterID() *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.ClearCostCenterID()
+	})
+}
+
+// SetClaimType sets the "claim_type" field.
+func (u *ExpenseClaimUpsertBulk) SetClaimType(v string) *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.SetClaimType(v)
+	})
+}
+
+// UpdateClaimType sets the "claim_type" field to the value that was provided on create.
+func (u *ExpenseClaimUpsertBulk) UpdateClaimType() *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.UpdateClaimType()
+	})
+}
+
+// SetTaxable sets the "taxable" field.
+func (u *ExpenseClaimUpsertBulk) SetTaxable(v bool) *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.SetTaxable(v)
+	})
+}
+
+// UpdateTaxable sets the "taxable" field to the value that was provided on create.
+func (u *ExpenseClaimUpsertBulk) UpdateTaxable() *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.UpdateTaxable()
 	})
 }
 

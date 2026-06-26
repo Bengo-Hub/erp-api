@@ -68,6 +68,7 @@ func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 		pr.Get("/claims/{id}", h.GetClaim)
 		pr.Post("/claims", h.CreateClaim)
 		pr.Put("/claims/{id}", h.UpdateClaim)
+		pr.Post("/claims/{id}/approve", h.ApproveClaim)
 		pr.Delete("/claims/{id}", h.DeleteClaim)
 	})
 }
@@ -90,27 +91,27 @@ func parsePeriod(s string) (time.Time, bool) {
 // ---- Payslip views ----
 
 type payslipView struct {
-	ID               uuid.UUID `json:"id"`
-	Employee         uuid.UUID `json:"employee"`
-	EmployeeID       uuid.UUID `json:"employee_id"`
-	EmployeeName     string    `json:"employee_name,omitempty"`
-	EmployeeNumber   string    `json:"employee_number,omitempty"`
-	PaymentPeriod    string    `json:"payment_period,omitempty"`
-	Period           string    `json:"period,omitempty"`
-	GrossPay         string    `json:"gross_pay"`
-	BasicSalary      string    `json:"basic_salary"`
-	TotalEarnings    string    `json:"total_earnings"`
-	TotalDeductions  string    `json:"total_deductions"`
-	Paye             string    `json:"paye"`
-	Nssf             string    `json:"nssf"`
-	Shif             string    `json:"shif"`
-	HousingLevy      string    `json:"housing_levy"`
-	NetPay           string    `json:"net_pay"`
-	Status           string    `json:"status,omitempty"`
-	PaymentStatus    string    `json:"payment_status,omitempty"`
-	Currency         string    `json:"currency"`
-	BatchRef         string    `json:"batch_ref,omitempty"`
-	CreatedAt        string    `json:"created_at,omitempty"`
+	ID              uuid.UUID `json:"id"`
+	Employee        uuid.UUID `json:"employee"`
+	EmployeeID      uuid.UUID `json:"employee_id"`
+	EmployeeName    string    `json:"employee_name,omitempty"`
+	EmployeeNumber  string    `json:"employee_number,omitempty"`
+	PaymentPeriod   string    `json:"payment_period,omitempty"`
+	Period          string    `json:"period,omitempty"`
+	GrossPay        string    `json:"gross_pay"`
+	BasicSalary     string    `json:"basic_salary"`
+	TotalEarnings   string    `json:"total_earnings"`
+	TotalDeductions string    `json:"total_deductions"`
+	Paye            string    `json:"paye"`
+	Nssf            string    `json:"nssf"`
+	Shif            string    `json:"shif"`
+	HousingLevy     string    `json:"housing_levy"`
+	NetPay          string    `json:"net_pay"`
+	Status          string    `json:"status,omitempty"`
+	PaymentStatus   string    `json:"payment_status,omitempty"`
+	Currency        string    `json:"currency"`
+	BatchRef        string    `json:"batch_ref,omitempty"`
+	CreatedAt       string    `json:"created_at,omitempty"`
 }
 
 func (h *PayrollHandler) payslipView(ctx context.Context, tenantID uuid.UUID, ps *ent.Payslip) payslipView {
@@ -730,12 +731,15 @@ func (h *PayrollHandler) decodeRecoverable(w http.ResponseWriter, r *http.Reques
 // ---- Claims ----
 
 type claimBody struct {
-	Employee   string `json:"employee"`
-	EmployeeID string `json:"employee_id"`
-	Amount     string `json:"amount"`
-	ClaimType  string `json:"claim_type"`
-	Category   string `json:"category"`
-	Date       string `json:"date"`
+	Employee     string `json:"employee"`
+	EmployeeID   string `json:"employee_id"`
+	Amount       string `json:"amount"`
+	ClaimType    string `json:"claim_type"`
+	Category     string `json:"category"`
+	Date         string `json:"date"`
+	ProjectID    string `json:"project_id"`
+	CostCenterID string `json:"cost_center_id"`
+	Taxable      *bool  `json:"taxable"`
 }
 
 func (b claimBody) toInput() (payroll.ClaimInput, error) {
@@ -759,8 +763,20 @@ func (b claimBody) toInput() (payroll.ClaimInput, error) {
 		in.Amount = amt
 	}
 	in.Category = b.Category
+	in.ClaimType = b.ClaimType
 	if in.Category == "" {
 		in.Category = b.ClaimType
+	}
+	in.Taxable = b.Taxable
+	if b.ProjectID != "" {
+		if pid, err := uuid.Parse(b.ProjectID); err == nil {
+			in.ProjectID = &pid
+		}
+	}
+	if b.CostCenterID != "" {
+		if cid, err := uuid.Parse(b.CostCenterID); err == nil {
+			in.CostCenterID = &cid
+		}
 	}
 	if b.Date != "" {
 		if d, err := parseDate(b.Date); err == nil {
@@ -777,11 +793,19 @@ func claimView(c *ent.ExpenseClaim, name string) map[string]any {
 		"employee_id":   c.EmployeeID,
 		"employee_name": name,
 		"amount":        c.Amount.StringFixed(2),
-		"claim_type":    c.Category,
+		"claim_type":    c.ClaimType,
 		"category":      c.Category,
+		"taxable":       c.Taxable,
+		"approved":      c.Approved,
 		"status":        claimStatus(c),
 		"is_paid":       c.IsPaid,
 		"created_at":    c.CreatedAt.Format(time.RFC3339),
+	}
+	if c.ProjectID != nil {
+		v["project_id"] = c.ProjectID
+	}
+	if c.CostCenterID != nil {
+		v["cost_center_id"] = c.CostCenterID
 	}
 	if c.ApplicationDate != nil {
 		v["date"] = c.ApplicationDate.Format("2006-01-02")
@@ -837,6 +861,30 @@ func (h *PayrollHandler) GetClaim(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to fetch claim")
+		return
+	}
+	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, c.EmployeeID)
+	writeJSON(w, http.StatusOK, claimView(c, name))
+}
+
+// ApproveClaim approves a claim and emits erp.expense_claim.approved for treasury GL posting.
+func (h *PayrollHandler) ApproveClaim(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	c, err := h.svc.ApproveClaim(r.Context(), scope.TenantID, id, scope.UserID)
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "claim not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to approve claim")
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, c.EmployeeID)

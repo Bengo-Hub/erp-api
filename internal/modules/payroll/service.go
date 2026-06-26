@@ -20,16 +20,26 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
+	"github.com/Bengo-Hub/erp-api/internal/platform/events"
 )
 
 // Service generates and stores payslips.
 type Service struct {
-	orm      *ent.Client
-	settings *payrollsettings.Service
+	orm       *ent.Client
+	settings  *payrollsettings.Service
+	publisher *events.Publisher
 }
 
 func NewService(orm *ent.Client, settings *payrollsettings.Service) *Service {
 	return &Service{orm: orm, settings: settings}
+}
+
+// WithPublisher wires the outbox event publisher so claim approval can emit
+// erp.expense_claim.approved for treasury to post the reimbursement to the GL. Returns the
+// service for chaining; optional (nil publisher = no event, approval still works).
+func (s *Service) WithPublisher(p *events.Publisher) *Service {
+	s.publisher = p
+	return s
 }
 
 // RunParams controls a payroll run.
@@ -45,9 +55,9 @@ type RunParams struct {
 
 // LineResult pairs an employee with their engine output.
 type LineResult struct {
-	EmployeeID uuid.UUID                    `json:"employee_id"`
-	Result     payrollengine.PayslipResult  `json:"result"`
-	PayslipID  *uuid.UUID                   `json:"payslip_id,omitempty"`
+	EmployeeID uuid.UUID                   `json:"employee_id"`
+	Result     payrollengine.PayslipResult `json:"result"`
+	PayslipID  *uuid.UUID                  `json:"payslip_id,omitempty"`
 }
 
 // Run computes (and optionally persists) payslips for the matching employees. It builds
