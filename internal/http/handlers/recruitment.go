@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
@@ -34,6 +35,7 @@ func (h *RecruitmentHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/hrm/recruitment", func(rr chi.Router) {
 		rr.Get("/postings", h.ListPostings)
 		rr.Post("/postings", h.CreatePosting)
+		rr.Put("/postings/{id}", h.UpdatePosting)
 		rr.Put("/postings/{id}/status", h.SetPostingStatus)
 
 		rr.Get("/candidates", h.ListCandidates)
@@ -67,11 +69,29 @@ func (h *RecruitmentHandler) ListPostings(w http.ResponseWriter, r *http.Request
 }
 
 type postingBody struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Department  string `json:"department"`
-	Location    string `json:"location"`
-	Status      string `json:"status"`
+	Title               string `json:"title"`
+	Description         string `json:"description"`
+	Department          string `json:"department"`
+	Location            string `json:"location"`
+	Status              string `json:"status"`
+	IsPublic            bool   `json:"is_public"`
+	EmploymentType      string `json:"employment_type"`
+	NumPositions        int    `json:"num_positions"`
+	ApplicationDeadline string `json:"application_deadline"`
+}
+
+func (b postingBody) toInput() recruitment.PostingInput {
+	in := recruitment.PostingInput{
+		Title: b.Title, Description: b.Description, Department: b.Department,
+		Location: b.Location, Status: b.Status, IsPublic: b.IsPublic,
+		EmploymentType: b.EmploymentType, NumPositions: b.NumPositions,
+	}
+	if b.ApplicationDeadline != "" {
+		if t, err := time.Parse("2006-01-02", b.ApplicationDeadline); err == nil {
+			in.ApplicationDeadline = &t
+		}
+	}
+	return in
 }
 
 func (h *RecruitmentHandler) CreatePosting(w http.ResponseWriter, r *http.Request) {
@@ -84,15 +104,36 @@ func (h *RecruitmentHandler) CreatePosting(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	row, err := h.svc.CreatePosting(r.Context(), scope.TenantID, recruitment.PostingInput{
-		Title: b.Title, Description: b.Description, Department: b.Department,
-		Location: b.Location, Status: b.Status,
-	})
+	row, err := h.svc.CreatePosting(r.Context(), scope.TenantID, b.toInput())
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
+}
+
+// UpdatePosting edits a posting (title/description/visibility/employment type/deadline).
+func (h *RecruitmentHandler) UpdatePosting(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permRecruitmentManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var b postingBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	row, err := h.svc.UpdatePosting(r.Context(), scope.TenantID, id, b.toInput())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
 }
 
 type statusBody struct {

@@ -1,4 +1,4 @@
-h1:4zw88RvEidm5/7x/xz/5ourhSQuRjRcVnCT3L0VbHGU=
+h1:dYuduCKXaW7qNOvNDy61BI4TECGg4eWqzOaArNYE/As=
 20260614111624_initial_schema.sql h1:tduj8h0RdEm+lMEI2bb30y3PuaaHSJmw5kPoJ1kC5jk=
 20260614165124_leave_schema.sql h1:nMX5BEZkndFmBfl63yvqIKFsnuuMwtZ90snrBefIfrE=
 20260614170337_attendance_schema.sql h1:z7tsaY/igRA6rGJJoBcVLgeuNS6Y8d8wR5vwdeQboAw=
@@ -16,3 +16,4 @@ h1:4zw88RvEidm5/7x/xz/5ourhSQuRjRcVnCT3L0VbHGU=
 20260626190000_add_employee_project_allocations.sql h1:UMYVUJItaGgIH8B711+xLsB2Wu2Kc+n8R4rcVoCOwSs=
 20260626200000_add_payroll_component_money.sql h1:ayAGAllAEPFsmYStR0yssyHAISra5CulD4U9Wa8KAgU=
 20260626210000_add_payslip_lines.sql h1:jCs39Rrt7Cvvv7QXy5Ior0qcGZuqDtYUmk20yjZ3Ias=
+20260626220000_add_careers_portal_fields.sql h1:4YMSGneM+OQny8arS+9Q44Xw7LWQFjSuKwP6P8YQW0o=

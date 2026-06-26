@@ -28,6 +28,9 @@ func (Application) Fields() []ent.Field {
 			Default("applied"),
 		field.Time("applied_at").Default(time.Now),
 		field.String("notes").Optional().Nillable(),
+		// Applicant-provided motivation + how they reached us (public careers portal sets these).
+		field.Text("cover_letter").Optional().Nillable(),
+		field.String("source").Optional().Nillable().Comment("careers_portal | referral | direct | agency"),
 		field.UUID("hired_employee_id", uuid.UUID{}).Optional().Nillable().
 			Comment("Employee created on hire (links recruitment -> onboarding)"),
 		field.Time("created_at").Default(time.Now).Immutable(),

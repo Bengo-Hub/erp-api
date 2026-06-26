@@ -23,6 +23,13 @@ func (JobPosting) Fields() []ent.Field {
 		field.String("department").Optional().Nillable(),
 		field.String("location").Optional().Nillable(),
 		field.Enum("status").Values("draft", "open", "closed", "archived").Default("draft"),
+		// Public careers portal: slug (URL ref), visibility, employment type, number of openings and
+		// an application deadline. All nullable / defaulted → online additive-migration safe.
+		field.String("slug").Optional().Nillable().Comment("URL slug for the public careers portal"),
+		field.Bool("is_public").Default(false).Comment("Listed on the public careers portal"),
+		field.String("employment_type").Optional().Nillable().Comment("full_time | part_time | contract | internship | temporary"),
+		field.Int("num_positions").Default(1),
+		field.Time("application_deadline").Optional().Nillable(),
 		field.Time("posted_at").Default(time.Now),
 		field.Time("closed_at").Optional().Nillable(),
 		field.Time("created_at").Default(time.Now).Immutable(),

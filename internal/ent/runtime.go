@@ -191,11 +191,11 @@ func init() {
 	// application.DefaultAppliedAt holds the default value on creation for the applied_at field.
 	application.DefaultAppliedAt = applicationDescAppliedAt.Default.(func() time.Time)
 	// applicationDescCreatedAt is the schema descriptor for created_at field.
-	applicationDescCreatedAt := applicationFields[8].Descriptor()
+	applicationDescCreatedAt := applicationFields[10].Descriptor()
 	// application.DefaultCreatedAt holds the default value on creation for the created_at field.
 	application.DefaultCreatedAt = applicationDescCreatedAt.Default.(func() time.Time)
 	// applicationDescUpdatedAt is the schema descriptor for updated_at field.
-	applicationDescUpdatedAt := applicationFields[9].Descriptor()
+	applicationDescUpdatedAt := applicationFields[11].Descriptor()
 	// application.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	application.DefaultUpdatedAt = applicationDescUpdatedAt.Default.(func() time.Time)
 	// application.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1418,16 +1418,24 @@ func init() {
 	jobgroup.DefaultID = jobgroupDescID.Default.(func() uuid.UUID)
 	jobpostingFields := schema.JobPosting{}.Fields()
 	_ = jobpostingFields
+	// jobpostingDescIsPublic is the schema descriptor for is_public field.
+	jobpostingDescIsPublic := jobpostingFields[8].Descriptor()
+	// jobposting.DefaultIsPublic holds the default value on creation for the is_public field.
+	jobposting.DefaultIsPublic = jobpostingDescIsPublic.Default.(bool)
+	// jobpostingDescNumPositions is the schema descriptor for num_positions field.
+	jobpostingDescNumPositions := jobpostingFields[10].Descriptor()
+	// jobposting.DefaultNumPositions holds the default value on creation for the num_positions field.
+	jobposting.DefaultNumPositions = jobpostingDescNumPositions.Default.(int)
 	// jobpostingDescPostedAt is the schema descriptor for posted_at field.
-	jobpostingDescPostedAt := jobpostingFields[7].Descriptor()
+	jobpostingDescPostedAt := jobpostingFields[12].Descriptor()
 	// jobposting.DefaultPostedAt holds the default value on creation for the posted_at field.
 	jobposting.DefaultPostedAt = jobpostingDescPostedAt.Default.(func() time.Time)
 	// jobpostingDescCreatedAt is the schema descriptor for created_at field.
-	jobpostingDescCreatedAt := jobpostingFields[9].Descriptor()
+	jobpostingDescCreatedAt := jobpostingFields[14].Descriptor()
 	// jobposting.DefaultCreatedAt holds the default value on creation for the created_at field.
 	jobposting.DefaultCreatedAt = jobpostingDescCreatedAt.Default.(func() time.Time)
 	// jobpostingDescUpdatedAt is the schema descriptor for updated_at field.
-	jobpostingDescUpdatedAt := jobpostingFields[10].Descriptor()
+	jobpostingDescUpdatedAt := jobpostingFields[15].Descriptor()
 	// jobposting.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	jobposting.DefaultUpdatedAt = jobpostingDescUpdatedAt.Default.(func() time.Time)
 	// jobposting.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

@@ -80,6 +80,16 @@ func Notes(v string) predicate.Application {
 	return predicate.Application(sql.FieldEQ(FieldNotes, v))
 }
 
+// CoverLetter applies equality check predicate on the "cover_letter" field. It's identical to CoverLetterEQ.
+func CoverLetter(v string) predicate.Application {
+	return predicate.Application(sql.FieldEQ(FieldCoverLetter, v))
+}
+
+// Source applies equality check predicate on the "source" field. It's identical to SourceEQ.
+func Source(v string) predicate.Application {
+	return predicate.Application(sql.FieldEQ(FieldSource, v))
+}
+
 // HiredEmployeeID applies equality check predicate on the "hired_employee_id" field. It's identical to HiredEmployeeIDEQ.
 func HiredEmployeeID(v uuid.UUID) predicate.Application {
 	return predicate.Application(sql.FieldEQ(FieldHiredEmployeeID, v))
@@ -348,6 +358,156 @@ func NotesEqualFold(v string) predicate.Application {
 // NotesContainsFold applies the ContainsFold predicate on the "notes" field.
 func NotesContainsFold(v string) predicate.Application {
 	return predicate.Application(sql.FieldContainsFold(FieldNotes, v))
+}
+
+// CoverLetterEQ applies the EQ predicate on the "cover_letter" field.
+func CoverLetterEQ(v string) predicate.Application {
+	return predicate.Application(sql.FieldEQ(FieldCoverLetter, v))
+}
+
+// CoverLetterNEQ applies the NEQ predicate on the "cover_letter" field.
+func CoverLetterNEQ(v string) predicate.Application {
+	return predicate.Application(sql.FieldNEQ(FieldCoverLetter, v))
+}
+
+// CoverLetterIn applies the In predicate on the "cover_letter" field.
+func CoverLetterIn(vs ...string) predicate.Application {
+	return predicate.Application(sql.FieldIn(FieldCoverLetter, vs...))
+}
+
+// CoverLetterNotIn applies the NotIn predicate on the "cover_letter" field.
+func CoverLetterNotIn(vs ...string) predicate.Application {
+	return predicate.Application(sql.FieldNotIn(FieldCoverLetter, vs...))
+}
+
+// CoverLetterGT applies the GT predicate on the "cover_letter" field.
+func CoverLetterGT(v string) predicate.Application {
+	return predicate.Application(sql.FieldGT(FieldCoverLetter, v))
+}
+
+// CoverLetterGTE applies the GTE predicate on the "cover_letter" field.
+func CoverLetterGTE(v string) predicate.Application {
+	return predicate.Application(sql.FieldGTE(FieldCoverLetter, v))
+}
+
+// CoverLetterLT applies the LT predicate on the "cover_letter" field.
+func CoverLetterLT(v string) predicate.Application {
+	return predicate.Application(sql.FieldLT(FieldCoverLetter, v))
+}
+
+// CoverLetterLTE applies the LTE predicate on the "cover_letter" field.
+func CoverLetterLTE(v string) predicate.Application {
+	return predicate.Application(sql.FieldLTE(FieldCoverLetter, v))
+}
+
+// CoverLetterContains applies the Contains predicate on the "cover_letter" field.
+func CoverLetterContains(v string) predicate.Application {
+	return predicate.Application(sql.FieldContains(FieldCoverLetter, v))
+}
+
+// CoverLetterHasPrefix applies the HasPrefix predicate on the "cover_letter" field.
+func CoverLetterHasPrefix(v string) predicate.Application {
+	return predicate.Application(sql.FieldHasPrefix(FieldCoverLetter, v))
+}
+
+// CoverLetterHasSuffix applies the HasSuffix predicate on the "cover_letter" field.
+func CoverLetterHasSuffix(v string) predicate.Application {
+	return predicate.Application(sql.FieldHasSuffix(FieldCoverLetter, v))
+}
+
+// CoverLetterIsNil applies the IsNil predicate on the "cover_letter" field.
+func CoverLetterIsNil() predicate.Application {
+	return predicate.Application(sql.FieldIsNull(FieldCoverLetter))
+}
+
+// CoverLetterNotNil applies the NotNil predicate on the "cover_letter" field.
+func CoverLetterNotNil() predicate.Application {
+	return predicate.Application(sql.FieldNotNull(FieldCoverLetter))
+}
+
+// CoverLetterEqualFold applies the EqualFold predicate on the "cover_letter" field.
+func CoverLetterEqualFold(v string) predicate.Application {
+	return predicate.Application(sql.FieldEqualFold(FieldCoverLetter, v))
+}
+
+// CoverLetterContainsFold applies the ContainsFold predicate on the "cover_letter" field.
+func CoverLetterContainsFold(v string) predicate.Application {
+	return predicate.Application(sql.FieldContainsFold(FieldCoverLetter, v))
+}
+
+// SourceEQ applies the EQ predicate on the "source" field.
+func SourceEQ(v string) predicate.Application {
+	return predicate.Application(sql.FieldEQ(FieldSource, v))
+}
+
+// SourceNEQ applies the NEQ predicate on the "source" field.
+func SourceNEQ(v string) predicate.Application {
+	return predicate.Application(sql.FieldNEQ(FieldSource, v))
+}
+
+// SourceIn applies the In predicate on the "source" field.
+func SourceIn(vs ...string) predicate.Application {
+	return predicate.Application(sql.FieldIn(FieldSource, vs...))
+}
+
+// SourceNotIn applies the NotIn predicate on the "source" field.
+func SourceNotIn(vs ...string) predicate.Application {
+	return predicate.Application(sql.FieldNotIn(FieldSource, vs...))
+}
+
+// SourceGT applies the GT predicate on the "source" field.
+func SourceGT(v string) predicate.Application {
+	return predicate.Application(sql.FieldGT(FieldSource, v))
+}
+
+// SourceGTE applies the GTE predicate on the "source" field.
+func SourceGTE(v string) predicate.Application {
+	return predicate.Application(sql.FieldGTE(FieldSource, v))
+}
+
+// SourceLT applies the LT predicate on the "source" field.
+func SourceLT(v string) predicate.Application {
+	return predicate.Application(sql.FieldLT(FieldSource, v))
+}
+
+// SourceLTE applies the LTE predicate on the "source" field.
+func SourceLTE(v string) predicate.Application {
+	return predicate.Application(sql.FieldLTE(FieldSource, v))
+}
+
+// SourceContains applies the Contains predicate on the "source" field.
+func SourceContains(v string) predicate.Application {
+	return predicate.Application(sql.FieldContains(FieldSource, v))
+}
+
+// SourceHasPrefix applies the HasPrefix predicate on the "source" field.
+func SourceHasPrefix(v string) predicate.Application {
+	return predicate.Application(sql.FieldHasPrefix(FieldSource, v))
+}
+
+// SourceHasSuffix applies the HasSuffix predicate on the "source" field.
+func SourceHasSuffix(v string) predicate.Application {
+	return predicate.Application(sql.FieldHasSuffix(FieldSource, v))
+}
+
+// SourceIsNil applies the IsNil predicate on the "source" field.
+func SourceIsNil() predicate.Application {
+	return predicate.Application(sql.FieldIsNull(FieldSource))
+}
+
+// SourceNotNil applies the NotNil predicate on the "source" field.
+func SourceNotNil() predicate.Application {
+	return predicate.Application(sql.FieldNotNull(FieldSource))
+}
+
+// SourceEqualFold applies the EqualFold predicate on the "source" field.
+func SourceEqualFold(v string) predicate.Application {
+	return predicate.Application(sql.FieldEqualFold(FieldSource, v))
+}
+
+// SourceContainsFold applies the ContainsFold predicate on the "source" field.
+func SourceContainsFold(v string) predicate.Application {
+	return predicate.Application(sql.FieldContainsFold(FieldSource, v))
 }
 
 // HiredEmployeeIDEQ applies the EQ predicate on the "hired_employee_id" field.

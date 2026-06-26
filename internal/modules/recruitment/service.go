@@ -33,35 +33,86 @@ func (s *Service) ListPostings(ctx context.Context, tenantID uuid.UUID, status s
 	return q.Order(ent.Desc(jobposting.FieldPostedAt)).All(ctx)
 }
 
-// PostingInput is the create payload for a job posting.
+// PostingInput is the create/update payload for a job posting.
 type PostingInput struct {
-	Title       string
-	Description string
-	Department  string
-	Location    string
-	Status      string
+	Title               string
+	Description         string
+	Department          string
+	Location            string
+	Status              string
+	IsPublic            bool
+	EmploymentType      string
+	NumPositions        int
+	ApplicationDeadline *time.Time
 }
 
-// CreatePosting inserts a tenant-scoped job posting.
+// CreatePosting inserts a tenant-scoped job posting with a unique public slug.
 func (s *Service) CreatePosting(ctx context.Context, tenantID uuid.UUID, in PostingInput) (*ent.JobPosting, error) {
 	status := in.Status
 	if status == "" {
 		status = "draft"
 	}
+	slug, err := s.uniquePostingSlug(ctx, tenantID, in.Title, uuid.Nil)
+	if err != nil {
+		return nil, err
+	}
 	b := s.orm.JobPosting.Create().
 		SetTenantID(tenantID).SetTitle(in.Title).SetDescription(in.Description).
-		SetStatus(jobposting.Status(status))
+		SetStatus(jobposting.Status(status)).SetSlug(slug).SetIsPublic(in.IsPublic)
 	if in.Department != "" {
 		b = b.SetDepartment(in.Department)
 	}
 	if in.Location != "" {
 		b = b.SetLocation(in.Location)
 	}
+	if in.EmploymentType != "" {
+		b = b.SetEmploymentType(in.EmploymentType)
+	}
+	if in.NumPositions > 0 {
+		b = b.SetNumPositions(in.NumPositions)
+	}
+	if in.ApplicationDeadline != nil {
+		b = b.SetApplicationDeadline(*in.ApplicationDeadline)
+	}
 	row, err := b.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("recruitment: create posting: %w", err)
 	}
 	return row, nil
+}
+
+// UpdatePosting edits a posting's editable fields (title/description/location/employment/visibility/
+// deadline). The slug is regenerated only when the title changes (keeps public links stable otherwise).
+func (s *Service) UpdatePosting(ctx context.Context, tenantID, id uuid.UUID, in PostingInput) (*ent.JobPosting, error) {
+	p, err := s.orm.JobPosting.Query().Where(jobposting.TenantID(tenantID), jobposting.ID(id)).Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("recruitment: load posting: %w", err)
+	}
+	u := p.Update().
+		SetTitle(in.Title).SetDescription(in.Description).SetIsPublic(in.IsPublic)
+	if in.Department != "" {
+		u = u.SetDepartment(in.Department)
+	}
+	if in.Location != "" {
+		u = u.SetLocation(in.Location)
+	}
+	if in.EmploymentType != "" {
+		u = u.SetEmploymentType(in.EmploymentType)
+	}
+	if in.NumPositions > 0 {
+		u = u.SetNumPositions(in.NumPositions)
+	}
+	if in.ApplicationDeadline != nil {
+		u = u.SetApplicationDeadline(*in.ApplicationDeadline)
+	}
+	if in.Title != p.Title {
+		slug, err := s.uniquePostingSlug(ctx, tenantID, in.Title, id)
+		if err != nil {
+			return nil, err
+		}
+		u = u.SetSlug(slug)
+	}
+	return u.Save(ctx)
 }
 
 // SetPostingStatus updates a posting's status, stamping closed_at when moving to closed.
