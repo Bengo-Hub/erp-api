@@ -49,6 +49,7 @@ func (h *ReportsHandler) producers() map[string]periodReport {
 		"bank-schedule":    h.svc.BankSchedule,
 		"payroll-variance": h.svc.PayrollVariance,
 		"payroll-summary":  h.svc.PayrollSummary,
+		"muster-roll":      h.svc.MusterRoll,
 	}
 }
 
@@ -66,6 +67,7 @@ func (h *ReportsHandler) RegisterRoutes(r chi.Router) {
 		rr.Get("/bank-schedule", h.period(h.svc.BankSchedule))
 		rr.Get("/payroll-variance", h.period(h.svc.PayrollVariance))
 		rr.Get("/payroll-summary", h.period(h.svc.PayrollSummary))
+		rr.Get("/muster-roll", h.period(h.svc.MusterRoll))
 
 		// Non-period summaries.
 		rr.Get("/headcount-summary", h.Headcount)
