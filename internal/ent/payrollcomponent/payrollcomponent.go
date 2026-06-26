@@ -7,6 +7,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -28,6 +29,28 @@ const (
 	FieldDescription = "description"
 	// FieldMode holds the string denoting the mode field in the database.
 	FieldMode = "mode"
+	// FieldAmount holds the string denoting the amount field in the database.
+	FieldAmount = "amount"
+	// FieldPercentage holds the string denoting the percentage field in the database.
+	FieldPercentage = "percentage"
+	// FieldPercentOf holds the string denoting the percent_of field in the database.
+	FieldPercentOf = "percent_of"
+	// FieldEmployerAmount holds the string denoting the employer_amount field in the database.
+	FieldEmployerAmount = "employer_amount"
+	// FieldEmployerPercentage holds the string denoting the employer_percentage field in the database.
+	FieldEmployerPercentage = "employer_percentage"
+	// FieldRegistrationNo holds the string denoting the registration_no field in the database.
+	FieldRegistrationNo = "registration_no"
+	// FieldUnitType holds the string denoting the unit_type field in the database.
+	FieldUnitType = "unit_type"
+	// FieldUnitRate holds the string denoting the unit_rate field in the database.
+	FieldUnitRate = "unit_rate"
+	// FieldQuantity holds the string denoting the quantity field in the database.
+	FieldQuantity = "quantity"
+	// FieldEffectiveFrom holds the string denoting the effective_from field in the database.
+	FieldEffectiveFrom = "effective_from"
+	// FieldEffectiveTo holds the string denoting the effective_to field in the database.
+	FieldEffectiveTo = "effective_to"
 	// FieldNonCash holds the string denoting the non_cash field in the database.
 	FieldNonCash = "non_cash"
 	// FieldDeductAfterTaxing holds the string denoting the deduct_after_taxing field in the database.
@@ -68,6 +91,17 @@ var Columns = []string{
 	FieldCategory,
 	FieldDescription,
 	FieldMode,
+	FieldAmount,
+	FieldPercentage,
+	FieldPercentOf,
+	FieldEmployerAmount,
+	FieldEmployerPercentage,
+	FieldRegistrationNo,
+	FieldUnitType,
+	FieldUnitRate,
+	FieldQuantity,
+	FieldEffectiveFrom,
+	FieldEffectiveTo,
 	FieldNonCash,
 	FieldDeductAfterTaxing,
 	FieldApplicableReliefID,
@@ -96,6 +130,18 @@ func ValidColumn(column string) bool {
 var (
 	// TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	TitleValidator func(string) error
+	// DefaultAmount holds the default value on creation for the "amount" field.
+	DefaultAmount decimal.Decimal
+	// DefaultPercentage holds the default value on creation for the "percentage" field.
+	DefaultPercentage decimal.Decimal
+	// DefaultEmployerAmount holds the default value on creation for the "employer_amount" field.
+	DefaultEmployerAmount decimal.Decimal
+	// DefaultEmployerPercentage holds the default value on creation for the "employer_percentage" field.
+	DefaultEmployerPercentage decimal.Decimal
+	// DefaultUnitRate holds the default value on creation for the "unit_rate" field.
+	DefaultUnitRate decimal.Decimal
+	// DefaultQuantity holds the default value on creation for the "quantity" field.
+	DefaultQuantity decimal.Decimal
 	// DefaultNonCash holds the default value on creation for the "non_cash" field.
 	DefaultNonCash bool
 	// DefaultDeductAfterTaxing holds the default value on creation for the "deduct_after_taxing" field.
@@ -163,6 +209,61 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 // ByMode orders the results by the mode field.
 func ByMode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMode, opts...).ToFunc()
+}
+
+// ByAmount orders the results by the amount field.
+func ByAmount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAmount, opts...).ToFunc()
+}
+
+// ByPercentage orders the results by the percentage field.
+func ByPercentage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPercentage, opts...).ToFunc()
+}
+
+// ByPercentOf orders the results by the percent_of field.
+func ByPercentOf(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPercentOf, opts...).ToFunc()
+}
+
+// ByEmployerAmount orders the results by the employer_amount field.
+func ByEmployerAmount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEmployerAmount, opts...).ToFunc()
+}
+
+// ByEmployerPercentage orders the results by the employer_percentage field.
+func ByEmployerPercentage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEmployerPercentage, opts...).ToFunc()
+}
+
+// ByRegistrationNo orders the results by the registration_no field.
+func ByRegistrationNo(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRegistrationNo, opts...).ToFunc()
+}
+
+// ByUnitType orders the results by the unit_type field.
+func ByUnitType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUnitType, opts...).ToFunc()
+}
+
+// ByUnitRate orders the results by the unit_rate field.
+func ByUnitRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUnitRate, opts...).ToFunc()
+}
+
+// ByQuantity orders the results by the quantity field.
+func ByQuantity(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQuantity, opts...).ToFunc()
+}
+
+// ByEffectiveFrom orders the results by the effective_from field.
+func ByEffectiveFrom(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEffectiveFrom, opts...).ToFunc()
+}
+
+// ByEffectiveTo orders the results by the effective_to field.
+func ByEffectiveTo(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEffectiveTo, opts...).ToFunc()
 }
 
 // ByNonCash orders the results by the non_cash field.

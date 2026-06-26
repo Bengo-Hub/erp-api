@@ -59747,6 +59747,17 @@ type PayrollComponentMutation struct {
 	category                  *string
 	description               *string
 	mode                      *string
+	amount                    *decimal.Decimal
+	percentage                *decimal.Decimal
+	percent_of                *string
+	employer_amount           *decimal.Decimal
+	employer_percentage       *decimal.Decimal
+	registration_no           *string
+	unit_type                 *string
+	unit_rate                 *decimal.Decimal
+	quantity                  *decimal.Decimal
+	effective_from            *time.Time
+	effective_to              *time.Time
 	non_cash                  *bool
 	deduct_after_taxing       *bool
 	applicable_relief_id      *uuid.UUID
@@ -60186,6 +60197,467 @@ func (m *PayrollComponentMutation) ModeCleared() bool {
 func (m *PayrollComponentMutation) ResetMode() {
 	m.mode = nil
 	delete(m.clearedFields, payrollcomponent.FieldMode)
+}
+
+// SetAmount sets the "amount" field.
+func (m *PayrollComponentMutation) SetAmount(d decimal.Decimal) {
+	m.amount = &d
+}
+
+// Amount returns the value of the "amount" field in the mutation.
+func (m *PayrollComponentMutation) Amount() (r decimal.Decimal, exists bool) {
+	v := m.amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmount returns the old "amount" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmount: %w", err)
+	}
+	return oldValue.Amount, nil
+}
+
+// ResetAmount resets all changes to the "amount" field.
+func (m *PayrollComponentMutation) ResetAmount() {
+	m.amount = nil
+}
+
+// SetPercentage sets the "percentage" field.
+func (m *PayrollComponentMutation) SetPercentage(d decimal.Decimal) {
+	m.percentage = &d
+}
+
+// Percentage returns the value of the "percentage" field in the mutation.
+func (m *PayrollComponentMutation) Percentage() (r decimal.Decimal, exists bool) {
+	v := m.percentage
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPercentage returns the old "percentage" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldPercentage(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPercentage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPercentage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPercentage: %w", err)
+	}
+	return oldValue.Percentage, nil
+}
+
+// ResetPercentage resets all changes to the "percentage" field.
+func (m *PayrollComponentMutation) ResetPercentage() {
+	m.percentage = nil
+}
+
+// SetPercentOf sets the "percent_of" field.
+func (m *PayrollComponentMutation) SetPercentOf(s string) {
+	m.percent_of = &s
+}
+
+// PercentOf returns the value of the "percent_of" field in the mutation.
+func (m *PayrollComponentMutation) PercentOf() (r string, exists bool) {
+	v := m.percent_of
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPercentOf returns the old "percent_of" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldPercentOf(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPercentOf is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPercentOf requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPercentOf: %w", err)
+	}
+	return oldValue.PercentOf, nil
+}
+
+// ClearPercentOf clears the value of the "percent_of" field.
+func (m *PayrollComponentMutation) ClearPercentOf() {
+	m.percent_of = nil
+	m.clearedFields[payrollcomponent.FieldPercentOf] = struct{}{}
+}
+
+// PercentOfCleared returns if the "percent_of" field was cleared in this mutation.
+func (m *PayrollComponentMutation) PercentOfCleared() bool {
+	_, ok := m.clearedFields[payrollcomponent.FieldPercentOf]
+	return ok
+}
+
+// ResetPercentOf resets all changes to the "percent_of" field.
+func (m *PayrollComponentMutation) ResetPercentOf() {
+	m.percent_of = nil
+	delete(m.clearedFields, payrollcomponent.FieldPercentOf)
+}
+
+// SetEmployerAmount sets the "employer_amount" field.
+func (m *PayrollComponentMutation) SetEmployerAmount(d decimal.Decimal) {
+	m.employer_amount = &d
+}
+
+// EmployerAmount returns the value of the "employer_amount" field in the mutation.
+func (m *PayrollComponentMutation) EmployerAmount() (r decimal.Decimal, exists bool) {
+	v := m.employer_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployerAmount returns the old "employer_amount" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldEmployerAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployerAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployerAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployerAmount: %w", err)
+	}
+	return oldValue.EmployerAmount, nil
+}
+
+// ResetEmployerAmount resets all changes to the "employer_amount" field.
+func (m *PayrollComponentMutation) ResetEmployerAmount() {
+	m.employer_amount = nil
+}
+
+// SetEmployerPercentage sets the "employer_percentage" field.
+func (m *PayrollComponentMutation) SetEmployerPercentage(d decimal.Decimal) {
+	m.employer_percentage = &d
+}
+
+// EmployerPercentage returns the value of the "employer_percentage" field in the mutation.
+func (m *PayrollComponentMutation) EmployerPercentage() (r decimal.Decimal, exists bool) {
+	v := m.employer_percentage
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployerPercentage returns the old "employer_percentage" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldEmployerPercentage(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployerPercentage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployerPercentage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployerPercentage: %w", err)
+	}
+	return oldValue.EmployerPercentage, nil
+}
+
+// ResetEmployerPercentage resets all changes to the "employer_percentage" field.
+func (m *PayrollComponentMutation) ResetEmployerPercentage() {
+	m.employer_percentage = nil
+}
+
+// SetRegistrationNo sets the "registration_no" field.
+func (m *PayrollComponentMutation) SetRegistrationNo(s string) {
+	m.registration_no = &s
+}
+
+// RegistrationNo returns the value of the "registration_no" field in the mutation.
+func (m *PayrollComponentMutation) RegistrationNo() (r string, exists bool) {
+	v := m.registration_no
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRegistrationNo returns the old "registration_no" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldRegistrationNo(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRegistrationNo is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRegistrationNo requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRegistrationNo: %w", err)
+	}
+	return oldValue.RegistrationNo, nil
+}
+
+// ClearRegistrationNo clears the value of the "registration_no" field.
+func (m *PayrollComponentMutation) ClearRegistrationNo() {
+	m.registration_no = nil
+	m.clearedFields[payrollcomponent.FieldRegistrationNo] = struct{}{}
+}
+
+// RegistrationNoCleared returns if the "registration_no" field was cleared in this mutation.
+func (m *PayrollComponentMutation) RegistrationNoCleared() bool {
+	_, ok := m.clearedFields[payrollcomponent.FieldRegistrationNo]
+	return ok
+}
+
+// ResetRegistrationNo resets all changes to the "registration_no" field.
+func (m *PayrollComponentMutation) ResetRegistrationNo() {
+	m.registration_no = nil
+	delete(m.clearedFields, payrollcomponent.FieldRegistrationNo)
+}
+
+// SetUnitType sets the "unit_type" field.
+func (m *PayrollComponentMutation) SetUnitType(s string) {
+	m.unit_type = &s
+}
+
+// UnitType returns the value of the "unit_type" field in the mutation.
+func (m *PayrollComponentMutation) UnitType() (r string, exists bool) {
+	v := m.unit_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUnitType returns the old "unit_type" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldUnitType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUnitType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUnitType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUnitType: %w", err)
+	}
+	return oldValue.UnitType, nil
+}
+
+// ClearUnitType clears the value of the "unit_type" field.
+func (m *PayrollComponentMutation) ClearUnitType() {
+	m.unit_type = nil
+	m.clearedFields[payrollcomponent.FieldUnitType] = struct{}{}
+}
+
+// UnitTypeCleared returns if the "unit_type" field was cleared in this mutation.
+func (m *PayrollComponentMutation) UnitTypeCleared() bool {
+	_, ok := m.clearedFields[payrollcomponent.FieldUnitType]
+	return ok
+}
+
+// ResetUnitType resets all changes to the "unit_type" field.
+func (m *PayrollComponentMutation) ResetUnitType() {
+	m.unit_type = nil
+	delete(m.clearedFields, payrollcomponent.FieldUnitType)
+}
+
+// SetUnitRate sets the "unit_rate" field.
+func (m *PayrollComponentMutation) SetUnitRate(d decimal.Decimal) {
+	m.unit_rate = &d
+}
+
+// UnitRate returns the value of the "unit_rate" field in the mutation.
+func (m *PayrollComponentMutation) UnitRate() (r decimal.Decimal, exists bool) {
+	v := m.unit_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUnitRate returns the old "unit_rate" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldUnitRate(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUnitRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUnitRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUnitRate: %w", err)
+	}
+	return oldValue.UnitRate, nil
+}
+
+// ResetUnitRate resets all changes to the "unit_rate" field.
+func (m *PayrollComponentMutation) ResetUnitRate() {
+	m.unit_rate = nil
+}
+
+// SetQuantity sets the "quantity" field.
+func (m *PayrollComponentMutation) SetQuantity(d decimal.Decimal) {
+	m.quantity = &d
+}
+
+// Quantity returns the value of the "quantity" field in the mutation.
+func (m *PayrollComponentMutation) Quantity() (r decimal.Decimal, exists bool) {
+	v := m.quantity
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuantity returns the old "quantity" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldQuantity(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuantity is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuantity requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuantity: %w", err)
+	}
+	return oldValue.Quantity, nil
+}
+
+// ResetQuantity resets all changes to the "quantity" field.
+func (m *PayrollComponentMutation) ResetQuantity() {
+	m.quantity = nil
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (m *PayrollComponentMutation) SetEffectiveFrom(t time.Time) {
+	m.effective_from = &t
+}
+
+// EffectiveFrom returns the value of the "effective_from" field in the mutation.
+func (m *PayrollComponentMutation) EffectiveFrom() (r time.Time, exists bool) {
+	v := m.effective_from
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEffectiveFrom returns the old "effective_from" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldEffectiveFrom(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEffectiveFrom is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEffectiveFrom requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEffectiveFrom: %w", err)
+	}
+	return oldValue.EffectiveFrom, nil
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (m *PayrollComponentMutation) ClearEffectiveFrom() {
+	m.effective_from = nil
+	m.clearedFields[payrollcomponent.FieldEffectiveFrom] = struct{}{}
+}
+
+// EffectiveFromCleared returns if the "effective_from" field was cleared in this mutation.
+func (m *PayrollComponentMutation) EffectiveFromCleared() bool {
+	_, ok := m.clearedFields[payrollcomponent.FieldEffectiveFrom]
+	return ok
+}
+
+// ResetEffectiveFrom resets all changes to the "effective_from" field.
+func (m *PayrollComponentMutation) ResetEffectiveFrom() {
+	m.effective_from = nil
+	delete(m.clearedFields, payrollcomponent.FieldEffectiveFrom)
+}
+
+// SetEffectiveTo sets the "effective_to" field.
+func (m *PayrollComponentMutation) SetEffectiveTo(t time.Time) {
+	m.effective_to = &t
+}
+
+// EffectiveTo returns the value of the "effective_to" field in the mutation.
+func (m *PayrollComponentMutation) EffectiveTo() (r time.Time, exists bool) {
+	v := m.effective_to
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEffectiveTo returns the old "effective_to" field's value of the PayrollComponent entity.
+// If the PayrollComponent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollComponentMutation) OldEffectiveTo(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEffectiveTo is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEffectiveTo requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEffectiveTo: %w", err)
+	}
+	return oldValue.EffectiveTo, nil
+}
+
+// ClearEffectiveTo clears the value of the "effective_to" field.
+func (m *PayrollComponentMutation) ClearEffectiveTo() {
+	m.effective_to = nil
+	m.clearedFields[payrollcomponent.FieldEffectiveTo] = struct{}{}
+}
+
+// EffectiveToCleared returns if the "effective_to" field was cleared in this mutation.
+func (m *PayrollComponentMutation) EffectiveToCleared() bool {
+	_, ok := m.clearedFields[payrollcomponent.FieldEffectiveTo]
+	return ok
+}
+
+// ResetEffectiveTo resets all changes to the "effective_to" field.
+func (m *PayrollComponentMutation) ResetEffectiveTo() {
+	m.effective_to = nil
+	delete(m.clearedFields, payrollcomponent.FieldEffectiveTo)
 }
 
 // SetNonCash sets the "non_cash" field.
@@ -60749,7 +61221,7 @@ func (m *PayrollComponentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PayrollComponentMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 31)
 	if m.tenant_id != nil {
 		fields = append(fields, payrollcomponent.FieldTenantID)
 	}
@@ -60770,6 +61242,39 @@ func (m *PayrollComponentMutation) Fields() []string {
 	}
 	if m.mode != nil {
 		fields = append(fields, payrollcomponent.FieldMode)
+	}
+	if m.amount != nil {
+		fields = append(fields, payrollcomponent.FieldAmount)
+	}
+	if m.percentage != nil {
+		fields = append(fields, payrollcomponent.FieldPercentage)
+	}
+	if m.percent_of != nil {
+		fields = append(fields, payrollcomponent.FieldPercentOf)
+	}
+	if m.employer_amount != nil {
+		fields = append(fields, payrollcomponent.FieldEmployerAmount)
+	}
+	if m.employer_percentage != nil {
+		fields = append(fields, payrollcomponent.FieldEmployerPercentage)
+	}
+	if m.registration_no != nil {
+		fields = append(fields, payrollcomponent.FieldRegistrationNo)
+	}
+	if m.unit_type != nil {
+		fields = append(fields, payrollcomponent.FieldUnitType)
+	}
+	if m.unit_rate != nil {
+		fields = append(fields, payrollcomponent.FieldUnitRate)
+	}
+	if m.quantity != nil {
+		fields = append(fields, payrollcomponent.FieldQuantity)
+	}
+	if m.effective_from != nil {
+		fields = append(fields, payrollcomponent.FieldEffectiveFrom)
+	}
+	if m.effective_to != nil {
+		fields = append(fields, payrollcomponent.FieldEffectiveTo)
 	}
 	if m.non_cash != nil {
 		fields = append(fields, payrollcomponent.FieldNonCash)
@@ -60832,6 +61337,28 @@ func (m *PayrollComponentMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case payrollcomponent.FieldMode:
 		return m.Mode()
+	case payrollcomponent.FieldAmount:
+		return m.Amount()
+	case payrollcomponent.FieldPercentage:
+		return m.Percentage()
+	case payrollcomponent.FieldPercentOf:
+		return m.PercentOf()
+	case payrollcomponent.FieldEmployerAmount:
+		return m.EmployerAmount()
+	case payrollcomponent.FieldEmployerPercentage:
+		return m.EmployerPercentage()
+	case payrollcomponent.FieldRegistrationNo:
+		return m.RegistrationNo()
+	case payrollcomponent.FieldUnitType:
+		return m.UnitType()
+	case payrollcomponent.FieldUnitRate:
+		return m.UnitRate()
+	case payrollcomponent.FieldQuantity:
+		return m.Quantity()
+	case payrollcomponent.FieldEffectiveFrom:
+		return m.EffectiveFrom()
+	case payrollcomponent.FieldEffectiveTo:
+		return m.EffectiveTo()
 	case payrollcomponent.FieldNonCash:
 		return m.NonCash()
 	case payrollcomponent.FieldDeductAfterTaxing:
@@ -60881,6 +61408,28 @@ func (m *PayrollComponentMutation) OldField(ctx context.Context, name string) (e
 		return m.OldDescription(ctx)
 	case payrollcomponent.FieldMode:
 		return m.OldMode(ctx)
+	case payrollcomponent.FieldAmount:
+		return m.OldAmount(ctx)
+	case payrollcomponent.FieldPercentage:
+		return m.OldPercentage(ctx)
+	case payrollcomponent.FieldPercentOf:
+		return m.OldPercentOf(ctx)
+	case payrollcomponent.FieldEmployerAmount:
+		return m.OldEmployerAmount(ctx)
+	case payrollcomponent.FieldEmployerPercentage:
+		return m.OldEmployerPercentage(ctx)
+	case payrollcomponent.FieldRegistrationNo:
+		return m.OldRegistrationNo(ctx)
+	case payrollcomponent.FieldUnitType:
+		return m.OldUnitType(ctx)
+	case payrollcomponent.FieldUnitRate:
+		return m.OldUnitRate(ctx)
+	case payrollcomponent.FieldQuantity:
+		return m.OldQuantity(ctx)
+	case payrollcomponent.FieldEffectiveFrom:
+		return m.OldEffectiveFrom(ctx)
+	case payrollcomponent.FieldEffectiveTo:
+		return m.OldEffectiveTo(ctx)
 	case payrollcomponent.FieldNonCash:
 		return m.OldNonCash(ctx)
 	case payrollcomponent.FieldDeductAfterTaxing:
@@ -60964,6 +61513,83 @@ func (m *PayrollComponentMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMode(v)
+		return nil
+	case payrollcomponent.FieldAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmount(v)
+		return nil
+	case payrollcomponent.FieldPercentage:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPercentage(v)
+		return nil
+	case payrollcomponent.FieldPercentOf:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPercentOf(v)
+		return nil
+	case payrollcomponent.FieldEmployerAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployerAmount(v)
+		return nil
+	case payrollcomponent.FieldEmployerPercentage:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployerPercentage(v)
+		return nil
+	case payrollcomponent.FieldRegistrationNo:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRegistrationNo(v)
+		return nil
+	case payrollcomponent.FieldUnitType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUnitType(v)
+		return nil
+	case payrollcomponent.FieldUnitRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUnitRate(v)
+		return nil
+	case payrollcomponent.FieldQuantity:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuantity(v)
+		return nil
+	case payrollcomponent.FieldEffectiveFrom:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEffectiveFrom(v)
+		return nil
+	case payrollcomponent.FieldEffectiveTo:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEffectiveTo(v)
 		return nil
 	case payrollcomponent.FieldNonCash:
 		v, ok := value.(bool)
@@ -61116,6 +61742,21 @@ func (m *PayrollComponentMutation) ClearedFields() []string {
 	if m.FieldCleared(payrollcomponent.FieldMode) {
 		fields = append(fields, payrollcomponent.FieldMode)
 	}
+	if m.FieldCleared(payrollcomponent.FieldPercentOf) {
+		fields = append(fields, payrollcomponent.FieldPercentOf)
+	}
+	if m.FieldCleared(payrollcomponent.FieldRegistrationNo) {
+		fields = append(fields, payrollcomponent.FieldRegistrationNo)
+	}
+	if m.FieldCleared(payrollcomponent.FieldUnitType) {
+		fields = append(fields, payrollcomponent.FieldUnitType)
+	}
+	if m.FieldCleared(payrollcomponent.FieldEffectiveFrom) {
+		fields = append(fields, payrollcomponent.FieldEffectiveFrom)
+	}
+	if m.FieldCleared(payrollcomponent.FieldEffectiveTo) {
+		fields = append(fields, payrollcomponent.FieldEffectiveTo)
+	}
 	if m.FieldCleared(payrollcomponent.FieldApplicableReliefID) {
 		fields = append(fields, payrollcomponent.FieldApplicableReliefID)
 	}
@@ -61154,6 +61795,21 @@ func (m *PayrollComponentMutation) ClearField(name string) error {
 	case payrollcomponent.FieldMode:
 		m.ClearMode()
 		return nil
+	case payrollcomponent.FieldPercentOf:
+		m.ClearPercentOf()
+		return nil
+	case payrollcomponent.FieldRegistrationNo:
+		m.ClearRegistrationNo()
+		return nil
+	case payrollcomponent.FieldUnitType:
+		m.ClearUnitType()
+		return nil
+	case payrollcomponent.FieldEffectiveFrom:
+		m.ClearEffectiveFrom()
+		return nil
+	case payrollcomponent.FieldEffectiveTo:
+		m.ClearEffectiveTo()
+		return nil
 	case payrollcomponent.FieldApplicableReliefID:
 		m.ClearApplicableReliefID()
 		return nil
@@ -61191,6 +61847,39 @@ func (m *PayrollComponentMutation) ResetField(name string) error {
 		return nil
 	case payrollcomponent.FieldMode:
 		m.ResetMode()
+		return nil
+	case payrollcomponent.FieldAmount:
+		m.ResetAmount()
+		return nil
+	case payrollcomponent.FieldPercentage:
+		m.ResetPercentage()
+		return nil
+	case payrollcomponent.FieldPercentOf:
+		m.ResetPercentOf()
+		return nil
+	case payrollcomponent.FieldEmployerAmount:
+		m.ResetEmployerAmount()
+		return nil
+	case payrollcomponent.FieldEmployerPercentage:
+		m.ResetEmployerPercentage()
+		return nil
+	case payrollcomponent.FieldRegistrationNo:
+		m.ResetRegistrationNo()
+		return nil
+	case payrollcomponent.FieldUnitType:
+		m.ResetUnitType()
+		return nil
+	case payrollcomponent.FieldUnitRate:
+		m.ResetUnitRate()
+		return nil
+	case payrollcomponent.FieldQuantity:
+		m.ResetQuantity()
+		return nil
+	case payrollcomponent.FieldEffectiveFrom:
+		m.ResetEffectiveFrom()
+		return nil
+	case payrollcomponent.FieldEffectiveTo:
+		m.ResetEffectiveTo()
 		return nil
 	case payrollcomponent.FieldNonCash:
 		m.ResetNonCash()

@@ -8,6 +8,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // ID filters vertices based on their ID field.
@@ -88,6 +89,61 @@ func Description(v string) predicate.PayrollComponent {
 // Mode applies equality check predicate on the "mode" field. It's identical to ModeEQ.
 func Mode(v string) predicate.PayrollComponent {
 	return predicate.PayrollComponent(sql.FieldEQ(FieldMode, v))
+}
+
+// Amount applies equality check predicate on the "amount" field. It's identical to AmountEQ.
+func Amount(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldAmount, v))
+}
+
+// Percentage applies equality check predicate on the "percentage" field. It's identical to PercentageEQ.
+func Percentage(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldPercentage, v))
+}
+
+// PercentOf applies equality check predicate on the "percent_of" field. It's identical to PercentOfEQ.
+func PercentOf(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldPercentOf, v))
+}
+
+// EmployerAmount applies equality check predicate on the "employer_amount" field. It's identical to EmployerAmountEQ.
+func EmployerAmount(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldEmployerAmount, v))
+}
+
+// EmployerPercentage applies equality check predicate on the "employer_percentage" field. It's identical to EmployerPercentageEQ.
+func EmployerPercentage(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldEmployerPercentage, v))
+}
+
+// RegistrationNo applies equality check predicate on the "registration_no" field. It's identical to RegistrationNoEQ.
+func RegistrationNo(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldRegistrationNo, v))
+}
+
+// UnitType applies equality check predicate on the "unit_type" field. It's identical to UnitTypeEQ.
+func UnitType(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldUnitType, v))
+}
+
+// UnitRate applies equality check predicate on the "unit_rate" field. It's identical to UnitRateEQ.
+func UnitRate(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldUnitRate, v))
+}
+
+// Quantity applies equality check predicate on the "quantity" field. It's identical to QuantityEQ.
+func Quantity(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldQuantity, v))
+}
+
+// EffectiveFrom applies equality check predicate on the "effective_from" field. It's identical to EffectiveFromEQ.
+func EffectiveFrom(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldEffectiveFrom, v))
+}
+
+// EffectiveTo applies equality check predicate on the "effective_to" field. It's identical to EffectiveToEQ.
+func EffectiveTo(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldEffectiveTo, v))
 }
 
 // NonCash applies equality check predicate on the "non_cash" field. It's identical to NonCashEQ.
@@ -633,6 +689,571 @@ func ModeEqualFold(v string) predicate.PayrollComponent {
 // ModeContainsFold applies the ContainsFold predicate on the "mode" field.
 func ModeContainsFold(v string) predicate.PayrollComponent {
 	return predicate.PayrollComponent(sql.FieldContainsFold(FieldMode, v))
+}
+
+// AmountEQ applies the EQ predicate on the "amount" field.
+func AmountEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldAmount, v))
+}
+
+// AmountNEQ applies the NEQ predicate on the "amount" field.
+func AmountNEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldAmount, v))
+}
+
+// AmountIn applies the In predicate on the "amount" field.
+func AmountIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldAmount, vs...))
+}
+
+// AmountNotIn applies the NotIn predicate on the "amount" field.
+func AmountNotIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldAmount, vs...))
+}
+
+// AmountGT applies the GT predicate on the "amount" field.
+func AmountGT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldAmount, v))
+}
+
+// AmountGTE applies the GTE predicate on the "amount" field.
+func AmountGTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldAmount, v))
+}
+
+// AmountLT applies the LT predicate on the "amount" field.
+func AmountLT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldAmount, v))
+}
+
+// AmountLTE applies the LTE predicate on the "amount" field.
+func AmountLTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldAmount, v))
+}
+
+// PercentageEQ applies the EQ predicate on the "percentage" field.
+func PercentageEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldPercentage, v))
+}
+
+// PercentageNEQ applies the NEQ predicate on the "percentage" field.
+func PercentageNEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldPercentage, v))
+}
+
+// PercentageIn applies the In predicate on the "percentage" field.
+func PercentageIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldPercentage, vs...))
+}
+
+// PercentageNotIn applies the NotIn predicate on the "percentage" field.
+func PercentageNotIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldPercentage, vs...))
+}
+
+// PercentageGT applies the GT predicate on the "percentage" field.
+func PercentageGT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldPercentage, v))
+}
+
+// PercentageGTE applies the GTE predicate on the "percentage" field.
+func PercentageGTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldPercentage, v))
+}
+
+// PercentageLT applies the LT predicate on the "percentage" field.
+func PercentageLT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldPercentage, v))
+}
+
+// PercentageLTE applies the LTE predicate on the "percentage" field.
+func PercentageLTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldPercentage, v))
+}
+
+// PercentOfEQ applies the EQ predicate on the "percent_of" field.
+func PercentOfEQ(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldPercentOf, v))
+}
+
+// PercentOfNEQ applies the NEQ predicate on the "percent_of" field.
+func PercentOfNEQ(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldPercentOf, v))
+}
+
+// PercentOfIn applies the In predicate on the "percent_of" field.
+func PercentOfIn(vs ...string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldPercentOf, vs...))
+}
+
+// PercentOfNotIn applies the NotIn predicate on the "percent_of" field.
+func PercentOfNotIn(vs ...string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldPercentOf, vs...))
+}
+
+// PercentOfGT applies the GT predicate on the "percent_of" field.
+func PercentOfGT(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldPercentOf, v))
+}
+
+// PercentOfGTE applies the GTE predicate on the "percent_of" field.
+func PercentOfGTE(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldPercentOf, v))
+}
+
+// PercentOfLT applies the LT predicate on the "percent_of" field.
+func PercentOfLT(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldPercentOf, v))
+}
+
+// PercentOfLTE applies the LTE predicate on the "percent_of" field.
+func PercentOfLTE(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldPercentOf, v))
+}
+
+// PercentOfContains applies the Contains predicate on the "percent_of" field.
+func PercentOfContains(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldContains(FieldPercentOf, v))
+}
+
+// PercentOfHasPrefix applies the HasPrefix predicate on the "percent_of" field.
+func PercentOfHasPrefix(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldHasPrefix(FieldPercentOf, v))
+}
+
+// PercentOfHasSuffix applies the HasSuffix predicate on the "percent_of" field.
+func PercentOfHasSuffix(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldHasSuffix(FieldPercentOf, v))
+}
+
+// PercentOfIsNil applies the IsNil predicate on the "percent_of" field.
+func PercentOfIsNil() predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIsNull(FieldPercentOf))
+}
+
+// PercentOfNotNil applies the NotNil predicate on the "percent_of" field.
+func PercentOfNotNil() predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotNull(FieldPercentOf))
+}
+
+// PercentOfEqualFold applies the EqualFold predicate on the "percent_of" field.
+func PercentOfEqualFold(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEqualFold(FieldPercentOf, v))
+}
+
+// PercentOfContainsFold applies the ContainsFold predicate on the "percent_of" field.
+func PercentOfContainsFold(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldContainsFold(FieldPercentOf, v))
+}
+
+// EmployerAmountEQ applies the EQ predicate on the "employer_amount" field.
+func EmployerAmountEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldEmployerAmount, v))
+}
+
+// EmployerAmountNEQ applies the NEQ predicate on the "employer_amount" field.
+func EmployerAmountNEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldEmployerAmount, v))
+}
+
+// EmployerAmountIn applies the In predicate on the "employer_amount" field.
+func EmployerAmountIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldEmployerAmount, vs...))
+}
+
+// EmployerAmountNotIn applies the NotIn predicate on the "employer_amount" field.
+func EmployerAmountNotIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldEmployerAmount, vs...))
+}
+
+// EmployerAmountGT applies the GT predicate on the "employer_amount" field.
+func EmployerAmountGT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldEmployerAmount, v))
+}
+
+// EmployerAmountGTE applies the GTE predicate on the "employer_amount" field.
+func EmployerAmountGTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldEmployerAmount, v))
+}
+
+// EmployerAmountLT applies the LT predicate on the "employer_amount" field.
+func EmployerAmountLT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldEmployerAmount, v))
+}
+
+// EmployerAmountLTE applies the LTE predicate on the "employer_amount" field.
+func EmployerAmountLTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldEmployerAmount, v))
+}
+
+// EmployerPercentageEQ applies the EQ predicate on the "employer_percentage" field.
+func EmployerPercentageEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldEmployerPercentage, v))
+}
+
+// EmployerPercentageNEQ applies the NEQ predicate on the "employer_percentage" field.
+func EmployerPercentageNEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldEmployerPercentage, v))
+}
+
+// EmployerPercentageIn applies the In predicate on the "employer_percentage" field.
+func EmployerPercentageIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldEmployerPercentage, vs...))
+}
+
+// EmployerPercentageNotIn applies the NotIn predicate on the "employer_percentage" field.
+func EmployerPercentageNotIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldEmployerPercentage, vs...))
+}
+
+// EmployerPercentageGT applies the GT predicate on the "employer_percentage" field.
+func EmployerPercentageGT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldEmployerPercentage, v))
+}
+
+// EmployerPercentageGTE applies the GTE predicate on the "employer_percentage" field.
+func EmployerPercentageGTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldEmployerPercentage, v))
+}
+
+// EmployerPercentageLT applies the LT predicate on the "employer_percentage" field.
+func EmployerPercentageLT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldEmployerPercentage, v))
+}
+
+// EmployerPercentageLTE applies the LTE predicate on the "employer_percentage" field.
+func EmployerPercentageLTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldEmployerPercentage, v))
+}
+
+// RegistrationNoEQ applies the EQ predicate on the "registration_no" field.
+func RegistrationNoEQ(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldRegistrationNo, v))
+}
+
+// RegistrationNoNEQ applies the NEQ predicate on the "registration_no" field.
+func RegistrationNoNEQ(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldRegistrationNo, v))
+}
+
+// RegistrationNoIn applies the In predicate on the "registration_no" field.
+func RegistrationNoIn(vs ...string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldRegistrationNo, vs...))
+}
+
+// RegistrationNoNotIn applies the NotIn predicate on the "registration_no" field.
+func RegistrationNoNotIn(vs ...string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldRegistrationNo, vs...))
+}
+
+// RegistrationNoGT applies the GT predicate on the "registration_no" field.
+func RegistrationNoGT(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldRegistrationNo, v))
+}
+
+// RegistrationNoGTE applies the GTE predicate on the "registration_no" field.
+func RegistrationNoGTE(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldRegistrationNo, v))
+}
+
+// RegistrationNoLT applies the LT predicate on the "registration_no" field.
+func RegistrationNoLT(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldRegistrationNo, v))
+}
+
+// RegistrationNoLTE applies the LTE predicate on the "registration_no" field.
+func RegistrationNoLTE(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldRegistrationNo, v))
+}
+
+// RegistrationNoContains applies the Contains predicate on the "registration_no" field.
+func RegistrationNoContains(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldContains(FieldRegistrationNo, v))
+}
+
+// RegistrationNoHasPrefix applies the HasPrefix predicate on the "registration_no" field.
+func RegistrationNoHasPrefix(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldHasPrefix(FieldRegistrationNo, v))
+}
+
+// RegistrationNoHasSuffix applies the HasSuffix predicate on the "registration_no" field.
+func RegistrationNoHasSuffix(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldHasSuffix(FieldRegistrationNo, v))
+}
+
+// RegistrationNoIsNil applies the IsNil predicate on the "registration_no" field.
+func RegistrationNoIsNil() predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIsNull(FieldRegistrationNo))
+}
+
+// RegistrationNoNotNil applies the NotNil predicate on the "registration_no" field.
+func RegistrationNoNotNil() predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotNull(FieldRegistrationNo))
+}
+
+// RegistrationNoEqualFold applies the EqualFold predicate on the "registration_no" field.
+func RegistrationNoEqualFold(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEqualFold(FieldRegistrationNo, v))
+}
+
+// RegistrationNoContainsFold applies the ContainsFold predicate on the "registration_no" field.
+func RegistrationNoContainsFold(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldContainsFold(FieldRegistrationNo, v))
+}
+
+// UnitTypeEQ applies the EQ predicate on the "unit_type" field.
+func UnitTypeEQ(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldUnitType, v))
+}
+
+// UnitTypeNEQ applies the NEQ predicate on the "unit_type" field.
+func UnitTypeNEQ(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldUnitType, v))
+}
+
+// UnitTypeIn applies the In predicate on the "unit_type" field.
+func UnitTypeIn(vs ...string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldUnitType, vs...))
+}
+
+// UnitTypeNotIn applies the NotIn predicate on the "unit_type" field.
+func UnitTypeNotIn(vs ...string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldUnitType, vs...))
+}
+
+// UnitTypeGT applies the GT predicate on the "unit_type" field.
+func UnitTypeGT(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldUnitType, v))
+}
+
+// UnitTypeGTE applies the GTE predicate on the "unit_type" field.
+func UnitTypeGTE(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldUnitType, v))
+}
+
+// UnitTypeLT applies the LT predicate on the "unit_type" field.
+func UnitTypeLT(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldUnitType, v))
+}
+
+// UnitTypeLTE applies the LTE predicate on the "unit_type" field.
+func UnitTypeLTE(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldUnitType, v))
+}
+
+// UnitTypeContains applies the Contains predicate on the "unit_type" field.
+func UnitTypeContains(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldContains(FieldUnitType, v))
+}
+
+// UnitTypeHasPrefix applies the HasPrefix predicate on the "unit_type" field.
+func UnitTypeHasPrefix(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldHasPrefix(FieldUnitType, v))
+}
+
+// UnitTypeHasSuffix applies the HasSuffix predicate on the "unit_type" field.
+func UnitTypeHasSuffix(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldHasSuffix(FieldUnitType, v))
+}
+
+// UnitTypeIsNil applies the IsNil predicate on the "unit_type" field.
+func UnitTypeIsNil() predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIsNull(FieldUnitType))
+}
+
+// UnitTypeNotNil applies the NotNil predicate on the "unit_type" field.
+func UnitTypeNotNil() predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotNull(FieldUnitType))
+}
+
+// UnitTypeEqualFold applies the EqualFold predicate on the "unit_type" field.
+func UnitTypeEqualFold(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEqualFold(FieldUnitType, v))
+}
+
+// UnitTypeContainsFold applies the ContainsFold predicate on the "unit_type" field.
+func UnitTypeContainsFold(v string) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldContainsFold(FieldUnitType, v))
+}
+
+// UnitRateEQ applies the EQ predicate on the "unit_rate" field.
+func UnitRateEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldUnitRate, v))
+}
+
+// UnitRateNEQ applies the NEQ predicate on the "unit_rate" field.
+func UnitRateNEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldUnitRate, v))
+}
+
+// UnitRateIn applies the In predicate on the "unit_rate" field.
+func UnitRateIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldUnitRate, vs...))
+}
+
+// UnitRateNotIn applies the NotIn predicate on the "unit_rate" field.
+func UnitRateNotIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldUnitRate, vs...))
+}
+
+// UnitRateGT applies the GT predicate on the "unit_rate" field.
+func UnitRateGT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldUnitRate, v))
+}
+
+// UnitRateGTE applies the GTE predicate on the "unit_rate" field.
+func UnitRateGTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldUnitRate, v))
+}
+
+// UnitRateLT applies the LT predicate on the "unit_rate" field.
+func UnitRateLT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldUnitRate, v))
+}
+
+// UnitRateLTE applies the LTE predicate on the "unit_rate" field.
+func UnitRateLTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldUnitRate, v))
+}
+
+// QuantityEQ applies the EQ predicate on the "quantity" field.
+func QuantityEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldQuantity, v))
+}
+
+// QuantityNEQ applies the NEQ predicate on the "quantity" field.
+func QuantityNEQ(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldQuantity, v))
+}
+
+// QuantityIn applies the In predicate on the "quantity" field.
+func QuantityIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldQuantity, vs...))
+}
+
+// QuantityNotIn applies the NotIn predicate on the "quantity" field.
+func QuantityNotIn(vs ...decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldQuantity, vs...))
+}
+
+// QuantityGT applies the GT predicate on the "quantity" field.
+func QuantityGT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldQuantity, v))
+}
+
+// QuantityGTE applies the GTE predicate on the "quantity" field.
+func QuantityGTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldQuantity, v))
+}
+
+// QuantityLT applies the LT predicate on the "quantity" field.
+func QuantityLT(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldQuantity, v))
+}
+
+// QuantityLTE applies the LTE predicate on the "quantity" field.
+func QuantityLTE(v decimal.Decimal) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldQuantity, v))
+}
+
+// EffectiveFromEQ applies the EQ predicate on the "effective_from" field.
+func EffectiveFromEQ(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromNEQ applies the NEQ predicate on the "effective_from" field.
+func EffectiveFromNEQ(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromIn applies the In predicate on the "effective_from" field.
+func EffectiveFromIn(vs ...time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldEffectiveFrom, vs...))
+}
+
+// EffectiveFromNotIn applies the NotIn predicate on the "effective_from" field.
+func EffectiveFromNotIn(vs ...time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldEffectiveFrom, vs...))
+}
+
+// EffectiveFromGT applies the GT predicate on the "effective_from" field.
+func EffectiveFromGT(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromGTE applies the GTE predicate on the "effective_from" field.
+func EffectiveFromGTE(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromLT applies the LT predicate on the "effective_from" field.
+func EffectiveFromLT(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromLTE applies the LTE predicate on the "effective_from" field.
+func EffectiveFromLTE(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromIsNil applies the IsNil predicate on the "effective_from" field.
+func EffectiveFromIsNil() predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIsNull(FieldEffectiveFrom))
+}
+
+// EffectiveFromNotNil applies the NotNil predicate on the "effective_from" field.
+func EffectiveFromNotNil() predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotNull(FieldEffectiveFrom))
+}
+
+// EffectiveToEQ applies the EQ predicate on the "effective_to" field.
+func EffectiveToEQ(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldEQ(FieldEffectiveTo, v))
+}
+
+// EffectiveToNEQ applies the NEQ predicate on the "effective_to" field.
+func EffectiveToNEQ(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNEQ(FieldEffectiveTo, v))
+}
+
+// EffectiveToIn applies the In predicate on the "effective_to" field.
+func EffectiveToIn(vs ...time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIn(FieldEffectiveTo, vs...))
+}
+
+// EffectiveToNotIn applies the NotIn predicate on the "effective_to" field.
+func EffectiveToNotIn(vs ...time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotIn(FieldEffectiveTo, vs...))
+}
+
+// EffectiveToGT applies the GT predicate on the "effective_to" field.
+func EffectiveToGT(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGT(FieldEffectiveTo, v))
+}
+
+// EffectiveToGTE applies the GTE predicate on the "effective_to" field.
+func EffectiveToGTE(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldGTE(FieldEffectiveTo, v))
+}
+
+// EffectiveToLT applies the LT predicate on the "effective_to" field.
+func EffectiveToLT(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLT(FieldEffectiveTo, v))
+}
+
+// EffectiveToLTE applies the LTE predicate on the "effective_to" field.
+func EffectiveToLTE(v time.Time) predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldLTE(FieldEffectiveTo, v))
+}
+
+// EffectiveToIsNil applies the IsNil predicate on the "effective_to" field.
+func EffectiveToIsNil() predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldIsNull(FieldEffectiveTo))
+}
+
+// EffectiveToNotNil applies the NotNil predicate on the "effective_to" field.
+func EffectiveToNotNil() predicate.PayrollComponent {
+	return predicate.PayrollComponent(sql.FieldNotNull(FieldEffectiveTo))
 }
 
 // NonCashEQ applies the EQ predicate on the "non_cash" field.

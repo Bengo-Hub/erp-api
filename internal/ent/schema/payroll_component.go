@@ -27,6 +27,22 @@ func (PayrollComponent) Fields() []ent.Field {
 		field.Text("description").Optional().Nillable(),
 		field.String("mode").Optional().Comment("monthly | weekly | daily | perhour | perday | perpiece | commission"),
 
+		// Default monetary configuration (legacy "Default Payroll Settings"). The amount/percentage
+		// is the employee-side default; employer_* carries the employer contribution for split
+		// deductions (NSSF/pension). percent_of is the base a percentage applies to. Per-unit
+		// earnings (Daily Wages, Overtime) carry unit_type/unit_rate/quantity. All decimal.
+		moneyField("amount"),
+		rateField("percentage"),
+		field.String("percent_of").Optional().Comment("basic | gross | none — base a percentage applies to"),
+		moneyField("employer_amount"),
+		rateField("employer_percentage"),
+		field.String("registration_no").Optional().Nillable().Comment("e.g. insurer/pension scheme registration"),
+		field.String("unit_type").Optional().Comment("days | hours | pieces — for per-unit earnings"),
+		moneyField("unit_rate"),
+		daysField("quantity"),
+		field.Time("effective_from").Optional().Nillable(),
+		field.Time("effective_to").Optional().Nillable(),
+
 		field.Bool("non_cash").Default(false),
 		field.Bool("deduct_after_taxing").Default(false),
 		field.UUID("applicable_relief_id", uuid.UUID{}).Optional().Nillable(),
