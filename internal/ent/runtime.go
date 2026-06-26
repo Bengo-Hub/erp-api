@@ -26,6 +26,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/backupsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
+	"github.com/Bengo-Hub/erp-api/internal/ent/casuallaborrecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
@@ -629,6 +630,34 @@ func init() {
 	candidateDescID := candidateFields[0].Descriptor()
 	// candidate.DefaultID holds the default value on creation for the id field.
 	candidate.DefaultID = candidateDescID.Default.(func() uuid.UUID)
+	casuallaborrecordFields := schema.CasualLaborRecord{}.Fields()
+	_ = casuallaborrecordFields
+	// casuallaborrecordDescWorkerName is the schema descriptor for worker_name field.
+	casuallaborrecordDescWorkerName := casuallaborrecordFields[5].Descriptor()
+	// casuallaborrecord.WorkerNameValidator is a validator for the "worker_name" field. It is called by the builders before save.
+	casuallaborrecord.WorkerNameValidator = casuallaborrecordDescWorkerName.Validators[0].(func(string) error)
+	// casuallaborrecordDescAmount is the schema descriptor for amount field.
+	casuallaborrecordDescAmount := casuallaborrecordFields[9].Descriptor()
+	// casuallaborrecord.DefaultAmount holds the default value on creation for the amount field.
+	casuallaborrecord.DefaultAmount = casuallaborrecordDescAmount.Default.(decimal.Decimal)
+	// casuallaborrecordDescDeleteStatus is the schema descriptor for delete_status field.
+	casuallaborrecordDescDeleteStatus := casuallaborrecordFields[17].Descriptor()
+	// casuallaborrecord.DefaultDeleteStatus holds the default value on creation for the delete_status field.
+	casuallaborrecord.DefaultDeleteStatus = casuallaborrecordDescDeleteStatus.Default.(bool)
+	// casuallaborrecordDescCreatedAt is the schema descriptor for created_at field.
+	casuallaborrecordDescCreatedAt := casuallaborrecordFields[18].Descriptor()
+	// casuallaborrecord.DefaultCreatedAt holds the default value on creation for the created_at field.
+	casuallaborrecord.DefaultCreatedAt = casuallaborrecordDescCreatedAt.Default.(func() time.Time)
+	// casuallaborrecordDescUpdatedAt is the schema descriptor for updated_at field.
+	casuallaborrecordDescUpdatedAt := casuallaborrecordFields[19].Descriptor()
+	// casuallaborrecord.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	casuallaborrecord.DefaultUpdatedAt = casuallaborrecordDescUpdatedAt.Default.(func() time.Time)
+	// casuallaborrecord.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	casuallaborrecord.UpdateDefaultUpdatedAt = casuallaborrecordDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// casuallaborrecordDescID is the schema descriptor for id field.
+	casuallaborrecordDescID := casuallaborrecordFields[0].Descriptor()
+	// casuallaborrecord.DefaultID holds the default value on creation for the id field.
+	casuallaborrecord.DefaultID = casuallaborrecordDescID.Default.(func() uuid.UUID)
 	claimitemFields := schema.ClaimItem{}.Fields()
 	_ = claimitemFields
 	// claimitemDescAmount is the schema descriptor for amount field.

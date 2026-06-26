@@ -37,6 +37,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/backupsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
+	"github.com/Bengo-Hub/erp-api/internal/ent/casuallaborrecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
@@ -163,6 +164,8 @@ type Client struct {
 	BenefitTax *BenefitTaxClient
 	// Candidate is the client for interacting with the Candidate builders.
 	Candidate *CandidateClient
+	// CasualLaborRecord is the client for interacting with the CasualLaborRecord builders.
+	CasualLaborRecord *CasualLaborRecordClient
 	// ClaimItem is the client for interacting with the ClaimItem builders.
 	ClaimItem *ClaimItemClient
 	// CompanySettings is the client for interacting with the CompanySettings builders.
@@ -349,6 +352,7 @@ func (c *Client) init() {
 	c.BackupSetting = NewBackupSettingClient(c.config)
 	c.BenefitTax = NewBenefitTaxClient(c.config)
 	c.Candidate = NewCandidateClient(c.config)
+	c.CasualLaborRecord = NewCasualLaborRecordClient(c.config)
 	c.ClaimItem = NewClaimItemClient(c.config)
 	c.CompanySettings = NewCompanySettingsClient(c.config)
 	c.ContactDetails = NewContactDetailsClient(c.config)
@@ -539,6 +543,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		BackupSetting:           NewBackupSettingClient(cfg),
 		BenefitTax:              NewBenefitTaxClient(cfg),
 		Candidate:               NewCandidateClient(cfg),
+		CasualLaborRecord:       NewCasualLaborRecordClient(cfg),
 		ClaimItem:               NewClaimItemClient(cfg),
 		CompanySettings:         NewCompanySettingsClient(cfg),
 		ContactDetails:          NewContactDetailsClient(cfg),
@@ -656,6 +661,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		BackupSetting:           NewBackupSettingClient(cfg),
 		BenefitTax:              NewBenefitTaxClient(cfg),
 		Candidate:               NewCandidateClient(cfg),
+		CasualLaborRecord:       NewCasualLaborRecordClient(cfg),
 		ClaimItem:               NewClaimItemClient(cfg),
 		CompanySettings:         NewCompanySettingsClient(cfg),
 		ContactDetails:          NewContactDetailsClient(cfg),
@@ -767,24 +773,25 @@ func (c *Client) Use(hooks ...Hook) {
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
 		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BackupSetting,
-		c.BenefitTax, c.Candidate, c.ClaimItem, c.CompanySettings, c.ContactDetails,
-		c.Contract, c.CustomUser, c.Department, c.DocumentSequence, c.ESSSettings,
-		c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
-		c.EmployeeDocument, c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric,
-		c.EmployeeOnboarding, c.EmploymentHistory, c.ExchangeRate,
-		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
-		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
-		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
-		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory, c.MetricTarget,
-		c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent, c.PayrollComponent,
-		c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio,
-		c.Payslip, c.PayslipAudit, c.PerformanceMetric, c.PerformanceReview,
-		c.Permission, c.PublicHoliday, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
-		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
-		c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride, c.Task,
-		c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry, c.TrainingCourse,
-		c.TrainingEnrollment, c.TrainingEvaluation, c.UserRoleAssignment,
-		c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule, c.WorkersUnion,
+		c.BenefitTax, c.Candidate, c.CasualLaborRecord, c.ClaimItem, c.CompanySettings,
+		c.ContactDetails, c.Contract, c.CustomUser, c.Department, c.DocumentSequence,
+		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
+		c.EmployeeDisciplinary, c.EmployeeDocument, c.EmployeeEducation,
+		c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding, c.EmploymentHistory,
+		c.ExchangeRate, c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings,
+		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
+		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
+		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
+		c.MetricTarget, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
+		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
+		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PerformanceMetric,
+		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
+		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
+		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
+		c.Task, c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry,
+		c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
+		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
+		c.WorkersUnion,
 	} {
 		n.Use(hooks...)
 	}
@@ -799,24 +806,25 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
 		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BackupSetting,
-		c.BenefitTax, c.Candidate, c.ClaimItem, c.CompanySettings, c.ContactDetails,
-		c.Contract, c.CustomUser, c.Department, c.DocumentSequence, c.ESSSettings,
-		c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
-		c.EmployeeDocument, c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric,
-		c.EmployeeOnboarding, c.EmploymentHistory, c.ExchangeRate,
-		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
-		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
-		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
-		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory, c.MetricTarget,
-		c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent, c.PayrollComponent,
-		c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio,
-		c.Payslip, c.PayslipAudit, c.PerformanceMetric, c.PerformanceReview,
-		c.Permission, c.PublicHoliday, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
-		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
-		c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride, c.Task,
-		c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry, c.TrainingCourse,
-		c.TrainingEnrollment, c.TrainingEvaluation, c.UserRoleAssignment,
-		c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule, c.WorkersUnion,
+		c.BenefitTax, c.Candidate, c.CasualLaborRecord, c.ClaimItem, c.CompanySettings,
+		c.ContactDetails, c.Contract, c.CustomUser, c.Department, c.DocumentSequence,
+		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
+		c.EmployeeDisciplinary, c.EmployeeDocument, c.EmployeeEducation,
+		c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding, c.EmploymentHistory,
+		c.ExchangeRate, c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings,
+		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
+		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
+		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
+		c.MetricTarget, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
+		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
+		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PerformanceMetric,
+		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
+		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
+		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
+		c.Task, c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry,
+		c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
+		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
+		c.WorkersUnion,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -867,6 +875,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.BenefitTax.mutate(ctx, m)
 	case *CandidateMutation:
 		return c.Candidate.mutate(ctx, m)
+	case *CasualLaborRecordMutation:
+		return c.CasualLaborRecord.mutate(ctx, m)
 	case *ClaimItemMutation:
 		return c.ClaimItem.mutate(ctx, m)
 	case *CompanySettingsMutation:
@@ -3912,6 +3922,139 @@ func (c *CandidateClient) mutate(ctx context.Context, m *CandidateMutation) (Val
 		return (&CandidateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Candidate mutation op: %q", m.Op())
+	}
+}
+
+// CasualLaborRecordClient is a client for the CasualLaborRecord schema.
+type CasualLaborRecordClient struct {
+	config
+}
+
+// NewCasualLaborRecordClient returns a client for the CasualLaborRecord from the given config.
+func NewCasualLaborRecordClient(c config) *CasualLaborRecordClient {
+	return &CasualLaborRecordClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `casuallaborrecord.Hooks(f(g(h())))`.
+func (c *CasualLaborRecordClient) Use(hooks ...Hook) {
+	c.hooks.CasualLaborRecord = append(c.hooks.CasualLaborRecord, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `casuallaborrecord.Intercept(f(g(h())))`.
+func (c *CasualLaborRecordClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CasualLaborRecord = append(c.inters.CasualLaborRecord, interceptors...)
+}
+
+// Create returns a builder for creating a CasualLaborRecord entity.
+func (c *CasualLaborRecordClient) Create() *CasualLaborRecordCreate {
+	mutation := newCasualLaborRecordMutation(c.config, OpCreate)
+	return &CasualLaborRecordCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CasualLaborRecord entities.
+func (c *CasualLaborRecordClient) CreateBulk(builders ...*CasualLaborRecordCreate) *CasualLaborRecordCreateBulk {
+	return &CasualLaborRecordCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CasualLaborRecordClient) MapCreateBulk(slice any, setFunc func(*CasualLaborRecordCreate, int)) *CasualLaborRecordCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CasualLaborRecordCreateBulk{err: fmt.Errorf("calling to CasualLaborRecordClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CasualLaborRecordCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CasualLaborRecordCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CasualLaborRecord.
+func (c *CasualLaborRecordClient) Update() *CasualLaborRecordUpdate {
+	mutation := newCasualLaborRecordMutation(c.config, OpUpdate)
+	return &CasualLaborRecordUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CasualLaborRecordClient) UpdateOne(_m *CasualLaborRecord) *CasualLaborRecordUpdateOne {
+	mutation := newCasualLaborRecordMutation(c.config, OpUpdateOne, withCasualLaborRecord(_m))
+	return &CasualLaborRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CasualLaborRecordClient) UpdateOneID(id uuid.UUID) *CasualLaborRecordUpdateOne {
+	mutation := newCasualLaborRecordMutation(c.config, OpUpdateOne, withCasualLaborRecordID(id))
+	return &CasualLaborRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CasualLaborRecord.
+func (c *CasualLaborRecordClient) Delete() *CasualLaborRecordDelete {
+	mutation := newCasualLaborRecordMutation(c.config, OpDelete)
+	return &CasualLaborRecordDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CasualLaborRecordClient) DeleteOne(_m *CasualLaborRecord) *CasualLaborRecordDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CasualLaborRecordClient) DeleteOneID(id uuid.UUID) *CasualLaborRecordDeleteOne {
+	builder := c.Delete().Where(casuallaborrecord.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CasualLaborRecordDeleteOne{builder}
+}
+
+// Query returns a query builder for CasualLaborRecord.
+func (c *CasualLaborRecordClient) Query() *CasualLaborRecordQuery {
+	return &CasualLaborRecordQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCasualLaborRecord},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CasualLaborRecord entity by its id.
+func (c *CasualLaborRecordClient) Get(ctx context.Context, id uuid.UUID) (*CasualLaborRecord, error) {
+	return c.Query().Where(casuallaborrecord.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CasualLaborRecordClient) GetX(ctx context.Context, id uuid.UUID) *CasualLaborRecord {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CasualLaborRecordClient) Hooks() []Hook {
+	return c.hooks.CasualLaborRecord
+}
+
+// Interceptors returns the client interceptors.
+func (c *CasualLaborRecordClient) Interceptors() []Interceptor {
+	return c.inters.CasualLaborRecord
+}
+
+func (c *CasualLaborRecordClient) mutate(ctx context.Context, m *CasualLaborRecordMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CasualLaborRecordCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CasualLaborRecordUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CasualLaborRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CasualLaborRecordDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown CasualLaborRecord mutation op: %q", m.Op())
 	}
 }
 
@@ -14387,15 +14530,15 @@ type (
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
 		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
 		AttendanceRule, AuthOutlet, AuthTenant, Backup, BackupSetting, BenefitTax,
-		Candidate, ClaimItem, CompanySettings, ContactDetails, Contract, CustomUser,
-		Department, DocumentSequence, ESSSettings, Employee, EmployeeBankAccount,
-		EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument, EmployeeEducation,
-		EmployeeLoan, EmployeeMetric, EmployeeOnboarding, EmploymentHistory,
-		ExchangeRate, ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal,
-		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
-		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
-		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
-		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		Candidate, CasualLaborRecord, ClaimItem, CompanySettings, ContactDetails,
+		Contract, CustomUser, Department, DocumentSequence, ESSSettings, Employee,
+		EmployeeBankAccount, EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument,
+		EmployeeEducation, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
+		EmploymentHistory, ExchangeRate, ExchangeRateAPISettings, ExpenseClaim,
+		GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey, JobGroup,
+		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
+		LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin,
+		OffDay, OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
 		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
 		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
 		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
@@ -14409,15 +14552,15 @@ type (
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
 		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
 		AttendanceRule, AuthOutlet, AuthTenant, Backup, BackupSetting, BenefitTax,
-		Candidate, ClaimItem, CompanySettings, ContactDetails, Contract, CustomUser,
-		Department, DocumentSequence, ESSSettings, Employee, EmployeeBankAccount,
-		EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument, EmployeeEducation,
-		EmployeeLoan, EmployeeMetric, EmployeeOnboarding, EmploymentHistory,
-		ExchangeRate, ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal,
-		GoalProgress, HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle,
-		LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest,
-		LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay,
-		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		Candidate, CasualLaborRecord, ClaimItem, CompanySettings, ContactDetails,
+		Contract, CustomUser, Department, DocumentSequence, ESSSettings, Employee,
+		EmployeeBankAccount, EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument,
+		EmployeeEducation, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
+		EmploymentHistory, ExchangeRate, ExchangeRateAPISettings, ExpenseClaim,
+		GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey, JobGroup,
+		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
+		LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget, NextOfKin,
+		OffDay, OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
 		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
 		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
 		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
