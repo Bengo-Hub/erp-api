@@ -222,6 +222,9 @@ type Payslip func(*sql.Selector)
 // PayslipAudit is the predicate function for payslipaudit builders.
 type PayslipAudit func(*sql.Selector)
 
+// PayslipLine is the predicate function for payslipline builders.
+type PayslipLine func(*sql.Selector)
+
 // PerformanceMetric is the predicate function for performancemetric builders.
 type PerformanceMetric func(*sql.Selector)
 

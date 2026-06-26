@@ -120,12 +120,23 @@ type payslipView struct {
 	Currency        string    `json:"currency"`
 	BatchRef        string    `json:"batch_ref,omitempty"`
 	CreatedAt       string    `json:"created_at,omitempty"`
+	// Itemised lines (populated from payslip_line for new runs; empty for old payslips).
+	Earnings   []payslipLineView `json:"earnings,omitempty"`
+	Deductions []payslipLineView `json:"deductions,omitempty"`
+}
+
+type payslipLineView struct {
+	Label  string `json:"label"`
+	Name   string `json:"name"`
+	Amount string `json:"amount"`
 }
 
 func (h *PayrollHandler) payslipView(ctx context.Context, tenantID uuid.UUID, ps *ent.Payslip) payslipView {
 	// Single source of truth for the earnings/deductions/net figures (shared with the
-	// PDF document adapter so the JSON view and the payslip PDF never drift).
-	b := payroll.BuildPayslipBreakdown(ps)
+	// PDF document adapter so the JSON view and the payslip PDF never drift). When the payslip
+	// has itemised lines (new runs), they replace the lumped earnings/statutory rows.
+	lines, _ := h.svc.LoadPayslipLines(ctx, tenantID, ps.ID)
+	b := payroll.BuildPayslipBreakdownWithLines(ps, lines)
 	v := payslipView{
 		ID:              ps.ID,
 		Employee:        ps.EmployeeID,
@@ -142,6 +153,12 @@ func (h *PayrollHandler) payslipView(ctx context.Context, tenantID uuid.UUID, ps
 		Status:          ps.ApprovalStatus,
 		Currency:        "KES",
 		CreatedAt:       ps.CreatedAt.Format(time.RFC3339),
+	}
+	for _, e := range b.Earnings {
+		v.Earnings = append(v.Earnings, payslipLineView{Label: e.Label, Name: e.Label, Amount: e.Amount.StringFixed(2)})
+	}
+	for _, d := range b.Deductions {
+		v.Deductions = append(v.Deductions, payslipLineView{Label: d.Label, Name: d.Label, Amount: d.Amount.StringFixed(2)})
 	}
 	if ps.Published {
 		v.PaymentStatus = "paid"

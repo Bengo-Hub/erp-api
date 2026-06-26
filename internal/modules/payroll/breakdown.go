@@ -73,3 +73,34 @@ func BuildPayslipBreakdown(ps *ent.Payslip) PayslipBreakdown {
 	}
 	return b
 }
+
+// BuildPayslipBreakdownWithLines is BuildPayslipBreakdown but, when itemised payslip_line rows
+// exist (new runs), it replaces the lumped "Gross Pay" earning + the 4 statutory deduction rows
+// with the real per-component lines (Basic Pay, House Allowance, N.S.S.F. Tier I/II, Loan, …).
+// Falls back to the aggregate breakdown when there are no lines (old payslips). The scalar
+// fields (PAYE/NSSF/Net…) are always the stored totals so existing consumers are unchanged.
+func BuildPayslipBreakdownWithLines(ps *ent.Payslip, lines []*ent.PayslipLine) PayslipBreakdown {
+	b := BuildPayslipBreakdown(ps)
+	if len(lines) == 0 {
+		return b
+	}
+	earnings := make([]AmountItem, 0, len(lines))
+	deductions := make([]AmountItem, 0, len(lines))
+	for _, l := range lines {
+		switch l.Section {
+		case "earning_cash", "benefit_noncash":
+			earnings = append(earnings, AmountItem{Label: l.Label, Amount: l.CashAmount})
+		case "deduction_before_tax", "tax", "deduction_after_tax":
+			// relief + employer_contribution are intentionally excluded (relief reduces PAYE; the
+			// employer side is not deducted from the employee's net).
+			deductions = append(deductions, AmountItem{Label: l.Label, Amount: l.CashAmount})
+		}
+	}
+	if len(earnings) > 0 {
+		b.Earnings = earnings
+	}
+	if len(deductions) > 0 {
+		b.Deductions = deductions
+	}
+	return b
+}

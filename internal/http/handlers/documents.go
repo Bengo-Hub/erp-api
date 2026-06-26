@@ -94,7 +94,8 @@ func (h *DocumentsHandler) PayslipPDF(w http.ResponseWriter, r *http.Request) {
 	ti := h.tenantInfo(r.Context(), scope.TenantID)
 	in := h.payslipInput(r.Context(), scope.TenantID, ps, emp)
 
-	breakdown := payroll.BuildPayslipBreakdown(ps)
+	lines, _ := h.payroll.LoadPayslipLines(r.Context(), scope.TenantID, ps.ID)
+	breakdown := payroll.BuildPayslipBreakdownWithLines(ps, lines)
 	doc := adapters.PayslipToDocument(in, breakdown, ti)
 
 	body, mime, err := h.docs.Generate(doc, docs.FormatPDF)

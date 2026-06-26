@@ -2478,6 +2478,50 @@ var (
 			},
 		},
 	}
+	// PayslipLinesColumns holds the columns for the "payslip_lines" table.
+	PayslipLinesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "payslip_id", Type: field.TypeUUID},
+		{Name: "component_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "section", Type: field.TypeString},
+		{Name: "code", Type: field.TypeString, Nullable: true},
+		{Name: "label", Type: field.TypeString},
+		{Name: "cash_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "taxable_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "employer_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "non_cash", Type: field.TypeBool, Default: false},
+		{Name: "taxable", Type: field.TypeBool, Default: true},
+		{Name: "quantity", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(7,2)"}},
+		{Name: "rate", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "unit", Type: field.TypeString, Nullable: true},
+		{Name: "deduction_phase", Type: field.TypeString, Nullable: true},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// PayslipLinesTable holds the schema information for the "payslip_lines" table.
+	PayslipLinesTable = &schema.Table{
+		Name:       "payslip_lines",
+		Columns:    PayslipLinesColumns,
+		PrimaryKey: []*schema.Column{PayslipLinesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "payslipline_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{PayslipLinesColumns[1]},
+			},
+			{
+				Name:    "payslipline_payslip_id",
+				Unique:  false,
+				Columns: []*schema.Column{PayslipLinesColumns[2]},
+			},
+			{
+				Name:    "payslipline_tenant_id_section",
+				Unique:  false,
+				Columns: []*schema.Column{PayslipLinesColumns[1], PayslipLinesColumns[4]},
+			},
+		},
+	}
 	// PerformanceMetricsColumns holds the columns for the "performance_metrics" table.
 	PerformanceMetricsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -3524,6 +3568,7 @@ var (
 		PayrollSplitRatiosTable,
 		PayslipsTable,
 		PayslipAuditsTable,
+		PayslipLinesTable,
 		PerformanceMetricsTable,
 		PerformanceReviewsTable,
 		PermissionsTable,

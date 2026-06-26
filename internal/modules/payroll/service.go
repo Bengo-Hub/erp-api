@@ -16,6 +16,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
@@ -76,7 +77,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 
 	out := make([]LineResult, 0, len(emps))
 	for _, emp := range emps {
-		in, ierr := s.buildEmployeeInput(ctx, p, emp)
+		in, items, ierr := s.buildEmployeeInput(ctx, p, emp)
 		if ierr != nil {
 			return nil, fmt.Errorf("payroll: employee %s: %w", emp.ID, ierr)
 		}
@@ -91,6 +92,11 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 				return nil, fmt.Errorf("payroll: persist %s: %w", emp.ID, perr)
 			}
 			line.PayslipID = &id
+			// Itemised payslip lines (best-effort, additive): power the rich payslip PDF,
+			// Muster Roll, Payroll Summary and P9. Failure must not abort the run.
+			if lerr := s.writePayslipLines(ctx, p.TenantID, id, in.GrossPay, res, items); lerr != nil {
+				return nil, fmt.Errorf("payroll: payslip lines %s: %w", emp.ID, lerr)
+			}
 		}
 		out = append(out, line)
 	}
@@ -114,17 +120,18 @@ func (s *Service) selectEmployees(ctx context.Context, p RunParams) ([]*ent.Empl
 
 // buildEmployeeInput loads salary + active, effective-dated recoverables for the employee
 // and maps them to the pure engine input (no persistence — gaps §2.7).
-func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.Employee) (payrollengine.EmployeeInput, error) {
+func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.Employee) (payrollengine.EmployeeInput, EmployeeItemized, error) {
 	var in payrollengine.EmployeeInput
+	var items EmployeeItemized
 
 	sal, err := s.orm.SalaryDetails.Query().
 		Where(salarydetails.TenantID(p.TenantID), salarydetails.EmployeeID(emp.ID), salarydetails.IsActive(true)).
 		First(ctx)
 	if ent.IsNotFound(err) {
-		return in, fmt.Errorf("no active salary details")
+		return in, items, fmt.Errorf("no active salary details")
 	}
 	if err != nil {
-		return in, err
+		return in, items, err
 	}
 	in.GrossPay = sal.MonthlySalary
 	in.TaxCategory = sal.IncomeTax
@@ -134,16 +141,17 @@ func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.
 		Where(employeeloan.TenantID(p.TenantID), employeeloan.EmployeeID(emp.ID), employeeloan.IsActive(true)).
 		All(ctx)
 	if err != nil {
-		return in, err
+		return in, items, err
 	}
 	for _, l := range loans {
 		if !dateActive(l.StartDate, l.EndDate, p.Period) {
 			continue
 		}
-		in.Loans = append(in.Loans, payrollengine.Recoverable{
-			Installment: l.MonthlyInstallment,
-			Outstanding: l.PrincipalAmount.Sub(l.AmountRepaid),
-		})
+		outstanding := l.PrincipalAmount.Sub(l.AmountRepaid)
+		in.Loans = append(in.Loans, payrollengine.Recoverable{Installment: l.MonthlyInstallment, Outstanding: outstanding})
+		if rec := recovered(l.MonthlyInstallment, outstanding); rec.IsPositive() {
+			items.Loans = append(items.Loans, LabeledAmount{Label: "Loan", Amount: rec})
+		}
 	}
 
 	// Advances.
@@ -151,7 +159,7 @@ func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.
 		Where(advance.TenantID(p.TenantID), advance.EmployeeID(emp.ID), advance.IsActive(true)).
 		All(ctx)
 	if err != nil {
-		return in, err
+		return in, items, err
 	}
 	for _, a := range advs {
 		if a.IssueDate != nil && a.IssueDate.After(p.Period) {
@@ -159,12 +167,15 @@ func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.
 		}
 		install, e := s.installmentFor(ctx, a.RepayOptionID)
 		if e != nil {
-			return in, e
+			return in, items, e
 		}
-		in.Advances = append(in.Advances, payrollengine.Recoverable{
-			Installment: install,
-			Outstanding: a.AmountIssued.Sub(a.AmountRepaid),
-		})
+		outstanding := a.AmountIssued.Sub(a.AmountRepaid)
+		in.Advances = append(in.Advances, payrollengine.Recoverable{Installment: install, Outstanding: outstanding})
+		if p.RecoverAdvances {
+			if rec := recovered(install, outstanding); rec.IsPositive() {
+				items.Advances = append(items.Advances, LabeledAmount{Label: "Salary Advance", Amount: rec})
+			}
+		}
 	}
 
 	// Loss/damages.
@@ -172,7 +183,7 @@ func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.
 		Where(lossanddamage.TenantID(p.TenantID), lossanddamage.EmployeeID(emp.ID), lossanddamage.IsActive(true)).
 		All(ctx)
 	if err != nil {
-		return in, err
+		return in, items, err
 	}
 	for _, ld := range lds {
 		if ld.IssueDate != nil && ld.IssueDate.After(p.Period) {
@@ -180,30 +191,75 @@ func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.
 		}
 		install, e := s.installmentFor(ctx, ld.RepayOptionID)
 		if e != nil {
-			return in, e
+			return in, items, e
 		}
-		in.LossDamages = append(in.LossDamages, payrollengine.Recoverable{
-			Installment: install,
-			Outstanding: ld.DamageAmount.Sub(ld.AmountRepaid),
-		})
+		outstanding := ld.DamageAmount.Sub(ld.AmountRepaid)
+		in.LossDamages = append(in.LossDamages, payrollengine.Recoverable{Installment: install, Outstanding: outstanding})
+		if rec := recovered(install, outstanding); rec.IsPositive() {
+			items.LossDamages = append(items.LossDamages, LabeledAmount{Label: "Loss & Damage", Amount: rec})
+		}
 	}
 
-	// Non-cash benefits.
+	// Non-cash benefits (fed to the engine as an aggregate; itemised for the payslip lines).
 	bens, err := s.orm.EmployeeBenefit.Query().
 		Where(employeebenefit.TenantID(p.TenantID), employeebenefit.EmployeeID(emp.ID), employeebenefit.IsActive(true), employeebenefit.NonCash(true)).
 		All(ctx)
 	if err != nil {
-		return in, err
+		return in, items, err
 	}
 	total := decimal.Zero
+	titles := s.componentTitles(ctx, p.TenantID, bens)
 	for _, b := range bens {
 		if !dateActive(b.EffectiveDate, b.EndDate, p.Period) {
 			continue
 		}
 		total = total.Add(b.Amount)
+		label := "Benefit"
+		if b.ComponentID != nil {
+			if t, ok := titles[*b.ComponentID]; ok {
+				label = t
+			}
+		}
+		items.Benefits = append(items.Benefits, LabeledAmount{
+			ComponentID: b.ComponentID, Label: label, Amount: b.Amount, Taxable: b.Amount, NonCash: true,
+		})
 	}
 	in.NonCashBenefits = total
-	return in, nil
+	return in, items, nil
+}
+
+// recovered returns the amount actually recovered this period: min(installment, outstanding),
+// or zero when either is non-positive (mirrors payrollengine.sumRecoverables).
+func recovered(installment, outstanding decimal.Decimal) decimal.Decimal {
+	if installment.LessThanOrEqual(decimal.Zero) || outstanding.LessThanOrEqual(decimal.Zero) {
+		return decimal.Zero
+	}
+	if installment.LessThan(outstanding) {
+		return installment
+	}
+	return outstanding
+}
+
+// componentTitles batch-loads the titles for the benefit components referenced by bens.
+func (s *Service) componentTitles(ctx context.Context, tenantID uuid.UUID, bens []*ent.EmployeeBenefit) map[uuid.UUID]string {
+	ids := make([]uuid.UUID, 0, len(bens))
+	for _, b := range bens {
+		if b.ComponentID != nil {
+			ids = append(ids, *b.ComponentID)
+		}
+	}
+	out := map[uuid.UUID]string{}
+	if len(ids) == 0 {
+		return out
+	}
+	rows, err := s.orm.PayrollComponent.Query().Where(payrollcomponent.IDIn(ids...)).All(ctx)
+	if err != nil {
+		return out
+	}
+	for _, c := range rows {
+		out[c.ID] = c.Title
+	}
+	return out
 }
 
 // installmentFor resolves the per-period installment for a repay option (amount/installments).
