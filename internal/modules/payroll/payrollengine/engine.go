@@ -46,14 +46,18 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 		order = DefaultDeductionOrder()
 	}
 
-	res := PayslipResult{GrossPay: in.GrossPay}
+	// Effective cash gross = base salary + taxable cash allowances (per-diem/mileage excess, taxable
+	// allowances). Non-taxable reimbursements are NEVER here (they go via AP). Statutory + PAYE +
+	// net pay all use this gross. Additive: TaxableAllowances defaults to zero.
+	gross := in.GrossPay.Add(in.TaxableAllowances)
+	res := PayslipResult{GrossPay: gross}
 	var nssf NSSFResult
 
 	for _, phase := range order {
 		for _, comp := range phase.Components {
 			switch comp {
 			case CompNSSF:
-				n, err := CalculateNSSF(cfg.NSSF, in.GrossPay)
+				n, err := CalculateNSSF(cfg.NSSF, gross)
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -68,7 +72,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 					// SHIF not effective this period; skip (NHIF handles health then).
 					continue
 				}
-				c, err := CalculateSHIF(cfg.SHIF, in.GrossPay)
+				c, err := CalculateSHIF(cfg.SHIF, gross)
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -79,7 +83,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 				if cfg.NHIF == nil {
 					continue
 				}
-				c, err := CalculateNHIF(cfg.NHIF, in.GrossPay)
+				c, err := CalculateNHIF(cfg.NHIF, gross)
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -87,7 +91,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 				addPhase(&res, phase.Name, c.Employee)
 
 			case CompHousingLevy:
-				c, err := CalculateHousingLevy(cfg.HousingLevy, in.GrossPay)
+				c, err := CalculateHousingLevy(cfg.HousingLevy, gross)
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -108,7 +112,12 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 			case CompLossDamages:
 				addPhase(&res, phase.Name, sumRecoverables(in.LossDamages))
 			case CompNonCash:
-				addPhase(&res, phase.Name, in.NonCashBenefits)
+				// When NonCashAsTaxable, the benefit is in-kind: it is taxed via the taxable
+				// add-back in applyPAYE and must NOT be deducted from cash net pay. Legacy mode
+				// (default) keeps deducting it from net pay, untaxed.
+				if !cfg.NonCashAsTaxable {
+					addPhase(&res, phase.Name, in.NonCashBenefits)
+				}
 
 			default:
 				return PayslipResult{}, fmt.Errorf("payrollengine: unknown deduction component %q", comp)
@@ -121,15 +130,30 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 		Add(res.DeductionsAfterTax).
 		Add(res.DeductionsAfterPAYE).
 		Add(res.DeductionsFinal)
-	res.NetPay = round2(in.GrossPay.Sub(totalDeductions))
+	res.NetPay = round2(gross.Sub(totalDeductions))
 	return res, nil
+}
+
+// taxableNonCash returns the taxable portion of non-cash benefits for the period: the excess over
+// the monthly de-minimis exemption, only when NonCashAsTaxable is enabled. Otherwise zero.
+func taxableNonCash(cfg Config, in EmployeeInput) decimal.Decimal {
+	if !cfg.NonCashAsTaxable {
+		return decimal.Zero
+	}
+	excess := in.NonCashBenefits.Sub(cfg.NonCashMonthlyExemption)
+	if excess.LessThan(decimal.Zero) {
+		return decimal.Zero
+	}
+	return excess
 }
 
 // applyPAYE computes taxable pay (gross - before-tax deductions), progressive PAYE, then
 // subtracts personal relief, flooring at zero. "secondary" category taxes the whole
 // taxable amount at the bands with no relief; "none" => no PAYE.
 func applyPAYE(res *PayslipResult, cfg Config, in EmployeeInput) error {
-	taxable := in.GrossPay.Sub(res.DeductionsBeforeTax)
+	// res.GrossPay already includes taxable allowances. Taxable pay = gross − before-tax deductions
+	// + the taxable excess of non-cash benefits (when NonCashAsTaxable is enabled).
+	taxable := res.GrossPay.Sub(res.DeductionsBeforeTax).Add(taxableNonCash(cfg, in))
 	if taxable.LessThan(decimal.Zero) {
 		taxable = decimal.Zero
 	}
