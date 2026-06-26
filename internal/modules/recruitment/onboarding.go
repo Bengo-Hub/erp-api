@@ -107,6 +107,47 @@ func (s *Service) CompleteTask(ctx context.Context, tenantID, taskID uuid.UUID, 
 	return updated, nil
 }
 
+// TaskUpdate carries the editable scheduling fields of an onboarding task.
+type TaskUpdate struct {
+	AssignedTo *uuid.UUID
+	DueDate    *time.Time
+	ClearDue   bool
+}
+
+// UpdateTask sets a task's assignee and/or due date (for accountability + overdue tracking).
+func (s *Service) UpdateTask(ctx context.Context, tenantID, taskID uuid.UUID, in TaskUpdate) (*ent.OnboardingTask, error) {
+	task, err := s.orm.OnboardingTask.Query().
+		Where(onboardingtask.TenantID(tenantID), onboardingtask.ID(taskID)).Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("recruitment: load task: %w", err)
+	}
+	u := task.Update()
+	if in.AssignedTo != nil {
+		u = u.SetAssignedTo(*in.AssignedTo)
+	}
+	if in.ClearDue {
+		u = u.ClearDueDate()
+	} else if in.DueDate != nil {
+		u = u.SetDueDate(*in.DueDate)
+	}
+	return u.Save(ctx)
+}
+
+// AddTask appends a custom task to an existing onboarding checklist (beyond the seeded defaults).
+func (s *Service) AddTask(ctx context.Context, tenantID, onboardingID uuid.UUID, category, title string) (*ent.OnboardingTask, error) {
+	if title == "" {
+		return nil, fmt.Errorf("title is required")
+	}
+	if category == "" {
+		category = "Other"
+	}
+	n, _ := s.orm.OnboardingTask.Query().
+		Where(onboardingtask.TenantID(tenantID), onboardingtask.OnboardingID(onboardingID)).Count(ctx)
+	return s.orm.OnboardingTask.Create().
+		SetTenantID(tenantID).SetOnboardingID(onboardingID).
+		SetCategory(onboardingtask.Category(category)).SetTitle(title).SetOrder(n).Save(ctx)
+}
+
 // refreshOnboardingStatus marks an onboarding completed when all its tasks are done.
 func (s *Service) refreshOnboardingStatus(ctx context.Context, tenantID, onboardingID uuid.UUID) error {
 	tasks, err := s.orm.OnboardingTask.Query().

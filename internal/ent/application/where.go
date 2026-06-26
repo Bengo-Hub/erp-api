@@ -90,6 +90,21 @@ func Source(v string) predicate.Application {
 	return predicate.Application(sql.FieldEQ(FieldSource, v))
 }
 
+// InterviewDate applies equality check predicate on the "interview_date" field. It's identical to InterviewDateEQ.
+func InterviewDate(v time.Time) predicate.Application {
+	return predicate.Application(sql.FieldEQ(FieldInterviewDate, v))
+}
+
+// OfferDetails applies equality check predicate on the "offer_details" field. It's identical to OfferDetailsEQ.
+func OfferDetails(v string) predicate.Application {
+	return predicate.Application(sql.FieldEQ(FieldOfferDetails, v))
+}
+
+// RejectionReason applies equality check predicate on the "rejection_reason" field. It's identical to RejectionReasonEQ.
+func RejectionReason(v string) predicate.Application {
+	return predicate.Application(sql.FieldEQ(FieldRejectionReason, v))
+}
+
 // HiredEmployeeID applies equality check predicate on the "hired_employee_id" field. It's identical to HiredEmployeeIDEQ.
 func HiredEmployeeID(v uuid.UUID) predicate.Application {
 	return predicate.Application(sql.FieldEQ(FieldHiredEmployeeID, v))
@@ -508,6 +523,206 @@ func SourceEqualFold(v string) predicate.Application {
 // SourceContainsFold applies the ContainsFold predicate on the "source" field.
 func SourceContainsFold(v string) predicate.Application {
 	return predicate.Application(sql.FieldContainsFold(FieldSource, v))
+}
+
+// InterviewDateEQ applies the EQ predicate on the "interview_date" field.
+func InterviewDateEQ(v time.Time) predicate.Application {
+	return predicate.Application(sql.FieldEQ(FieldInterviewDate, v))
+}
+
+// InterviewDateNEQ applies the NEQ predicate on the "interview_date" field.
+func InterviewDateNEQ(v time.Time) predicate.Application {
+	return predicate.Application(sql.FieldNEQ(FieldInterviewDate, v))
+}
+
+// InterviewDateIn applies the In predicate on the "interview_date" field.
+func InterviewDateIn(vs ...time.Time) predicate.Application {
+	return predicate.Application(sql.FieldIn(FieldInterviewDate, vs...))
+}
+
+// InterviewDateNotIn applies the NotIn predicate on the "interview_date" field.
+func InterviewDateNotIn(vs ...time.Time) predicate.Application {
+	return predicate.Application(sql.FieldNotIn(FieldInterviewDate, vs...))
+}
+
+// InterviewDateGT applies the GT predicate on the "interview_date" field.
+func InterviewDateGT(v time.Time) predicate.Application {
+	return predicate.Application(sql.FieldGT(FieldInterviewDate, v))
+}
+
+// InterviewDateGTE applies the GTE predicate on the "interview_date" field.
+func InterviewDateGTE(v time.Time) predicate.Application {
+	return predicate.Application(sql.FieldGTE(FieldInterviewDate, v))
+}
+
+// InterviewDateLT applies the LT predicate on the "interview_date" field.
+func InterviewDateLT(v time.Time) predicate.Application {
+	return predicate.Application(sql.FieldLT(FieldInterviewDate, v))
+}
+
+// InterviewDateLTE applies the LTE predicate on the "interview_date" field.
+func InterviewDateLTE(v time.Time) predicate.Application {
+	return predicate.Application(sql.FieldLTE(FieldInterviewDate, v))
+}
+
+// InterviewDateIsNil applies the IsNil predicate on the "interview_date" field.
+func InterviewDateIsNil() predicate.Application {
+	return predicate.Application(sql.FieldIsNull(FieldInterviewDate))
+}
+
+// InterviewDateNotNil applies the NotNil predicate on the "interview_date" field.
+func InterviewDateNotNil() predicate.Application {
+	return predicate.Application(sql.FieldNotNull(FieldInterviewDate))
+}
+
+// OfferDetailsEQ applies the EQ predicate on the "offer_details" field.
+func OfferDetailsEQ(v string) predicate.Application {
+	return predicate.Application(sql.FieldEQ(FieldOfferDetails, v))
+}
+
+// OfferDetailsNEQ applies the NEQ predicate on the "offer_details" field.
+func OfferDetailsNEQ(v string) predicate.Application {
+	return predicate.Application(sql.FieldNEQ(FieldOfferDetails, v))
+}
+
+// OfferDetailsIn applies the In predicate on the "offer_details" field.
+func OfferDetailsIn(vs ...string) predicate.Application {
+	return predicate.Application(sql.FieldIn(FieldOfferDetails, vs...))
+}
+
+// OfferDetailsNotIn applies the NotIn predicate on the "offer_details" field.
+func OfferDetailsNotIn(vs ...string) predicate.Application {
+	return predicate.Application(sql.FieldNotIn(FieldOfferDetails, vs...))
+}
+
+// OfferDetailsGT applies the GT predicate on the "offer_details" field.
+func OfferDetailsGT(v string) predicate.Application {
+	return predicate.Application(sql.FieldGT(FieldOfferDetails, v))
+}
+
+// OfferDetailsGTE applies the GTE predicate on the "offer_details" field.
+func OfferDetailsGTE(v string) predicate.Application {
+	return predicate.Application(sql.FieldGTE(FieldOfferDetails, v))
+}
+
+// OfferDetailsLT applies the LT predicate on the "offer_details" field.
+func OfferDetailsLT(v string) predicate.Application {
+	return predicate.Application(sql.FieldLT(FieldOfferDetails, v))
+}
+
+// OfferDetailsLTE applies the LTE predicate on the "offer_details" field.
+func OfferDetailsLTE(v string) predicate.Application {
+	return predicate.Application(sql.FieldLTE(FieldOfferDetails, v))
+}
+
+// OfferDetailsContains applies the Contains predicate on the "offer_details" field.
+func OfferDetailsContains(v string) predicate.Application {
+	return predicate.Application(sql.FieldContains(FieldOfferDetails, v))
+}
+
+// OfferDetailsHasPrefix applies the HasPrefix predicate on the "offer_details" field.
+func OfferDetailsHasPrefix(v string) predicate.Application {
+	return predicate.Application(sql.FieldHasPrefix(FieldOfferDetails, v))
+}
+
+// OfferDetailsHasSuffix applies the HasSuffix predicate on the "offer_details" field.
+func OfferDetailsHasSuffix(v string) predicate.Application {
+	return predicate.Application(sql.FieldHasSuffix(FieldOfferDetails, v))
+}
+
+// OfferDetailsIsNil applies the IsNil predicate on the "offer_details" field.
+func OfferDetailsIsNil() predicate.Application {
+	return predicate.Application(sql.FieldIsNull(FieldOfferDetails))
+}
+
+// OfferDetailsNotNil applies the NotNil predicate on the "offer_details" field.
+func OfferDetailsNotNil() predicate.Application {
+	return predicate.Application(sql.FieldNotNull(FieldOfferDetails))
+}
+
+// OfferDetailsEqualFold applies the EqualFold predicate on the "offer_details" field.
+func OfferDetailsEqualFold(v string) predicate.Application {
+	return predicate.Application(sql.FieldEqualFold(FieldOfferDetails, v))
+}
+
+// OfferDetailsContainsFold applies the ContainsFold predicate on the "offer_details" field.
+func OfferDetailsContainsFold(v string) predicate.Application {
+	return predicate.Application(sql.FieldContainsFold(FieldOfferDetails, v))
+}
+
+// RejectionReasonEQ applies the EQ predicate on the "rejection_reason" field.
+func RejectionReasonEQ(v string) predicate.Application {
+	return predicate.Application(sql.FieldEQ(FieldRejectionReason, v))
+}
+
+// RejectionReasonNEQ applies the NEQ predicate on the "rejection_reason" field.
+func RejectionReasonNEQ(v string) predicate.Application {
+	return predicate.Application(sql.FieldNEQ(FieldRejectionReason, v))
+}
+
+// RejectionReasonIn applies the In predicate on the "rejection_reason" field.
+func RejectionReasonIn(vs ...string) predicate.Application {
+	return predicate.Application(sql.FieldIn(FieldRejectionReason, vs...))
+}
+
+// RejectionReasonNotIn applies the NotIn predicate on the "rejection_reason" field.
+func RejectionReasonNotIn(vs ...string) predicate.Application {
+	return predicate.Application(sql.FieldNotIn(FieldRejectionReason, vs...))
+}
+
+// RejectionReasonGT applies the GT predicate on the "rejection_reason" field.
+func RejectionReasonGT(v string) predicate.Application {
+	return predicate.Application(sql.FieldGT(FieldRejectionReason, v))
+}
+
+// RejectionReasonGTE applies the GTE predicate on the "rejection_reason" field.
+func RejectionReasonGTE(v string) predicate.Application {
+	return predicate.Application(sql.FieldGTE(FieldRejectionReason, v))
+}
+
+// RejectionReasonLT applies the LT predicate on the "rejection_reason" field.
+func RejectionReasonLT(v string) predicate.Application {
+	return predicate.Application(sql.FieldLT(FieldRejectionReason, v))
+}
+
+// RejectionReasonLTE applies the LTE predicate on the "rejection_reason" field.
+func RejectionReasonLTE(v string) predicate.Application {
+	return predicate.Application(sql.FieldLTE(FieldRejectionReason, v))
+}
+
+// RejectionReasonContains applies the Contains predicate on the "rejection_reason" field.
+func RejectionReasonContains(v string) predicate.Application {
+	return predicate.Application(sql.FieldContains(FieldRejectionReason, v))
+}
+
+// RejectionReasonHasPrefix applies the HasPrefix predicate on the "rejection_reason" field.
+func RejectionReasonHasPrefix(v string) predicate.Application {
+	return predicate.Application(sql.FieldHasPrefix(FieldRejectionReason, v))
+}
+
+// RejectionReasonHasSuffix applies the HasSuffix predicate on the "rejection_reason" field.
+func RejectionReasonHasSuffix(v string) predicate.Application {
+	return predicate.Application(sql.FieldHasSuffix(FieldRejectionReason, v))
+}
+
+// RejectionReasonIsNil applies the IsNil predicate on the "rejection_reason" field.
+func RejectionReasonIsNil() predicate.Application {
+	return predicate.Application(sql.FieldIsNull(FieldRejectionReason))
+}
+
+// RejectionReasonNotNil applies the NotNil predicate on the "rejection_reason" field.
+func RejectionReasonNotNil() predicate.Application {
+	return predicate.Application(sql.FieldNotNull(FieldRejectionReason))
+}
+
+// RejectionReasonEqualFold applies the EqualFold predicate on the "rejection_reason" field.
+func RejectionReasonEqualFold(v string) predicate.Application {
+	return predicate.Application(sql.FieldEqualFold(FieldRejectionReason, v))
+}
+
+// RejectionReasonContainsFold applies the ContainsFold predicate on the "rejection_reason" field.
+func RejectionReasonContainsFold(v string) predicate.Application {
+	return predicate.Application(sql.FieldContainsFold(FieldRejectionReason, v))
 }
 
 // HiredEmployeeIDEQ applies the EQ predicate on the "hired_employee_id" field.

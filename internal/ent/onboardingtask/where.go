@@ -90,6 +90,11 @@ func AssignedTo(v uuid.UUID) predicate.OnboardingTask {
 	return predicate.OnboardingTask(sql.FieldEQ(FieldAssignedTo, v))
 }
 
+// DueDate applies equality check predicate on the "due_date" field. It's identical to DueDateEQ.
+func DueDate(v time.Time) predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldEQ(FieldDueDate, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.OnboardingTask {
 	return predicate.OnboardingTask(sql.FieldEQ(FieldCreatedAt, v))
@@ -408,6 +413,56 @@ func AssignedToIsNil() predicate.OnboardingTask {
 // AssignedToNotNil applies the NotNil predicate on the "assigned_to" field.
 func AssignedToNotNil() predicate.OnboardingTask {
 	return predicate.OnboardingTask(sql.FieldNotNull(FieldAssignedTo))
+}
+
+// DueDateEQ applies the EQ predicate on the "due_date" field.
+func DueDateEQ(v time.Time) predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldEQ(FieldDueDate, v))
+}
+
+// DueDateNEQ applies the NEQ predicate on the "due_date" field.
+func DueDateNEQ(v time.Time) predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldNEQ(FieldDueDate, v))
+}
+
+// DueDateIn applies the In predicate on the "due_date" field.
+func DueDateIn(vs ...time.Time) predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldIn(FieldDueDate, vs...))
+}
+
+// DueDateNotIn applies the NotIn predicate on the "due_date" field.
+func DueDateNotIn(vs ...time.Time) predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldNotIn(FieldDueDate, vs...))
+}
+
+// DueDateGT applies the GT predicate on the "due_date" field.
+func DueDateGT(v time.Time) predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldGT(FieldDueDate, v))
+}
+
+// DueDateGTE applies the GTE predicate on the "due_date" field.
+func DueDateGTE(v time.Time) predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldGTE(FieldDueDate, v))
+}
+
+// DueDateLT applies the LT predicate on the "due_date" field.
+func DueDateLT(v time.Time) predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldLT(FieldDueDate, v))
+}
+
+// DueDateLTE applies the LTE predicate on the "due_date" field.
+func DueDateLTE(v time.Time) predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldLTE(FieldDueDate, v))
+}
+
+// DueDateIsNil applies the IsNil predicate on the "due_date" field.
+func DueDateIsNil() predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldIsNull(FieldDueDate))
+}
+
+// DueDateNotNil applies the NotNil predicate on the "due_date" field.
+func DueDateNotNil() predicate.OnboardingTask {
+	return predicate.OnboardingTask(sql.FieldNotNull(FieldDueDate))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

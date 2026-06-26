@@ -31,6 +31,10 @@ func (Application) Fields() []ent.Field {
 		// Applicant-provided motivation + how they reached us (public careers portal sets these).
 		field.Text("cover_letter").Optional().Nillable(),
 		field.String("source").Optional().Nillable().Comment("careers_portal | referral | direct | agency"),
+		// Hiring-pipeline context captured at each stage transition.
+		field.Time("interview_date").Optional().Nillable(),
+		field.Text("offer_details").Optional().Nillable().Comment("Salary/start-date/terms summary recorded at offer"),
+		field.String("rejection_reason").Optional().Nillable(),
 		field.UUID("hired_employee_id", uuid.UUID{}).Optional().Nillable().
 			Comment("Employee created on hire (links recruitment -> onboarding)"),
 		field.Time("created_at").Default(time.Now).Immutable(),

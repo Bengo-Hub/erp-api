@@ -160,6 +160,26 @@ func (_u *OnboardingTaskUpdate) ClearAssignedTo() *OnboardingTaskUpdate {
 	return _u
 }
 
+// SetDueDate sets the "due_date" field.
+func (_u *OnboardingTaskUpdate) SetDueDate(v time.Time) *OnboardingTaskUpdate {
+	_u.mutation.SetDueDate(v)
+	return _u
+}
+
+// SetNillableDueDate sets the "due_date" field if the given value is not nil.
+func (_u *OnboardingTaskUpdate) SetNillableDueDate(v *time.Time) *OnboardingTaskUpdate {
+	if v != nil {
+		_u.SetDueDate(*v)
+	}
+	return _u
+}
+
+// ClearDueDate clears the value of the "due_date" field.
+func (_u *OnboardingTaskUpdate) ClearDueDate() *OnboardingTaskUpdate {
+	_u.mutation.ClearDueDate()
+	return _u
+}
+
 // Mutation returns the OnboardingTaskMutation object of the builder.
 func (_u *OnboardingTaskUpdate) Mutation() *OnboardingTaskMutation {
 	return _u.mutation
@@ -246,6 +266,12 @@ func (_u *OnboardingTaskUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if _u.mutation.AssignedToCleared() {
 		_spec.ClearField(onboardingtask.FieldAssignedTo, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.DueDate(); ok {
+		_spec.SetField(onboardingtask.FieldDueDate, field.TypeTime, value)
+	}
+	if _u.mutation.DueDateCleared() {
+		_spec.ClearField(onboardingtask.FieldDueDate, field.TypeTime)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -398,6 +424,26 @@ func (_u *OnboardingTaskUpdateOne) ClearAssignedTo() *OnboardingTaskUpdateOne {
 	return _u
 }
 
+// SetDueDate sets the "due_date" field.
+func (_u *OnboardingTaskUpdateOne) SetDueDate(v time.Time) *OnboardingTaskUpdateOne {
+	_u.mutation.SetDueDate(v)
+	return _u
+}
+
+// SetNillableDueDate sets the "due_date" field if the given value is not nil.
+func (_u *OnboardingTaskUpdateOne) SetNillableDueDate(v *time.Time) *OnboardingTaskUpdateOne {
+	if v != nil {
+		_u.SetDueDate(*v)
+	}
+	return _u
+}
+
+// ClearDueDate clears the value of the "due_date" field.
+func (_u *OnboardingTaskUpdateOne) ClearDueDate() *OnboardingTaskUpdateOne {
+	_u.mutation.ClearDueDate()
+	return _u
+}
+
 // Mutation returns the OnboardingTaskMutation object of the builder.
 func (_u *OnboardingTaskUpdateOne) Mutation() *OnboardingTaskMutation {
 	return _u.mutation
@@ -514,6 +560,12 @@ func (_u *OnboardingTaskUpdateOne) sqlSave(ctx context.Context) (_node *Onboardi
 	}
 	if _u.mutation.AssignedToCleared() {
 		_spec.ClearField(onboardingtask.FieldAssignedTo, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.DueDate(); ok {
+		_spec.SetField(onboardingtask.FieldDueDate, field.TypeTime, value)
+	}
+	if _u.mutation.DueDateCleared() {
+		_spec.ClearField(onboardingtask.FieldDueDate, field.TypeTime)
 	}
 	_node = &OnboardingTask{config: _u.config}
 	_spec.Assign = _node.assignValues

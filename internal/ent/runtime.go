@@ -191,11 +191,11 @@ func init() {
 	// application.DefaultAppliedAt holds the default value on creation for the applied_at field.
 	application.DefaultAppliedAt = applicationDescAppliedAt.Default.(func() time.Time)
 	// applicationDescCreatedAt is the schema descriptor for created_at field.
-	applicationDescCreatedAt := applicationFields[10].Descriptor()
+	applicationDescCreatedAt := applicationFields[13].Descriptor()
 	// application.DefaultCreatedAt holds the default value on creation for the created_at field.
 	application.DefaultCreatedAt = applicationDescCreatedAt.Default.(func() time.Time)
 	// applicationDescUpdatedAt is the schema descriptor for updated_at field.
-	applicationDescUpdatedAt := applicationFields[11].Descriptor()
+	applicationDescUpdatedAt := applicationFields[14].Descriptor()
 	// application.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	application.DefaultUpdatedAt = applicationDescUpdatedAt.Default.(func() time.Time)
 	// application.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1723,7 +1723,7 @@ func init() {
 	// onboardingtask.DefaultIsDone holds the default value on creation for the is_done field.
 	onboardingtask.DefaultIsDone = onboardingtaskDescIsDone.Default.(bool)
 	// onboardingtaskDescCreatedAt is the schema descriptor for created_at field.
-	onboardingtaskDescCreatedAt := onboardingtaskFields[9].Descriptor()
+	onboardingtaskDescCreatedAt := onboardingtaskFields[10].Descriptor()
 	// onboardingtask.DefaultCreatedAt holds the default value on creation for the created_at field.
 	onboardingtask.DefaultCreatedAt = onboardingtaskDescCreatedAt.Default.(func() time.Time)
 	// onboardingtaskDescID is the schema descriptor for id field.

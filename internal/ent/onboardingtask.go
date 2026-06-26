@@ -34,6 +34,8 @@ type OnboardingTask struct {
 	DoneAt *time.Time `json:"done_at,omitempty"`
 	// AssignedTo holds the value of the "assigned_to" field.
 	AssignedTo *uuid.UUID `json:"assigned_to,omitempty"`
+	// Target completion date (drives overdue flagging)
+	DueDate *time.Time `json:"due_date,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt    time.Time `json:"created_at,omitempty"`
 	selectValues sql.SelectValues
@@ -52,7 +54,7 @@ func (*OnboardingTask) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case onboardingtask.FieldCategory, onboardingtask.FieldTitle:
 			values[i] = new(sql.NullString)
-		case onboardingtask.FieldDoneAt, onboardingtask.FieldCreatedAt:
+		case onboardingtask.FieldDoneAt, onboardingtask.FieldDueDate, onboardingtask.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
 		case onboardingtask.FieldID, onboardingtask.FieldTenantID, onboardingtask.FieldOnboardingID:
 			values[i] = new(uuid.UUID)
@@ -127,6 +129,13 @@ func (_m *OnboardingTask) assignValues(columns []string, values []any) error {
 				_m.AssignedTo = new(uuid.UUID)
 				*_m.AssignedTo = *value.S.(*uuid.UUID)
 			}
+		case onboardingtask.FieldDueDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field due_date", values[i])
+			} else if value.Valid {
+				_m.DueDate = new(time.Time)
+				*_m.DueDate = value.Time
+			}
 		case onboardingtask.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -195,6 +204,11 @@ func (_m *OnboardingTask) String() string {
 	if v := _m.AssignedTo; v != nil {
 		builder.WriteString("assigned_to=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.DueDate; v != nil {
+		builder.WriteString("due_date=")
+		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")

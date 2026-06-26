@@ -2605,6 +2605,9 @@ type ApplicationMutation struct {
 	notes             *string
 	cover_letter      *string
 	source            *string
+	interview_date    *time.Time
+	offer_details     *string
+	rejection_reason  *string
 	hired_employee_id *uuid.UUID
 	created_at        *time.Time
 	updated_at        *time.Time
@@ -3045,6 +3048,153 @@ func (m *ApplicationMutation) ResetSource() {
 	delete(m.clearedFields, application.FieldSource)
 }
 
+// SetInterviewDate sets the "interview_date" field.
+func (m *ApplicationMutation) SetInterviewDate(t time.Time) {
+	m.interview_date = &t
+}
+
+// InterviewDate returns the value of the "interview_date" field in the mutation.
+func (m *ApplicationMutation) InterviewDate() (r time.Time, exists bool) {
+	v := m.interview_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInterviewDate returns the old "interview_date" field's value of the Application entity.
+// If the Application object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ApplicationMutation) OldInterviewDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInterviewDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInterviewDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInterviewDate: %w", err)
+	}
+	return oldValue.InterviewDate, nil
+}
+
+// ClearInterviewDate clears the value of the "interview_date" field.
+func (m *ApplicationMutation) ClearInterviewDate() {
+	m.interview_date = nil
+	m.clearedFields[application.FieldInterviewDate] = struct{}{}
+}
+
+// InterviewDateCleared returns if the "interview_date" field was cleared in this mutation.
+func (m *ApplicationMutation) InterviewDateCleared() bool {
+	_, ok := m.clearedFields[application.FieldInterviewDate]
+	return ok
+}
+
+// ResetInterviewDate resets all changes to the "interview_date" field.
+func (m *ApplicationMutation) ResetInterviewDate() {
+	m.interview_date = nil
+	delete(m.clearedFields, application.FieldInterviewDate)
+}
+
+// SetOfferDetails sets the "offer_details" field.
+func (m *ApplicationMutation) SetOfferDetails(s string) {
+	m.offer_details = &s
+}
+
+// OfferDetails returns the value of the "offer_details" field in the mutation.
+func (m *ApplicationMutation) OfferDetails() (r string, exists bool) {
+	v := m.offer_details
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOfferDetails returns the old "offer_details" field's value of the Application entity.
+// If the Application object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ApplicationMutation) OldOfferDetails(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOfferDetails is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOfferDetails requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOfferDetails: %w", err)
+	}
+	return oldValue.OfferDetails, nil
+}
+
+// ClearOfferDetails clears the value of the "offer_details" field.
+func (m *ApplicationMutation) ClearOfferDetails() {
+	m.offer_details = nil
+	m.clearedFields[application.FieldOfferDetails] = struct{}{}
+}
+
+// OfferDetailsCleared returns if the "offer_details" field was cleared in this mutation.
+func (m *ApplicationMutation) OfferDetailsCleared() bool {
+	_, ok := m.clearedFields[application.FieldOfferDetails]
+	return ok
+}
+
+// ResetOfferDetails resets all changes to the "offer_details" field.
+func (m *ApplicationMutation) ResetOfferDetails() {
+	m.offer_details = nil
+	delete(m.clearedFields, application.FieldOfferDetails)
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (m *ApplicationMutation) SetRejectionReason(s string) {
+	m.rejection_reason = &s
+}
+
+// RejectionReason returns the value of the "rejection_reason" field in the mutation.
+func (m *ApplicationMutation) RejectionReason() (r string, exists bool) {
+	v := m.rejection_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRejectionReason returns the old "rejection_reason" field's value of the Application entity.
+// If the Application object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ApplicationMutation) OldRejectionReason(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRejectionReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRejectionReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRejectionReason: %w", err)
+	}
+	return oldValue.RejectionReason, nil
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (m *ApplicationMutation) ClearRejectionReason() {
+	m.rejection_reason = nil
+	m.clearedFields[application.FieldRejectionReason] = struct{}{}
+}
+
+// RejectionReasonCleared returns if the "rejection_reason" field was cleared in this mutation.
+func (m *ApplicationMutation) RejectionReasonCleared() bool {
+	_, ok := m.clearedFields[application.FieldRejectionReason]
+	return ok
+}
+
+// ResetRejectionReason resets all changes to the "rejection_reason" field.
+func (m *ApplicationMutation) ResetRejectionReason() {
+	m.rejection_reason = nil
+	delete(m.clearedFields, application.FieldRejectionReason)
+}
+
 // SetHiredEmployeeID sets the "hired_employee_id" field.
 func (m *ApplicationMutation) SetHiredEmployeeID(u uuid.UUID) {
 	m.hired_employee_id = &u
@@ -3200,7 +3350,7 @@ func (m *ApplicationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ApplicationMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 14)
 	if m.tenant_id != nil {
 		fields = append(fields, application.FieldTenantID)
 	}
@@ -3224,6 +3374,15 @@ func (m *ApplicationMutation) Fields() []string {
 	}
 	if m.source != nil {
 		fields = append(fields, application.FieldSource)
+	}
+	if m.interview_date != nil {
+		fields = append(fields, application.FieldInterviewDate)
+	}
+	if m.offer_details != nil {
+		fields = append(fields, application.FieldOfferDetails)
+	}
+	if m.rejection_reason != nil {
+		fields = append(fields, application.FieldRejectionReason)
 	}
 	if m.hired_employee_id != nil {
 		fields = append(fields, application.FieldHiredEmployeeID)
@@ -3258,6 +3417,12 @@ func (m *ApplicationMutation) Field(name string) (ent.Value, bool) {
 		return m.CoverLetter()
 	case application.FieldSource:
 		return m.Source()
+	case application.FieldInterviewDate:
+		return m.InterviewDate()
+	case application.FieldOfferDetails:
+		return m.OfferDetails()
+	case application.FieldRejectionReason:
+		return m.RejectionReason()
 	case application.FieldHiredEmployeeID:
 		return m.HiredEmployeeID()
 	case application.FieldCreatedAt:
@@ -3289,6 +3454,12 @@ func (m *ApplicationMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldCoverLetter(ctx)
 	case application.FieldSource:
 		return m.OldSource(ctx)
+	case application.FieldInterviewDate:
+		return m.OldInterviewDate(ctx)
+	case application.FieldOfferDetails:
+		return m.OldOfferDetails(ctx)
+	case application.FieldRejectionReason:
+		return m.OldRejectionReason(ctx)
 	case application.FieldHiredEmployeeID:
 		return m.OldHiredEmployeeID(ctx)
 	case application.FieldCreatedAt:
@@ -3360,6 +3531,27 @@ func (m *ApplicationMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSource(v)
 		return nil
+	case application.FieldInterviewDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInterviewDate(v)
+		return nil
+	case application.FieldOfferDetails:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOfferDetails(v)
+		return nil
+	case application.FieldRejectionReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRejectionReason(v)
+		return nil
 	case application.FieldHiredEmployeeID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
@@ -3420,6 +3612,15 @@ func (m *ApplicationMutation) ClearedFields() []string {
 	if m.FieldCleared(application.FieldSource) {
 		fields = append(fields, application.FieldSource)
 	}
+	if m.FieldCleared(application.FieldInterviewDate) {
+		fields = append(fields, application.FieldInterviewDate)
+	}
+	if m.FieldCleared(application.FieldOfferDetails) {
+		fields = append(fields, application.FieldOfferDetails)
+	}
+	if m.FieldCleared(application.FieldRejectionReason) {
+		fields = append(fields, application.FieldRejectionReason)
+	}
 	if m.FieldCleared(application.FieldHiredEmployeeID) {
 		fields = append(fields, application.FieldHiredEmployeeID)
 	}
@@ -3445,6 +3646,15 @@ func (m *ApplicationMutation) ClearField(name string) error {
 		return nil
 	case application.FieldSource:
 		m.ClearSource()
+		return nil
+	case application.FieldInterviewDate:
+		m.ClearInterviewDate()
+		return nil
+	case application.FieldOfferDetails:
+		m.ClearOfferDetails()
+		return nil
+	case application.FieldRejectionReason:
+		m.ClearRejectionReason()
 		return nil
 	case application.FieldHiredEmployeeID:
 		m.ClearHiredEmployeeID()
@@ -3480,6 +3690,15 @@ func (m *ApplicationMutation) ResetField(name string) error {
 		return nil
 	case application.FieldSource:
 		m.ResetSource()
+		return nil
+	case application.FieldInterviewDate:
+		m.ResetInterviewDate()
+		return nil
+	case application.FieldOfferDetails:
+		m.ResetOfferDetails()
+		return nil
+	case application.FieldRejectionReason:
+		m.ResetRejectionReason()
 		return nil
 	case application.FieldHiredEmployeeID:
 		m.ResetHiredEmployeeID()
@@ -58435,6 +58654,7 @@ type OnboardingTaskMutation struct {
 	is_done       *bool
 	done_at       *time.Time
 	assigned_to   *uuid.UUID
+	due_date      *time.Time
 	created_at    *time.Time
 	clearedFields map[string]struct{}
 	done          bool
@@ -58880,6 +59100,55 @@ func (m *OnboardingTaskMutation) ResetAssignedTo() {
 	delete(m.clearedFields, onboardingtask.FieldAssignedTo)
 }
 
+// SetDueDate sets the "due_date" field.
+func (m *OnboardingTaskMutation) SetDueDate(t time.Time) {
+	m.due_date = &t
+}
+
+// DueDate returns the value of the "due_date" field in the mutation.
+func (m *OnboardingTaskMutation) DueDate() (r time.Time, exists bool) {
+	v := m.due_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDueDate returns the old "due_date" field's value of the OnboardingTask entity.
+// If the OnboardingTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OnboardingTaskMutation) OldDueDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDueDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDueDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDueDate: %w", err)
+	}
+	return oldValue.DueDate, nil
+}
+
+// ClearDueDate clears the value of the "due_date" field.
+func (m *OnboardingTaskMutation) ClearDueDate() {
+	m.due_date = nil
+	m.clearedFields[onboardingtask.FieldDueDate] = struct{}{}
+}
+
+// DueDateCleared returns if the "due_date" field was cleared in this mutation.
+func (m *OnboardingTaskMutation) DueDateCleared() bool {
+	_, ok := m.clearedFields[onboardingtask.FieldDueDate]
+	return ok
+}
+
+// ResetDueDate resets all changes to the "due_date" field.
+func (m *OnboardingTaskMutation) ResetDueDate() {
+	m.due_date = nil
+	delete(m.clearedFields, onboardingtask.FieldDueDate)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *OnboardingTaskMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -58950,7 +59219,7 @@ func (m *OnboardingTaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *OnboardingTaskMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.tenant_id != nil {
 		fields = append(fields, onboardingtask.FieldTenantID)
 	}
@@ -58974,6 +59243,9 @@ func (m *OnboardingTaskMutation) Fields() []string {
 	}
 	if m.assigned_to != nil {
 		fields = append(fields, onboardingtask.FieldAssignedTo)
+	}
+	if m.due_date != nil {
+		fields = append(fields, onboardingtask.FieldDueDate)
 	}
 	if m.created_at != nil {
 		fields = append(fields, onboardingtask.FieldCreatedAt)
@@ -59002,6 +59274,8 @@ func (m *OnboardingTaskMutation) Field(name string) (ent.Value, bool) {
 		return m.DoneAt()
 	case onboardingtask.FieldAssignedTo:
 		return m.AssignedTo()
+	case onboardingtask.FieldDueDate:
+		return m.DueDate()
 	case onboardingtask.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -59029,6 +59303,8 @@ func (m *OnboardingTaskMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldDoneAt(ctx)
 	case onboardingtask.FieldAssignedTo:
 		return m.OldAssignedTo(ctx)
+	case onboardingtask.FieldDueDate:
+		return m.OldDueDate(ctx)
 	case onboardingtask.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -59096,6 +59372,13 @@ func (m *OnboardingTaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAssignedTo(v)
 		return nil
+	case onboardingtask.FieldDueDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDueDate(v)
+		return nil
 	case onboardingtask.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -59154,6 +59437,9 @@ func (m *OnboardingTaskMutation) ClearedFields() []string {
 	if m.FieldCleared(onboardingtask.FieldAssignedTo) {
 		fields = append(fields, onboardingtask.FieldAssignedTo)
 	}
+	if m.FieldCleared(onboardingtask.FieldDueDate) {
+		fields = append(fields, onboardingtask.FieldDueDate)
+	}
 	return fields
 }
 
@@ -59173,6 +59459,9 @@ func (m *OnboardingTaskMutation) ClearField(name string) error {
 		return nil
 	case onboardingtask.FieldAssignedTo:
 		m.ClearAssignedTo()
+		return nil
+	case onboardingtask.FieldDueDate:
+		m.ClearDueDate()
 		return nil
 	}
 	return fmt.Errorf("unknown OnboardingTask nullable field %s", name)
@@ -59205,6 +59494,9 @@ func (m *OnboardingTaskMutation) ResetField(name string) error {
 		return nil
 	case onboardingtask.FieldAssignedTo:
 		m.ResetAssignedTo()
+		return nil
+	case onboardingtask.FieldDueDate:
+		m.ResetDueDate()
 		return nil
 	case onboardingtask.FieldCreatedAt:
 		m.ResetCreatedAt()

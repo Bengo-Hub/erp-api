@@ -49,7 +49,9 @@ func (h *RecruitmentHandler) RegisterRoutes(r chi.Router) {
 		rr.Get("/onboarding", h.ListOnboardings)
 		rr.Post("/onboarding", h.StartOnboarding)
 		rr.Get("/onboarding/{id}/tasks", h.ListTasks)
+		rr.Post("/onboarding/{id}/tasks", h.AddTask)
 		rr.Put("/onboarding/tasks/{taskID}/complete", h.CompleteTask)
+		rr.Put("/onboarding/tasks/{taskID}", h.UpdateTask)
 	})
 }
 
@@ -300,8 +302,21 @@ func (h *RecruitmentHandler) CreateApplication(w http.ResponseWriter, r *http.Re
 }
 
 type transitionBody struct {
-	Status         string `json:"status"`
-	CreateEmployee bool   `json:"create_employee"`
+	Status          string `json:"status"`
+	CreateEmployee  bool   `json:"create_employee"`
+	InterviewDate   string `json:"interview_date"`
+	OfferDetails    string `json:"offer_details"`
+	RejectionReason string `json:"rejection_reason"`
+}
+
+func (b transitionBody) meta() recruitment.TransitionMeta {
+	m := recruitment.TransitionMeta{OfferDetails: b.OfferDetails, RejectionReason: b.RejectionReason}
+	if b.InterviewDate != "" {
+		if t, err := time.Parse("2006-01-02", b.InterviewDate); err == nil {
+			m.InterviewDate = &t
+		}
+	}
+	return m
 }
 
 func (h *RecruitmentHandler) TransitionApplication(w http.ResponseWriter, r *http.Request) {
@@ -319,7 +334,7 @@ func (h *RecruitmentHandler) TransitionApplication(w http.ResponseWriter, r *htt
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	res, err := h.svc.Transition(r.Context(), scope.TenantID, id, b.Status, b.CreateEmployee)
+	res, err := h.svc.Transition(r.Context(), scope.TenantID, id, b.Status, b.CreateEmployee, b.meta())
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "transition_failed", err.Error())
 		return
@@ -418,4 +433,73 @@ func (h *RecruitmentHandler) CompleteTask(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, row)
+}
+
+type updateTaskBody struct {
+	AssignedTo string `json:"assigned_to"`
+	DueDate    string `json:"due_date"`
+}
+
+// UpdateTask sets a task's assignee and/or due date.
+func (h *RecruitmentHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permRecruitmentManage) {
+		return
+	}
+	taskID, err := uuid.Parse(chi.URLParam(r, "taskID"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid task id")
+		return
+	}
+	var b updateTaskBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	var in recruitment.TaskUpdate
+	if b.AssignedTo != "" {
+		if id, e := uuid.Parse(b.AssignedTo); e == nil {
+			in.AssignedTo = &id
+		}
+	}
+	if b.DueDate == "" {
+		in.ClearDue = true
+	} else if t, e := time.Parse("2006-01-02", b.DueDate); e == nil {
+		in.DueDate = &t
+	}
+	row, err := h.svc.UpdateTask(r.Context(), scope.TenantID, taskID, in)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+type addTaskBody struct {
+	Category string `json:"category"`
+	Title    string `json:"title"`
+}
+
+// AddTask appends a custom task to an onboarding checklist.
+func (h *RecruitmentHandler) AddTask(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permRecruitmentManage) {
+		return
+	}
+	onboardingID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var b addTaskBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	row, err := h.svc.AddTask(r.Context(), scope.TenantID, onboardingID, b.Category, b.Title)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "add_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, row)
 }

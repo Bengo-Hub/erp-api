@@ -31,6 +31,8 @@ const (
 	FieldDoneAt = "done_at"
 	// FieldAssignedTo holds the string denoting the assigned_to field in the database.
 	FieldAssignedTo = "assigned_to"
+	// FieldDueDate holds the string denoting the due_date field in the database.
+	FieldDueDate = "due_date"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// Table holds the table name of the onboardingtask in the database.
@@ -48,6 +50,7 @@ var Columns = []string{
 	FieldIsDone,
 	FieldDoneAt,
 	FieldAssignedTo,
+	FieldDueDate,
 	FieldCreatedAt,
 }
 
@@ -146,6 +149,11 @@ func ByDoneAt(opts ...sql.OrderTermOption) OrderOption {
 // ByAssignedTo orders the results by the assigned_to field.
 func ByAssignedTo(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAssignedTo, opts...).ToFunc()
+}
+
+// ByDueDate orders the results by the due_date field.
+func ByDueDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDueDate, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

@@ -159,6 +159,66 @@ func (_u *ApplicationUpdate) ClearSource() *ApplicationUpdate {
 	return _u
 }
 
+// SetInterviewDate sets the "interview_date" field.
+func (_u *ApplicationUpdate) SetInterviewDate(v time.Time) *ApplicationUpdate {
+	_u.mutation.SetInterviewDate(v)
+	return _u
+}
+
+// SetNillableInterviewDate sets the "interview_date" field if the given value is not nil.
+func (_u *ApplicationUpdate) SetNillableInterviewDate(v *time.Time) *ApplicationUpdate {
+	if v != nil {
+		_u.SetInterviewDate(*v)
+	}
+	return _u
+}
+
+// ClearInterviewDate clears the value of the "interview_date" field.
+func (_u *ApplicationUpdate) ClearInterviewDate() *ApplicationUpdate {
+	_u.mutation.ClearInterviewDate()
+	return _u
+}
+
+// SetOfferDetails sets the "offer_details" field.
+func (_u *ApplicationUpdate) SetOfferDetails(v string) *ApplicationUpdate {
+	_u.mutation.SetOfferDetails(v)
+	return _u
+}
+
+// SetNillableOfferDetails sets the "offer_details" field if the given value is not nil.
+func (_u *ApplicationUpdate) SetNillableOfferDetails(v *string) *ApplicationUpdate {
+	if v != nil {
+		_u.SetOfferDetails(*v)
+	}
+	return _u
+}
+
+// ClearOfferDetails clears the value of the "offer_details" field.
+func (_u *ApplicationUpdate) ClearOfferDetails() *ApplicationUpdate {
+	_u.mutation.ClearOfferDetails()
+	return _u
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (_u *ApplicationUpdate) SetRejectionReason(v string) *ApplicationUpdate {
+	_u.mutation.SetRejectionReason(v)
+	return _u
+}
+
+// SetNillableRejectionReason sets the "rejection_reason" field if the given value is not nil.
+func (_u *ApplicationUpdate) SetNillableRejectionReason(v *string) *ApplicationUpdate {
+	if v != nil {
+		_u.SetRejectionReason(*v)
+	}
+	return _u
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (_u *ApplicationUpdate) ClearRejectionReason() *ApplicationUpdate {
+	_u.mutation.ClearRejectionReason()
+	return _u
+}
+
 // SetHiredEmployeeID sets the "hired_employee_id" field.
 func (_u *ApplicationUpdate) SetHiredEmployeeID(v uuid.UUID) *ApplicationUpdate {
 	_u.mutation.SetHiredEmployeeID(v)
@@ -280,6 +340,24 @@ func (_u *ApplicationUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if _u.mutation.SourceCleared() {
 		_spec.ClearField(application.FieldSource, field.TypeString)
+	}
+	if value, ok := _u.mutation.InterviewDate(); ok {
+		_spec.SetField(application.FieldInterviewDate, field.TypeTime, value)
+	}
+	if _u.mutation.InterviewDateCleared() {
+		_spec.ClearField(application.FieldInterviewDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.OfferDetails(); ok {
+		_spec.SetField(application.FieldOfferDetails, field.TypeString, value)
+	}
+	if _u.mutation.OfferDetailsCleared() {
+		_spec.ClearField(application.FieldOfferDetails, field.TypeString)
+	}
+	if value, ok := _u.mutation.RejectionReason(); ok {
+		_spec.SetField(application.FieldRejectionReason, field.TypeString, value)
+	}
+	if _u.mutation.RejectionReasonCleared() {
+		_spec.ClearField(application.FieldRejectionReason, field.TypeString)
 	}
 	if value, ok := _u.mutation.HiredEmployeeID(); ok {
 		_spec.SetField(application.FieldHiredEmployeeID, field.TypeUUID, value)
@@ -440,6 +518,66 @@ func (_u *ApplicationUpdateOne) ClearSource() *ApplicationUpdateOne {
 	return _u
 }
 
+// SetInterviewDate sets the "interview_date" field.
+func (_u *ApplicationUpdateOne) SetInterviewDate(v time.Time) *ApplicationUpdateOne {
+	_u.mutation.SetInterviewDate(v)
+	return _u
+}
+
+// SetNillableInterviewDate sets the "interview_date" field if the given value is not nil.
+func (_u *ApplicationUpdateOne) SetNillableInterviewDate(v *time.Time) *ApplicationUpdateOne {
+	if v != nil {
+		_u.SetInterviewDate(*v)
+	}
+	return _u
+}
+
+// ClearInterviewDate clears the value of the "interview_date" field.
+func (_u *ApplicationUpdateOne) ClearInterviewDate() *ApplicationUpdateOne {
+	_u.mutation.ClearInterviewDate()
+	return _u
+}
+
+// SetOfferDetails sets the "offer_details" field.
+func (_u *ApplicationUpdateOne) SetOfferDetails(v string) *ApplicationUpdateOne {
+	_u.mutation.SetOfferDetails(v)
+	return _u
+}
+
+// SetNillableOfferDetails sets the "offer_details" field if the given value is not nil.
+func (_u *ApplicationUpdateOne) SetNillableOfferDetails(v *string) *ApplicationUpdateOne {
+	if v != nil {
+		_u.SetOfferDetails(*v)
+	}
+	return _u
+}
+
+// ClearOfferDetails clears the value of the "offer_details" field.
+func (_u *ApplicationUpdateOne) ClearOfferDetails() *ApplicationUpdateOne {
+	_u.mutation.ClearOfferDetails()
+	return _u
+}
+
+// SetRejectionReason sets the "rejection_reason" field.
+func (_u *ApplicationUpdateOne) SetRejectionReason(v string) *ApplicationUpdateOne {
+	_u.mutation.SetRejectionReason(v)
+	return _u
+}
+
+// SetNillableRejectionReason sets the "rejection_reason" field if the given value is not nil.
+func (_u *ApplicationUpdateOne) SetNillableRejectionReason(v *string) *ApplicationUpdateOne {
+	if v != nil {
+		_u.SetRejectionReason(*v)
+	}
+	return _u
+}
+
+// ClearRejectionReason clears the value of the "rejection_reason" field.
+func (_u *ApplicationUpdateOne) ClearRejectionReason() *ApplicationUpdateOne {
+	_u.mutation.ClearRejectionReason()
+	return _u
+}
+
 // SetHiredEmployeeID sets the "hired_employee_id" field.
 func (_u *ApplicationUpdateOne) SetHiredEmployeeID(v uuid.UUID) *ApplicationUpdateOne {
 	_u.mutation.SetHiredEmployeeID(v)
@@ -591,6 +729,24 @@ func (_u *ApplicationUpdateOne) sqlSave(ctx context.Context) (_node *Application
 	}
 	if _u.mutation.SourceCleared() {
 		_spec.ClearField(application.FieldSource, field.TypeString)
+	}
+	if value, ok := _u.mutation.InterviewDate(); ok {
+		_spec.SetField(application.FieldInterviewDate, field.TypeTime, value)
+	}
+	if _u.mutation.InterviewDateCleared() {
+		_spec.ClearField(application.FieldInterviewDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.OfferDetails(); ok {
+		_spec.SetField(application.FieldOfferDetails, field.TypeString, value)
+	}
+	if _u.mutation.OfferDetailsCleared() {
+		_spec.ClearField(application.FieldOfferDetails, field.TypeString)
+	}
+	if value, ok := _u.mutation.RejectionReason(); ok {
+		_spec.SetField(application.FieldRejectionReason, field.TypeString, value)
+	}
+	if _u.mutation.RejectionReasonCleared() {
+		_spec.ClearField(application.FieldRejectionReason, field.TypeString)
 	}
 	if value, ok := _u.mutation.HiredEmployeeID(); ok {
 		_spec.SetField(application.FieldHiredEmployeeID, field.TypeUUID, value)
