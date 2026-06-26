@@ -9,7 +9,11 @@ package treasury
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -33,8 +37,10 @@ type Payout struct {
 // service client for resilience (retry/circuit-breaker) and header propagation.
 type Client struct {
 	apiKey  string
+	baseURL string
 	enabled bool
 	sc      *serviceclient.Client
+	httpc   *http.Client
 	log     *zap.Logger
 }
 
@@ -52,10 +58,50 @@ func NewClient(baseURL, apiKey string, log *zap.Logger) *Client {
 	}
 	return &Client{
 		apiKey:  apiKey,
+		baseURL: baseURL,
 		enabled: enabled,
 		sc:      sc,
+		httpc:   &http.Client{Timeout: 10 * time.Second},
 		log:     log,
 	}
+}
+
+// ListBanks proxies the treasury S2S Paystack bank list for a country (raw JSON passthrough).
+func (c *Client) ListBanks(ctx context.Context, tenantID uuid.UUID, country string) (json.RawMessage, error) {
+	if !c.enabled {
+		return nil, fmt.Errorf("treasury client not configured")
+	}
+	if country == "" {
+		country = "kenya"
+	}
+	return c.getRaw(ctx, fmt.Sprintf("%s/api/v1/s2s/%s/gateways/banks/%s", c.baseURL, tenantID.String(), country))
+}
+
+// ResolveAccount proxies the treasury S2S Paystack account name-enquiry (raw JSON passthrough).
+func (c *Client) ResolveAccount(ctx context.Context, tenantID uuid.UUID, accountNumber, bankCode string) (json.RawMessage, error) {
+	if !c.enabled {
+		return nil, fmt.Errorf("treasury client not configured")
+	}
+	return c.getRaw(ctx, fmt.Sprintf("%s/api/v1/s2s/%s/gateways/resolve-account?account_number=%s&bank_code=%s",
+		c.baseURL, tenantID.String(), url.QueryEscape(accountNumber), url.QueryEscape(bankCode)))
+}
+
+func (c *Client) getRaw(ctx context.Context, fullURL string) (json.RawMessage, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-API-Key", c.apiKey)
+	resp, err := c.httpc.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("treasury: %s status %d", fullURL, resp.StatusCode)
+	}
+	return json.RawMessage(body), nil
 }
 
 // Enabled reports whether the client is configured for S2S calls.
