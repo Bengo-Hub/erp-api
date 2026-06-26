@@ -252,6 +252,34 @@ func (_u *CompanySettingsUpdate) SetNillableTimezone(v *string) *CompanySettings
 	return _u
 }
 
+// SetDateFormat sets the "date_format" field.
+func (_u *CompanySettingsUpdate) SetDateFormat(v string) *CompanySettingsUpdate {
+	_u.mutation.SetDateFormat(v)
+	return _u
+}
+
+// SetNillableDateFormat sets the "date_format" field if the given value is not nil.
+func (_u *CompanySettingsUpdate) SetNillableDateFormat(v *string) *CompanySettingsUpdate {
+	if v != nil {
+		_u.SetDateFormat(*v)
+	}
+	return _u
+}
+
+// SetTimeFormat sets the "time_format" field.
+func (_u *CompanySettingsUpdate) SetTimeFormat(v string) *CompanySettingsUpdate {
+	_u.mutation.SetTimeFormat(v)
+	return _u
+}
+
+// SetNillableTimeFormat sets the "time_format" field if the given value is not nil.
+func (_u *CompanySettingsUpdate) SetNillableTimeFormat(v *string) *CompanySettingsUpdate {
+	if v != nil {
+		_u.SetTimeFormat(*v)
+	}
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *CompanySettingsUpdate) SetUpdatedAt(v time.Time) *CompanySettingsUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -370,6 +398,12 @@ func (_u *CompanySettingsUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if value, ok := _u.mutation.Timezone(); ok {
 		_spec.SetField(companysettings.FieldTimezone, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.DateFormat(); ok {
+		_spec.SetField(companysettings.FieldDateFormat, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.TimeFormat(); ok {
+		_spec.SetField(companysettings.FieldTimeFormat, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(companysettings.FieldUpdatedAt, field.TypeTime, value)
@@ -617,6 +651,34 @@ func (_u *CompanySettingsUpdateOne) SetNillableTimezone(v *string) *CompanySetti
 	return _u
 }
 
+// SetDateFormat sets the "date_format" field.
+func (_u *CompanySettingsUpdateOne) SetDateFormat(v string) *CompanySettingsUpdateOne {
+	_u.mutation.SetDateFormat(v)
+	return _u
+}
+
+// SetNillableDateFormat sets the "date_format" field if the given value is not nil.
+func (_u *CompanySettingsUpdateOne) SetNillableDateFormat(v *string) *CompanySettingsUpdateOne {
+	if v != nil {
+		_u.SetDateFormat(*v)
+	}
+	return _u
+}
+
+// SetTimeFormat sets the "time_format" field.
+func (_u *CompanySettingsUpdateOne) SetTimeFormat(v string) *CompanySettingsUpdateOne {
+	_u.mutation.SetTimeFormat(v)
+	return _u
+}
+
+// SetNillableTimeFormat sets the "time_format" field if the given value is not nil.
+func (_u *CompanySettingsUpdateOne) SetNillableTimeFormat(v *string) *CompanySettingsUpdateOne {
+	if v != nil {
+		_u.SetTimeFormat(*v)
+	}
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *CompanySettingsUpdateOne) SetUpdatedAt(v time.Time) *CompanySettingsUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -765,6 +827,12 @@ func (_u *CompanySettingsUpdateOne) sqlSave(ctx context.Context) (_node *Company
 	}
 	if value, ok := _u.mutation.Timezone(); ok {
 		_spec.SetField(companysettings.FieldTimezone, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.DateFormat(); ok {
+		_spec.SetField(companysettings.FieldDateFormat, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.TimeFormat(); ok {
+		_spec.SetField(companysettings.FieldTimeFormat, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(companysettings.FieldUpdatedAt, field.TypeTime, value)

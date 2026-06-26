@@ -11,6 +11,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
+	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
 )
@@ -71,15 +72,66 @@ func (s *Service) UpdateDepartment(ctx context.Context, tenantID, id uuid.UUID, 
 	return u.Save(ctx)
 }
 
+// DeleteDepartment hard-deletes a tenant's department after clearing the foreign keys that
+// reference it, all inside one transaction so it is atomic:
+//  1. NULL out HRDetails.department_id for employees placed in this dept (they become
+//     unassigned rather than blocking the delete).
+//  2. Re-parent child departments to the deleted dept's own parent (or NULL when it had none),
+//     preserving the hierarchy instead of orphaning the subtree.
+//  3. Hard-delete the department row.
+//
+// Only the tenant's OWN departments (tenant_id = tenantID) can be deleted — seeded platform
+// reference rows (NULL tenant_id) are intentionally not deletable by a tenant admin. Idempotent
+// on the FK clears; returns a clear "not found" only when the row truly doesn't belong to the
+// tenant, and the real DB error otherwise.
 func (s *Service) DeleteDepartment(ctx context.Context, tenantID, id uuid.UUID) error {
-	n, err := s.orm.Department.Delete().
-		Where(department.ID(id), department.TenantID(tenantID)).
-		Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("orgsettings: delete department: %w", err)
-	}
-	if n == 0 {
+	// Load the target first (tenant-owned only) so we know its parent for re-parenting and can
+	// distinguish not-found from a real failure.
+	dept, err := s.orm.Department.Query().
+		Where(department.ID(id), department.TenantID(tenantID)).Only(ctx)
+	if ent.IsNotFound(err) {
 		return fmt.Errorf("orgsettings: department not found")
+	}
+	if err != nil {
+		return fmt.Errorf("orgsettings: load department: %w", err)
+	}
+
+	tx, err := s.orm.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("orgsettings: begin tx: %w", err)
+	}
+	rollback := func(cause error) error {
+		_ = tx.Rollback()
+		return cause
+	}
+
+	// 1) Unassign employees in this department.
+	if _, err := tx.HRDetails.Update().
+		Where(hrdetails.TenantID(tenantID), hrdetails.DepartmentID(id)).
+		ClearDepartmentID().
+		Save(ctx); err != nil {
+		return rollback(fmt.Errorf("orgsettings: clear employee department links: %w", err))
+	}
+
+	// 2) Re-parent child departments to this dept's parent (or NULL).
+	childUpd := tx.Department.Update().
+		Where(department.TenantID(tenantID), department.ParentDepartmentID(id))
+	if dept.ParentDepartmentID != nil {
+		childUpd = childUpd.SetParentDepartmentID(*dept.ParentDepartmentID)
+	} else {
+		childUpd = childUpd.ClearParentDepartmentID()
+	}
+	if _, err := childUpd.Save(ctx); err != nil {
+		return rollback(fmt.Errorf("orgsettings: re-parent child departments: %w", err))
+	}
+
+	// 3) Hard-delete the department.
+	if err := tx.Department.DeleteOneID(id).Exec(ctx); err != nil {
+		return rollback(fmt.Errorf("orgsettings: delete department: %w", err))
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("orgsettings: commit delete: %w", err)
 	}
 	return nil
 }

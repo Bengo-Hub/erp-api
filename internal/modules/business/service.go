@@ -37,6 +37,8 @@ type SettingsInput struct {
 	FinancialYearStartMonth int
 	DefaultCurrency         string
 	Timezone                string
+	DateFormat              string
+	TimeFormat              string
 }
 
 // GetSettings returns the tenant's company settings (or ent.NotFound when unset).
@@ -66,9 +68,20 @@ func (s *Service) UpsertSettings(ctx context.Context, tenantID uuid.UUID, in Set
 		if in.Timezone != "" {
 			b = b.SetTimezone(in.Timezone)
 		}
+		if in.DateFormat != "" {
+			b = b.SetDateFormat(in.DateFormat)
+		}
+		if in.TimeFormat != "" {
+			b = b.SetTimeFormat(in.TimeFormat)
+		}
 		row, cerr := b.Save(ctx)
 		if cerr != nil {
 			return nil, fmt.Errorf("business: create settings: %w", cerr)
+		}
+		// First-time tenant bootstrap: ensure default document sequences exist for this tenant.
+		// Best-effort + idempotent — a sequence hiccup must not fail the settings save.
+		if err := s.Seq.EnsureDefaults(ctx, tenantID); err != nil {
+			return row, nil //nolint:nilerr // defaults are best-effort
 		}
 		return row, nil
 	}
@@ -88,6 +101,12 @@ func (s *Service) UpsertSettings(ctx context.Context, tenantID uuid.UUID, in Set
 	}
 	if in.Timezone != "" {
 		u = u.SetTimezone(in.Timezone)
+	}
+	if in.DateFormat != "" {
+		u = u.SetDateFormat(in.DateFormat)
+	}
+	if in.TimeFormat != "" {
+		u = u.SetTimeFormat(in.TimeFormat)
 	}
 	row, uerr := u.Save(ctx)
 	if uerr != nil {

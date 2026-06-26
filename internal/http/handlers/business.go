@@ -68,6 +68,8 @@ type settingsBody struct {
 	FinancialYearStartMonth int    `json:"financial_year_start_month"`
 	DefaultCurrency         string `json:"default_currency"`
 	Timezone                string `json:"timezone"`
+	DateFormat              string `json:"date_format"`
+	TimeFormat              string `json:"time_format"`
 }
 
 func (h *BusinessHandler) UpsertSettings(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +87,7 @@ func (h *BusinessHandler) UpsertSettings(w http.ResponseWriter, r *http.Request)
 		SHIFEmployerNo: b.SHIFEmployerNo, ContactEmail: b.ContactEmail, ContactPhone: b.ContactPhone,
 		PostalAddress: b.PostalAddress, PhysicalAddress: b.PhysicalAddress,
 		FinancialYearStartMonth: b.FinancialYearStartMonth, DefaultCurrency: b.DefaultCurrency,
-		Timezone: b.Timezone,
+		Timezone: b.Timezone, DateFormat: b.DateFormat, TimeFormat: b.TimeFormat,
 	})
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "save_failed", err.Error())

@@ -694,12 +694,20 @@ func init() {
 	companysettingsDescTimezone := companysettingsFields[12].Descriptor()
 	// companysettings.DefaultTimezone holds the default value on creation for the timezone field.
 	companysettings.DefaultTimezone = companysettingsDescTimezone.Default.(string)
+	// companysettingsDescDateFormat is the schema descriptor for date_format field.
+	companysettingsDescDateFormat := companysettingsFields[13].Descriptor()
+	// companysettings.DefaultDateFormat holds the default value on creation for the date_format field.
+	companysettings.DefaultDateFormat = companysettingsDescDateFormat.Default.(string)
+	// companysettingsDescTimeFormat is the schema descriptor for time_format field.
+	companysettingsDescTimeFormat := companysettingsFields[14].Descriptor()
+	// companysettings.DefaultTimeFormat holds the default value on creation for the time_format field.
+	companysettings.DefaultTimeFormat = companysettingsDescTimeFormat.Default.(string)
 	// companysettingsDescCreatedAt is the schema descriptor for created_at field.
-	companysettingsDescCreatedAt := companysettingsFields[13].Descriptor()
+	companysettingsDescCreatedAt := companysettingsFields[15].Descriptor()
 	// companysettings.DefaultCreatedAt holds the default value on creation for the created_at field.
 	companysettings.DefaultCreatedAt = companysettingsDescCreatedAt.Default.(func() time.Time)
 	// companysettingsDescUpdatedAt is the schema descriptor for updated_at field.
-	companysettingsDescUpdatedAt := companysettingsFields[14].Descriptor()
+	companysettingsDescUpdatedAt := companysettingsFields[16].Descriptor()
 	// companysettings.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	companysettings.DefaultUpdatedAt = companysettingsDescUpdatedAt.Default.(func() time.Time)
 	// companysettings.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

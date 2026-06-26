@@ -184,6 +184,34 @@ func (_c *CompanySettingsCreate) SetNillableTimezone(v *string) *CompanySettings
 	return _c
 }
 
+// SetDateFormat sets the "date_format" field.
+func (_c *CompanySettingsCreate) SetDateFormat(v string) *CompanySettingsCreate {
+	_c.mutation.SetDateFormat(v)
+	return _c
+}
+
+// SetNillableDateFormat sets the "date_format" field if the given value is not nil.
+func (_c *CompanySettingsCreate) SetNillableDateFormat(v *string) *CompanySettingsCreate {
+	if v != nil {
+		_c.SetDateFormat(*v)
+	}
+	return _c
+}
+
+// SetTimeFormat sets the "time_format" field.
+func (_c *CompanySettingsCreate) SetTimeFormat(v string) *CompanySettingsCreate {
+	_c.mutation.SetTimeFormat(v)
+	return _c
+}
+
+// SetNillableTimeFormat sets the "time_format" field if the given value is not nil.
+func (_c *CompanySettingsCreate) SetNillableTimeFormat(v *string) *CompanySettingsCreate {
+	if v != nil {
+		_c.SetTimeFormat(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *CompanySettingsCreate) SetCreatedAt(v time.Time) *CompanySettingsCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -273,6 +301,14 @@ func (_c *CompanySettingsCreate) defaults() {
 		v := companysettings.DefaultTimezone
 		_c.mutation.SetTimezone(v)
 	}
+	if _, ok := _c.mutation.DateFormat(); !ok {
+		v := companysettings.DefaultDateFormat
+		_c.mutation.SetDateFormat(v)
+	}
+	if _, ok := _c.mutation.TimeFormat(); !ok {
+		v := companysettings.DefaultTimeFormat
+		_c.mutation.SetTimeFormat(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := companysettings.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -300,6 +336,12 @@ func (_c *CompanySettingsCreate) check() error {
 	}
 	if _, ok := _c.mutation.Timezone(); !ok {
 		return &ValidationError{Name: "timezone", err: errors.New(`ent: missing required field "CompanySettings.timezone"`)}
+	}
+	if _, ok := _c.mutation.DateFormat(); !ok {
+		return &ValidationError{Name: "date_format", err: errors.New(`ent: missing required field "CompanySettings.date_format"`)}
+	}
+	if _, ok := _c.mutation.TimeFormat(); !ok {
+		return &ValidationError{Name: "time_format", err: errors.New(`ent: missing required field "CompanySettings.time_format"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "CompanySettings.created_at"`)}
@@ -390,6 +432,14 @@ func (_c *CompanySettingsCreate) createSpec() (*CompanySettings, *sqlgraph.Creat
 	if value, ok := _c.mutation.Timezone(); ok {
 		_spec.SetField(companysettings.FieldTimezone, field.TypeString, value)
 		_node.Timezone = value
+	}
+	if value, ok := _c.mutation.DateFormat(); ok {
+		_spec.SetField(companysettings.FieldDateFormat, field.TypeString, value)
+		_node.DateFormat = value
+	}
+	if value, ok := _c.mutation.TimeFormat(); ok {
+		_spec.SetField(companysettings.FieldTimeFormat, field.TypeString, value)
+		_node.TimeFormat = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(companysettings.FieldCreatedAt, field.TypeTime, value)
@@ -646,6 +696,30 @@ func (u *CompanySettingsUpsert) SetTimezone(v string) *CompanySettingsUpsert {
 // UpdateTimezone sets the "timezone" field to the value that was provided on create.
 func (u *CompanySettingsUpsert) UpdateTimezone() *CompanySettingsUpsert {
 	u.SetExcluded(companysettings.FieldTimezone)
+	return u
+}
+
+// SetDateFormat sets the "date_format" field.
+func (u *CompanySettingsUpsert) SetDateFormat(v string) *CompanySettingsUpsert {
+	u.Set(companysettings.FieldDateFormat, v)
+	return u
+}
+
+// UpdateDateFormat sets the "date_format" field to the value that was provided on create.
+func (u *CompanySettingsUpsert) UpdateDateFormat() *CompanySettingsUpsert {
+	u.SetExcluded(companysettings.FieldDateFormat)
+	return u
+}
+
+// SetTimeFormat sets the "time_format" field.
+func (u *CompanySettingsUpsert) SetTimeFormat(v string) *CompanySettingsUpsert {
+	u.Set(companysettings.FieldTimeFormat, v)
+	return u
+}
+
+// UpdateTimeFormat sets the "time_format" field to the value that was provided on create.
+func (u *CompanySettingsUpsert) UpdateTimeFormat() *CompanySettingsUpsert {
+	u.SetExcluded(companysettings.FieldTimeFormat)
 	return u
 }
 
@@ -940,6 +1014,34 @@ func (u *CompanySettingsUpsertOne) SetTimezone(v string) *CompanySettingsUpsertO
 func (u *CompanySettingsUpsertOne) UpdateTimezone() *CompanySettingsUpsertOne {
 	return u.Update(func(s *CompanySettingsUpsert) {
 		s.UpdateTimezone()
+	})
+}
+
+// SetDateFormat sets the "date_format" field.
+func (u *CompanySettingsUpsertOne) SetDateFormat(v string) *CompanySettingsUpsertOne {
+	return u.Update(func(s *CompanySettingsUpsert) {
+		s.SetDateFormat(v)
+	})
+}
+
+// UpdateDateFormat sets the "date_format" field to the value that was provided on create.
+func (u *CompanySettingsUpsertOne) UpdateDateFormat() *CompanySettingsUpsertOne {
+	return u.Update(func(s *CompanySettingsUpsert) {
+		s.UpdateDateFormat()
+	})
+}
+
+// SetTimeFormat sets the "time_format" field.
+func (u *CompanySettingsUpsertOne) SetTimeFormat(v string) *CompanySettingsUpsertOne {
+	return u.Update(func(s *CompanySettingsUpsert) {
+		s.SetTimeFormat(v)
+	})
+}
+
+// UpdateTimeFormat sets the "time_format" field to the value that was provided on create.
+func (u *CompanySettingsUpsertOne) UpdateTimeFormat() *CompanySettingsUpsertOne {
+	return u.Update(func(s *CompanySettingsUpsert) {
+		s.UpdateTimeFormat()
 	})
 }
 
@@ -1403,6 +1505,34 @@ func (u *CompanySettingsUpsertBulk) SetTimezone(v string) *CompanySettingsUpsert
 func (u *CompanySettingsUpsertBulk) UpdateTimezone() *CompanySettingsUpsertBulk {
 	return u.Update(func(s *CompanySettingsUpsert) {
 		s.UpdateTimezone()
+	})
+}
+
+// SetDateFormat sets the "date_format" field.
+func (u *CompanySettingsUpsertBulk) SetDateFormat(v string) *CompanySettingsUpsertBulk {
+	return u.Update(func(s *CompanySettingsUpsert) {
+		s.SetDateFormat(v)
+	})
+}
+
+// UpdateDateFormat sets the "date_format" field to the value that was provided on create.
+func (u *CompanySettingsUpsertBulk) UpdateDateFormat() *CompanySettingsUpsertBulk {
+	return u.Update(func(s *CompanySettingsUpsert) {
+		s.UpdateDateFormat()
+	})
+}
+
+// SetTimeFormat sets the "time_format" field.
+func (u *CompanySettingsUpsertBulk) SetTimeFormat(v string) *CompanySettingsUpsertBulk {
+	return u.Update(func(s *CompanySettingsUpsert) {
+		s.SetTimeFormat(v)
+	})
+}
+
+// UpdateTimeFormat sets the "time_format" field to the value that was provided on create.
+func (u *CompanySettingsUpsertBulk) UpdateTimeFormat() *CompanySettingsUpsertBulk {
+	return u.Update(func(s *CompanySettingsUpsert) {
+		s.UpdateTimeFormat()
 	})
 }
 
