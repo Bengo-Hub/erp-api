@@ -1,0 +1,47 @@
+package payrollengine
+
+import "github.com/shopspring/decimal"
+
+func mustDec(s string) decimal.Decimal { return decimal.RequireFromString(s) }
+
+// KRADefaults returns the canonical Kenyan statutory rate set used as BOTH the golden-master
+// test oracle AND the global system-tenant seed (cmd/seed-payroll). Keeping a single source of
+// truth means the seeded national defaults and the verified engine test can never diverge.
+//
+// Rates (Finance Act 2023 PAYE; NSSF/SHIF/Housing as effective for the golden master):
+//   - PAYE bands 10/25/30/32.5/35, monthly personal relief 2,400
+//   - NSSF tiers 0–8,000 and 8,000–72,000 @ 6% (employee + employer matched 100%)
+//   - SHIF 2.75% of gross (employee only)
+//   - Housing Levy 1.5% (employee + employer matched)
+func KRADefaults() Config {
+	return Config{
+		Income: &FormulaRates{
+			Bands: []Band{
+				{From: mustDec("0"), To: mustDec("24000"), Rate: mustDec("0.10")},
+				{From: mustDec("24000"), To: mustDec("32333"), Rate: mustDec("0.25")},
+				{From: mustDec("32333"), To: mustDec("500000"), Rate: mustDec("0.30")},
+				{From: mustDec("500000"), To: mustDec("799999"), Rate: mustDec("0.325")},
+				{From: mustDec("799999"), To: Inf, Rate: mustDec("0.35")},
+			},
+			PersonalRelief: mustDec("2400"),
+		},
+		NSSF: &FormulaRates{
+			Bands: []Band{
+				{From: mustDec("0"), To: mustDec("8000"), Rate: mustDec("0.06")},
+				{From: mustDec("8000"), To: mustDec("72000"), Rate: mustDec("0.06")},
+			},
+			EmployeePercentage: mustDec("1"),
+			EmployerPercentage: mustDec("1"),
+		},
+		SHIF: &FormulaRates{
+			Bands:              []Band{{From: mustDec("0"), To: Inf, Rate: mustDec("0.0275")}},
+			EmployeePercentage: mustDec("1"),
+		},
+		HousingLevy: &FormulaRates{
+			Bands:              []Band{{From: mustDec("0"), To: Inf, Rate: mustDec("0.015")}},
+			EmployeePercentage: mustDec("1"),
+			EmployerPercentage: mustDec("1"),
+		},
+		RecoverAdvances: true,
+	}
+}

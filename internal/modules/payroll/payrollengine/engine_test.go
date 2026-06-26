@@ -9,39 +9,9 @@ import (
 
 func d(s string) decimal.Decimal { return decimal.RequireFromString(s) }
 
-// kra2025Config builds the Feb-2025 KRA national rate set used by the golden-master.
-func kra2025Config() Config {
-	return Config{
-		Income: &FormulaRates{
-			Bands: []Band{
-				{From: d("0"), To: d("24000"), Rate: d("0.10")},
-				{From: d("24000"), To: d("32333"), Rate: d("0.25")},
-				{From: d("32333"), To: d("500000"), Rate: d("0.30")},
-				{From: d("500000"), To: d("799999"), Rate: d("0.325")},
-				{From: d("799999"), To: Inf, Rate: d("0.35")},
-			},
-			PersonalRelief: d("2400"),
-		},
-		NSSF: &FormulaRates{
-			Bands: []Band{
-				{From: d("0"), To: d("8000"), Rate: d("0.06")},
-				{From: d("8000"), To: d("72000"), Rate: d("0.06")},
-			},
-			EmployeePercentage: d("1"),
-			EmployerPercentage: d("1"),
-		},
-		SHIF: &FormulaRates{
-			Bands:              []Band{{From: d("0"), To: Inf, Rate: d("0.0275")}},
-			EmployeePercentage: d("1"),
-		},
-		HousingLevy: &FormulaRates{
-			Bands:              []Band{{From: d("0"), To: Inf, Rate: d("0.015")}},
-			EmployeePercentage: d("1"),
-			EmployerPercentage: d("1"),
-		},
-		RecoverAdvances: true,
-	}
-}
+// kra2025Config is the golden-master rate set — now sourced from the shared KRADefaults() so the
+// engine test and the global system-tenant seed (cmd/seed-payroll) can never diverge.
+func kra2025Config() Config { return KRADefaults() }
 
 func TestGoldenMaster_Gross100k(t *testing.T) {
 	res, err := Compute(kra2025Config(), EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
