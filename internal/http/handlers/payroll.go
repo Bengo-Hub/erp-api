@@ -429,9 +429,43 @@ func (h *PayrollHandler) Command(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.disburse(w, r, scope, body)
+	case "reverse":
+		if !requirePermission(w, scope, permPayrollProcess) {
+			return
+		}
+		h.reverse(w, r, scope, body)
 	default:
 		writeError(w, http.StatusBadRequest, "bad_request", "unknown command")
 	}
+}
+
+// reverse reverses a disbursed payroll batch (emits erp.payroll.reversed for treasury GL reversal).
+func (h *PayrollHandler) reverse(w http.ResponseWriter, r *http.Request, scope RequestScope, body commandBody) {
+	if h.disburser == nil {
+		writeError(w, http.StatusServiceUnavailable, "unavailable", "disbursement not configured")
+		return
+	}
+	period := body.PaymentPeriod
+	if period == "" {
+		period = body.FromDate
+	}
+	p, ok := parsePeriod(period)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "bad_request", "payment_period is required")
+		return
+	}
+	dp := payroll.DisburseParams{TenantID: scope.TenantID, OutletID: scope.OutletID, Period: p, IdemKey: r.Header.Get("Idempotency-Key")}
+	if body.OutletID != "" {
+		if oid, err := uuid.Parse(body.OutletID); err == nil {
+			dp.OutletID = oid
+		}
+	}
+	res, err := h.disburser.Reverse(r.Context(), dp)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "reverse_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, res)
 }
 
 func (h *PayrollHandler) disburse(w http.ResponseWriter, r *http.Request, scope RequestScope, body commandBody) {
