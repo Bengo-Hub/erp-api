@@ -84,6 +84,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payslipline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
@@ -244,6 +245,7 @@ func checkColumn(t, c string) error {
 			payrollsplitratio.Table:         payrollsplitratio.ValidColumn,
 			payslip.Table:                   payslip.ValidColumn,
 			payslipaudit.Table:              payslipaudit.ValidColumn,
+			payslipline.Table:               payslipline.ValidColumn,
 			performancemetric.Table:         performancemetric.ValidColumn,
 			performancereview.Table:         performancereview.ValidColumn,
 			permission.Table:                permission.ValidColumn,

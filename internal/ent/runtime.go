@@ -77,6 +77,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payslipline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
@@ -2069,6 +2070,48 @@ func init() {
 	payslipauditDescID := payslipauditFields[0].Descriptor()
 	// payslipaudit.DefaultID holds the default value on creation for the id field.
 	payslipaudit.DefaultID = payslipauditDescID.Default.(func() uuid.UUID)
+	paysliplineFields := schema.PayslipLine{}.Fields()
+	_ = paysliplineFields
+	// paysliplineDescCashAmount is the schema descriptor for cash_amount field.
+	paysliplineDescCashAmount := paysliplineFields[7].Descriptor()
+	// payslipline.DefaultCashAmount holds the default value on creation for the cash_amount field.
+	payslipline.DefaultCashAmount = paysliplineDescCashAmount.Default.(decimal.Decimal)
+	// paysliplineDescTaxableAmount is the schema descriptor for taxable_amount field.
+	paysliplineDescTaxableAmount := paysliplineFields[8].Descriptor()
+	// payslipline.DefaultTaxableAmount holds the default value on creation for the taxable_amount field.
+	payslipline.DefaultTaxableAmount = paysliplineDescTaxableAmount.Default.(decimal.Decimal)
+	// paysliplineDescEmployerAmount is the schema descriptor for employer_amount field.
+	paysliplineDescEmployerAmount := paysliplineFields[9].Descriptor()
+	// payslipline.DefaultEmployerAmount holds the default value on creation for the employer_amount field.
+	payslipline.DefaultEmployerAmount = paysliplineDescEmployerAmount.Default.(decimal.Decimal)
+	// paysliplineDescNonCash is the schema descriptor for non_cash field.
+	paysliplineDescNonCash := paysliplineFields[10].Descriptor()
+	// payslipline.DefaultNonCash holds the default value on creation for the non_cash field.
+	payslipline.DefaultNonCash = paysliplineDescNonCash.Default.(bool)
+	// paysliplineDescTaxable is the schema descriptor for taxable field.
+	paysliplineDescTaxable := paysliplineFields[11].Descriptor()
+	// payslipline.DefaultTaxable holds the default value on creation for the taxable field.
+	payslipline.DefaultTaxable = paysliplineDescTaxable.Default.(bool)
+	// paysliplineDescQuantity is the schema descriptor for quantity field.
+	paysliplineDescQuantity := paysliplineFields[12].Descriptor()
+	// payslipline.DefaultQuantity holds the default value on creation for the quantity field.
+	payslipline.DefaultQuantity = paysliplineDescQuantity.Default.(decimal.Decimal)
+	// paysliplineDescRate is the schema descriptor for rate field.
+	paysliplineDescRate := paysliplineFields[13].Descriptor()
+	// payslipline.DefaultRate holds the default value on creation for the rate field.
+	payslipline.DefaultRate = paysliplineDescRate.Default.(decimal.Decimal)
+	// paysliplineDescSortOrder is the schema descriptor for sort_order field.
+	paysliplineDescSortOrder := paysliplineFields[16].Descriptor()
+	// payslipline.DefaultSortOrder holds the default value on creation for the sort_order field.
+	payslipline.DefaultSortOrder = paysliplineDescSortOrder.Default.(int)
+	// paysliplineDescCreatedAt is the schema descriptor for created_at field.
+	paysliplineDescCreatedAt := paysliplineFields[17].Descriptor()
+	// payslipline.DefaultCreatedAt holds the default value on creation for the created_at field.
+	payslipline.DefaultCreatedAt = paysliplineDescCreatedAt.Default.(func() time.Time)
+	// paysliplineDescID is the schema descriptor for id field.
+	paysliplineDescID := paysliplineFields[0].Descriptor()
+	// payslipline.DefaultID holds the default value on creation for the id field.
+	payslipline.DefaultID = paysliplineDescID.Default.(func() uuid.UUID)
 	performancemetricFields := schema.PerformanceMetric{}.Fields()
 	_ = performancemetricFields
 	// performancemetricDescIsActive is the schema descriptor for is_active field.

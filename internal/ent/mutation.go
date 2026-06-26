@@ -84,6 +84,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payslipline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
@@ -199,6 +200,7 @@ const (
 	TypePayrollSplitRatio         = "PayrollSplitRatio"
 	TypePayslip                   = "Payslip"
 	TypePayslipAudit              = "PayslipAudit"
+	TypePayslipLine               = "PayslipLine"
 	TypePerformanceMetric         = "PerformanceMetric"
 	TypePerformanceReview         = "PerformanceReview"
 	TypePermission                = "Permission"
@@ -68456,6 +68458,1317 @@ func (m *PayslipAuditMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *PayslipAuditMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown PayslipAudit edge %s", name)
+}
+
+// PayslipLineMutation represents an operation that mutates the PayslipLine nodes in the graph.
+type PayslipLineMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	tenant_id       *uuid.UUID
+	payslip_id      *uuid.UUID
+	component_id    *uuid.UUID
+	section         *string
+	code            *string
+	label           *string
+	cash_amount     *decimal.Decimal
+	taxable_amount  *decimal.Decimal
+	employer_amount *decimal.Decimal
+	non_cash        *bool
+	taxable         *bool
+	quantity        *decimal.Decimal
+	rate            *decimal.Decimal
+	unit            *string
+	deduction_phase *string
+	sort_order      *int
+	addsort_order   *int
+	created_at      *time.Time
+	clearedFields   map[string]struct{}
+	done            bool
+	oldValue        func(context.Context) (*PayslipLine, error)
+	predicates      []predicate.PayslipLine
+}
+
+var _ ent.Mutation = (*PayslipLineMutation)(nil)
+
+// paysliplineOption allows management of the mutation configuration using functional options.
+type paysliplineOption func(*PayslipLineMutation)
+
+// newPayslipLineMutation creates new mutation for the PayslipLine entity.
+func newPayslipLineMutation(c config, op Op, opts ...paysliplineOption) *PayslipLineMutation {
+	m := &PayslipLineMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePayslipLine,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPayslipLineID sets the ID field of the mutation.
+func withPayslipLineID(id uuid.UUID) paysliplineOption {
+	return func(m *PayslipLineMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *PayslipLine
+		)
+		m.oldValue = func(ctx context.Context) (*PayslipLine, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().PayslipLine.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPayslipLine sets the old PayslipLine of the mutation.
+func withPayslipLine(node *PayslipLine) paysliplineOption {
+	return func(m *PayslipLineMutation) {
+		m.oldValue = func(context.Context) (*PayslipLine, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PayslipLineMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PayslipLineMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of PayslipLine entities.
+func (m *PayslipLineMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PayslipLineMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PayslipLineMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PayslipLine.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *PayslipLineMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *PayslipLineMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *PayslipLineMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetPayslipID sets the "payslip_id" field.
+func (m *PayslipLineMutation) SetPayslipID(u uuid.UUID) {
+	m.payslip_id = &u
+}
+
+// PayslipID returns the value of the "payslip_id" field in the mutation.
+func (m *PayslipLineMutation) PayslipID() (r uuid.UUID, exists bool) {
+	v := m.payslip_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayslipID returns the old "payslip_id" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldPayslipID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayslipID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayslipID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayslipID: %w", err)
+	}
+	return oldValue.PayslipID, nil
+}
+
+// ResetPayslipID resets all changes to the "payslip_id" field.
+func (m *PayslipLineMutation) ResetPayslipID() {
+	m.payslip_id = nil
+}
+
+// SetComponentID sets the "component_id" field.
+func (m *PayslipLineMutation) SetComponentID(u uuid.UUID) {
+	m.component_id = &u
+}
+
+// ComponentID returns the value of the "component_id" field in the mutation.
+func (m *PayslipLineMutation) ComponentID() (r uuid.UUID, exists bool) {
+	v := m.component_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldComponentID returns the old "component_id" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldComponentID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldComponentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldComponentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldComponentID: %w", err)
+	}
+	return oldValue.ComponentID, nil
+}
+
+// ClearComponentID clears the value of the "component_id" field.
+func (m *PayslipLineMutation) ClearComponentID() {
+	m.component_id = nil
+	m.clearedFields[payslipline.FieldComponentID] = struct{}{}
+}
+
+// ComponentIDCleared returns if the "component_id" field was cleared in this mutation.
+func (m *PayslipLineMutation) ComponentIDCleared() bool {
+	_, ok := m.clearedFields[payslipline.FieldComponentID]
+	return ok
+}
+
+// ResetComponentID resets all changes to the "component_id" field.
+func (m *PayslipLineMutation) ResetComponentID() {
+	m.component_id = nil
+	delete(m.clearedFields, payslipline.FieldComponentID)
+}
+
+// SetSection sets the "section" field.
+func (m *PayslipLineMutation) SetSection(s string) {
+	m.section = &s
+}
+
+// Section returns the value of the "section" field in the mutation.
+func (m *PayslipLineMutation) Section() (r string, exists bool) {
+	v := m.section
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSection returns the old "section" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldSection(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSection is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSection requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSection: %w", err)
+	}
+	return oldValue.Section, nil
+}
+
+// ResetSection resets all changes to the "section" field.
+func (m *PayslipLineMutation) ResetSection() {
+	m.section = nil
+}
+
+// SetCode sets the "code" field.
+func (m *PayslipLineMutation) SetCode(s string) {
+	m.code = &s
+}
+
+// Code returns the value of the "code" field in the mutation.
+func (m *PayslipLineMutation) Code() (r string, exists bool) {
+	v := m.code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCode returns the old "code" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldCode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCode: %w", err)
+	}
+	return oldValue.Code, nil
+}
+
+// ClearCode clears the value of the "code" field.
+func (m *PayslipLineMutation) ClearCode() {
+	m.code = nil
+	m.clearedFields[payslipline.FieldCode] = struct{}{}
+}
+
+// CodeCleared returns if the "code" field was cleared in this mutation.
+func (m *PayslipLineMutation) CodeCleared() bool {
+	_, ok := m.clearedFields[payslipline.FieldCode]
+	return ok
+}
+
+// ResetCode resets all changes to the "code" field.
+func (m *PayslipLineMutation) ResetCode() {
+	m.code = nil
+	delete(m.clearedFields, payslipline.FieldCode)
+}
+
+// SetLabel sets the "label" field.
+func (m *PayslipLineMutation) SetLabel(s string) {
+	m.label = &s
+}
+
+// Label returns the value of the "label" field in the mutation.
+func (m *PayslipLineMutation) Label() (r string, exists bool) {
+	v := m.label
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLabel returns the old "label" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldLabel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLabel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLabel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLabel: %w", err)
+	}
+	return oldValue.Label, nil
+}
+
+// ResetLabel resets all changes to the "label" field.
+func (m *PayslipLineMutation) ResetLabel() {
+	m.label = nil
+}
+
+// SetCashAmount sets the "cash_amount" field.
+func (m *PayslipLineMutation) SetCashAmount(d decimal.Decimal) {
+	m.cash_amount = &d
+}
+
+// CashAmount returns the value of the "cash_amount" field in the mutation.
+func (m *PayslipLineMutation) CashAmount() (r decimal.Decimal, exists bool) {
+	v := m.cash_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCashAmount returns the old "cash_amount" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldCashAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCashAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCashAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCashAmount: %w", err)
+	}
+	return oldValue.CashAmount, nil
+}
+
+// ResetCashAmount resets all changes to the "cash_amount" field.
+func (m *PayslipLineMutation) ResetCashAmount() {
+	m.cash_amount = nil
+}
+
+// SetTaxableAmount sets the "taxable_amount" field.
+func (m *PayslipLineMutation) SetTaxableAmount(d decimal.Decimal) {
+	m.taxable_amount = &d
+}
+
+// TaxableAmount returns the value of the "taxable_amount" field in the mutation.
+func (m *PayslipLineMutation) TaxableAmount() (r decimal.Decimal, exists bool) {
+	v := m.taxable_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaxableAmount returns the old "taxable_amount" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldTaxableAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaxableAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaxableAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaxableAmount: %w", err)
+	}
+	return oldValue.TaxableAmount, nil
+}
+
+// ResetTaxableAmount resets all changes to the "taxable_amount" field.
+func (m *PayslipLineMutation) ResetTaxableAmount() {
+	m.taxable_amount = nil
+}
+
+// SetEmployerAmount sets the "employer_amount" field.
+func (m *PayslipLineMutation) SetEmployerAmount(d decimal.Decimal) {
+	m.employer_amount = &d
+}
+
+// EmployerAmount returns the value of the "employer_amount" field in the mutation.
+func (m *PayslipLineMutation) EmployerAmount() (r decimal.Decimal, exists bool) {
+	v := m.employer_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployerAmount returns the old "employer_amount" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldEmployerAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployerAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployerAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployerAmount: %w", err)
+	}
+	return oldValue.EmployerAmount, nil
+}
+
+// ResetEmployerAmount resets all changes to the "employer_amount" field.
+func (m *PayslipLineMutation) ResetEmployerAmount() {
+	m.employer_amount = nil
+}
+
+// SetNonCash sets the "non_cash" field.
+func (m *PayslipLineMutation) SetNonCash(b bool) {
+	m.non_cash = &b
+}
+
+// NonCash returns the value of the "non_cash" field in the mutation.
+func (m *PayslipLineMutation) NonCash() (r bool, exists bool) {
+	v := m.non_cash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNonCash returns the old "non_cash" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldNonCash(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNonCash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNonCash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNonCash: %w", err)
+	}
+	return oldValue.NonCash, nil
+}
+
+// ResetNonCash resets all changes to the "non_cash" field.
+func (m *PayslipLineMutation) ResetNonCash() {
+	m.non_cash = nil
+}
+
+// SetTaxable sets the "taxable" field.
+func (m *PayslipLineMutation) SetTaxable(b bool) {
+	m.taxable = &b
+}
+
+// Taxable returns the value of the "taxable" field in the mutation.
+func (m *PayslipLineMutation) Taxable() (r bool, exists bool) {
+	v := m.taxable
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaxable returns the old "taxable" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldTaxable(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaxable is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaxable requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaxable: %w", err)
+	}
+	return oldValue.Taxable, nil
+}
+
+// ResetTaxable resets all changes to the "taxable" field.
+func (m *PayslipLineMutation) ResetTaxable() {
+	m.taxable = nil
+}
+
+// SetQuantity sets the "quantity" field.
+func (m *PayslipLineMutation) SetQuantity(d decimal.Decimal) {
+	m.quantity = &d
+}
+
+// Quantity returns the value of the "quantity" field in the mutation.
+func (m *PayslipLineMutation) Quantity() (r decimal.Decimal, exists bool) {
+	v := m.quantity
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuantity returns the old "quantity" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldQuantity(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuantity is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuantity requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuantity: %w", err)
+	}
+	return oldValue.Quantity, nil
+}
+
+// ResetQuantity resets all changes to the "quantity" field.
+func (m *PayslipLineMutation) ResetQuantity() {
+	m.quantity = nil
+}
+
+// SetRate sets the "rate" field.
+func (m *PayslipLineMutation) SetRate(d decimal.Decimal) {
+	m.rate = &d
+}
+
+// Rate returns the value of the "rate" field in the mutation.
+func (m *PayslipLineMutation) Rate() (r decimal.Decimal, exists bool) {
+	v := m.rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRate returns the old "rate" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldRate(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRate: %w", err)
+	}
+	return oldValue.Rate, nil
+}
+
+// ResetRate resets all changes to the "rate" field.
+func (m *PayslipLineMutation) ResetRate() {
+	m.rate = nil
+}
+
+// SetUnit sets the "unit" field.
+func (m *PayslipLineMutation) SetUnit(s string) {
+	m.unit = &s
+}
+
+// Unit returns the value of the "unit" field in the mutation.
+func (m *PayslipLineMutation) Unit() (r string, exists bool) {
+	v := m.unit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUnit returns the old "unit" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldUnit(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUnit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUnit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUnit: %w", err)
+	}
+	return oldValue.Unit, nil
+}
+
+// ClearUnit clears the value of the "unit" field.
+func (m *PayslipLineMutation) ClearUnit() {
+	m.unit = nil
+	m.clearedFields[payslipline.FieldUnit] = struct{}{}
+}
+
+// UnitCleared returns if the "unit" field was cleared in this mutation.
+func (m *PayslipLineMutation) UnitCleared() bool {
+	_, ok := m.clearedFields[payslipline.FieldUnit]
+	return ok
+}
+
+// ResetUnit resets all changes to the "unit" field.
+func (m *PayslipLineMutation) ResetUnit() {
+	m.unit = nil
+	delete(m.clearedFields, payslipline.FieldUnit)
+}
+
+// SetDeductionPhase sets the "deduction_phase" field.
+func (m *PayslipLineMutation) SetDeductionPhase(s string) {
+	m.deduction_phase = &s
+}
+
+// DeductionPhase returns the value of the "deduction_phase" field in the mutation.
+func (m *PayslipLineMutation) DeductionPhase() (r string, exists bool) {
+	v := m.deduction_phase
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeductionPhase returns the old "deduction_phase" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldDeductionPhase(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeductionPhase is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeductionPhase requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeductionPhase: %w", err)
+	}
+	return oldValue.DeductionPhase, nil
+}
+
+// ClearDeductionPhase clears the value of the "deduction_phase" field.
+func (m *PayslipLineMutation) ClearDeductionPhase() {
+	m.deduction_phase = nil
+	m.clearedFields[payslipline.FieldDeductionPhase] = struct{}{}
+}
+
+// DeductionPhaseCleared returns if the "deduction_phase" field was cleared in this mutation.
+func (m *PayslipLineMutation) DeductionPhaseCleared() bool {
+	_, ok := m.clearedFields[payslipline.FieldDeductionPhase]
+	return ok
+}
+
+// ResetDeductionPhase resets all changes to the "deduction_phase" field.
+func (m *PayslipLineMutation) ResetDeductionPhase() {
+	m.deduction_phase = nil
+	delete(m.clearedFields, payslipline.FieldDeductionPhase)
+}
+
+// SetSortOrder sets the "sort_order" field.
+func (m *PayslipLineMutation) SetSortOrder(i int) {
+	m.sort_order = &i
+	m.addsort_order = nil
+}
+
+// SortOrder returns the value of the "sort_order" field in the mutation.
+func (m *PayslipLineMutation) SortOrder() (r int, exists bool) {
+	v := m.sort_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSortOrder returns the old "sort_order" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldSortOrder(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSortOrder is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSortOrder requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSortOrder: %w", err)
+	}
+	return oldValue.SortOrder, nil
+}
+
+// AddSortOrder adds i to the "sort_order" field.
+func (m *PayslipLineMutation) AddSortOrder(i int) {
+	if m.addsort_order != nil {
+		*m.addsort_order += i
+	} else {
+		m.addsort_order = &i
+	}
+}
+
+// AddedSortOrder returns the value that was added to the "sort_order" field in this mutation.
+func (m *PayslipLineMutation) AddedSortOrder() (r int, exists bool) {
+	v := m.addsort_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSortOrder resets all changes to the "sort_order" field.
+func (m *PayslipLineMutation) ResetSortOrder() {
+	m.sort_order = nil
+	m.addsort_order = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *PayslipLineMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *PayslipLineMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the PayslipLine entity.
+// If the PayslipLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipLineMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *PayslipLineMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// Where appends a list predicates to the PayslipLineMutation builder.
+func (m *PayslipLineMutation) Where(ps ...predicate.PayslipLine) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the PayslipLineMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PayslipLineMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PayslipLine, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *PayslipLineMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PayslipLineMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (PayslipLine).
+func (m *PayslipLineMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PayslipLineMutation) Fields() []string {
+	fields := make([]string, 0, 17)
+	if m.tenant_id != nil {
+		fields = append(fields, payslipline.FieldTenantID)
+	}
+	if m.payslip_id != nil {
+		fields = append(fields, payslipline.FieldPayslipID)
+	}
+	if m.component_id != nil {
+		fields = append(fields, payslipline.FieldComponentID)
+	}
+	if m.section != nil {
+		fields = append(fields, payslipline.FieldSection)
+	}
+	if m.code != nil {
+		fields = append(fields, payslipline.FieldCode)
+	}
+	if m.label != nil {
+		fields = append(fields, payslipline.FieldLabel)
+	}
+	if m.cash_amount != nil {
+		fields = append(fields, payslipline.FieldCashAmount)
+	}
+	if m.taxable_amount != nil {
+		fields = append(fields, payslipline.FieldTaxableAmount)
+	}
+	if m.employer_amount != nil {
+		fields = append(fields, payslipline.FieldEmployerAmount)
+	}
+	if m.non_cash != nil {
+		fields = append(fields, payslipline.FieldNonCash)
+	}
+	if m.taxable != nil {
+		fields = append(fields, payslipline.FieldTaxable)
+	}
+	if m.quantity != nil {
+		fields = append(fields, payslipline.FieldQuantity)
+	}
+	if m.rate != nil {
+		fields = append(fields, payslipline.FieldRate)
+	}
+	if m.unit != nil {
+		fields = append(fields, payslipline.FieldUnit)
+	}
+	if m.deduction_phase != nil {
+		fields = append(fields, payslipline.FieldDeductionPhase)
+	}
+	if m.sort_order != nil {
+		fields = append(fields, payslipline.FieldSortOrder)
+	}
+	if m.created_at != nil {
+		fields = append(fields, payslipline.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PayslipLineMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case payslipline.FieldTenantID:
+		return m.TenantID()
+	case payslipline.FieldPayslipID:
+		return m.PayslipID()
+	case payslipline.FieldComponentID:
+		return m.ComponentID()
+	case payslipline.FieldSection:
+		return m.Section()
+	case payslipline.FieldCode:
+		return m.Code()
+	case payslipline.FieldLabel:
+		return m.Label()
+	case payslipline.FieldCashAmount:
+		return m.CashAmount()
+	case payslipline.FieldTaxableAmount:
+		return m.TaxableAmount()
+	case payslipline.FieldEmployerAmount:
+		return m.EmployerAmount()
+	case payslipline.FieldNonCash:
+		return m.NonCash()
+	case payslipline.FieldTaxable:
+		return m.Taxable()
+	case payslipline.FieldQuantity:
+		return m.Quantity()
+	case payslipline.FieldRate:
+		return m.Rate()
+	case payslipline.FieldUnit:
+		return m.Unit()
+	case payslipline.FieldDeductionPhase:
+		return m.DeductionPhase()
+	case payslipline.FieldSortOrder:
+		return m.SortOrder()
+	case payslipline.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PayslipLineMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case payslipline.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case payslipline.FieldPayslipID:
+		return m.OldPayslipID(ctx)
+	case payslipline.FieldComponentID:
+		return m.OldComponentID(ctx)
+	case payslipline.FieldSection:
+		return m.OldSection(ctx)
+	case payslipline.FieldCode:
+		return m.OldCode(ctx)
+	case payslipline.FieldLabel:
+		return m.OldLabel(ctx)
+	case payslipline.FieldCashAmount:
+		return m.OldCashAmount(ctx)
+	case payslipline.FieldTaxableAmount:
+		return m.OldTaxableAmount(ctx)
+	case payslipline.FieldEmployerAmount:
+		return m.OldEmployerAmount(ctx)
+	case payslipline.FieldNonCash:
+		return m.OldNonCash(ctx)
+	case payslipline.FieldTaxable:
+		return m.OldTaxable(ctx)
+	case payslipline.FieldQuantity:
+		return m.OldQuantity(ctx)
+	case payslipline.FieldRate:
+		return m.OldRate(ctx)
+	case payslipline.FieldUnit:
+		return m.OldUnit(ctx)
+	case payslipline.FieldDeductionPhase:
+		return m.OldDeductionPhase(ctx)
+	case payslipline.FieldSortOrder:
+		return m.OldSortOrder(ctx)
+	case payslipline.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown PayslipLine field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PayslipLineMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case payslipline.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case payslipline.FieldPayslipID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayslipID(v)
+		return nil
+	case payslipline.FieldComponentID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetComponentID(v)
+		return nil
+	case payslipline.FieldSection:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSection(v)
+		return nil
+	case payslipline.FieldCode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCode(v)
+		return nil
+	case payslipline.FieldLabel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLabel(v)
+		return nil
+	case payslipline.FieldCashAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCashAmount(v)
+		return nil
+	case payslipline.FieldTaxableAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaxableAmount(v)
+		return nil
+	case payslipline.FieldEmployerAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployerAmount(v)
+		return nil
+	case payslipline.FieldNonCash:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNonCash(v)
+		return nil
+	case payslipline.FieldTaxable:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaxable(v)
+		return nil
+	case payslipline.FieldQuantity:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuantity(v)
+		return nil
+	case payslipline.FieldRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRate(v)
+		return nil
+	case payslipline.FieldUnit:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUnit(v)
+		return nil
+	case payslipline.FieldDeductionPhase:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeductionPhase(v)
+		return nil
+	case payslipline.FieldSortOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSortOrder(v)
+		return nil
+	case payslipline.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PayslipLine field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PayslipLineMutation) AddedFields() []string {
+	var fields []string
+	if m.addsort_order != nil {
+		fields = append(fields, payslipline.FieldSortOrder)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PayslipLineMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case payslipline.FieldSortOrder:
+		return m.AddedSortOrder()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PayslipLineMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case payslipline.FieldSortOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSortOrder(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PayslipLine numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PayslipLineMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(payslipline.FieldComponentID) {
+		fields = append(fields, payslipline.FieldComponentID)
+	}
+	if m.FieldCleared(payslipline.FieldCode) {
+		fields = append(fields, payslipline.FieldCode)
+	}
+	if m.FieldCleared(payslipline.FieldUnit) {
+		fields = append(fields, payslipline.FieldUnit)
+	}
+	if m.FieldCleared(payslipline.FieldDeductionPhase) {
+		fields = append(fields, payslipline.FieldDeductionPhase)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PayslipLineMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PayslipLineMutation) ClearField(name string) error {
+	switch name {
+	case payslipline.FieldComponentID:
+		m.ClearComponentID()
+		return nil
+	case payslipline.FieldCode:
+		m.ClearCode()
+		return nil
+	case payslipline.FieldUnit:
+		m.ClearUnit()
+		return nil
+	case payslipline.FieldDeductionPhase:
+		m.ClearDeductionPhase()
+		return nil
+	}
+	return fmt.Errorf("unknown PayslipLine nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PayslipLineMutation) ResetField(name string) error {
+	switch name {
+	case payslipline.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case payslipline.FieldPayslipID:
+		m.ResetPayslipID()
+		return nil
+	case payslipline.FieldComponentID:
+		m.ResetComponentID()
+		return nil
+	case payslipline.FieldSection:
+		m.ResetSection()
+		return nil
+	case payslipline.FieldCode:
+		m.ResetCode()
+		return nil
+	case payslipline.FieldLabel:
+		m.ResetLabel()
+		return nil
+	case payslipline.FieldCashAmount:
+		m.ResetCashAmount()
+		return nil
+	case payslipline.FieldTaxableAmount:
+		m.ResetTaxableAmount()
+		return nil
+	case payslipline.FieldEmployerAmount:
+		m.ResetEmployerAmount()
+		return nil
+	case payslipline.FieldNonCash:
+		m.ResetNonCash()
+		return nil
+	case payslipline.FieldTaxable:
+		m.ResetTaxable()
+		return nil
+	case payslipline.FieldQuantity:
+		m.ResetQuantity()
+		return nil
+	case payslipline.FieldRate:
+		m.ResetRate()
+		return nil
+	case payslipline.FieldUnit:
+		m.ResetUnit()
+		return nil
+	case payslipline.FieldDeductionPhase:
+		m.ResetDeductionPhase()
+		return nil
+	case payslipline.FieldSortOrder:
+		m.ResetSortOrder()
+		return nil
+	case payslipline.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown PayslipLine field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PayslipLineMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PayslipLineMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PayslipLineMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PayslipLineMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PayslipLineMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PayslipLineMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PayslipLineMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown PayslipLine unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PayslipLineMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown PayslipLine edge %s", name)
 }
 
 // PerformanceMetricMutation represents an operation that mutates the PerformanceMetric nodes in the graph.

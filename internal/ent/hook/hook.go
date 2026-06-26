@@ -873,6 +873,18 @@ func (f PayslipAuditFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PayslipAuditMutation", m)
 }
 
+// The PayslipLineFunc type is an adapter to allow the use of ordinary
+// function as PayslipLine mutator.
+type PayslipLineFunc func(context.Context, *ent.PayslipLineMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PayslipLineFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PayslipLineMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PayslipLineMutation", m)
+}
+
 // The PerformanceMetricFunc type is an adapter to allow the use of ordinary
 // function as PerformanceMetric mutator.
 type PerformanceMetricFunc func(context.Context, *ent.PerformanceMetricMutation) (ent.Value, error)

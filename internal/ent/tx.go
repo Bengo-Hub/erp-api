@@ -156,6 +156,8 @@ type Tx struct {
 	Payslip *PayslipClient
 	// PayslipAudit is the client for interacting with the PayslipAudit builders.
 	PayslipAudit *PayslipAuditClient
+	// PayslipLine is the client for interacting with the PayslipLine builders.
+	PayslipLine *PayslipLineClient
 	// PerformanceMetric is the client for interacting with the PerformanceMetric builders.
 	PerformanceMetric *PerformanceMetricClient
 	// PerformanceReview is the client for interacting with the PerformanceReview builders.
@@ -415,6 +417,7 @@ func (tx *Tx) init() {
 	tx.PayrollSplitRatio = NewPayrollSplitRatioClient(tx.config)
 	tx.Payslip = NewPayslipClient(tx.config)
 	tx.PayslipAudit = NewPayslipAuditClient(tx.config)
+	tx.PayslipLine = NewPayslipLineClient(tx.config)
 	tx.PerformanceMetric = NewPerformanceMetricClient(tx.config)
 	tx.PerformanceReview = NewPerformanceReviewClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
