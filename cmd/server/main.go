@@ -220,7 +220,10 @@ func run() error {
 
 	// Payroll: engine service (reuses payroll-settings for rate resolution) + disburser
 	// (publishes the GL event + best-effort treasury S2S payout).
-	payrollSettingsSvc := payrollsettings.NewService(orm, uuid.Nil)
+	// Global statutory formulas live under the synthetic system tenant; tenants without their
+	// own current formula inherit it (feedback_shared_core_reference_data). uuid.Nil = no fallback.
+	systemTenant, _ := uuid.Parse(cfg.Payroll.SystemTenantID)
+	payrollSettingsSvc := payrollsettings.NewService(orm, systemTenant)
 	payrollSvc := payroll.NewService(orm, payrollSettingsSvc).WithPublisher(notifyPublisher)
 	treasuryClient := treasury.NewClient(cfg.Services.TreasuryURL, cfg.Auth.APIKey, log)
 	employeesHandler.WithTreasury(treasuryClient) // enables /hrm/banks/* verify proxy

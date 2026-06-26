@@ -26,6 +26,15 @@ type Config struct {
 	Media     MediaConfig
 	Backup    BackupConfig
 	RateLimit mw.RateLimitConfig
+	Payroll   PayrollConfig
+}
+
+// PayrollConfig holds payroll-engine wiring. SystemTenantID is the synthetic tenant that owns
+// the GLOBAL KRA statutory formulas (per feedback_shared_core_reference_data: statutory rates are
+// shared reference data, not per-tenant). Tenants without their own current formula inherit it
+// (payrollsettings.Service.EffectiveFormula fallback). cmd/seed-payroll seeds under this id.
+type PayrollConfig struct {
+	SystemTenantID string `envconfig:"PAYROLL_SYSTEM_TENANT_ID" default:"00000000-0000-0000-0000-0000000005ff"`
 }
 
 // BackupConfig controls the tenant-scoped backup scheduler + retention churn.
