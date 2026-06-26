@@ -90,6 +90,8 @@ type Tx struct {
 	EmployeeMetric *EmployeeMetricClient
 	// EmployeeOnboarding is the client for interacting with the EmployeeOnboarding builders.
 	EmployeeOnboarding *EmployeeOnboardingClient
+	// EmployeeProjectAllocation is the client for interacting with the EmployeeProjectAllocation builders.
+	EmployeeProjectAllocation *EmployeeProjectAllocationClient
 	// EmploymentHistory is the client for interacting with the EmploymentHistory builders.
 	EmploymentHistory *EmploymentHistoryClient
 	// ExchangeRate is the client for interacting with the ExchangeRate builders.
@@ -380,6 +382,7 @@ func (tx *Tx) init() {
 	tx.EmployeeLoan = NewEmployeeLoanClient(tx.config)
 	tx.EmployeeMetric = NewEmployeeMetricClient(tx.config)
 	tx.EmployeeOnboarding = NewEmployeeOnboardingClient(tx.config)
+	tx.EmployeeProjectAllocation = NewEmployeeProjectAllocationClient(tx.config)
 	tx.EmploymentHistory = NewEmploymentHistoryClient(tx.config)
 	tx.ExchangeRate = NewExchangeRateClient(tx.config)
 	tx.ExchangeRateAPISettings = NewExchangeRateAPISettingsClient(tx.config)

@@ -477,6 +477,18 @@ func (f EmployeeOnboardingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeOnboardingMutation", m)
 }
 
+// The EmployeeProjectAllocationFunc type is an adapter to allow the use of ordinary
+// function as EmployeeProjectAllocation mutator.
+type EmployeeProjectAllocationFunc func(context.Context, *ent.EmployeeProjectAllocationMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EmployeeProjectAllocationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.EmployeeProjectAllocationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeProjectAllocationMutation", m)
+}
+
 // The EmploymentHistoryFunc type is an adapter to allow the use of ordinary
 // function as EmploymentHistory mutator.
 type EmploymentHistoryFunc func(context.Context, *ent.EmploymentHistoryMutation) (ent.Value, error)

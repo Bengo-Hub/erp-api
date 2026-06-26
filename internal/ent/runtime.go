@@ -43,6 +43,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeonboarding"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeeprojectallocation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employmenthistory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerate"
@@ -1132,6 +1133,30 @@ func init() {
 	employeeonboardingDescID := employeeonboardingFields[0].Descriptor()
 	// employeeonboarding.DefaultID holds the default value on creation for the id field.
 	employeeonboarding.DefaultID = employeeonboardingDescID.Default.(func() uuid.UUID)
+	employeeprojectallocationFields := schema.EmployeeProjectAllocation{}.Fields()
+	_ = employeeprojectallocationFields
+	// employeeprojectallocationDescAllocationPercent is the schema descriptor for allocation_percent field.
+	employeeprojectallocationDescAllocationPercent := employeeprojectallocationFields[6].Descriptor()
+	// employeeprojectallocation.DefaultAllocationPercent holds the default value on creation for the allocation_percent field.
+	employeeprojectallocation.DefaultAllocationPercent = employeeprojectallocationDescAllocationPercent.Default.(decimal.Decimal)
+	// employeeprojectallocationDescIsActive is the schema descriptor for is_active field.
+	employeeprojectallocationDescIsActive := employeeprojectallocationFields[10].Descriptor()
+	// employeeprojectallocation.DefaultIsActive holds the default value on creation for the is_active field.
+	employeeprojectallocation.DefaultIsActive = employeeprojectallocationDescIsActive.Default.(bool)
+	// employeeprojectallocationDescCreatedAt is the schema descriptor for created_at field.
+	employeeprojectallocationDescCreatedAt := employeeprojectallocationFields[11].Descriptor()
+	// employeeprojectallocation.DefaultCreatedAt holds the default value on creation for the created_at field.
+	employeeprojectallocation.DefaultCreatedAt = employeeprojectallocationDescCreatedAt.Default.(func() time.Time)
+	// employeeprojectallocationDescUpdatedAt is the schema descriptor for updated_at field.
+	employeeprojectallocationDescUpdatedAt := employeeprojectallocationFields[12].Descriptor()
+	// employeeprojectallocation.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	employeeprojectallocation.DefaultUpdatedAt = employeeprojectallocationDescUpdatedAt.Default.(func() time.Time)
+	// employeeprojectallocation.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	employeeprojectallocation.UpdateDefaultUpdatedAt = employeeprojectallocationDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// employeeprojectallocationDescID is the schema descriptor for id field.
+	employeeprojectallocationDescID := employeeprojectallocationFields[0].Descriptor()
+	// employeeprojectallocation.DefaultID holds the default value on creation for the id field.
+	employeeprojectallocation.DefaultID = employeeprojectallocationDescID.Default.(func() uuid.UUID)
 	employmenthistoryFields := schema.EmploymentHistory{}.Fields()
 	_ = employmenthistoryFields
 	// employmenthistoryDescEmployer is the schema descriptor for employer field.

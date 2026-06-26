@@ -1359,6 +1359,45 @@ var (
 			},
 		},
 	}
+	// EmployeeProjectAllocationsColumns holds the columns for the "employee_project_allocations" table.
+	EmployeeProjectAllocationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "project_id", Type: field.TypeUUID},
+		{Name: "project_name", Type: field.TypeString, Nullable: true},
+		{Name: "cost_center_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "allocation_percent", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "fixed_amount", Type: field.TypeFloat64, Nullable: true},
+		{Name: "start_date", Type: field.TypeTime, Nullable: true},
+		{Name: "end_date", Type: field.TypeTime, Nullable: true},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// EmployeeProjectAllocationsTable holds the schema information for the "employee_project_allocations" table.
+	EmployeeProjectAllocationsTable = &schema.Table{
+		Name:       "employee_project_allocations",
+		Columns:    EmployeeProjectAllocationsColumns,
+		PrimaryKey: []*schema.Column{EmployeeProjectAllocationsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "employeeprojectallocation_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{EmployeeProjectAllocationsColumns[1]},
+			},
+			{
+				Name:    "employeeprojectallocation_tenant_id_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{EmployeeProjectAllocationsColumns[1], EmployeeProjectAllocationsColumns[2]},
+			},
+			{
+				Name:    "employeeprojectallocation_tenant_id_project_id",
+				Unique:  false,
+				Columns: []*schema.Column{EmployeeProjectAllocationsColumns[1], EmployeeProjectAllocationsColumns[3]},
+			},
+		},
+	}
 	// EmploymentHistoriesColumns holds the columns for the "employment_histories" table.
 	EmploymentHistoriesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -3441,6 +3480,7 @@ var (
 		EmployeeLoansTable,
 		EmployeeMetricsTable,
 		EmployeeOnboardingsTable,
+		EmployeeProjectAllocationsTable,
 		EmploymentHistoriesTable,
 		ExchangeRatesTable,
 		ExchangeRateAPISettingsTable,
