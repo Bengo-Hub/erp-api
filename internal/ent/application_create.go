@@ -84,6 +84,34 @@ func (_c *ApplicationCreate) SetNillableNotes(v *string) *ApplicationCreate {
 	return _c
 }
 
+// SetCoverLetter sets the "cover_letter" field.
+func (_c *ApplicationCreate) SetCoverLetter(v string) *ApplicationCreate {
+	_c.mutation.SetCoverLetter(v)
+	return _c
+}
+
+// SetNillableCoverLetter sets the "cover_letter" field if the given value is not nil.
+func (_c *ApplicationCreate) SetNillableCoverLetter(v *string) *ApplicationCreate {
+	if v != nil {
+		_c.SetCoverLetter(*v)
+	}
+	return _c
+}
+
+// SetSource sets the "source" field.
+func (_c *ApplicationCreate) SetSource(v string) *ApplicationCreate {
+	_c.mutation.SetSource(v)
+	return _c
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_c *ApplicationCreate) SetNillableSource(v *string) *ApplicationCreate {
+	if v != nil {
+		_c.SetSource(*v)
+	}
+	return _c
+}
+
 // SetHiredEmployeeID sets the "hired_employee_id" field.
 func (_c *ApplicationCreate) SetHiredEmployeeID(v uuid.UUID) *ApplicationCreate {
 	_c.mutation.SetHiredEmployeeID(v)
@@ -285,6 +313,14 @@ func (_c *ApplicationCreate) createSpec() (*Application, *sqlgraph.CreateSpec) {
 		_spec.SetField(application.FieldNotes, field.TypeString, value)
 		_node.Notes = &value
 	}
+	if value, ok := _c.mutation.CoverLetter(); ok {
+		_spec.SetField(application.FieldCoverLetter, field.TypeString, value)
+		_node.CoverLetter = &value
+	}
+	if value, ok := _c.mutation.Source(); ok {
+		_spec.SetField(application.FieldSource, field.TypeString, value)
+		_node.Source = &value
+	}
 	if value, ok := _c.mutation.HiredEmployeeID(); ok {
 		_spec.SetField(application.FieldHiredEmployeeID, field.TypeUUID, value)
 		_node.HiredEmployeeID = &value
@@ -424,6 +460,42 @@ func (u *ApplicationUpsert) UpdateNotes() *ApplicationUpsert {
 // ClearNotes clears the value of the "notes" field.
 func (u *ApplicationUpsert) ClearNotes() *ApplicationUpsert {
 	u.SetNull(application.FieldNotes)
+	return u
+}
+
+// SetCoverLetter sets the "cover_letter" field.
+func (u *ApplicationUpsert) SetCoverLetter(v string) *ApplicationUpsert {
+	u.Set(application.FieldCoverLetter, v)
+	return u
+}
+
+// UpdateCoverLetter sets the "cover_letter" field to the value that was provided on create.
+func (u *ApplicationUpsert) UpdateCoverLetter() *ApplicationUpsert {
+	u.SetExcluded(application.FieldCoverLetter)
+	return u
+}
+
+// ClearCoverLetter clears the value of the "cover_letter" field.
+func (u *ApplicationUpsert) ClearCoverLetter() *ApplicationUpsert {
+	u.SetNull(application.FieldCoverLetter)
+	return u
+}
+
+// SetSource sets the "source" field.
+func (u *ApplicationUpsert) SetSource(v string) *ApplicationUpsert {
+	u.Set(application.FieldSource, v)
+	return u
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *ApplicationUpsert) UpdateSource() *ApplicationUpsert {
+	u.SetExcluded(application.FieldSource)
+	return u
+}
+
+// ClearSource clears the value of the "source" field.
+func (u *ApplicationUpsert) ClearSource() *ApplicationUpsert {
+	u.SetNull(application.FieldSource)
 	return u
 }
 
@@ -596,6 +668,48 @@ func (u *ApplicationUpsertOne) UpdateNotes() *ApplicationUpsertOne {
 func (u *ApplicationUpsertOne) ClearNotes() *ApplicationUpsertOne {
 	return u.Update(func(s *ApplicationUpsert) {
 		s.ClearNotes()
+	})
+}
+
+// SetCoverLetter sets the "cover_letter" field.
+func (u *ApplicationUpsertOne) SetCoverLetter(v string) *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.SetCoverLetter(v)
+	})
+}
+
+// UpdateCoverLetter sets the "cover_letter" field to the value that was provided on create.
+func (u *ApplicationUpsertOne) UpdateCoverLetter() *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.UpdateCoverLetter()
+	})
+}
+
+// ClearCoverLetter clears the value of the "cover_letter" field.
+func (u *ApplicationUpsertOne) ClearCoverLetter() *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.ClearCoverLetter()
+	})
+}
+
+// SetSource sets the "source" field.
+func (u *ApplicationUpsertOne) SetSource(v string) *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.SetSource(v)
+	})
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *ApplicationUpsertOne) UpdateSource() *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.UpdateSource()
+	})
+}
+
+// ClearSource clears the value of the "source" field.
+func (u *ApplicationUpsertOne) ClearSource() *ApplicationUpsertOne {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.ClearSource()
 	})
 }
 
@@ -940,6 +1054,48 @@ func (u *ApplicationUpsertBulk) UpdateNotes() *ApplicationUpsertBulk {
 func (u *ApplicationUpsertBulk) ClearNotes() *ApplicationUpsertBulk {
 	return u.Update(func(s *ApplicationUpsert) {
 		s.ClearNotes()
+	})
+}
+
+// SetCoverLetter sets the "cover_letter" field.
+func (u *ApplicationUpsertBulk) SetCoverLetter(v string) *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.SetCoverLetter(v)
+	})
+}
+
+// UpdateCoverLetter sets the "cover_letter" field to the value that was provided on create.
+func (u *ApplicationUpsertBulk) UpdateCoverLetter() *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.UpdateCoverLetter()
+	})
+}
+
+// ClearCoverLetter clears the value of the "cover_letter" field.
+func (u *ApplicationUpsertBulk) ClearCoverLetter() *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.ClearCoverLetter()
+	})
+}
+
+// SetSource sets the "source" field.
+func (u *ApplicationUpsertBulk) SetSource(v string) *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.SetSource(v)
+	})
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *ApplicationUpsertBulk) UpdateSource() *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.UpdateSource()
+	})
+}
+
+// ClearSource clears the value of the "source" field.
+func (u *ApplicationUpsertBulk) ClearSource() *ApplicationUpsertBulk {
+	return u.Update(func(s *ApplicationUpsert) {
+		s.ClearSource()
 	})
 }
 

@@ -92,6 +92,76 @@ func (_c *JobPostingCreate) SetNillableStatus(v *jobposting.Status) *JobPostingC
 	return _c
 }
 
+// SetSlug sets the "slug" field.
+func (_c *JobPostingCreate) SetSlug(v string) *JobPostingCreate {
+	_c.mutation.SetSlug(v)
+	return _c
+}
+
+// SetNillableSlug sets the "slug" field if the given value is not nil.
+func (_c *JobPostingCreate) SetNillableSlug(v *string) *JobPostingCreate {
+	if v != nil {
+		_c.SetSlug(*v)
+	}
+	return _c
+}
+
+// SetIsPublic sets the "is_public" field.
+func (_c *JobPostingCreate) SetIsPublic(v bool) *JobPostingCreate {
+	_c.mutation.SetIsPublic(v)
+	return _c
+}
+
+// SetNillableIsPublic sets the "is_public" field if the given value is not nil.
+func (_c *JobPostingCreate) SetNillableIsPublic(v *bool) *JobPostingCreate {
+	if v != nil {
+		_c.SetIsPublic(*v)
+	}
+	return _c
+}
+
+// SetEmploymentType sets the "employment_type" field.
+func (_c *JobPostingCreate) SetEmploymentType(v string) *JobPostingCreate {
+	_c.mutation.SetEmploymentType(v)
+	return _c
+}
+
+// SetNillableEmploymentType sets the "employment_type" field if the given value is not nil.
+func (_c *JobPostingCreate) SetNillableEmploymentType(v *string) *JobPostingCreate {
+	if v != nil {
+		_c.SetEmploymentType(*v)
+	}
+	return _c
+}
+
+// SetNumPositions sets the "num_positions" field.
+func (_c *JobPostingCreate) SetNumPositions(v int) *JobPostingCreate {
+	_c.mutation.SetNumPositions(v)
+	return _c
+}
+
+// SetNillableNumPositions sets the "num_positions" field if the given value is not nil.
+func (_c *JobPostingCreate) SetNillableNumPositions(v *int) *JobPostingCreate {
+	if v != nil {
+		_c.SetNumPositions(*v)
+	}
+	return _c
+}
+
+// SetApplicationDeadline sets the "application_deadline" field.
+func (_c *JobPostingCreate) SetApplicationDeadline(v time.Time) *JobPostingCreate {
+	_c.mutation.SetApplicationDeadline(v)
+	return _c
+}
+
+// SetNillableApplicationDeadline sets the "application_deadline" field if the given value is not nil.
+func (_c *JobPostingCreate) SetNillableApplicationDeadline(v *time.Time) *JobPostingCreate {
+	if v != nil {
+		_c.SetApplicationDeadline(*v)
+	}
+	return _c
+}
+
 // SetPostedAt sets the "posted_at" field.
 func (_c *JobPostingCreate) SetPostedAt(v time.Time) *JobPostingCreate {
 	_c.mutation.SetPostedAt(v)
@@ -201,6 +271,14 @@ func (_c *JobPostingCreate) defaults() {
 		v := jobposting.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.IsPublic(); !ok {
+		v := jobposting.DefaultIsPublic
+		_c.mutation.SetIsPublic(v)
+	}
+	if _, ok := _c.mutation.NumPositions(); !ok {
+		v := jobposting.DefaultNumPositions
+		_c.mutation.SetNumPositions(v)
+	}
 	if _, ok := _c.mutation.PostedAt(); !ok {
 		v := jobposting.DefaultPostedAt()
 		_c.mutation.SetPostedAt(v)
@@ -234,6 +312,12 @@ func (_c *JobPostingCreate) check() error {
 		if err := jobposting.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "JobPosting.status": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.IsPublic(); !ok {
+		return &ValidationError{Name: "is_public", err: errors.New(`ent: missing required field "JobPosting.is_public"`)}
+	}
+	if _, ok := _c.mutation.NumPositions(); !ok {
+		return &ValidationError{Name: "num_positions", err: errors.New(`ent: missing required field "JobPosting.num_positions"`)}
 	}
 	if _, ok := _c.mutation.PostedAt(); !ok {
 		return &ValidationError{Name: "posted_at", err: errors.New(`ent: missing required field "JobPosting.posted_at"`)}
@@ -303,6 +387,26 @@ func (_c *JobPostingCreate) createSpec() (*JobPosting, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(jobposting.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
+	}
+	if value, ok := _c.mutation.Slug(); ok {
+		_spec.SetField(jobposting.FieldSlug, field.TypeString, value)
+		_node.Slug = &value
+	}
+	if value, ok := _c.mutation.IsPublic(); ok {
+		_spec.SetField(jobposting.FieldIsPublic, field.TypeBool, value)
+		_node.IsPublic = value
+	}
+	if value, ok := _c.mutation.EmploymentType(); ok {
+		_spec.SetField(jobposting.FieldEmploymentType, field.TypeString, value)
+		_node.EmploymentType = &value
+	}
+	if value, ok := _c.mutation.NumPositions(); ok {
+		_spec.SetField(jobposting.FieldNumPositions, field.TypeInt, value)
+		_node.NumPositions = value
+	}
+	if value, ok := _c.mutation.ApplicationDeadline(); ok {
+		_spec.SetField(jobposting.FieldApplicationDeadline, field.TypeTime, value)
+		_node.ApplicationDeadline = &value
 	}
 	if value, ok := _c.mutation.PostedAt(); ok {
 		_spec.SetField(jobposting.FieldPostedAt, field.TypeTime, value)
@@ -459,6 +563,90 @@ func (u *JobPostingUpsert) SetStatus(v jobposting.Status) *JobPostingUpsert {
 // UpdateStatus sets the "status" field to the value that was provided on create.
 func (u *JobPostingUpsert) UpdateStatus() *JobPostingUpsert {
 	u.SetExcluded(jobposting.FieldStatus)
+	return u
+}
+
+// SetSlug sets the "slug" field.
+func (u *JobPostingUpsert) SetSlug(v string) *JobPostingUpsert {
+	u.Set(jobposting.FieldSlug, v)
+	return u
+}
+
+// UpdateSlug sets the "slug" field to the value that was provided on create.
+func (u *JobPostingUpsert) UpdateSlug() *JobPostingUpsert {
+	u.SetExcluded(jobposting.FieldSlug)
+	return u
+}
+
+// ClearSlug clears the value of the "slug" field.
+func (u *JobPostingUpsert) ClearSlug() *JobPostingUpsert {
+	u.SetNull(jobposting.FieldSlug)
+	return u
+}
+
+// SetIsPublic sets the "is_public" field.
+func (u *JobPostingUpsert) SetIsPublic(v bool) *JobPostingUpsert {
+	u.Set(jobposting.FieldIsPublic, v)
+	return u
+}
+
+// UpdateIsPublic sets the "is_public" field to the value that was provided on create.
+func (u *JobPostingUpsert) UpdateIsPublic() *JobPostingUpsert {
+	u.SetExcluded(jobposting.FieldIsPublic)
+	return u
+}
+
+// SetEmploymentType sets the "employment_type" field.
+func (u *JobPostingUpsert) SetEmploymentType(v string) *JobPostingUpsert {
+	u.Set(jobposting.FieldEmploymentType, v)
+	return u
+}
+
+// UpdateEmploymentType sets the "employment_type" field to the value that was provided on create.
+func (u *JobPostingUpsert) UpdateEmploymentType() *JobPostingUpsert {
+	u.SetExcluded(jobposting.FieldEmploymentType)
+	return u
+}
+
+// ClearEmploymentType clears the value of the "employment_type" field.
+func (u *JobPostingUpsert) ClearEmploymentType() *JobPostingUpsert {
+	u.SetNull(jobposting.FieldEmploymentType)
+	return u
+}
+
+// SetNumPositions sets the "num_positions" field.
+func (u *JobPostingUpsert) SetNumPositions(v int) *JobPostingUpsert {
+	u.Set(jobposting.FieldNumPositions, v)
+	return u
+}
+
+// UpdateNumPositions sets the "num_positions" field to the value that was provided on create.
+func (u *JobPostingUpsert) UpdateNumPositions() *JobPostingUpsert {
+	u.SetExcluded(jobposting.FieldNumPositions)
+	return u
+}
+
+// AddNumPositions adds v to the "num_positions" field.
+func (u *JobPostingUpsert) AddNumPositions(v int) *JobPostingUpsert {
+	u.Add(jobposting.FieldNumPositions, v)
+	return u
+}
+
+// SetApplicationDeadline sets the "application_deadline" field.
+func (u *JobPostingUpsert) SetApplicationDeadline(v time.Time) *JobPostingUpsert {
+	u.Set(jobposting.FieldApplicationDeadline, v)
+	return u
+}
+
+// UpdateApplicationDeadline sets the "application_deadline" field to the value that was provided on create.
+func (u *JobPostingUpsert) UpdateApplicationDeadline() *JobPostingUpsert {
+	u.SetExcluded(jobposting.FieldApplicationDeadline)
+	return u
+}
+
+// ClearApplicationDeadline clears the value of the "application_deadline" field.
+func (u *JobPostingUpsert) ClearApplicationDeadline() *JobPostingUpsert {
+	u.SetNull(jobposting.FieldApplicationDeadline)
 	return u
 }
 
@@ -657,6 +845,104 @@ func (u *JobPostingUpsertOne) SetStatus(v jobposting.Status) *JobPostingUpsertOn
 func (u *JobPostingUpsertOne) UpdateStatus() *JobPostingUpsertOne {
 	return u.Update(func(s *JobPostingUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetSlug sets the "slug" field.
+func (u *JobPostingUpsertOne) SetSlug(v string) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetSlug(v)
+	})
+}
+
+// UpdateSlug sets the "slug" field to the value that was provided on create.
+func (u *JobPostingUpsertOne) UpdateSlug() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateSlug()
+	})
+}
+
+// ClearSlug clears the value of the "slug" field.
+func (u *JobPostingUpsertOne) ClearSlug() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearSlug()
+	})
+}
+
+// SetIsPublic sets the "is_public" field.
+func (u *JobPostingUpsertOne) SetIsPublic(v bool) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetIsPublic(v)
+	})
+}
+
+// UpdateIsPublic sets the "is_public" field to the value that was provided on create.
+func (u *JobPostingUpsertOne) UpdateIsPublic() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateIsPublic()
+	})
+}
+
+// SetEmploymentType sets the "employment_type" field.
+func (u *JobPostingUpsertOne) SetEmploymentType(v string) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetEmploymentType(v)
+	})
+}
+
+// UpdateEmploymentType sets the "employment_type" field to the value that was provided on create.
+func (u *JobPostingUpsertOne) UpdateEmploymentType() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateEmploymentType()
+	})
+}
+
+// ClearEmploymentType clears the value of the "employment_type" field.
+func (u *JobPostingUpsertOne) ClearEmploymentType() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearEmploymentType()
+	})
+}
+
+// SetNumPositions sets the "num_positions" field.
+func (u *JobPostingUpsertOne) SetNumPositions(v int) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetNumPositions(v)
+	})
+}
+
+// AddNumPositions adds v to the "num_positions" field.
+func (u *JobPostingUpsertOne) AddNumPositions(v int) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.AddNumPositions(v)
+	})
+}
+
+// UpdateNumPositions sets the "num_positions" field to the value that was provided on create.
+func (u *JobPostingUpsertOne) UpdateNumPositions() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateNumPositions()
+	})
+}
+
+// SetApplicationDeadline sets the "application_deadline" field.
+func (u *JobPostingUpsertOne) SetApplicationDeadline(v time.Time) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetApplicationDeadline(v)
+	})
+}
+
+// UpdateApplicationDeadline sets the "application_deadline" field to the value that was provided on create.
+func (u *JobPostingUpsertOne) UpdateApplicationDeadline() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateApplicationDeadline()
+	})
+}
+
+// ClearApplicationDeadline clears the value of the "application_deadline" field.
+func (u *JobPostingUpsertOne) ClearApplicationDeadline() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearApplicationDeadline()
 	})
 }
 
@@ -1029,6 +1315,104 @@ func (u *JobPostingUpsertBulk) SetStatus(v jobposting.Status) *JobPostingUpsertB
 func (u *JobPostingUpsertBulk) UpdateStatus() *JobPostingUpsertBulk {
 	return u.Update(func(s *JobPostingUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetSlug sets the "slug" field.
+func (u *JobPostingUpsertBulk) SetSlug(v string) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetSlug(v)
+	})
+}
+
+// UpdateSlug sets the "slug" field to the value that was provided on create.
+func (u *JobPostingUpsertBulk) UpdateSlug() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateSlug()
+	})
+}
+
+// ClearSlug clears the value of the "slug" field.
+func (u *JobPostingUpsertBulk) ClearSlug() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearSlug()
+	})
+}
+
+// SetIsPublic sets the "is_public" field.
+func (u *JobPostingUpsertBulk) SetIsPublic(v bool) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetIsPublic(v)
+	})
+}
+
+// UpdateIsPublic sets the "is_public" field to the value that was provided on create.
+func (u *JobPostingUpsertBulk) UpdateIsPublic() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateIsPublic()
+	})
+}
+
+// SetEmploymentType sets the "employment_type" field.
+func (u *JobPostingUpsertBulk) SetEmploymentType(v string) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetEmploymentType(v)
+	})
+}
+
+// UpdateEmploymentType sets the "employment_type" field to the value that was provided on create.
+func (u *JobPostingUpsertBulk) UpdateEmploymentType() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateEmploymentType()
+	})
+}
+
+// ClearEmploymentType clears the value of the "employment_type" field.
+func (u *JobPostingUpsertBulk) ClearEmploymentType() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearEmploymentType()
+	})
+}
+
+// SetNumPositions sets the "num_positions" field.
+func (u *JobPostingUpsertBulk) SetNumPositions(v int) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetNumPositions(v)
+	})
+}
+
+// AddNumPositions adds v to the "num_positions" field.
+func (u *JobPostingUpsertBulk) AddNumPositions(v int) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.AddNumPositions(v)
+	})
+}
+
+// UpdateNumPositions sets the "num_positions" field to the value that was provided on create.
+func (u *JobPostingUpsertBulk) UpdateNumPositions() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateNumPositions()
+	})
+}
+
+// SetApplicationDeadline sets the "application_deadline" field.
+func (u *JobPostingUpsertBulk) SetApplicationDeadline(v time.Time) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetApplicationDeadline(v)
+	})
+}
+
+// UpdateApplicationDeadline sets the "application_deadline" field to the value that was provided on create.
+func (u *JobPostingUpsertBulk) UpdateApplicationDeadline() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateApplicationDeadline()
+	})
+}
+
+// ClearApplicationDeadline clears the value of the "application_deadline" field.
+func (u *JobPostingUpsertBulk) ClearApplicationDeadline() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearApplicationDeadline()
 	})
 }
 

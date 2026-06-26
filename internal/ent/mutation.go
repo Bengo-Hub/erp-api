@@ -2603,6 +2603,8 @@ type ApplicationMutation struct {
 	status            *application.Status
 	applied_at        *time.Time
 	notes             *string
+	cover_letter      *string
+	source            *string
 	hired_employee_id *uuid.UUID
 	created_at        *time.Time
 	updated_at        *time.Time
@@ -2945,6 +2947,104 @@ func (m *ApplicationMutation) ResetNotes() {
 	delete(m.clearedFields, application.FieldNotes)
 }
 
+// SetCoverLetter sets the "cover_letter" field.
+func (m *ApplicationMutation) SetCoverLetter(s string) {
+	m.cover_letter = &s
+}
+
+// CoverLetter returns the value of the "cover_letter" field in the mutation.
+func (m *ApplicationMutation) CoverLetter() (r string, exists bool) {
+	v := m.cover_letter
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCoverLetter returns the old "cover_letter" field's value of the Application entity.
+// If the Application object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ApplicationMutation) OldCoverLetter(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCoverLetter is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCoverLetter requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCoverLetter: %w", err)
+	}
+	return oldValue.CoverLetter, nil
+}
+
+// ClearCoverLetter clears the value of the "cover_letter" field.
+func (m *ApplicationMutation) ClearCoverLetter() {
+	m.cover_letter = nil
+	m.clearedFields[application.FieldCoverLetter] = struct{}{}
+}
+
+// CoverLetterCleared returns if the "cover_letter" field was cleared in this mutation.
+func (m *ApplicationMutation) CoverLetterCleared() bool {
+	_, ok := m.clearedFields[application.FieldCoverLetter]
+	return ok
+}
+
+// ResetCoverLetter resets all changes to the "cover_letter" field.
+func (m *ApplicationMutation) ResetCoverLetter() {
+	m.cover_letter = nil
+	delete(m.clearedFields, application.FieldCoverLetter)
+}
+
+// SetSource sets the "source" field.
+func (m *ApplicationMutation) SetSource(s string) {
+	m.source = &s
+}
+
+// Source returns the value of the "source" field in the mutation.
+func (m *ApplicationMutation) Source() (r string, exists bool) {
+	v := m.source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSource returns the old "source" field's value of the Application entity.
+// If the Application object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ApplicationMutation) OldSource(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSource: %w", err)
+	}
+	return oldValue.Source, nil
+}
+
+// ClearSource clears the value of the "source" field.
+func (m *ApplicationMutation) ClearSource() {
+	m.source = nil
+	m.clearedFields[application.FieldSource] = struct{}{}
+}
+
+// SourceCleared returns if the "source" field was cleared in this mutation.
+func (m *ApplicationMutation) SourceCleared() bool {
+	_, ok := m.clearedFields[application.FieldSource]
+	return ok
+}
+
+// ResetSource resets all changes to the "source" field.
+func (m *ApplicationMutation) ResetSource() {
+	m.source = nil
+	delete(m.clearedFields, application.FieldSource)
+}
+
 // SetHiredEmployeeID sets the "hired_employee_id" field.
 func (m *ApplicationMutation) SetHiredEmployeeID(u uuid.UUID) {
 	m.hired_employee_id = &u
@@ -3100,7 +3200,7 @@ func (m *ApplicationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ApplicationMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 11)
 	if m.tenant_id != nil {
 		fields = append(fields, application.FieldTenantID)
 	}
@@ -3118,6 +3218,12 @@ func (m *ApplicationMutation) Fields() []string {
 	}
 	if m.notes != nil {
 		fields = append(fields, application.FieldNotes)
+	}
+	if m.cover_letter != nil {
+		fields = append(fields, application.FieldCoverLetter)
+	}
+	if m.source != nil {
+		fields = append(fields, application.FieldSource)
 	}
 	if m.hired_employee_id != nil {
 		fields = append(fields, application.FieldHiredEmployeeID)
@@ -3148,6 +3254,10 @@ func (m *ApplicationMutation) Field(name string) (ent.Value, bool) {
 		return m.AppliedAt()
 	case application.FieldNotes:
 		return m.Notes()
+	case application.FieldCoverLetter:
+		return m.CoverLetter()
+	case application.FieldSource:
+		return m.Source()
 	case application.FieldHiredEmployeeID:
 		return m.HiredEmployeeID()
 	case application.FieldCreatedAt:
@@ -3175,6 +3285,10 @@ func (m *ApplicationMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldAppliedAt(ctx)
 	case application.FieldNotes:
 		return m.OldNotes(ctx)
+	case application.FieldCoverLetter:
+		return m.OldCoverLetter(ctx)
+	case application.FieldSource:
+		return m.OldSource(ctx)
 	case application.FieldHiredEmployeeID:
 		return m.OldHiredEmployeeID(ctx)
 	case application.FieldCreatedAt:
@@ -3232,6 +3346,20 @@ func (m *ApplicationMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetNotes(v)
 		return nil
+	case application.FieldCoverLetter:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCoverLetter(v)
+		return nil
+	case application.FieldSource:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSource(v)
+		return nil
 	case application.FieldHiredEmployeeID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
@@ -3286,6 +3414,12 @@ func (m *ApplicationMutation) ClearedFields() []string {
 	if m.FieldCleared(application.FieldNotes) {
 		fields = append(fields, application.FieldNotes)
 	}
+	if m.FieldCleared(application.FieldCoverLetter) {
+		fields = append(fields, application.FieldCoverLetter)
+	}
+	if m.FieldCleared(application.FieldSource) {
+		fields = append(fields, application.FieldSource)
+	}
 	if m.FieldCleared(application.FieldHiredEmployeeID) {
 		fields = append(fields, application.FieldHiredEmployeeID)
 	}
@@ -3305,6 +3439,12 @@ func (m *ApplicationMutation) ClearField(name string) error {
 	switch name {
 	case application.FieldNotes:
 		m.ClearNotes()
+		return nil
+	case application.FieldCoverLetter:
+		m.ClearCoverLetter()
+		return nil
+	case application.FieldSource:
+		m.ClearSource()
 		return nil
 	case application.FieldHiredEmployeeID:
 		m.ClearHiredEmployeeID()
@@ -3334,6 +3474,12 @@ func (m *ApplicationMutation) ResetField(name string) error {
 		return nil
 	case application.FieldNotes:
 		m.ResetNotes()
+		return nil
+	case application.FieldCoverLetter:
+		m.ResetCoverLetter()
+		return nil
+	case application.FieldSource:
+		m.ResetSource()
 		return nil
 	case application.FieldHiredEmployeeID:
 		m.ResetHiredEmployeeID()
@@ -47525,23 +47671,29 @@ func (m *JobGroupMutation) ResetEdge(name string) error {
 // JobPostingMutation represents an operation that mutates the JobPosting nodes in the graph.
 type JobPostingMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	tenant_id     *uuid.UUID
-	title         *string
-	description   *string
-	department    *string
-	location      *string
-	status        *jobposting.Status
-	posted_at     *time.Time
-	closed_at     *time.Time
-	created_at    *time.Time
-	updated_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*JobPosting, error)
-	predicates    []predicate.JobPosting
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	tenant_id            *uuid.UUID
+	title                *string
+	description          *string
+	department           *string
+	location             *string
+	status               *jobposting.Status
+	slug                 *string
+	is_public            *bool
+	employment_type      *string
+	num_positions        *int
+	addnum_positions     *int
+	application_deadline *time.Time
+	posted_at            *time.Time
+	closed_at            *time.Time
+	created_at           *time.Time
+	updated_at           *time.Time
+	clearedFields        map[string]struct{}
+	done                 bool
+	oldValue             func(context.Context) (*JobPosting, error)
+	predicates           []predicate.JobPosting
 }
 
 var _ ent.Mutation = (*JobPostingMutation)(nil)
@@ -47903,6 +48055,245 @@ func (m *JobPostingMutation) ResetStatus() {
 	m.status = nil
 }
 
+// SetSlug sets the "slug" field.
+func (m *JobPostingMutation) SetSlug(s string) {
+	m.slug = &s
+}
+
+// Slug returns the value of the "slug" field in the mutation.
+func (m *JobPostingMutation) Slug() (r string, exists bool) {
+	v := m.slug
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSlug returns the old "slug" field's value of the JobPosting entity.
+// If the JobPosting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobPostingMutation) OldSlug(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSlug is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSlug requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSlug: %w", err)
+	}
+	return oldValue.Slug, nil
+}
+
+// ClearSlug clears the value of the "slug" field.
+func (m *JobPostingMutation) ClearSlug() {
+	m.slug = nil
+	m.clearedFields[jobposting.FieldSlug] = struct{}{}
+}
+
+// SlugCleared returns if the "slug" field was cleared in this mutation.
+func (m *JobPostingMutation) SlugCleared() bool {
+	_, ok := m.clearedFields[jobposting.FieldSlug]
+	return ok
+}
+
+// ResetSlug resets all changes to the "slug" field.
+func (m *JobPostingMutation) ResetSlug() {
+	m.slug = nil
+	delete(m.clearedFields, jobposting.FieldSlug)
+}
+
+// SetIsPublic sets the "is_public" field.
+func (m *JobPostingMutation) SetIsPublic(b bool) {
+	m.is_public = &b
+}
+
+// IsPublic returns the value of the "is_public" field in the mutation.
+func (m *JobPostingMutation) IsPublic() (r bool, exists bool) {
+	v := m.is_public
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsPublic returns the old "is_public" field's value of the JobPosting entity.
+// If the JobPosting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobPostingMutation) OldIsPublic(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsPublic is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsPublic requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsPublic: %w", err)
+	}
+	return oldValue.IsPublic, nil
+}
+
+// ResetIsPublic resets all changes to the "is_public" field.
+func (m *JobPostingMutation) ResetIsPublic() {
+	m.is_public = nil
+}
+
+// SetEmploymentType sets the "employment_type" field.
+func (m *JobPostingMutation) SetEmploymentType(s string) {
+	m.employment_type = &s
+}
+
+// EmploymentType returns the value of the "employment_type" field in the mutation.
+func (m *JobPostingMutation) EmploymentType() (r string, exists bool) {
+	v := m.employment_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmploymentType returns the old "employment_type" field's value of the JobPosting entity.
+// If the JobPosting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobPostingMutation) OldEmploymentType(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmploymentType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmploymentType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmploymentType: %w", err)
+	}
+	return oldValue.EmploymentType, nil
+}
+
+// ClearEmploymentType clears the value of the "employment_type" field.
+func (m *JobPostingMutation) ClearEmploymentType() {
+	m.employment_type = nil
+	m.clearedFields[jobposting.FieldEmploymentType] = struct{}{}
+}
+
+// EmploymentTypeCleared returns if the "employment_type" field was cleared in this mutation.
+func (m *JobPostingMutation) EmploymentTypeCleared() bool {
+	_, ok := m.clearedFields[jobposting.FieldEmploymentType]
+	return ok
+}
+
+// ResetEmploymentType resets all changes to the "employment_type" field.
+func (m *JobPostingMutation) ResetEmploymentType() {
+	m.employment_type = nil
+	delete(m.clearedFields, jobposting.FieldEmploymentType)
+}
+
+// SetNumPositions sets the "num_positions" field.
+func (m *JobPostingMutation) SetNumPositions(i int) {
+	m.num_positions = &i
+	m.addnum_positions = nil
+}
+
+// NumPositions returns the value of the "num_positions" field in the mutation.
+func (m *JobPostingMutation) NumPositions() (r int, exists bool) {
+	v := m.num_positions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNumPositions returns the old "num_positions" field's value of the JobPosting entity.
+// If the JobPosting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobPostingMutation) OldNumPositions(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNumPositions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNumPositions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNumPositions: %w", err)
+	}
+	return oldValue.NumPositions, nil
+}
+
+// AddNumPositions adds i to the "num_positions" field.
+func (m *JobPostingMutation) AddNumPositions(i int) {
+	if m.addnum_positions != nil {
+		*m.addnum_positions += i
+	} else {
+		m.addnum_positions = &i
+	}
+}
+
+// AddedNumPositions returns the value that was added to the "num_positions" field in this mutation.
+func (m *JobPostingMutation) AddedNumPositions() (r int, exists bool) {
+	v := m.addnum_positions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetNumPositions resets all changes to the "num_positions" field.
+func (m *JobPostingMutation) ResetNumPositions() {
+	m.num_positions = nil
+	m.addnum_positions = nil
+}
+
+// SetApplicationDeadline sets the "application_deadline" field.
+func (m *JobPostingMutation) SetApplicationDeadline(t time.Time) {
+	m.application_deadline = &t
+}
+
+// ApplicationDeadline returns the value of the "application_deadline" field in the mutation.
+func (m *JobPostingMutation) ApplicationDeadline() (r time.Time, exists bool) {
+	v := m.application_deadline
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApplicationDeadline returns the old "application_deadline" field's value of the JobPosting entity.
+// If the JobPosting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobPostingMutation) OldApplicationDeadline(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApplicationDeadline is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApplicationDeadline requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApplicationDeadline: %w", err)
+	}
+	return oldValue.ApplicationDeadline, nil
+}
+
+// ClearApplicationDeadline clears the value of the "application_deadline" field.
+func (m *JobPostingMutation) ClearApplicationDeadline() {
+	m.application_deadline = nil
+	m.clearedFields[jobposting.FieldApplicationDeadline] = struct{}{}
+}
+
+// ApplicationDeadlineCleared returns if the "application_deadline" field was cleared in this mutation.
+func (m *JobPostingMutation) ApplicationDeadlineCleared() bool {
+	_, ok := m.clearedFields[jobposting.FieldApplicationDeadline]
+	return ok
+}
+
+// ResetApplicationDeadline resets all changes to the "application_deadline" field.
+func (m *JobPostingMutation) ResetApplicationDeadline() {
+	m.application_deadline = nil
+	delete(m.clearedFields, jobposting.FieldApplicationDeadline)
+}
+
 // SetPostedAt sets the "posted_at" field.
 func (m *JobPostingMutation) SetPostedAt(t time.Time) {
 	m.posted_at = &t
@@ -48094,7 +48485,7 @@ func (m *JobPostingMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *JobPostingMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 15)
 	if m.tenant_id != nil {
 		fields = append(fields, jobposting.FieldTenantID)
 	}
@@ -48112,6 +48503,21 @@ func (m *JobPostingMutation) Fields() []string {
 	}
 	if m.status != nil {
 		fields = append(fields, jobposting.FieldStatus)
+	}
+	if m.slug != nil {
+		fields = append(fields, jobposting.FieldSlug)
+	}
+	if m.is_public != nil {
+		fields = append(fields, jobposting.FieldIsPublic)
+	}
+	if m.employment_type != nil {
+		fields = append(fields, jobposting.FieldEmploymentType)
+	}
+	if m.num_positions != nil {
+		fields = append(fields, jobposting.FieldNumPositions)
+	}
+	if m.application_deadline != nil {
+		fields = append(fields, jobposting.FieldApplicationDeadline)
 	}
 	if m.posted_at != nil {
 		fields = append(fields, jobposting.FieldPostedAt)
@@ -48145,6 +48551,16 @@ func (m *JobPostingMutation) Field(name string) (ent.Value, bool) {
 		return m.Location()
 	case jobposting.FieldStatus:
 		return m.Status()
+	case jobposting.FieldSlug:
+		return m.Slug()
+	case jobposting.FieldIsPublic:
+		return m.IsPublic()
+	case jobposting.FieldEmploymentType:
+		return m.EmploymentType()
+	case jobposting.FieldNumPositions:
+		return m.NumPositions()
+	case jobposting.FieldApplicationDeadline:
+		return m.ApplicationDeadline()
 	case jobposting.FieldPostedAt:
 		return m.PostedAt()
 	case jobposting.FieldClosedAt:
@@ -48174,6 +48590,16 @@ func (m *JobPostingMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldLocation(ctx)
 	case jobposting.FieldStatus:
 		return m.OldStatus(ctx)
+	case jobposting.FieldSlug:
+		return m.OldSlug(ctx)
+	case jobposting.FieldIsPublic:
+		return m.OldIsPublic(ctx)
+	case jobposting.FieldEmploymentType:
+		return m.OldEmploymentType(ctx)
+	case jobposting.FieldNumPositions:
+		return m.OldNumPositions(ctx)
+	case jobposting.FieldApplicationDeadline:
+		return m.OldApplicationDeadline(ctx)
 	case jobposting.FieldPostedAt:
 		return m.OldPostedAt(ctx)
 	case jobposting.FieldClosedAt:
@@ -48233,6 +48659,41 @@ func (m *JobPostingMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetStatus(v)
 		return nil
+	case jobposting.FieldSlug:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSlug(v)
+		return nil
+	case jobposting.FieldIsPublic:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsPublic(v)
+		return nil
+	case jobposting.FieldEmploymentType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmploymentType(v)
+		return nil
+	case jobposting.FieldNumPositions:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNumPositions(v)
+		return nil
+	case jobposting.FieldApplicationDeadline:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApplicationDeadline(v)
+		return nil
 	case jobposting.FieldPostedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -48268,13 +48729,21 @@ func (m *JobPostingMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *JobPostingMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addnum_positions != nil {
+		fields = append(fields, jobposting.FieldNumPositions)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *JobPostingMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case jobposting.FieldNumPositions:
+		return m.AddedNumPositions()
+	}
 	return nil, false
 }
 
@@ -48283,6 +48752,13 @@ func (m *JobPostingMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *JobPostingMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case jobposting.FieldNumPositions:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddNumPositions(v)
+		return nil
 	}
 	return fmt.Errorf("unknown JobPosting numeric field %s", name)
 }
@@ -48299,6 +48775,15 @@ func (m *JobPostingMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(jobposting.FieldLocation) {
 		fields = append(fields, jobposting.FieldLocation)
+	}
+	if m.FieldCleared(jobposting.FieldSlug) {
+		fields = append(fields, jobposting.FieldSlug)
+	}
+	if m.FieldCleared(jobposting.FieldEmploymentType) {
+		fields = append(fields, jobposting.FieldEmploymentType)
+	}
+	if m.FieldCleared(jobposting.FieldApplicationDeadline) {
+		fields = append(fields, jobposting.FieldApplicationDeadline)
 	}
 	if m.FieldCleared(jobposting.FieldClosedAt) {
 		fields = append(fields, jobposting.FieldClosedAt)
@@ -48325,6 +48810,15 @@ func (m *JobPostingMutation) ClearField(name string) error {
 		return nil
 	case jobposting.FieldLocation:
 		m.ClearLocation()
+		return nil
+	case jobposting.FieldSlug:
+		m.ClearSlug()
+		return nil
+	case jobposting.FieldEmploymentType:
+		m.ClearEmploymentType()
+		return nil
+	case jobposting.FieldApplicationDeadline:
+		m.ClearApplicationDeadline()
 		return nil
 	case jobposting.FieldClosedAt:
 		m.ClearClosedAt()
@@ -48354,6 +48848,21 @@ func (m *JobPostingMutation) ResetField(name string) error {
 		return nil
 	case jobposting.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case jobposting.FieldSlug:
+		m.ResetSlug()
+		return nil
+	case jobposting.FieldIsPublic:
+		m.ResetIsPublic()
+		return nil
+	case jobposting.FieldEmploymentType:
+		m.ResetEmploymentType()
+		return nil
+	case jobposting.FieldNumPositions:
+		m.ResetNumPositions()
+		return nil
+	case jobposting.FieldApplicationDeadline:
+		m.ResetApplicationDeadline()
 		return nil
 	case jobposting.FieldPostedAt:
 		m.ResetPostedAt()

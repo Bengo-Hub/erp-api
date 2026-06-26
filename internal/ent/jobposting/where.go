@@ -80,6 +80,31 @@ func Location(v string) predicate.JobPosting {
 	return predicate.JobPosting(sql.FieldEQ(FieldLocation, v))
 }
 
+// Slug applies equality check predicate on the "slug" field. It's identical to SlugEQ.
+func Slug(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldSlug, v))
+}
+
+// IsPublic applies equality check predicate on the "is_public" field. It's identical to IsPublicEQ.
+func IsPublic(v bool) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldIsPublic, v))
+}
+
+// EmploymentType applies equality check predicate on the "employment_type" field. It's identical to EmploymentTypeEQ.
+func EmploymentType(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldEmploymentType, v))
+}
+
+// NumPositions applies equality check predicate on the "num_positions" field. It's identical to NumPositionsEQ.
+func NumPositions(v int) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldNumPositions, v))
+}
+
+// ApplicationDeadline applies equality check predicate on the "application_deadline" field. It's identical to ApplicationDeadlineEQ.
+func ApplicationDeadline(v time.Time) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldApplicationDeadline, v))
+}
+
 // PostedAt applies equality check predicate on the "posted_at" field. It's identical to PostedAtEQ.
 func PostedAt(v time.Time) predicate.JobPosting {
 	return predicate.JobPosting(sql.FieldEQ(FieldPostedAt, v))
@@ -448,6 +473,256 @@ func StatusIn(vs ...Status) predicate.JobPosting {
 // StatusNotIn applies the NotIn predicate on the "status" field.
 func StatusNotIn(vs ...Status) predicate.JobPosting {
 	return predicate.JobPosting(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// SlugEQ applies the EQ predicate on the "slug" field.
+func SlugEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldSlug, v))
+}
+
+// SlugNEQ applies the NEQ predicate on the "slug" field.
+func SlugNEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNEQ(FieldSlug, v))
+}
+
+// SlugIn applies the In predicate on the "slug" field.
+func SlugIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIn(FieldSlug, vs...))
+}
+
+// SlugNotIn applies the NotIn predicate on the "slug" field.
+func SlugNotIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotIn(FieldSlug, vs...))
+}
+
+// SlugGT applies the GT predicate on the "slug" field.
+func SlugGT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGT(FieldSlug, v))
+}
+
+// SlugGTE applies the GTE predicate on the "slug" field.
+func SlugGTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGTE(FieldSlug, v))
+}
+
+// SlugLT applies the LT predicate on the "slug" field.
+func SlugLT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLT(FieldSlug, v))
+}
+
+// SlugLTE applies the LTE predicate on the "slug" field.
+func SlugLTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLTE(FieldSlug, v))
+}
+
+// SlugContains applies the Contains predicate on the "slug" field.
+func SlugContains(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContains(FieldSlug, v))
+}
+
+// SlugHasPrefix applies the HasPrefix predicate on the "slug" field.
+func SlugHasPrefix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasPrefix(FieldSlug, v))
+}
+
+// SlugHasSuffix applies the HasSuffix predicate on the "slug" field.
+func SlugHasSuffix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasSuffix(FieldSlug, v))
+}
+
+// SlugIsNil applies the IsNil predicate on the "slug" field.
+func SlugIsNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIsNull(FieldSlug))
+}
+
+// SlugNotNil applies the NotNil predicate on the "slug" field.
+func SlugNotNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotNull(FieldSlug))
+}
+
+// SlugEqualFold applies the EqualFold predicate on the "slug" field.
+func SlugEqualFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEqualFold(FieldSlug, v))
+}
+
+// SlugContainsFold applies the ContainsFold predicate on the "slug" field.
+func SlugContainsFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContainsFold(FieldSlug, v))
+}
+
+// IsPublicEQ applies the EQ predicate on the "is_public" field.
+func IsPublicEQ(v bool) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldIsPublic, v))
+}
+
+// IsPublicNEQ applies the NEQ predicate on the "is_public" field.
+func IsPublicNEQ(v bool) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNEQ(FieldIsPublic, v))
+}
+
+// EmploymentTypeEQ applies the EQ predicate on the "employment_type" field.
+func EmploymentTypeEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldEmploymentType, v))
+}
+
+// EmploymentTypeNEQ applies the NEQ predicate on the "employment_type" field.
+func EmploymentTypeNEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNEQ(FieldEmploymentType, v))
+}
+
+// EmploymentTypeIn applies the In predicate on the "employment_type" field.
+func EmploymentTypeIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIn(FieldEmploymentType, vs...))
+}
+
+// EmploymentTypeNotIn applies the NotIn predicate on the "employment_type" field.
+func EmploymentTypeNotIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotIn(FieldEmploymentType, vs...))
+}
+
+// EmploymentTypeGT applies the GT predicate on the "employment_type" field.
+func EmploymentTypeGT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGT(FieldEmploymentType, v))
+}
+
+// EmploymentTypeGTE applies the GTE predicate on the "employment_type" field.
+func EmploymentTypeGTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGTE(FieldEmploymentType, v))
+}
+
+// EmploymentTypeLT applies the LT predicate on the "employment_type" field.
+func EmploymentTypeLT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLT(FieldEmploymentType, v))
+}
+
+// EmploymentTypeLTE applies the LTE predicate on the "employment_type" field.
+func EmploymentTypeLTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLTE(FieldEmploymentType, v))
+}
+
+// EmploymentTypeContains applies the Contains predicate on the "employment_type" field.
+func EmploymentTypeContains(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContains(FieldEmploymentType, v))
+}
+
+// EmploymentTypeHasPrefix applies the HasPrefix predicate on the "employment_type" field.
+func EmploymentTypeHasPrefix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasPrefix(FieldEmploymentType, v))
+}
+
+// EmploymentTypeHasSuffix applies the HasSuffix predicate on the "employment_type" field.
+func EmploymentTypeHasSuffix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasSuffix(FieldEmploymentType, v))
+}
+
+// EmploymentTypeIsNil applies the IsNil predicate on the "employment_type" field.
+func EmploymentTypeIsNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIsNull(FieldEmploymentType))
+}
+
+// EmploymentTypeNotNil applies the NotNil predicate on the "employment_type" field.
+func EmploymentTypeNotNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotNull(FieldEmploymentType))
+}
+
+// EmploymentTypeEqualFold applies the EqualFold predicate on the "employment_type" field.
+func EmploymentTypeEqualFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEqualFold(FieldEmploymentType, v))
+}
+
+// EmploymentTypeContainsFold applies the ContainsFold predicate on the "employment_type" field.
+func EmploymentTypeContainsFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContainsFold(FieldEmploymentType, v))
+}
+
+// NumPositionsEQ applies the EQ predicate on the "num_positions" field.
+func NumPositionsEQ(v int) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldNumPositions, v))
+}
+
+// NumPositionsNEQ applies the NEQ predicate on the "num_positions" field.
+func NumPositionsNEQ(v int) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNEQ(FieldNumPositions, v))
+}
+
+// NumPositionsIn applies the In predicate on the "num_positions" field.
+func NumPositionsIn(vs ...int) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIn(FieldNumPositions, vs...))
+}
+
+// NumPositionsNotIn applies the NotIn predicate on the "num_positions" field.
+func NumPositionsNotIn(vs ...int) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotIn(FieldNumPositions, vs...))
+}
+
+// NumPositionsGT applies the GT predicate on the "num_positions" field.
+func NumPositionsGT(v int) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGT(FieldNumPositions, v))
+}
+
+// NumPositionsGTE applies the GTE predicate on the "num_positions" field.
+func NumPositionsGTE(v int) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGTE(FieldNumPositions, v))
+}
+
+// NumPositionsLT applies the LT predicate on the "num_positions" field.
+func NumPositionsLT(v int) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLT(FieldNumPositions, v))
+}
+
+// NumPositionsLTE applies the LTE predicate on the "num_positions" field.
+func NumPositionsLTE(v int) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLTE(FieldNumPositions, v))
+}
+
+// ApplicationDeadlineEQ applies the EQ predicate on the "application_deadline" field.
+func ApplicationDeadlineEQ(v time.Time) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldApplicationDeadline, v))
+}
+
+// ApplicationDeadlineNEQ applies the NEQ predicate on the "application_deadline" field.
+func ApplicationDeadlineNEQ(v time.Time) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNEQ(FieldApplicationDeadline, v))
+}
+
+// ApplicationDeadlineIn applies the In predicate on the "application_deadline" field.
+func ApplicationDeadlineIn(vs ...time.Time) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIn(FieldApplicationDeadline, vs...))
+}
+
+// ApplicationDeadlineNotIn applies the NotIn predicate on the "application_deadline" field.
+func ApplicationDeadlineNotIn(vs ...time.Time) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotIn(FieldApplicationDeadline, vs...))
+}
+
+// ApplicationDeadlineGT applies the GT predicate on the "application_deadline" field.
+func ApplicationDeadlineGT(v time.Time) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGT(FieldApplicationDeadline, v))
+}
+
+// ApplicationDeadlineGTE applies the GTE predicate on the "application_deadline" field.
+func ApplicationDeadlineGTE(v time.Time) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGTE(FieldApplicationDeadline, v))
+}
+
+// ApplicationDeadlineLT applies the LT predicate on the "application_deadline" field.
+func ApplicationDeadlineLT(v time.Time) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLT(FieldApplicationDeadline, v))
+}
+
+// ApplicationDeadlineLTE applies the LTE predicate on the "application_deadline" field.
+func ApplicationDeadlineLTE(v time.Time) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLTE(FieldApplicationDeadline, v))
+}
+
+// ApplicationDeadlineIsNil applies the IsNil predicate on the "application_deadline" field.
+func ApplicationDeadlineIsNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIsNull(FieldApplicationDeadline))
+}
+
+// ApplicationDeadlineNotNil applies the NotNil predicate on the "application_deadline" field.
+func ApplicationDeadlineNotNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotNull(FieldApplicationDeadline))
 }
 
 // PostedAtEQ applies the EQ predicate on the "posted_at" field.

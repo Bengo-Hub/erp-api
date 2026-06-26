@@ -27,6 +27,10 @@ const (
 	FieldAppliedAt = "applied_at"
 	// FieldNotes holds the string denoting the notes field in the database.
 	FieldNotes = "notes"
+	// FieldCoverLetter holds the string denoting the cover_letter field in the database.
+	FieldCoverLetter = "cover_letter"
+	// FieldSource holds the string denoting the source field in the database.
+	FieldSource = "source"
 	// FieldHiredEmployeeID holds the string denoting the hired_employee_id field in the database.
 	FieldHiredEmployeeID = "hired_employee_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -46,6 +50,8 @@ var Columns = []string{
 	FieldStatus,
 	FieldAppliedAt,
 	FieldNotes,
+	FieldCoverLetter,
+	FieldSource,
 	FieldHiredEmployeeID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -140,6 +146,16 @@ func ByAppliedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByNotes orders the results by the notes field.
 func ByNotes(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNotes, opts...).ToFunc()
+}
+
+// ByCoverLetter orders the results by the cover_letter field.
+func ByCoverLetter(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCoverLetter, opts...).ToFunc()
+}
+
+// BySource orders the results by the source field.
+func BySource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSource, opts...).ToFunc()
 }
 
 // ByHiredEmployeeID orders the results by the hired_employee_id field.

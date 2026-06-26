@@ -234,7 +234,9 @@ func run() error {
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
 	mediaStore := media.NewStore(cfg.Media.Root, cfg.Media.URLBase)
-	recruitmentHandler := handlers.NewRecruitmentHandler(log, recruitment.NewService(orm), mediaStore)
+	recruitmentSvc := recruitment.NewService(orm)
+	recruitmentHandler := handlers.NewRecruitmentHandler(log, recruitmentSvc, mediaStore)
+	careersHandler := handlers.NewCareersHandler(log, recruitmentSvc) // PUBLIC careers portal
 	trainingHandler := handlers.NewTrainingHandler(log, training.NewService(orm))
 	appraisalsSvc := appraisals.NewService(orm)
 	appraisalsHandler := handlers.NewAppraisalsHandler(log, appraisalsSvc)
@@ -313,6 +315,9 @@ func run() error {
 	})
 	r.Route("/api/v1", func(api chi.Router) {
 		brandingHandler.RegisterRoutes(api) // public branding
+		// Public careers portal (no auth): open postings + applications. The apply (write) route is
+		// IP-rate-limited (10/hour) to deter spam; reads are unthrottled.
+		careersHandler.RegisterRoutes(api, rateLimiter.IPRateLimiter(10, time.Hour))
 		// Authenticated surface.
 		api.Group(func(priv chi.Router) {
 			priv.Use(authMiddleware.RequireAuth)

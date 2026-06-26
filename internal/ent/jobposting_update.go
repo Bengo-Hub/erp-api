@@ -131,6 +131,101 @@ func (_u *JobPostingUpdate) SetNillableStatus(v *jobposting.Status) *JobPostingU
 	return _u
 }
 
+// SetSlug sets the "slug" field.
+func (_u *JobPostingUpdate) SetSlug(v string) *JobPostingUpdate {
+	_u.mutation.SetSlug(v)
+	return _u
+}
+
+// SetNillableSlug sets the "slug" field if the given value is not nil.
+func (_u *JobPostingUpdate) SetNillableSlug(v *string) *JobPostingUpdate {
+	if v != nil {
+		_u.SetSlug(*v)
+	}
+	return _u
+}
+
+// ClearSlug clears the value of the "slug" field.
+func (_u *JobPostingUpdate) ClearSlug() *JobPostingUpdate {
+	_u.mutation.ClearSlug()
+	return _u
+}
+
+// SetIsPublic sets the "is_public" field.
+func (_u *JobPostingUpdate) SetIsPublic(v bool) *JobPostingUpdate {
+	_u.mutation.SetIsPublic(v)
+	return _u
+}
+
+// SetNillableIsPublic sets the "is_public" field if the given value is not nil.
+func (_u *JobPostingUpdate) SetNillableIsPublic(v *bool) *JobPostingUpdate {
+	if v != nil {
+		_u.SetIsPublic(*v)
+	}
+	return _u
+}
+
+// SetEmploymentType sets the "employment_type" field.
+func (_u *JobPostingUpdate) SetEmploymentType(v string) *JobPostingUpdate {
+	_u.mutation.SetEmploymentType(v)
+	return _u
+}
+
+// SetNillableEmploymentType sets the "employment_type" field if the given value is not nil.
+func (_u *JobPostingUpdate) SetNillableEmploymentType(v *string) *JobPostingUpdate {
+	if v != nil {
+		_u.SetEmploymentType(*v)
+	}
+	return _u
+}
+
+// ClearEmploymentType clears the value of the "employment_type" field.
+func (_u *JobPostingUpdate) ClearEmploymentType() *JobPostingUpdate {
+	_u.mutation.ClearEmploymentType()
+	return _u
+}
+
+// SetNumPositions sets the "num_positions" field.
+func (_u *JobPostingUpdate) SetNumPositions(v int) *JobPostingUpdate {
+	_u.mutation.ResetNumPositions()
+	_u.mutation.SetNumPositions(v)
+	return _u
+}
+
+// SetNillableNumPositions sets the "num_positions" field if the given value is not nil.
+func (_u *JobPostingUpdate) SetNillableNumPositions(v *int) *JobPostingUpdate {
+	if v != nil {
+		_u.SetNumPositions(*v)
+	}
+	return _u
+}
+
+// AddNumPositions adds value to the "num_positions" field.
+func (_u *JobPostingUpdate) AddNumPositions(v int) *JobPostingUpdate {
+	_u.mutation.AddNumPositions(v)
+	return _u
+}
+
+// SetApplicationDeadline sets the "application_deadline" field.
+func (_u *JobPostingUpdate) SetApplicationDeadline(v time.Time) *JobPostingUpdate {
+	_u.mutation.SetApplicationDeadline(v)
+	return _u
+}
+
+// SetNillableApplicationDeadline sets the "application_deadline" field if the given value is not nil.
+func (_u *JobPostingUpdate) SetNillableApplicationDeadline(v *time.Time) *JobPostingUpdate {
+	if v != nil {
+		_u.SetApplicationDeadline(*v)
+	}
+	return _u
+}
+
+// ClearApplicationDeadline clears the value of the "application_deadline" field.
+func (_u *JobPostingUpdate) ClearApplicationDeadline() *JobPostingUpdate {
+	_u.mutation.ClearApplicationDeadline()
+	return _u
+}
+
 // SetPostedAt sets the "posted_at" field.
 func (_u *JobPostingUpdate) SetPostedAt(v time.Time) *JobPostingUpdate {
 	_u.mutation.SetPostedAt(v)
@@ -260,6 +355,33 @@ func (_u *JobPostingUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(jobposting.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Slug(); ok {
+		_spec.SetField(jobposting.FieldSlug, field.TypeString, value)
+	}
+	if _u.mutation.SlugCleared() {
+		_spec.ClearField(jobposting.FieldSlug, field.TypeString)
+	}
+	if value, ok := _u.mutation.IsPublic(); ok {
+		_spec.SetField(jobposting.FieldIsPublic, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.EmploymentType(); ok {
+		_spec.SetField(jobposting.FieldEmploymentType, field.TypeString, value)
+	}
+	if _u.mutation.EmploymentTypeCleared() {
+		_spec.ClearField(jobposting.FieldEmploymentType, field.TypeString)
+	}
+	if value, ok := _u.mutation.NumPositions(); ok {
+		_spec.SetField(jobposting.FieldNumPositions, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedNumPositions(); ok {
+		_spec.AddField(jobposting.FieldNumPositions, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.ApplicationDeadline(); ok {
+		_spec.SetField(jobposting.FieldApplicationDeadline, field.TypeTime, value)
+	}
+	if _u.mutation.ApplicationDeadlineCleared() {
+		_spec.ClearField(jobposting.FieldApplicationDeadline, field.TypeTime)
 	}
 	if value, ok := _u.mutation.PostedAt(); ok {
 		_spec.SetField(jobposting.FieldPostedAt, field.TypeTime, value)
@@ -392,6 +514,101 @@ func (_u *JobPostingUpdateOne) SetNillableStatus(v *jobposting.Status) *JobPosti
 	if v != nil {
 		_u.SetStatus(*v)
 	}
+	return _u
+}
+
+// SetSlug sets the "slug" field.
+func (_u *JobPostingUpdateOne) SetSlug(v string) *JobPostingUpdateOne {
+	_u.mutation.SetSlug(v)
+	return _u
+}
+
+// SetNillableSlug sets the "slug" field if the given value is not nil.
+func (_u *JobPostingUpdateOne) SetNillableSlug(v *string) *JobPostingUpdateOne {
+	if v != nil {
+		_u.SetSlug(*v)
+	}
+	return _u
+}
+
+// ClearSlug clears the value of the "slug" field.
+func (_u *JobPostingUpdateOne) ClearSlug() *JobPostingUpdateOne {
+	_u.mutation.ClearSlug()
+	return _u
+}
+
+// SetIsPublic sets the "is_public" field.
+func (_u *JobPostingUpdateOne) SetIsPublic(v bool) *JobPostingUpdateOne {
+	_u.mutation.SetIsPublic(v)
+	return _u
+}
+
+// SetNillableIsPublic sets the "is_public" field if the given value is not nil.
+func (_u *JobPostingUpdateOne) SetNillableIsPublic(v *bool) *JobPostingUpdateOne {
+	if v != nil {
+		_u.SetIsPublic(*v)
+	}
+	return _u
+}
+
+// SetEmploymentType sets the "employment_type" field.
+func (_u *JobPostingUpdateOne) SetEmploymentType(v string) *JobPostingUpdateOne {
+	_u.mutation.SetEmploymentType(v)
+	return _u
+}
+
+// SetNillableEmploymentType sets the "employment_type" field if the given value is not nil.
+func (_u *JobPostingUpdateOne) SetNillableEmploymentType(v *string) *JobPostingUpdateOne {
+	if v != nil {
+		_u.SetEmploymentType(*v)
+	}
+	return _u
+}
+
+// ClearEmploymentType clears the value of the "employment_type" field.
+func (_u *JobPostingUpdateOne) ClearEmploymentType() *JobPostingUpdateOne {
+	_u.mutation.ClearEmploymentType()
+	return _u
+}
+
+// SetNumPositions sets the "num_positions" field.
+func (_u *JobPostingUpdateOne) SetNumPositions(v int) *JobPostingUpdateOne {
+	_u.mutation.ResetNumPositions()
+	_u.mutation.SetNumPositions(v)
+	return _u
+}
+
+// SetNillableNumPositions sets the "num_positions" field if the given value is not nil.
+func (_u *JobPostingUpdateOne) SetNillableNumPositions(v *int) *JobPostingUpdateOne {
+	if v != nil {
+		_u.SetNumPositions(*v)
+	}
+	return _u
+}
+
+// AddNumPositions adds value to the "num_positions" field.
+func (_u *JobPostingUpdateOne) AddNumPositions(v int) *JobPostingUpdateOne {
+	_u.mutation.AddNumPositions(v)
+	return _u
+}
+
+// SetApplicationDeadline sets the "application_deadline" field.
+func (_u *JobPostingUpdateOne) SetApplicationDeadline(v time.Time) *JobPostingUpdateOne {
+	_u.mutation.SetApplicationDeadline(v)
+	return _u
+}
+
+// SetNillableApplicationDeadline sets the "application_deadline" field if the given value is not nil.
+func (_u *JobPostingUpdateOne) SetNillableApplicationDeadline(v *time.Time) *JobPostingUpdateOne {
+	if v != nil {
+		_u.SetApplicationDeadline(*v)
+	}
+	return _u
+}
+
+// ClearApplicationDeadline clears the value of the "application_deadline" field.
+func (_u *JobPostingUpdateOne) ClearApplicationDeadline() *JobPostingUpdateOne {
+	_u.mutation.ClearApplicationDeadline()
 	return _u
 }
 
@@ -554,6 +771,33 @@ func (_u *JobPostingUpdateOne) sqlSave(ctx context.Context) (_node *JobPosting, 
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(jobposting.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Slug(); ok {
+		_spec.SetField(jobposting.FieldSlug, field.TypeString, value)
+	}
+	if _u.mutation.SlugCleared() {
+		_spec.ClearField(jobposting.FieldSlug, field.TypeString)
+	}
+	if value, ok := _u.mutation.IsPublic(); ok {
+		_spec.SetField(jobposting.FieldIsPublic, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.EmploymentType(); ok {
+		_spec.SetField(jobposting.FieldEmploymentType, field.TypeString, value)
+	}
+	if _u.mutation.EmploymentTypeCleared() {
+		_spec.ClearField(jobposting.FieldEmploymentType, field.TypeString)
+	}
+	if value, ok := _u.mutation.NumPositions(); ok {
+		_spec.SetField(jobposting.FieldNumPositions, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedNumPositions(); ok {
+		_spec.AddField(jobposting.FieldNumPositions, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.ApplicationDeadline(); ok {
+		_spec.SetField(jobposting.FieldApplicationDeadline, field.TypeTime, value)
+	}
+	if _u.mutation.ApplicationDeadlineCleared() {
+		_spec.ClearField(jobposting.FieldApplicationDeadline, field.TypeTime)
 	}
 	if value, ok := _u.mutation.PostedAt(); ok {
 		_spec.SetField(jobposting.FieldPostedAt, field.TypeTime, value)

@@ -30,6 +30,10 @@ type Application struct {
 	AppliedAt time.Time `json:"applied_at,omitempty"`
 	// Notes holds the value of the "notes" field.
 	Notes *string `json:"notes,omitempty"`
+	// CoverLetter holds the value of the "cover_letter" field.
+	CoverLetter *string `json:"cover_letter,omitempty"`
+	// careers_portal | referral | direct | agency
+	Source *string `json:"source,omitempty"`
 	// Employee created on hire (links recruitment -> onboarding)
 	HiredEmployeeID *uuid.UUID `json:"hired_employee_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -46,7 +50,7 @@ func (*Application) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case application.FieldHiredEmployeeID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case application.FieldStatus, application.FieldNotes:
+		case application.FieldStatus, application.FieldNotes, application.FieldCoverLetter, application.FieldSource:
 			values[i] = new(sql.NullString)
 		case application.FieldAppliedAt, application.FieldCreatedAt, application.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -109,6 +113,20 @@ func (_m *Application) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Notes = new(string)
 				*_m.Notes = value.String
+			}
+		case application.FieldCoverLetter:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field cover_letter", values[i])
+			} else if value.Valid {
+				_m.CoverLetter = new(string)
+				*_m.CoverLetter = value.String
+			}
+		case application.FieldSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field source", values[i])
+			} else if value.Valid {
+				_m.Source = new(string)
+				*_m.Source = value.String
 			}
 		case application.FieldHiredEmployeeID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -182,6 +200,16 @@ func (_m *Application) String() string {
 	builder.WriteString(", ")
 	if v := _m.Notes; v != nil {
 		builder.WriteString("notes=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.CoverLetter; v != nil {
+		builder.WriteString("cover_letter=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.Source; v != nil {
+		builder.WriteString("source=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")

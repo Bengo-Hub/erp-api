@@ -119,6 +119,46 @@ func (_u *ApplicationUpdate) ClearNotes() *ApplicationUpdate {
 	return _u
 }
 
+// SetCoverLetter sets the "cover_letter" field.
+func (_u *ApplicationUpdate) SetCoverLetter(v string) *ApplicationUpdate {
+	_u.mutation.SetCoverLetter(v)
+	return _u
+}
+
+// SetNillableCoverLetter sets the "cover_letter" field if the given value is not nil.
+func (_u *ApplicationUpdate) SetNillableCoverLetter(v *string) *ApplicationUpdate {
+	if v != nil {
+		_u.SetCoverLetter(*v)
+	}
+	return _u
+}
+
+// ClearCoverLetter clears the value of the "cover_letter" field.
+func (_u *ApplicationUpdate) ClearCoverLetter() *ApplicationUpdate {
+	_u.mutation.ClearCoverLetter()
+	return _u
+}
+
+// SetSource sets the "source" field.
+func (_u *ApplicationUpdate) SetSource(v string) *ApplicationUpdate {
+	_u.mutation.SetSource(v)
+	return _u
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_u *ApplicationUpdate) SetNillableSource(v *string) *ApplicationUpdate {
+	if v != nil {
+		_u.SetSource(*v)
+	}
+	return _u
+}
+
+// ClearSource clears the value of the "source" field.
+func (_u *ApplicationUpdate) ClearSource() *ApplicationUpdate {
+	_u.mutation.ClearSource()
+	return _u
+}
+
 // SetHiredEmployeeID sets the "hired_employee_id" field.
 func (_u *ApplicationUpdate) SetHiredEmployeeID(v uuid.UUID) *ApplicationUpdate {
 	_u.mutation.SetHiredEmployeeID(v)
@@ -228,6 +268,18 @@ func (_u *ApplicationUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if _u.mutation.NotesCleared() {
 		_spec.ClearField(application.FieldNotes, field.TypeString)
+	}
+	if value, ok := _u.mutation.CoverLetter(); ok {
+		_spec.SetField(application.FieldCoverLetter, field.TypeString, value)
+	}
+	if _u.mutation.CoverLetterCleared() {
+		_spec.ClearField(application.FieldCoverLetter, field.TypeString)
+	}
+	if value, ok := _u.mutation.Source(); ok {
+		_spec.SetField(application.FieldSource, field.TypeString, value)
+	}
+	if _u.mutation.SourceCleared() {
+		_spec.ClearField(application.FieldSource, field.TypeString)
 	}
 	if value, ok := _u.mutation.HiredEmployeeID(); ok {
 		_spec.SetField(application.FieldHiredEmployeeID, field.TypeUUID, value)
@@ -345,6 +397,46 @@ func (_u *ApplicationUpdateOne) SetNillableNotes(v *string) *ApplicationUpdateOn
 // ClearNotes clears the value of the "notes" field.
 func (_u *ApplicationUpdateOne) ClearNotes() *ApplicationUpdateOne {
 	_u.mutation.ClearNotes()
+	return _u
+}
+
+// SetCoverLetter sets the "cover_letter" field.
+func (_u *ApplicationUpdateOne) SetCoverLetter(v string) *ApplicationUpdateOne {
+	_u.mutation.SetCoverLetter(v)
+	return _u
+}
+
+// SetNillableCoverLetter sets the "cover_letter" field if the given value is not nil.
+func (_u *ApplicationUpdateOne) SetNillableCoverLetter(v *string) *ApplicationUpdateOne {
+	if v != nil {
+		_u.SetCoverLetter(*v)
+	}
+	return _u
+}
+
+// ClearCoverLetter clears the value of the "cover_letter" field.
+func (_u *ApplicationUpdateOne) ClearCoverLetter() *ApplicationUpdateOne {
+	_u.mutation.ClearCoverLetter()
+	return _u
+}
+
+// SetSource sets the "source" field.
+func (_u *ApplicationUpdateOne) SetSource(v string) *ApplicationUpdateOne {
+	_u.mutation.SetSource(v)
+	return _u
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_u *ApplicationUpdateOne) SetNillableSource(v *string) *ApplicationUpdateOne {
+	if v != nil {
+		_u.SetSource(*v)
+	}
+	return _u
+}
+
+// ClearSource clears the value of the "source" field.
+func (_u *ApplicationUpdateOne) ClearSource() *ApplicationUpdateOne {
+	_u.mutation.ClearSource()
 	return _u
 }
 
@@ -487,6 +579,18 @@ func (_u *ApplicationUpdateOne) sqlSave(ctx context.Context) (_node *Application
 	}
 	if _u.mutation.NotesCleared() {
 		_spec.ClearField(application.FieldNotes, field.TypeString)
+	}
+	if value, ok := _u.mutation.CoverLetter(); ok {
+		_spec.SetField(application.FieldCoverLetter, field.TypeString, value)
+	}
+	if _u.mutation.CoverLetterCleared() {
+		_spec.ClearField(application.FieldCoverLetter, field.TypeString)
+	}
+	if value, ok := _u.mutation.Source(); ok {
+		_spec.SetField(application.FieldSource, field.TypeString, value)
+	}
+	if _u.mutation.SourceCleared() {
+		_spec.ClearField(application.FieldSource, field.TypeString)
 	}
 	if value, ok := _u.mutation.HiredEmployeeID(); ok {
 		_spec.SetField(application.FieldHiredEmployeeID, field.TypeUUID, value)

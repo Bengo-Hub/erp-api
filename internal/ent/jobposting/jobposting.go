@@ -27,6 +27,16 @@ const (
 	FieldLocation = "location"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldSlug holds the string denoting the slug field in the database.
+	FieldSlug = "slug"
+	// FieldIsPublic holds the string denoting the is_public field in the database.
+	FieldIsPublic = "is_public"
+	// FieldEmploymentType holds the string denoting the employment_type field in the database.
+	FieldEmploymentType = "employment_type"
+	// FieldNumPositions holds the string denoting the num_positions field in the database.
+	FieldNumPositions = "num_positions"
+	// FieldApplicationDeadline holds the string denoting the application_deadline field in the database.
+	FieldApplicationDeadline = "application_deadline"
 	// FieldPostedAt holds the string denoting the posted_at field in the database.
 	FieldPostedAt = "posted_at"
 	// FieldClosedAt holds the string denoting the closed_at field in the database.
@@ -48,6 +58,11 @@ var Columns = []string{
 	FieldDepartment,
 	FieldLocation,
 	FieldStatus,
+	FieldSlug,
+	FieldIsPublic,
+	FieldEmploymentType,
+	FieldNumPositions,
+	FieldApplicationDeadline,
 	FieldPostedAt,
 	FieldClosedAt,
 	FieldCreatedAt,
@@ -65,6 +80,10 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultIsPublic holds the default value on creation for the "is_public" field.
+	DefaultIsPublic bool
+	// DefaultNumPositions holds the default value on creation for the "num_positions" field.
+	DefaultNumPositions int
 	// DefaultPostedAt holds the default value on creation for the "posted_at" field.
 	DefaultPostedAt func() time.Time
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -141,6 +160,31 @@ func ByLocation(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// BySlug orders the results by the slug field.
+func BySlug(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSlug, opts...).ToFunc()
+}
+
+// ByIsPublic orders the results by the is_public field.
+func ByIsPublic(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsPublic, opts...).ToFunc()
+}
+
+// ByEmploymentType orders the results by the employment_type field.
+func ByEmploymentType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEmploymentType, opts...).ToFunc()
+}
+
+// ByNumPositions orders the results by the num_positions field.
+func ByNumPositions(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNumPositions, opts...).ToFunc()
+}
+
+// ByApplicationDeadline orders the results by the application_deadline field.
+func ByApplicationDeadline(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldApplicationDeadline, opts...).ToFunc()
 }
 
 // ByPostedAt orders the results by the posted_at field.

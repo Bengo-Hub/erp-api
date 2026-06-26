@@ -30,6 +30,16 @@ type JobPosting struct {
 	Location *string `json:"location,omitempty"`
 	// Status holds the value of the "status" field.
 	Status jobposting.Status `json:"status,omitempty"`
+	// URL slug for the public careers portal
+	Slug *string `json:"slug,omitempty"`
+	// Listed on the public careers portal
+	IsPublic bool `json:"is_public,omitempty"`
+	// full_time | part_time | contract | internship | temporary
+	EmploymentType *string `json:"employment_type,omitempty"`
+	// NumPositions holds the value of the "num_positions" field.
+	NumPositions int `json:"num_positions,omitempty"`
+	// ApplicationDeadline holds the value of the "application_deadline" field.
+	ApplicationDeadline *time.Time `json:"application_deadline,omitempty"`
 	// PostedAt holds the value of the "posted_at" field.
 	PostedAt time.Time `json:"posted_at,omitempty"`
 	// ClosedAt holds the value of the "closed_at" field.
@@ -46,9 +56,13 @@ func (*JobPosting) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case jobposting.FieldTitle, jobposting.FieldDescription, jobposting.FieldDepartment, jobposting.FieldLocation, jobposting.FieldStatus:
+		case jobposting.FieldIsPublic:
+			values[i] = new(sql.NullBool)
+		case jobposting.FieldNumPositions:
+			values[i] = new(sql.NullInt64)
+		case jobposting.FieldTitle, jobposting.FieldDescription, jobposting.FieldDepartment, jobposting.FieldLocation, jobposting.FieldStatus, jobposting.FieldSlug, jobposting.FieldEmploymentType:
 			values[i] = new(sql.NullString)
-		case jobposting.FieldPostedAt, jobposting.FieldClosedAt, jobposting.FieldCreatedAt, jobposting.FieldUpdatedAt:
+		case jobposting.FieldApplicationDeadline, jobposting.FieldPostedAt, jobposting.FieldClosedAt, jobposting.FieldCreatedAt, jobposting.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case jobposting.FieldID, jobposting.FieldTenantID:
 			values[i] = new(uuid.UUID)
@@ -110,6 +124,39 @@ func (_m *JobPosting) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				_m.Status = jobposting.Status(value.String)
+			}
+		case jobposting.FieldSlug:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field slug", values[i])
+			} else if value.Valid {
+				_m.Slug = new(string)
+				*_m.Slug = value.String
+			}
+		case jobposting.FieldIsPublic:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_public", values[i])
+			} else if value.Valid {
+				_m.IsPublic = value.Bool
+			}
+		case jobposting.FieldEmploymentType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field employment_type", values[i])
+			} else if value.Valid {
+				_m.EmploymentType = new(string)
+				*_m.EmploymentType = value.String
+			}
+		case jobposting.FieldNumPositions:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field num_positions", values[i])
+			} else if value.Valid {
+				_m.NumPositions = int(value.Int64)
+			}
+		case jobposting.FieldApplicationDeadline:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field application_deadline", values[i])
+			} else if value.Valid {
+				_m.ApplicationDeadline = new(time.Time)
+				*_m.ApplicationDeadline = value.Time
 			}
 		case jobposting.FieldPostedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -193,6 +240,27 @@ func (_m *JobPosting) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))
+	builder.WriteString(", ")
+	if v := _m.Slug; v != nil {
+		builder.WriteString("slug=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("is_public=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsPublic))
+	builder.WriteString(", ")
+	if v := _m.EmploymentType; v != nil {
+		builder.WriteString("employment_type=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("num_positions=")
+	builder.WriteString(fmt.Sprintf("%v", _m.NumPositions))
+	builder.WriteString(", ")
+	if v := _m.ApplicationDeadline; v != nil {
+		builder.WriteString("application_deadline=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("posted_at=")
 	builder.WriteString(_m.PostedAt.Format(time.ANSIC))
