@@ -3,15 +3,18 @@ package attendance
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftassignment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftroster"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrosterslot"
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
+	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 )
 
 // ---- Rosters ----
@@ -155,6 +158,7 @@ type OverrideInput struct {
 	EmployeeID   uuid.UUID
 	Date         time.Time
 	OverrideType string
+	WorkShiftID  *uuid.UUID
 	StartTime    string
 	EndTime      string
 	Reason       string
@@ -184,11 +188,179 @@ func (s *Service) CreateOverride(ctx context.Context, tenantID uuid.UUID, in Ove
 	if in.CreatedBy != nil {
 		b = b.SetCreatedBy(*in.CreatedBy)
 	}
+	if in.WorkShiftID != nil {
+		b = b.SetWorkShiftID(*in.WorkShiftID)
+	}
 	row, err := b.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("attendance: create override: %w", err)
 	}
 	return row, nil
+}
+
+// ---- Weekly shift planner (per-cell, drawable roster) ----
+//
+// The planner is a drawable employee×date grid. Each filled cell is persisted as a
+// StaffShiftOverride keyed uniquely on (tenant, employee, date) — clicking a shift onto a
+// cell upserts that row with override_type=manual_shift + work_shift_id; clearing deletes it.
+// This reuses the existing override store (no new table) and gives a real resolved grid.
+
+// PlannerCellInput upserts one planner cell.
+type PlannerCellInput struct {
+	EmployeeID  uuid.UUID
+	Date        time.Time
+	WorkShiftID *uuid.UUID // nil => an explicit off-duty cell
+	StartTime   string
+	EndTime     string
+	CreatedBy   *uuid.UUID
+}
+
+// ResolvedCell is a flattened planner cell with the shift name/times resolved for the UI.
+type ResolvedCell struct {
+	Employee     uuid.UUID  `json:"employee"`
+	EmployeeName string     `json:"employee_name,omitempty"`
+	Date         string     `json:"date"`
+	WorkShiftID  *uuid.UUID `json:"work_shift_id,omitempty"`
+	ShiftName    string     `json:"shift_name,omitempty"`
+	StartTime    string     `json:"start_time,omitempty"`
+	EndTime      string     `json:"end_time,omitempty"`
+	IsOff        bool       `json:"is_off"`
+	OverrideID   uuid.UUID  `json:"override_id"`
+}
+
+// UpsertPlannerCell creates/replaces the cell for (employee, date). work_shift_id nil = off-duty.
+func (s *Service) UpsertPlannerCell(ctx context.Context, tenantID uuid.UUID, in PlannerCellInput) (*ent.StaffShiftOverride, error) {
+	overrideType := "manual_shift"
+	if in.WorkShiftID == nil {
+		overrideType = "off_duty"
+	}
+	existing, err := s.orm.StaffShiftOverride.Query().Where(
+		staffshiftoverride.TenantID(tenantID),
+		staffshiftoverride.EmployeeID(in.EmployeeID),
+		staffshiftoverride.Date(in.Date),
+	).First(ctx)
+	if ent.IsNotFound(err) {
+		return s.CreateOverride(ctx, tenantID, OverrideInput{
+			EmployeeID: in.EmployeeID, Date: in.Date, OverrideType: overrideType,
+			WorkShiftID: in.WorkShiftID, StartTime: in.StartTime, EndTime: in.EndTime,
+			Status: "approved", CreatedBy: in.CreatedBy,
+		})
+	}
+	if err != nil {
+		return nil, fmt.Errorf("attendance: planner cell lookup: %w", err)
+	}
+	u := existing.Update().
+		SetOverrideType(staffshiftoverride.OverrideType(overrideType)).
+		SetStatus(staffshiftoverride.StatusApproved)
+	if in.WorkShiftID != nil {
+		u = u.SetWorkShiftID(*in.WorkShiftID)
+	} else {
+		u = u.ClearWorkShiftID()
+	}
+	if in.StartTime != "" {
+		u = u.SetStartTime(in.StartTime)
+	} else {
+		u = u.ClearStartTime()
+	}
+	if in.EndTime != "" {
+		u = u.SetEndTime(in.EndTime)
+	} else {
+		u = u.ClearEndTime()
+	}
+	row, err := u.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("attendance: update planner cell: %w", err)
+	}
+	return row, nil
+}
+
+// ClearPlannerCell deletes the cell for (employee, date), if any.
+func (s *Service) ClearPlannerCell(ctx context.Context, tenantID, employeeID uuid.UUID, date time.Time) error {
+	_, err := s.orm.StaffShiftOverride.Delete().Where(
+		staffshiftoverride.TenantID(tenantID),
+		staffshiftoverride.EmployeeID(employeeID),
+		staffshiftoverride.Date(date),
+	).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("attendance: clear planner cell: %w", err)
+	}
+	return nil
+}
+
+// ResolvePlanner returns the filled planner cells in [from, to], with shift name/times +
+// employee names resolved for direct rendering.
+func (s *Service) ResolvePlanner(ctx context.Context, tenantID uuid.UUID, from, to time.Time) ([]ResolvedCell, error) {
+	rows, err := s.orm.StaffShiftOverride.Query().Where(
+		staffshiftoverride.TenantID(tenantID),
+		staffshiftoverride.DateGTE(from),
+		staffshiftoverride.DateLTE(to),
+	).Order(ent.Asc(staffshiftoverride.FieldDate)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("attendance: resolve planner: %w", err)
+	}
+
+	// Resolve shift names/times in one batch.
+	shiftIDs := make([]uuid.UUID, 0, len(rows))
+	empIDs := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		if r.WorkShiftID != nil {
+			shiftIDs = append(shiftIDs, *r.WorkShiftID)
+		}
+		empIDs = append(empIDs, r.EmployeeID)
+	}
+	shifts := map[uuid.UUID]*ent.WorkShift{}
+	if len(shiftIDs) > 0 {
+		ss, serr := s.orm.WorkShift.Query().Where(
+			workshift.TenantID(tenantID), workshift.IDIn(shiftIDs...),
+		).All(ctx)
+		if serr == nil {
+			for _, sh := range ss {
+				shifts[sh.ID] = sh
+			}
+		}
+	}
+	names := map[uuid.UUID]string{}
+	if len(empIDs) > 0 {
+		es, eerr := s.orm.Employee.Query().Where(
+			employee.TenantID(tenantID), employee.IDIn(empIDs...),
+		).All(ctx)
+		if eerr == nil {
+			for _, e := range es {
+				names[e.ID] = strings.TrimSpace(e.FirstName + " " + e.LastName)
+			}
+		}
+	}
+
+	out := make([]ResolvedCell, 0, len(rows))
+	for _, r := range rows {
+		c := ResolvedCell{
+			Employee: r.EmployeeID, EmployeeName: names[r.EmployeeID],
+			Date: r.Date.Format("2006-01-02"), WorkShiftID: r.WorkShiftID,
+			IsOff: r.OverrideType == staffshiftoverride.OverrideTypeOffDuty, OverrideID: r.ID,
+		}
+		if r.StartTime != nil {
+			c.StartTime = *r.StartTime
+		}
+		if r.EndTime != nil {
+			c.EndTime = *r.EndTime
+		}
+		if r.WorkShiftID != nil {
+			if sh, ok := shifts[*r.WorkShiftID]; ok {
+				c.ShiftName = sh.Name
+				if c.StartTime == "" && sh.StartTime != nil {
+					c.StartTime = *sh.StartTime
+				}
+				if c.EndTime == "" && sh.EndTime != nil {
+					c.EndTime = *sh.EndTime
+				}
+			}
+		}
+		if c.IsOff && c.ShiftName == "" {
+			c.ShiftName = "Off"
+		}
+		out = append(out, c)
+	}
+	return out, nil
 }
 
 // ListOverrides returns tenant-scoped overrides (optionally for one employee).

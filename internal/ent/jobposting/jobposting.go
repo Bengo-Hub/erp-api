@@ -21,6 +21,16 @@ const (
 	FieldTitle = "title"
 	// FieldDescription holds the string denoting the description field in the database.
 	FieldDescription = "description"
+	// FieldRequirements holds the string denoting the requirements field in the database.
+	FieldRequirements = "requirements"
+	// FieldResponsibilities holds the string denoting the responsibilities field in the database.
+	FieldResponsibilities = "responsibilities"
+	// FieldSalaryMin holds the string denoting the salary_min field in the database.
+	FieldSalaryMin = "salary_min"
+	// FieldSalaryMax holds the string denoting the salary_max field in the database.
+	FieldSalaryMax = "salary_max"
+	// FieldSalaryCurrency holds the string denoting the salary_currency field in the database.
+	FieldSalaryCurrency = "salary_currency"
 	// FieldDepartment holds the string denoting the department field in the database.
 	FieldDepartment = "department"
 	// FieldLocation holds the string denoting the location field in the database.
@@ -55,6 +65,11 @@ var Columns = []string{
 	FieldTenantID,
 	FieldTitle,
 	FieldDescription,
+	FieldRequirements,
+	FieldResponsibilities,
+	FieldSalaryMin,
+	FieldSalaryMax,
+	FieldSalaryCurrency,
 	FieldDepartment,
 	FieldLocation,
 	FieldStatus,
@@ -145,6 +160,31 @@ func ByTitle(opts ...sql.OrderTermOption) OrderOption {
 // ByDescription orders the results by the description field.
 func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDescription, opts...).ToFunc()
+}
+
+// ByRequirements orders the results by the requirements field.
+func ByRequirements(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRequirements, opts...).ToFunc()
+}
+
+// ByResponsibilities orders the results by the responsibilities field.
+func ByResponsibilities(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldResponsibilities, opts...).ToFunc()
+}
+
+// BySalaryMin orders the results by the salary_min field.
+func BySalaryMin(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSalaryMin, opts...).ToFunc()
+}
+
+// BySalaryMax orders the results by the salary_max field.
+func BySalaryMax(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSalaryMax, opts...).ToFunc()
+}
+
+// BySalaryCurrency orders the results by the salary_currency field.
+func BySalaryCurrency(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSalaryCurrency, opts...).ToFunc()
 }
 
 // ByDepartment orders the results by the department field.

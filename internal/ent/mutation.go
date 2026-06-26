@@ -73,6 +73,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metriccategory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metrictarget"
+	"github.com/Bengo-Hub/erp-api/internal/ent/mileageroute"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
 	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/onboardingtask"
@@ -189,6 +190,7 @@ const (
 	TypeLossAndDamage             = "LossAndDamage"
 	TypeMetricCategory            = "MetricCategory"
 	TypeMetricTarget              = "MetricTarget"
+	TypeMileageRoute              = "MileageRoute"
 	TypeNextOfKin                 = "NextOfKin"
 	TypeOffDay                    = "OffDay"
 	TypeOnboardingTask            = "OnboardingTask"
@@ -48004,6 +48006,11 @@ type JobPostingMutation struct {
 	tenant_id            *uuid.UUID
 	title                *string
 	description          *string
+	requirements         *string
+	responsibilities     *string
+	salary_min           *string
+	salary_max           *string
+	salary_currency      *string
 	department           *string
 	location             *string
 	status               *jobposting.Status
@@ -48246,6 +48253,251 @@ func (m *JobPostingMutation) DescriptionCleared() bool {
 func (m *JobPostingMutation) ResetDescription() {
 	m.description = nil
 	delete(m.clearedFields, jobposting.FieldDescription)
+}
+
+// SetRequirements sets the "requirements" field.
+func (m *JobPostingMutation) SetRequirements(s string) {
+	m.requirements = &s
+}
+
+// Requirements returns the value of the "requirements" field in the mutation.
+func (m *JobPostingMutation) Requirements() (r string, exists bool) {
+	v := m.requirements
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRequirements returns the old "requirements" field's value of the JobPosting entity.
+// If the JobPosting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobPostingMutation) OldRequirements(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRequirements is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRequirements requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRequirements: %w", err)
+	}
+	return oldValue.Requirements, nil
+}
+
+// ClearRequirements clears the value of the "requirements" field.
+func (m *JobPostingMutation) ClearRequirements() {
+	m.requirements = nil
+	m.clearedFields[jobposting.FieldRequirements] = struct{}{}
+}
+
+// RequirementsCleared returns if the "requirements" field was cleared in this mutation.
+func (m *JobPostingMutation) RequirementsCleared() bool {
+	_, ok := m.clearedFields[jobposting.FieldRequirements]
+	return ok
+}
+
+// ResetRequirements resets all changes to the "requirements" field.
+func (m *JobPostingMutation) ResetRequirements() {
+	m.requirements = nil
+	delete(m.clearedFields, jobposting.FieldRequirements)
+}
+
+// SetResponsibilities sets the "responsibilities" field.
+func (m *JobPostingMutation) SetResponsibilities(s string) {
+	m.responsibilities = &s
+}
+
+// Responsibilities returns the value of the "responsibilities" field in the mutation.
+func (m *JobPostingMutation) Responsibilities() (r string, exists bool) {
+	v := m.responsibilities
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResponsibilities returns the old "responsibilities" field's value of the JobPosting entity.
+// If the JobPosting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobPostingMutation) OldResponsibilities(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResponsibilities is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResponsibilities requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResponsibilities: %w", err)
+	}
+	return oldValue.Responsibilities, nil
+}
+
+// ClearResponsibilities clears the value of the "responsibilities" field.
+func (m *JobPostingMutation) ClearResponsibilities() {
+	m.responsibilities = nil
+	m.clearedFields[jobposting.FieldResponsibilities] = struct{}{}
+}
+
+// ResponsibilitiesCleared returns if the "responsibilities" field was cleared in this mutation.
+func (m *JobPostingMutation) ResponsibilitiesCleared() bool {
+	_, ok := m.clearedFields[jobposting.FieldResponsibilities]
+	return ok
+}
+
+// ResetResponsibilities resets all changes to the "responsibilities" field.
+func (m *JobPostingMutation) ResetResponsibilities() {
+	m.responsibilities = nil
+	delete(m.clearedFields, jobposting.FieldResponsibilities)
+}
+
+// SetSalaryMin sets the "salary_min" field.
+func (m *JobPostingMutation) SetSalaryMin(s string) {
+	m.salary_min = &s
+}
+
+// SalaryMin returns the value of the "salary_min" field in the mutation.
+func (m *JobPostingMutation) SalaryMin() (r string, exists bool) {
+	v := m.salary_min
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSalaryMin returns the old "salary_min" field's value of the JobPosting entity.
+// If the JobPosting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobPostingMutation) OldSalaryMin(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSalaryMin is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSalaryMin requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSalaryMin: %w", err)
+	}
+	return oldValue.SalaryMin, nil
+}
+
+// ClearSalaryMin clears the value of the "salary_min" field.
+func (m *JobPostingMutation) ClearSalaryMin() {
+	m.salary_min = nil
+	m.clearedFields[jobposting.FieldSalaryMin] = struct{}{}
+}
+
+// SalaryMinCleared returns if the "salary_min" field was cleared in this mutation.
+func (m *JobPostingMutation) SalaryMinCleared() bool {
+	_, ok := m.clearedFields[jobposting.FieldSalaryMin]
+	return ok
+}
+
+// ResetSalaryMin resets all changes to the "salary_min" field.
+func (m *JobPostingMutation) ResetSalaryMin() {
+	m.salary_min = nil
+	delete(m.clearedFields, jobposting.FieldSalaryMin)
+}
+
+// SetSalaryMax sets the "salary_max" field.
+func (m *JobPostingMutation) SetSalaryMax(s string) {
+	m.salary_max = &s
+}
+
+// SalaryMax returns the value of the "salary_max" field in the mutation.
+func (m *JobPostingMutation) SalaryMax() (r string, exists bool) {
+	v := m.salary_max
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSalaryMax returns the old "salary_max" field's value of the JobPosting entity.
+// If the JobPosting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobPostingMutation) OldSalaryMax(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSalaryMax is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSalaryMax requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSalaryMax: %w", err)
+	}
+	return oldValue.SalaryMax, nil
+}
+
+// ClearSalaryMax clears the value of the "salary_max" field.
+func (m *JobPostingMutation) ClearSalaryMax() {
+	m.salary_max = nil
+	m.clearedFields[jobposting.FieldSalaryMax] = struct{}{}
+}
+
+// SalaryMaxCleared returns if the "salary_max" field was cleared in this mutation.
+func (m *JobPostingMutation) SalaryMaxCleared() bool {
+	_, ok := m.clearedFields[jobposting.FieldSalaryMax]
+	return ok
+}
+
+// ResetSalaryMax resets all changes to the "salary_max" field.
+func (m *JobPostingMutation) ResetSalaryMax() {
+	m.salary_max = nil
+	delete(m.clearedFields, jobposting.FieldSalaryMax)
+}
+
+// SetSalaryCurrency sets the "salary_currency" field.
+func (m *JobPostingMutation) SetSalaryCurrency(s string) {
+	m.salary_currency = &s
+}
+
+// SalaryCurrency returns the value of the "salary_currency" field in the mutation.
+func (m *JobPostingMutation) SalaryCurrency() (r string, exists bool) {
+	v := m.salary_currency
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSalaryCurrency returns the old "salary_currency" field's value of the JobPosting entity.
+// If the JobPosting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobPostingMutation) OldSalaryCurrency(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSalaryCurrency is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSalaryCurrency requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSalaryCurrency: %w", err)
+	}
+	return oldValue.SalaryCurrency, nil
+}
+
+// ClearSalaryCurrency clears the value of the "salary_currency" field.
+func (m *JobPostingMutation) ClearSalaryCurrency() {
+	m.salary_currency = nil
+	m.clearedFields[jobposting.FieldSalaryCurrency] = struct{}{}
+}
+
+// SalaryCurrencyCleared returns if the "salary_currency" field was cleared in this mutation.
+func (m *JobPostingMutation) SalaryCurrencyCleared() bool {
+	_, ok := m.clearedFields[jobposting.FieldSalaryCurrency]
+	return ok
+}
+
+// ResetSalaryCurrency resets all changes to the "salary_currency" field.
+func (m *JobPostingMutation) ResetSalaryCurrency() {
+	m.salary_currency = nil
+	delete(m.clearedFields, jobposting.FieldSalaryCurrency)
 }
 
 // SetDepartment sets the "department" field.
@@ -48812,7 +49064,7 @@ func (m *JobPostingMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *JobPostingMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 20)
 	if m.tenant_id != nil {
 		fields = append(fields, jobposting.FieldTenantID)
 	}
@@ -48821,6 +49073,21 @@ func (m *JobPostingMutation) Fields() []string {
 	}
 	if m.description != nil {
 		fields = append(fields, jobposting.FieldDescription)
+	}
+	if m.requirements != nil {
+		fields = append(fields, jobposting.FieldRequirements)
+	}
+	if m.responsibilities != nil {
+		fields = append(fields, jobposting.FieldResponsibilities)
+	}
+	if m.salary_min != nil {
+		fields = append(fields, jobposting.FieldSalaryMin)
+	}
+	if m.salary_max != nil {
+		fields = append(fields, jobposting.FieldSalaryMax)
+	}
+	if m.salary_currency != nil {
+		fields = append(fields, jobposting.FieldSalaryCurrency)
 	}
 	if m.department != nil {
 		fields = append(fields, jobposting.FieldDepartment)
@@ -48872,6 +49139,16 @@ func (m *JobPostingMutation) Field(name string) (ent.Value, bool) {
 		return m.Title()
 	case jobposting.FieldDescription:
 		return m.Description()
+	case jobposting.FieldRequirements:
+		return m.Requirements()
+	case jobposting.FieldResponsibilities:
+		return m.Responsibilities()
+	case jobposting.FieldSalaryMin:
+		return m.SalaryMin()
+	case jobposting.FieldSalaryMax:
+		return m.SalaryMax()
+	case jobposting.FieldSalaryCurrency:
+		return m.SalaryCurrency()
 	case jobposting.FieldDepartment:
 		return m.Department()
 	case jobposting.FieldLocation:
@@ -48911,6 +49188,16 @@ func (m *JobPostingMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldTitle(ctx)
 	case jobposting.FieldDescription:
 		return m.OldDescription(ctx)
+	case jobposting.FieldRequirements:
+		return m.OldRequirements(ctx)
+	case jobposting.FieldResponsibilities:
+		return m.OldResponsibilities(ctx)
+	case jobposting.FieldSalaryMin:
+		return m.OldSalaryMin(ctx)
+	case jobposting.FieldSalaryMax:
+		return m.OldSalaryMax(ctx)
+	case jobposting.FieldSalaryCurrency:
+		return m.OldSalaryCurrency(ctx)
 	case jobposting.FieldDepartment:
 		return m.OldDepartment(ctx)
 	case jobposting.FieldLocation:
@@ -48964,6 +49251,41 @@ func (m *JobPostingMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDescription(v)
+		return nil
+	case jobposting.FieldRequirements:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRequirements(v)
+		return nil
+	case jobposting.FieldResponsibilities:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResponsibilities(v)
+		return nil
+	case jobposting.FieldSalaryMin:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSalaryMin(v)
+		return nil
+	case jobposting.FieldSalaryMax:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSalaryMax(v)
+		return nil
+	case jobposting.FieldSalaryCurrency:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSalaryCurrency(v)
 		return nil
 	case jobposting.FieldDepartment:
 		v, ok := value.(string)
@@ -49097,6 +49419,21 @@ func (m *JobPostingMutation) ClearedFields() []string {
 	if m.FieldCleared(jobposting.FieldDescription) {
 		fields = append(fields, jobposting.FieldDescription)
 	}
+	if m.FieldCleared(jobposting.FieldRequirements) {
+		fields = append(fields, jobposting.FieldRequirements)
+	}
+	if m.FieldCleared(jobposting.FieldResponsibilities) {
+		fields = append(fields, jobposting.FieldResponsibilities)
+	}
+	if m.FieldCleared(jobposting.FieldSalaryMin) {
+		fields = append(fields, jobposting.FieldSalaryMin)
+	}
+	if m.FieldCleared(jobposting.FieldSalaryMax) {
+		fields = append(fields, jobposting.FieldSalaryMax)
+	}
+	if m.FieldCleared(jobposting.FieldSalaryCurrency) {
+		fields = append(fields, jobposting.FieldSalaryCurrency)
+	}
 	if m.FieldCleared(jobposting.FieldDepartment) {
 		fields = append(fields, jobposting.FieldDepartment)
 	}
@@ -49132,6 +49469,21 @@ func (m *JobPostingMutation) ClearField(name string) error {
 	case jobposting.FieldDescription:
 		m.ClearDescription()
 		return nil
+	case jobposting.FieldRequirements:
+		m.ClearRequirements()
+		return nil
+	case jobposting.FieldResponsibilities:
+		m.ClearResponsibilities()
+		return nil
+	case jobposting.FieldSalaryMin:
+		m.ClearSalaryMin()
+		return nil
+	case jobposting.FieldSalaryMax:
+		m.ClearSalaryMax()
+		return nil
+	case jobposting.FieldSalaryCurrency:
+		m.ClearSalaryCurrency()
+		return nil
 	case jobposting.FieldDepartment:
 		m.ClearDepartment()
 		return nil
@@ -49166,6 +49518,21 @@ func (m *JobPostingMutation) ResetField(name string) error {
 		return nil
 	case jobposting.FieldDescription:
 		m.ResetDescription()
+		return nil
+	case jobposting.FieldRequirements:
+		m.ResetRequirements()
+		return nil
+	case jobposting.FieldResponsibilities:
+		m.ResetResponsibilities()
+		return nil
+	case jobposting.FieldSalaryMin:
+		m.ResetSalaryMin()
+		return nil
+	case jobposting.FieldSalaryMax:
+		m.ResetSalaryMax()
+		return nil
+	case jobposting.FieldSalaryCurrency:
+		m.ResetSalaryCurrency()
 		return nil
 	case jobposting.FieldDepartment:
 		m.ResetDepartment()
@@ -57332,6 +57699,884 @@ func (m *MetricTargetMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *MetricTargetMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown MetricTarget edge %s", name)
+}
+
+// MileageRouteMutation represents an operation that mutates the MileageRoute nodes in the graph.
+type MileageRouteMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *uuid.UUID
+	tenant_id        *uuid.UUID
+	expense_claim_id *uuid.UUID
+	route_date       *time.Time
+	from_location    *string
+	to_location      *string
+	distance         *decimal.Decimal
+	rate             *decimal.Decimal
+	amount           *decimal.Decimal
+	created_at       *time.Time
+	updated_at       *time.Time
+	clearedFields    map[string]struct{}
+	done             bool
+	oldValue         func(context.Context) (*MileageRoute, error)
+	predicates       []predicate.MileageRoute
+}
+
+var _ ent.Mutation = (*MileageRouteMutation)(nil)
+
+// mileagerouteOption allows management of the mutation configuration using functional options.
+type mileagerouteOption func(*MileageRouteMutation)
+
+// newMileageRouteMutation creates new mutation for the MileageRoute entity.
+func newMileageRouteMutation(c config, op Op, opts ...mileagerouteOption) *MileageRouteMutation {
+	m := &MileageRouteMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeMileageRoute,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withMileageRouteID sets the ID field of the mutation.
+func withMileageRouteID(id uuid.UUID) mileagerouteOption {
+	return func(m *MileageRouteMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *MileageRoute
+		)
+		m.oldValue = func(ctx context.Context) (*MileageRoute, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().MileageRoute.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withMileageRoute sets the old MileageRoute of the mutation.
+func withMileageRoute(node *MileageRoute) mileagerouteOption {
+	return func(m *MileageRouteMutation) {
+		m.oldValue = func(context.Context) (*MileageRoute, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m MileageRouteMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m MileageRouteMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of MileageRoute entities.
+func (m *MileageRouteMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *MileageRouteMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *MileageRouteMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().MileageRoute.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *MileageRouteMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *MileageRouteMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the MileageRoute entity.
+// If the MileageRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MileageRouteMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *MileageRouteMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetExpenseClaimID sets the "expense_claim_id" field.
+func (m *MileageRouteMutation) SetExpenseClaimID(u uuid.UUID) {
+	m.expense_claim_id = &u
+}
+
+// ExpenseClaimID returns the value of the "expense_claim_id" field in the mutation.
+func (m *MileageRouteMutation) ExpenseClaimID() (r uuid.UUID, exists bool) {
+	v := m.expense_claim_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpenseClaimID returns the old "expense_claim_id" field's value of the MileageRoute entity.
+// If the MileageRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MileageRouteMutation) OldExpenseClaimID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpenseClaimID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpenseClaimID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpenseClaimID: %w", err)
+	}
+	return oldValue.ExpenseClaimID, nil
+}
+
+// ResetExpenseClaimID resets all changes to the "expense_claim_id" field.
+func (m *MileageRouteMutation) ResetExpenseClaimID() {
+	m.expense_claim_id = nil
+}
+
+// SetRouteDate sets the "route_date" field.
+func (m *MileageRouteMutation) SetRouteDate(t time.Time) {
+	m.route_date = &t
+}
+
+// RouteDate returns the value of the "route_date" field in the mutation.
+func (m *MileageRouteMutation) RouteDate() (r time.Time, exists bool) {
+	v := m.route_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRouteDate returns the old "route_date" field's value of the MileageRoute entity.
+// If the MileageRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MileageRouteMutation) OldRouteDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRouteDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRouteDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRouteDate: %w", err)
+	}
+	return oldValue.RouteDate, nil
+}
+
+// ClearRouteDate clears the value of the "route_date" field.
+func (m *MileageRouteMutation) ClearRouteDate() {
+	m.route_date = nil
+	m.clearedFields[mileageroute.FieldRouteDate] = struct{}{}
+}
+
+// RouteDateCleared returns if the "route_date" field was cleared in this mutation.
+func (m *MileageRouteMutation) RouteDateCleared() bool {
+	_, ok := m.clearedFields[mileageroute.FieldRouteDate]
+	return ok
+}
+
+// ResetRouteDate resets all changes to the "route_date" field.
+func (m *MileageRouteMutation) ResetRouteDate() {
+	m.route_date = nil
+	delete(m.clearedFields, mileageroute.FieldRouteDate)
+}
+
+// SetFromLocation sets the "from_location" field.
+func (m *MileageRouteMutation) SetFromLocation(s string) {
+	m.from_location = &s
+}
+
+// FromLocation returns the value of the "from_location" field in the mutation.
+func (m *MileageRouteMutation) FromLocation() (r string, exists bool) {
+	v := m.from_location
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFromLocation returns the old "from_location" field's value of the MileageRoute entity.
+// If the MileageRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MileageRouteMutation) OldFromLocation(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFromLocation is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFromLocation requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFromLocation: %w", err)
+	}
+	return oldValue.FromLocation, nil
+}
+
+// ClearFromLocation clears the value of the "from_location" field.
+func (m *MileageRouteMutation) ClearFromLocation() {
+	m.from_location = nil
+	m.clearedFields[mileageroute.FieldFromLocation] = struct{}{}
+}
+
+// FromLocationCleared returns if the "from_location" field was cleared in this mutation.
+func (m *MileageRouteMutation) FromLocationCleared() bool {
+	_, ok := m.clearedFields[mileageroute.FieldFromLocation]
+	return ok
+}
+
+// ResetFromLocation resets all changes to the "from_location" field.
+func (m *MileageRouteMutation) ResetFromLocation() {
+	m.from_location = nil
+	delete(m.clearedFields, mileageroute.FieldFromLocation)
+}
+
+// SetToLocation sets the "to_location" field.
+func (m *MileageRouteMutation) SetToLocation(s string) {
+	m.to_location = &s
+}
+
+// ToLocation returns the value of the "to_location" field in the mutation.
+func (m *MileageRouteMutation) ToLocation() (r string, exists bool) {
+	v := m.to_location
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldToLocation returns the old "to_location" field's value of the MileageRoute entity.
+// If the MileageRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MileageRouteMutation) OldToLocation(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldToLocation is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldToLocation requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldToLocation: %w", err)
+	}
+	return oldValue.ToLocation, nil
+}
+
+// ClearToLocation clears the value of the "to_location" field.
+func (m *MileageRouteMutation) ClearToLocation() {
+	m.to_location = nil
+	m.clearedFields[mileageroute.FieldToLocation] = struct{}{}
+}
+
+// ToLocationCleared returns if the "to_location" field was cleared in this mutation.
+func (m *MileageRouteMutation) ToLocationCleared() bool {
+	_, ok := m.clearedFields[mileageroute.FieldToLocation]
+	return ok
+}
+
+// ResetToLocation resets all changes to the "to_location" field.
+func (m *MileageRouteMutation) ResetToLocation() {
+	m.to_location = nil
+	delete(m.clearedFields, mileageroute.FieldToLocation)
+}
+
+// SetDistance sets the "distance" field.
+func (m *MileageRouteMutation) SetDistance(d decimal.Decimal) {
+	m.distance = &d
+}
+
+// Distance returns the value of the "distance" field in the mutation.
+func (m *MileageRouteMutation) Distance() (r decimal.Decimal, exists bool) {
+	v := m.distance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDistance returns the old "distance" field's value of the MileageRoute entity.
+// If the MileageRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MileageRouteMutation) OldDistance(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDistance is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDistance requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDistance: %w", err)
+	}
+	return oldValue.Distance, nil
+}
+
+// ResetDistance resets all changes to the "distance" field.
+func (m *MileageRouteMutation) ResetDistance() {
+	m.distance = nil
+}
+
+// SetRate sets the "rate" field.
+func (m *MileageRouteMutation) SetRate(d decimal.Decimal) {
+	m.rate = &d
+}
+
+// Rate returns the value of the "rate" field in the mutation.
+func (m *MileageRouteMutation) Rate() (r decimal.Decimal, exists bool) {
+	v := m.rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRate returns the old "rate" field's value of the MileageRoute entity.
+// If the MileageRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MileageRouteMutation) OldRate(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRate: %w", err)
+	}
+	return oldValue.Rate, nil
+}
+
+// ResetRate resets all changes to the "rate" field.
+func (m *MileageRouteMutation) ResetRate() {
+	m.rate = nil
+}
+
+// SetAmount sets the "amount" field.
+func (m *MileageRouteMutation) SetAmount(d decimal.Decimal) {
+	m.amount = &d
+}
+
+// Amount returns the value of the "amount" field in the mutation.
+func (m *MileageRouteMutation) Amount() (r decimal.Decimal, exists bool) {
+	v := m.amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmount returns the old "amount" field's value of the MileageRoute entity.
+// If the MileageRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MileageRouteMutation) OldAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmount: %w", err)
+	}
+	return oldValue.Amount, nil
+}
+
+// ResetAmount resets all changes to the "amount" field.
+func (m *MileageRouteMutation) ResetAmount() {
+	m.amount = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *MileageRouteMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *MileageRouteMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the MileageRoute entity.
+// If the MileageRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MileageRouteMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *MileageRouteMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *MileageRouteMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *MileageRouteMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the MileageRoute entity.
+// If the MileageRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MileageRouteMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *MileageRouteMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the MileageRouteMutation builder.
+func (m *MileageRouteMutation) Where(ps ...predicate.MileageRoute) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the MileageRouteMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *MileageRouteMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.MileageRoute, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *MileageRouteMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *MileageRouteMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (MileageRoute).
+func (m *MileageRouteMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *MileageRouteMutation) Fields() []string {
+	fields := make([]string, 0, 10)
+	if m.tenant_id != nil {
+		fields = append(fields, mileageroute.FieldTenantID)
+	}
+	if m.expense_claim_id != nil {
+		fields = append(fields, mileageroute.FieldExpenseClaimID)
+	}
+	if m.route_date != nil {
+		fields = append(fields, mileageroute.FieldRouteDate)
+	}
+	if m.from_location != nil {
+		fields = append(fields, mileageroute.FieldFromLocation)
+	}
+	if m.to_location != nil {
+		fields = append(fields, mileageroute.FieldToLocation)
+	}
+	if m.distance != nil {
+		fields = append(fields, mileageroute.FieldDistance)
+	}
+	if m.rate != nil {
+		fields = append(fields, mileageroute.FieldRate)
+	}
+	if m.amount != nil {
+		fields = append(fields, mileageroute.FieldAmount)
+	}
+	if m.created_at != nil {
+		fields = append(fields, mileageroute.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, mileageroute.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *MileageRouteMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case mileageroute.FieldTenantID:
+		return m.TenantID()
+	case mileageroute.FieldExpenseClaimID:
+		return m.ExpenseClaimID()
+	case mileageroute.FieldRouteDate:
+		return m.RouteDate()
+	case mileageroute.FieldFromLocation:
+		return m.FromLocation()
+	case mileageroute.FieldToLocation:
+		return m.ToLocation()
+	case mileageroute.FieldDistance:
+		return m.Distance()
+	case mileageroute.FieldRate:
+		return m.Rate()
+	case mileageroute.FieldAmount:
+		return m.Amount()
+	case mileageroute.FieldCreatedAt:
+		return m.CreatedAt()
+	case mileageroute.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *MileageRouteMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case mileageroute.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case mileageroute.FieldExpenseClaimID:
+		return m.OldExpenseClaimID(ctx)
+	case mileageroute.FieldRouteDate:
+		return m.OldRouteDate(ctx)
+	case mileageroute.FieldFromLocation:
+		return m.OldFromLocation(ctx)
+	case mileageroute.FieldToLocation:
+		return m.OldToLocation(ctx)
+	case mileageroute.FieldDistance:
+		return m.OldDistance(ctx)
+	case mileageroute.FieldRate:
+		return m.OldRate(ctx)
+	case mileageroute.FieldAmount:
+		return m.OldAmount(ctx)
+	case mileageroute.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case mileageroute.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown MileageRoute field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MileageRouteMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case mileageroute.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case mileageroute.FieldExpenseClaimID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpenseClaimID(v)
+		return nil
+	case mileageroute.FieldRouteDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRouteDate(v)
+		return nil
+	case mileageroute.FieldFromLocation:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFromLocation(v)
+		return nil
+	case mileageroute.FieldToLocation:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetToLocation(v)
+		return nil
+	case mileageroute.FieldDistance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDistance(v)
+		return nil
+	case mileageroute.FieldRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRate(v)
+		return nil
+	case mileageroute.FieldAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmount(v)
+		return nil
+	case mileageroute.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case mileageroute.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown MileageRoute field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *MileageRouteMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *MileageRouteMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MileageRouteMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown MileageRoute numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *MileageRouteMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(mileageroute.FieldRouteDate) {
+		fields = append(fields, mileageroute.FieldRouteDate)
+	}
+	if m.FieldCleared(mileageroute.FieldFromLocation) {
+		fields = append(fields, mileageroute.FieldFromLocation)
+	}
+	if m.FieldCleared(mileageroute.FieldToLocation) {
+		fields = append(fields, mileageroute.FieldToLocation)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *MileageRouteMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *MileageRouteMutation) ClearField(name string) error {
+	switch name {
+	case mileageroute.FieldRouteDate:
+		m.ClearRouteDate()
+		return nil
+	case mileageroute.FieldFromLocation:
+		m.ClearFromLocation()
+		return nil
+	case mileageroute.FieldToLocation:
+		m.ClearToLocation()
+		return nil
+	}
+	return fmt.Errorf("unknown MileageRoute nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *MileageRouteMutation) ResetField(name string) error {
+	switch name {
+	case mileageroute.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case mileageroute.FieldExpenseClaimID:
+		m.ResetExpenseClaimID()
+		return nil
+	case mileageroute.FieldRouteDate:
+		m.ResetRouteDate()
+		return nil
+	case mileageroute.FieldFromLocation:
+		m.ResetFromLocation()
+		return nil
+	case mileageroute.FieldToLocation:
+		m.ResetToLocation()
+		return nil
+	case mileageroute.FieldDistance:
+		m.ResetDistance()
+		return nil
+	case mileageroute.FieldRate:
+		m.ResetRate()
+		return nil
+	case mileageroute.FieldAmount:
+		m.ResetAmount()
+		return nil
+	case mileageroute.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case mileageroute.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown MileageRoute field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *MileageRouteMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *MileageRouteMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *MileageRouteMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *MileageRouteMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *MileageRouteMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *MileageRouteMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *MileageRouteMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown MileageRoute unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *MileageRouteMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown MileageRoute edge %s", name)
 }
 
 // NextOfKinMutation represents an operation that mutates the NextOfKin nodes in the graph.
@@ -82358,6 +83603,7 @@ type StaffShiftOverrideMutation struct {
 	tenant_id     *uuid.UUID
 	outlet_id     *uuid.UUID
 	employee_id   *uuid.UUID
+	work_shift_id *uuid.UUID
 	date          *time.Time
 	override_type *staffshiftoverride.OverrideType
 	start_time    *string
@@ -82597,6 +83843,55 @@ func (m *StaffShiftOverrideMutation) OldEmployeeID(ctx context.Context) (v uuid.
 // ResetEmployeeID resets all changes to the "employee_id" field.
 func (m *StaffShiftOverrideMutation) ResetEmployeeID() {
 	m.employee_id = nil
+}
+
+// SetWorkShiftID sets the "work_shift_id" field.
+func (m *StaffShiftOverrideMutation) SetWorkShiftID(u uuid.UUID) {
+	m.work_shift_id = &u
+}
+
+// WorkShiftID returns the value of the "work_shift_id" field in the mutation.
+func (m *StaffShiftOverrideMutation) WorkShiftID() (r uuid.UUID, exists bool) {
+	v := m.work_shift_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkShiftID returns the old "work_shift_id" field's value of the StaffShiftOverride entity.
+// If the StaffShiftOverride object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffShiftOverrideMutation) OldWorkShiftID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWorkShiftID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWorkShiftID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkShiftID: %w", err)
+	}
+	return oldValue.WorkShiftID, nil
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (m *StaffShiftOverrideMutation) ClearWorkShiftID() {
+	m.work_shift_id = nil
+	m.clearedFields[staffshiftoverride.FieldWorkShiftID] = struct{}{}
+}
+
+// WorkShiftIDCleared returns if the "work_shift_id" field was cleared in this mutation.
+func (m *StaffShiftOverrideMutation) WorkShiftIDCleared() bool {
+	_, ok := m.clearedFields[staffshiftoverride.FieldWorkShiftID]
+	return ok
+}
+
+// ResetWorkShiftID resets all changes to the "work_shift_id" field.
+func (m *StaffShiftOverrideMutation) ResetWorkShiftID() {
+	m.work_shift_id = nil
+	delete(m.clearedFields, staffshiftoverride.FieldWorkShiftID)
 }
 
 // SetDate sets the "date" field.
@@ -83058,7 +84353,7 @@ func (m *StaffShiftOverrideMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *StaffShiftOverrideMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.tenant_id != nil {
 		fields = append(fields, staffshiftoverride.FieldTenantID)
 	}
@@ -83067,6 +84362,9 @@ func (m *StaffShiftOverrideMutation) Fields() []string {
 	}
 	if m.employee_id != nil {
 		fields = append(fields, staffshiftoverride.FieldEmployeeID)
+	}
+	if m.work_shift_id != nil {
+		fields = append(fields, staffshiftoverride.FieldWorkShiftID)
 	}
 	if m.date != nil {
 		fields = append(fields, staffshiftoverride.FieldDate)
@@ -83112,6 +84410,8 @@ func (m *StaffShiftOverrideMutation) Field(name string) (ent.Value, bool) {
 		return m.OutletID()
 	case staffshiftoverride.FieldEmployeeID:
 		return m.EmployeeID()
+	case staffshiftoverride.FieldWorkShiftID:
+		return m.WorkShiftID()
 	case staffshiftoverride.FieldDate:
 		return m.Date()
 	case staffshiftoverride.FieldOverrideType:
@@ -83147,6 +84447,8 @@ func (m *StaffShiftOverrideMutation) OldField(ctx context.Context, name string) 
 		return m.OldOutletID(ctx)
 	case staffshiftoverride.FieldEmployeeID:
 		return m.OldEmployeeID(ctx)
+	case staffshiftoverride.FieldWorkShiftID:
+		return m.OldWorkShiftID(ctx)
 	case staffshiftoverride.FieldDate:
 		return m.OldDate(ctx)
 	case staffshiftoverride.FieldOverrideType:
@@ -83196,6 +84498,13 @@ func (m *StaffShiftOverrideMutation) SetField(name string, value ent.Value) erro
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEmployeeID(v)
+		return nil
+	case staffshiftoverride.FieldWorkShiftID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkShiftID(v)
 		return nil
 	case staffshiftoverride.FieldDate:
 		v, ok := value.(time.Time)
@@ -83300,6 +84609,9 @@ func (m *StaffShiftOverrideMutation) ClearedFields() []string {
 	if m.FieldCleared(staffshiftoverride.FieldOutletID) {
 		fields = append(fields, staffshiftoverride.FieldOutletID)
 	}
+	if m.FieldCleared(staffshiftoverride.FieldWorkShiftID) {
+		fields = append(fields, staffshiftoverride.FieldWorkShiftID)
+	}
 	if m.FieldCleared(staffshiftoverride.FieldStartTime) {
 		fields = append(fields, staffshiftoverride.FieldStartTime)
 	}
@@ -83332,6 +84644,9 @@ func (m *StaffShiftOverrideMutation) ClearField(name string) error {
 	case staffshiftoverride.FieldOutletID:
 		m.ClearOutletID()
 		return nil
+	case staffshiftoverride.FieldWorkShiftID:
+		m.ClearWorkShiftID()
+		return nil
 	case staffshiftoverride.FieldStartTime:
 		m.ClearStartTime()
 		return nil
@@ -83363,6 +84678,9 @@ func (m *StaffShiftOverrideMutation) ResetField(name string) error {
 		return nil
 	case staffshiftoverride.FieldEmployeeID:
 		m.ResetEmployeeID()
+		return nil
+	case staffshiftoverride.FieldWorkShiftID:
+		m.ResetWorkShiftID()
 		return nil
 	case staffshiftoverride.FieldDate:
 		m.ResetDate()

@@ -73,6 +73,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metriccategory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metrictarget"
+	"github.com/Bengo-Hub/erp-api/internal/ent/mileageroute"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
 	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/onboardingtask"
@@ -234,6 +235,7 @@ func checkColumn(t, c string) error {
 			lossanddamage.Table:             lossanddamage.ValidColumn,
 			metriccategory.Table:            metriccategory.ValidColumn,
 			metrictarget.Table:              metrictarget.ValidColumn,
+			mileageroute.Table:              mileageroute.ValidColumn,
 			nextofkin.Table:                 nextofkin.ValidColumn,
 			offday.Table:                    offday.ValidColumn,
 			onboardingtask.Table:            onboardingtask.ValidColumn,

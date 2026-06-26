@@ -1718,6 +1718,11 @@ var (
 		{Name: "tenant_id", Type: field.TypeUUID},
 		{Name: "title", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "requirements", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "responsibilities", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "salary_min", Type: field.TypeString, Nullable: true},
+		{Name: "salary_max", Type: field.TypeString, Nullable: true},
+		{Name: "salary_currency", Type: field.TypeString, Nullable: true},
 		{Name: "department", Type: field.TypeString, Nullable: true},
 		{Name: "location", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"draft", "open", "closed", "archived"}, Default: "draft"},
@@ -1745,7 +1750,7 @@ var (
 			{
 				Name:    "jobposting_tenant_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{JobPostingsColumns[1], JobPostingsColumns[6]},
+				Columns: []*schema.Column{JobPostingsColumns[1], JobPostingsColumns[11]},
 			},
 		},
 	}
@@ -2065,6 +2070,38 @@ var (
 				Name:    "metrictarget_tenant_id_employee_id_metric_id_period_start_period_end",
 				Unique:  true,
 				Columns: []*schema.Column{MetricTargetsColumns[1], MetricTargetsColumns[2], MetricTargetsColumns[3], MetricTargetsColumns[5], MetricTargetsColumns[6]},
+			},
+		},
+	}
+	// MileageRoutesColumns holds the columns for the "mileage_routes" table.
+	MileageRoutesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "expense_claim_id", Type: field.TypeUUID},
+		{Name: "route_date", Type: field.TypeTime, Nullable: true},
+		{Name: "from_location", Type: field.TypeString, Nullable: true},
+		{Name: "to_location", Type: field.TypeString, Nullable: true},
+		{Name: "distance", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(10,2)"}},
+		{Name: "rate", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(10,4)"}},
+		{Name: "amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// MileageRoutesTable holds the schema information for the "mileage_routes" table.
+	MileageRoutesTable = &schema.Table{
+		Name:       "mileage_routes",
+		Columns:    MileageRoutesColumns,
+		PrimaryKey: []*schema.Column{MileageRoutesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "mileageroute_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{MileageRoutesColumns[1]},
+			},
+			{
+				Name:    "mileageroute_expense_claim_id",
+				Unique:  false,
+				Columns: []*schema.Column{MileageRoutesColumns[2]},
 			},
 		},
 	}
@@ -3021,6 +3058,7 @@ var (
 		{Name: "tenant_id", Type: field.TypeUUID},
 		{Name: "outlet_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "work_shift_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "date", Type: field.TypeTime},
 		{Name: "override_type", Type: field.TypeEnum, Enums: []string{"off_duty", "manual_shift", "half_day"}},
 		{Name: "start_time", Type: field.TypeString, Nullable: true},
@@ -3046,12 +3084,12 @@ var (
 			{
 				Name:    "staffshiftoverride_tenant_id_employee_id_date",
 				Unique:  true,
-				Columns: []*schema.Column{StaffShiftOverridesColumns[1], StaffShiftOverridesColumns[3], StaffShiftOverridesColumns[4]},
+				Columns: []*schema.Column{StaffShiftOverridesColumns[1], StaffShiftOverridesColumns[3], StaffShiftOverridesColumns[5]},
 			},
 			{
 				Name:    "staffshiftoverride_tenant_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{StaffShiftOverridesColumns[1], StaffShiftOverridesColumns[9]},
+				Columns: []*schema.Column{StaffShiftOverridesColumns[1], StaffShiftOverridesColumns[10]},
 			},
 		},
 	}
@@ -3570,6 +3608,7 @@ var (
 		LossAndDamagesTable,
 		MetricCategoriesTable,
 		MetricTargetsTable,
+		MileageRoutesTable,
 		NextOfKinsTable,
 		OffDaysTable,
 		OnboardingTasksTable,

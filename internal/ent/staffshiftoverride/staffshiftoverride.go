@@ -21,6 +21,8 @@ const (
 	FieldOutletID = "outlet_id"
 	// FieldEmployeeID holds the string denoting the employee_id field in the database.
 	FieldEmployeeID = "employee_id"
+	// FieldWorkShiftID holds the string denoting the work_shift_id field in the database.
+	FieldWorkShiftID = "work_shift_id"
 	// FieldDate holds the string denoting the date field in the database.
 	FieldDate = "date"
 	// FieldOverrideType holds the string denoting the override_type field in the database.
@@ -51,6 +53,7 @@ var Columns = []string{
 	FieldTenantID,
 	FieldOutletID,
 	FieldEmployeeID,
+	FieldWorkShiftID,
 	FieldDate,
 	FieldOverrideType,
 	FieldStartTime,
@@ -156,6 +159,11 @@ func ByOutletID(opts ...sql.OrderTermOption) OrderOption {
 // ByEmployeeID orders the results by the employee_id field.
 func ByEmployeeID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEmployeeID, opts...).ToFunc()
+}
+
+// ByWorkShiftID orders the results by the work_shift_id field.
+func ByWorkShiftID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWorkShiftID, opts...).ToFunc()
 }
 
 // ByDate orders the results by the date field.

@@ -50,6 +50,20 @@ func (_c *StaffShiftOverrideCreate) SetEmployeeID(v uuid.UUID) *StaffShiftOverri
 	return _c
 }
 
+// SetWorkShiftID sets the "work_shift_id" field.
+func (_c *StaffShiftOverrideCreate) SetWorkShiftID(v uuid.UUID) *StaffShiftOverrideCreate {
+	_c.mutation.SetWorkShiftID(v)
+	return _c
+}
+
+// SetNillableWorkShiftID sets the "work_shift_id" field if the given value is not nil.
+func (_c *StaffShiftOverrideCreate) SetNillableWorkShiftID(v *uuid.UUID) *StaffShiftOverrideCreate {
+	if v != nil {
+		_c.SetWorkShiftID(*v)
+	}
+	return _c
+}
+
 // SetDate sets the "date" field.
 func (_c *StaffShiftOverrideCreate) SetDate(v time.Time) *StaffShiftOverrideCreate {
 	_c.mutation.SetDate(v)
@@ -322,6 +336,10 @@ func (_c *StaffShiftOverrideCreate) createSpec() (*StaffShiftOverride, *sqlgraph
 		_spec.SetField(staffshiftoverride.FieldEmployeeID, field.TypeUUID, value)
 		_node.EmployeeID = value
 	}
+	if value, ok := _c.mutation.WorkShiftID(); ok {
+		_spec.SetField(staffshiftoverride.FieldWorkShiftID, field.TypeUUID, value)
+		_node.WorkShiftID = &value
+	}
 	if value, ok := _c.mutation.Date(); ok {
 		_spec.SetField(staffshiftoverride.FieldDate, field.TypeTime, value)
 		_node.Date = value
@@ -453,6 +471,24 @@ func (u *StaffShiftOverrideUpsert) SetEmployeeID(v uuid.UUID) *StaffShiftOverrid
 // UpdateEmployeeID sets the "employee_id" field to the value that was provided on create.
 func (u *StaffShiftOverrideUpsert) UpdateEmployeeID() *StaffShiftOverrideUpsert {
 	u.SetExcluded(staffshiftoverride.FieldEmployeeID)
+	return u
+}
+
+// SetWorkShiftID sets the "work_shift_id" field.
+func (u *StaffShiftOverrideUpsert) SetWorkShiftID(v uuid.UUID) *StaffShiftOverrideUpsert {
+	u.Set(staffshiftoverride.FieldWorkShiftID, v)
+	return u
+}
+
+// UpdateWorkShiftID sets the "work_shift_id" field to the value that was provided on create.
+func (u *StaffShiftOverrideUpsert) UpdateWorkShiftID() *StaffShiftOverrideUpsert {
+	u.SetExcluded(staffshiftoverride.FieldWorkShiftID)
+	return u
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (u *StaffShiftOverrideUpsert) ClearWorkShiftID() *StaffShiftOverrideUpsert {
+	u.SetNull(staffshiftoverride.FieldWorkShiftID)
 	return u
 }
 
@@ -691,6 +727,27 @@ func (u *StaffShiftOverrideUpsertOne) SetEmployeeID(v uuid.UUID) *StaffShiftOver
 func (u *StaffShiftOverrideUpsertOne) UpdateEmployeeID() *StaffShiftOverrideUpsertOne {
 	return u.Update(func(s *StaffShiftOverrideUpsert) {
 		s.UpdateEmployeeID()
+	})
+}
+
+// SetWorkShiftID sets the "work_shift_id" field.
+func (u *StaffShiftOverrideUpsertOne) SetWorkShiftID(v uuid.UUID) *StaffShiftOverrideUpsertOne {
+	return u.Update(func(s *StaffShiftOverrideUpsert) {
+		s.SetWorkShiftID(v)
+	})
+}
+
+// UpdateWorkShiftID sets the "work_shift_id" field to the value that was provided on create.
+func (u *StaffShiftOverrideUpsertOne) UpdateWorkShiftID() *StaffShiftOverrideUpsertOne {
+	return u.Update(func(s *StaffShiftOverrideUpsert) {
+		s.UpdateWorkShiftID()
+	})
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (u *StaffShiftOverrideUpsertOne) ClearWorkShiftID() *StaffShiftOverrideUpsertOne {
+	return u.Update(func(s *StaffShiftOverrideUpsert) {
+		s.ClearWorkShiftID()
 	})
 }
 
@@ -1119,6 +1176,27 @@ func (u *StaffShiftOverrideUpsertBulk) SetEmployeeID(v uuid.UUID) *StaffShiftOve
 func (u *StaffShiftOverrideUpsertBulk) UpdateEmployeeID() *StaffShiftOverrideUpsertBulk {
 	return u.Update(func(s *StaffShiftOverrideUpsert) {
 		s.UpdateEmployeeID()
+	})
+}
+
+// SetWorkShiftID sets the "work_shift_id" field.
+func (u *StaffShiftOverrideUpsertBulk) SetWorkShiftID(v uuid.UUID) *StaffShiftOverrideUpsertBulk {
+	return u.Update(func(s *StaffShiftOverrideUpsert) {
+		s.SetWorkShiftID(v)
+	})
+}
+
+// UpdateWorkShiftID sets the "work_shift_id" field to the value that was provided on create.
+func (u *StaffShiftOverrideUpsertBulk) UpdateWorkShiftID() *StaffShiftOverrideUpsertBulk {
+	return u.Update(func(s *StaffShiftOverrideUpsert) {
+		s.UpdateWorkShiftID()
+	})
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (u *StaffShiftOverrideUpsertBulk) ClearWorkShiftID() *StaffShiftOverrideUpsertBulk {
+	return u.Update(func(s *StaffShiftOverrideUpsert) {
+		s.ClearWorkShiftID()
 	})
 }
 

@@ -66,6 +66,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metriccategory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metrictarget"
+	"github.com/Bengo-Hub/erp-api/internal/ent/mileageroute"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
 	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/onboardingtask"
@@ -1427,23 +1428,23 @@ func init() {
 	jobpostingFields := schema.JobPosting{}.Fields()
 	_ = jobpostingFields
 	// jobpostingDescIsPublic is the schema descriptor for is_public field.
-	jobpostingDescIsPublic := jobpostingFields[8].Descriptor()
+	jobpostingDescIsPublic := jobpostingFields[13].Descriptor()
 	// jobposting.DefaultIsPublic holds the default value on creation for the is_public field.
 	jobposting.DefaultIsPublic = jobpostingDescIsPublic.Default.(bool)
 	// jobpostingDescNumPositions is the schema descriptor for num_positions field.
-	jobpostingDescNumPositions := jobpostingFields[10].Descriptor()
+	jobpostingDescNumPositions := jobpostingFields[15].Descriptor()
 	// jobposting.DefaultNumPositions holds the default value on creation for the num_positions field.
 	jobposting.DefaultNumPositions = jobpostingDescNumPositions.Default.(int)
 	// jobpostingDescPostedAt is the schema descriptor for posted_at field.
-	jobpostingDescPostedAt := jobpostingFields[12].Descriptor()
+	jobpostingDescPostedAt := jobpostingFields[17].Descriptor()
 	// jobposting.DefaultPostedAt holds the default value on creation for the posted_at field.
 	jobposting.DefaultPostedAt = jobpostingDescPostedAt.Default.(func() time.Time)
 	// jobpostingDescCreatedAt is the schema descriptor for created_at field.
-	jobpostingDescCreatedAt := jobpostingFields[14].Descriptor()
+	jobpostingDescCreatedAt := jobpostingFields[19].Descriptor()
 	// jobposting.DefaultCreatedAt holds the default value on creation for the created_at field.
 	jobposting.DefaultCreatedAt = jobpostingDescCreatedAt.Default.(func() time.Time)
 	// jobpostingDescUpdatedAt is the schema descriptor for updated_at field.
-	jobpostingDescUpdatedAt := jobpostingFields[15].Descriptor()
+	jobpostingDescUpdatedAt := jobpostingFields[20].Descriptor()
 	// jobposting.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	jobposting.DefaultUpdatedAt = jobpostingDescUpdatedAt.Default.(func() time.Time)
 	// jobposting.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1690,6 +1691,34 @@ func init() {
 	metrictargetDescID := metrictargetFields[0].Descriptor()
 	// metrictarget.DefaultID holds the default value on creation for the id field.
 	metrictarget.DefaultID = metrictargetDescID.Default.(func() uuid.UUID)
+	mileagerouteFields := schema.MileageRoute{}.Fields()
+	_ = mileagerouteFields
+	// mileagerouteDescDistance is the schema descriptor for distance field.
+	mileagerouteDescDistance := mileagerouteFields[6].Descriptor()
+	// mileageroute.DefaultDistance holds the default value on creation for the distance field.
+	mileageroute.DefaultDistance = mileagerouteDescDistance.Default.(decimal.Decimal)
+	// mileagerouteDescRate is the schema descriptor for rate field.
+	mileagerouteDescRate := mileagerouteFields[7].Descriptor()
+	// mileageroute.DefaultRate holds the default value on creation for the rate field.
+	mileageroute.DefaultRate = mileagerouteDescRate.Default.(decimal.Decimal)
+	// mileagerouteDescAmount is the schema descriptor for amount field.
+	mileagerouteDescAmount := mileagerouteFields[8].Descriptor()
+	// mileageroute.DefaultAmount holds the default value on creation for the amount field.
+	mileageroute.DefaultAmount = mileagerouteDescAmount.Default.(decimal.Decimal)
+	// mileagerouteDescCreatedAt is the schema descriptor for created_at field.
+	mileagerouteDescCreatedAt := mileagerouteFields[9].Descriptor()
+	// mileageroute.DefaultCreatedAt holds the default value on creation for the created_at field.
+	mileageroute.DefaultCreatedAt = mileagerouteDescCreatedAt.Default.(func() time.Time)
+	// mileagerouteDescUpdatedAt is the schema descriptor for updated_at field.
+	mileagerouteDescUpdatedAt := mileagerouteFields[10].Descriptor()
+	// mileageroute.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	mileageroute.DefaultUpdatedAt = mileagerouteDescUpdatedAt.Default.(func() time.Time)
+	// mileageroute.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	mileageroute.UpdateDefaultUpdatedAt = mileagerouteDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// mileagerouteDescID is the schema descriptor for id field.
+	mileagerouteDescID := mileagerouteFields[0].Descriptor()
+	// mileageroute.DefaultID holds the default value on creation for the id field.
+	mileageroute.DefaultID = mileagerouteDescID.Default.(func() uuid.UUID)
 	nextofkinFields := schema.NextOfKin{}.Fields()
 	_ = nextofkinFields
 	// nextofkinDescFullName is the schema descriptor for full_name field.
@@ -2433,11 +2462,11 @@ func init() {
 	staffshiftoverrideFields := schema.StaffShiftOverride{}.Fields()
 	_ = staffshiftoverrideFields
 	// staffshiftoverrideDescCreatedAt is the schema descriptor for created_at field.
-	staffshiftoverrideDescCreatedAt := staffshiftoverrideFields[12].Descriptor()
+	staffshiftoverrideDescCreatedAt := staffshiftoverrideFields[13].Descriptor()
 	// staffshiftoverride.DefaultCreatedAt holds the default value on creation for the created_at field.
 	staffshiftoverride.DefaultCreatedAt = staffshiftoverrideDescCreatedAt.Default.(func() time.Time)
 	// staffshiftoverrideDescUpdatedAt is the schema descriptor for updated_at field.
-	staffshiftoverrideDescUpdatedAt := staffshiftoverrideFields[13].Descriptor()
+	staffshiftoverrideDescUpdatedAt := staffshiftoverrideFields[14].Descriptor()
 	// staffshiftoverride.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	staffshiftoverride.DefaultUpdatedAt = staffshiftoverrideDescUpdatedAt.Default.(func() time.Time)
 	// staffshiftoverride.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

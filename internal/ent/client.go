@@ -77,6 +77,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metriccategory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metrictarget"
+	"github.com/Bengo-Hub/erp-api/internal/ent/mileageroute"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
 	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/onboardingtask"
@@ -246,6 +247,8 @@ type Client struct {
 	MetricCategory *MetricCategoryClient
 	// MetricTarget is the client for interacting with the MetricTarget builders.
 	MetricTarget *MetricTargetClient
+	// MileageRoute is the client for interacting with the MileageRoute builders.
+	MileageRoute *MileageRouteClient
 	// NextOfKin is the client for interacting with the NextOfKin builders.
 	NextOfKin *NextOfKinClient
 	// OffDay is the client for interacting with the OffDay builders.
@@ -398,6 +401,7 @@ func (c *Client) init() {
 	c.LossAndDamage = NewLossAndDamageClient(c.config)
 	c.MetricCategory = NewMetricCategoryClient(c.config)
 	c.MetricTarget = NewMetricTargetClient(c.config)
+	c.MileageRoute = NewMileageRouteClient(c.config)
 	c.NextOfKin = NewNextOfKinClient(c.config)
 	c.OffDay = NewOffDayClient(c.config)
 	c.OnboardingTask = NewOnboardingTaskClient(c.config)
@@ -591,6 +595,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		LossAndDamage:             NewLossAndDamageClient(cfg),
 		MetricCategory:            NewMetricCategoryClient(cfg),
 		MetricTarget:              NewMetricTargetClient(cfg),
+		MileageRoute:              NewMileageRouteClient(cfg),
 		NextOfKin:                 NewNextOfKinClient(cfg),
 		OffDay:                    NewOffDayClient(cfg),
 		OnboardingTask:            NewOnboardingTaskClient(cfg),
@@ -711,6 +716,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		LossAndDamage:             NewLossAndDamageClient(cfg),
 		MetricCategory:            NewMetricCategoryClient(cfg),
 		MetricTarget:              NewMetricTargetClient(cfg),
+		MileageRoute:              NewMileageRouteClient(cfg),
 		NextOfKin:                 NewNextOfKinClient(cfg),
 		OffDay:                    NewOffDayClient(cfg),
 		OnboardingTask:            NewOnboardingTaskClient(cfg),
@@ -795,16 +801,16 @@ func (c *Client) Use(hooks ...Hook) {
 		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
 		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
 		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory, c.MetricTarget,
-		c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent, c.PayrollComponent,
-		c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio,
-		c.Payslip, c.PayslipAudit, c.PayslipLine, c.PerformanceMetric,
-		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
-		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
-		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
-		c.Task, c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry,
-		c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
-		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
-		c.WorkersUnion,
+		c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
+		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
+		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
+		c.PerformanceMetric, c.PerformanceReview, c.Permission, c.PublicHoliday,
+		c.Region, c.RepayOption, c.ReviewMetric, c.Role, c.RolePermission,
+		c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster, c.ShiftRosterSlot,
+		c.ShiftRotation, c.StaffShiftOverride, c.Task, c.TaskComment, c.TaskLog,
+		c.Timesheet, c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment,
+		c.TrainingEvaluation, c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift,
+		c.WorkShiftSchedule, c.WorkersUnion,
 	} {
 		n.Use(hooks...)
 	}
@@ -829,16 +835,16 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
 		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
 		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory, c.MetricTarget,
-		c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent, c.PayrollComponent,
-		c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief, c.PayrollSplitRatio,
-		c.Payslip, c.PayslipAudit, c.PayslipLine, c.PerformanceMetric,
-		c.PerformanceReview, c.Permission, c.PublicHoliday, c.Region, c.RepayOption,
-		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
-		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffShiftOverride,
-		c.Task, c.TaskComment, c.TaskLog, c.Timesheet, c.TimesheetEntry,
-		c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
-		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
-		c.WorkersUnion,
+		c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
+		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
+		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
+		c.PerformanceMetric, c.PerformanceReview, c.Permission, c.PublicHoliday,
+		c.Region, c.RepayOption, c.ReviewMetric, c.Role, c.RolePermission,
+		c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster, c.ShiftRosterSlot,
+		c.ShiftRotation, c.StaffShiftOverride, c.Task, c.TaskComment, c.TaskLog,
+		c.Timesheet, c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment,
+		c.TrainingEvaluation, c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift,
+		c.WorkShiftSchedule, c.WorkersUnion,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -969,6 +975,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.MetricCategory.mutate(ctx, m)
 	case *MetricTargetMutation:
 		return c.MetricTarget.mutate(ctx, m)
+	case *MileageRouteMutation:
+		return c.MileageRoute.mutate(ctx, m)
 	case *NextOfKinMutation:
 		return c.NextOfKin.mutate(ctx, m)
 	case *OffDayMutation:
@@ -9279,6 +9287,139 @@ func (c *MetricTargetClient) mutate(ctx context.Context, m *MetricTargetMutation
 	}
 }
 
+// MileageRouteClient is a client for the MileageRoute schema.
+type MileageRouteClient struct {
+	config
+}
+
+// NewMileageRouteClient returns a client for the MileageRoute from the given config.
+func NewMileageRouteClient(c config) *MileageRouteClient {
+	return &MileageRouteClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `mileageroute.Hooks(f(g(h())))`.
+func (c *MileageRouteClient) Use(hooks ...Hook) {
+	c.hooks.MileageRoute = append(c.hooks.MileageRoute, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `mileageroute.Intercept(f(g(h())))`.
+func (c *MileageRouteClient) Intercept(interceptors ...Interceptor) {
+	c.inters.MileageRoute = append(c.inters.MileageRoute, interceptors...)
+}
+
+// Create returns a builder for creating a MileageRoute entity.
+func (c *MileageRouteClient) Create() *MileageRouteCreate {
+	mutation := newMileageRouteMutation(c.config, OpCreate)
+	return &MileageRouteCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of MileageRoute entities.
+func (c *MileageRouteClient) CreateBulk(builders ...*MileageRouteCreate) *MileageRouteCreateBulk {
+	return &MileageRouteCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *MileageRouteClient) MapCreateBulk(slice any, setFunc func(*MileageRouteCreate, int)) *MileageRouteCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &MileageRouteCreateBulk{err: fmt.Errorf("calling to MileageRouteClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*MileageRouteCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &MileageRouteCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for MileageRoute.
+func (c *MileageRouteClient) Update() *MileageRouteUpdate {
+	mutation := newMileageRouteMutation(c.config, OpUpdate)
+	return &MileageRouteUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *MileageRouteClient) UpdateOne(_m *MileageRoute) *MileageRouteUpdateOne {
+	mutation := newMileageRouteMutation(c.config, OpUpdateOne, withMileageRoute(_m))
+	return &MileageRouteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *MileageRouteClient) UpdateOneID(id uuid.UUID) *MileageRouteUpdateOne {
+	mutation := newMileageRouteMutation(c.config, OpUpdateOne, withMileageRouteID(id))
+	return &MileageRouteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for MileageRoute.
+func (c *MileageRouteClient) Delete() *MileageRouteDelete {
+	mutation := newMileageRouteMutation(c.config, OpDelete)
+	return &MileageRouteDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *MileageRouteClient) DeleteOne(_m *MileageRoute) *MileageRouteDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *MileageRouteClient) DeleteOneID(id uuid.UUID) *MileageRouteDeleteOne {
+	builder := c.Delete().Where(mileageroute.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &MileageRouteDeleteOne{builder}
+}
+
+// Query returns a query builder for MileageRoute.
+func (c *MileageRouteClient) Query() *MileageRouteQuery {
+	return &MileageRouteQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeMileageRoute},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a MileageRoute entity by its id.
+func (c *MileageRouteClient) Get(ctx context.Context, id uuid.UUID) (*MileageRoute, error) {
+	return c.Query().Where(mileageroute.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *MileageRouteClient) GetX(ctx context.Context, id uuid.UUID) *MileageRoute {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *MileageRouteClient) Hooks() []Hook {
+	return c.hooks.MileageRoute
+}
+
+// Interceptors returns the client interceptors.
+func (c *MileageRouteClient) Interceptors() []Interceptor {
+	return c.inters.MileageRoute
+}
+
+func (c *MileageRouteClient) mutate(ctx context.Context, m *MileageRouteMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MileageRouteCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MileageRouteUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MileageRouteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MileageRouteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown MileageRoute mutation op: %q", m.Op())
+	}
+}
+
 // NextOfKinClient is a client for the NextOfKin schema.
 type NextOfKinClient struct {
 	config
@@ -14822,11 +14963,11 @@ type (
 		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
 		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
 		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
-		LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay, OnboardingTask,
-		OutboxEvent, PayrollComponent, PayrollFormula, PayrollFormulaItem,
-		PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit, PayslipLine,
-		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
-		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		LossAndDamage, MetricCategory, MetricTarget, MileageRoute, NextOfKin, OffDay,
+		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
+		PayslipLine, PerformanceMetric, PerformanceReview, Permission, PublicHoliday,
+		Region, RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
 		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
 		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
 		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
@@ -14845,11 +14986,11 @@ type (
 		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
 		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
 		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
-		LossAndDamage, MetricCategory, MetricTarget, NextOfKin, OffDay, OnboardingTask,
-		OutboxEvent, PayrollComponent, PayrollFormula, PayrollFormulaItem,
-		PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit, PayslipLine,
-		PerformanceMetric, PerformanceReview, Permission, PublicHoliday, Region,
-		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		LossAndDamage, MetricCategory, MetricTarget, MileageRoute, NextOfKin, OffDay,
+		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
+		PayslipLine, PerformanceMetric, PerformanceReview, Permission, PublicHoliday,
+		Region, RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
 		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
 		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
 		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,

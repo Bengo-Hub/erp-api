@@ -24,6 +24,16 @@ type JobPosting struct {
 	Title string `json:"title,omitempty"`
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
+	// Rich-text (HTML) requirements
+	Requirements *string `json:"requirements,omitempty"`
+	// Rich-text (HTML) responsibilities
+	Responsibilities *string `json:"responsibilities,omitempty"`
+	// Advertised minimum salary
+	SalaryMin *string `json:"salary_min,omitempty"`
+	// Advertised maximum salary
+	SalaryMax *string `json:"salary_max,omitempty"`
+	// ISO currency code, e.g. KES
+	SalaryCurrency *string `json:"salary_currency,omitempty"`
 	// Department holds the value of the "department" field.
 	Department *string `json:"department,omitempty"`
 	// Location holds the value of the "location" field.
@@ -60,7 +70,7 @@ func (*JobPosting) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case jobposting.FieldNumPositions:
 			values[i] = new(sql.NullInt64)
-		case jobposting.FieldTitle, jobposting.FieldDescription, jobposting.FieldDepartment, jobposting.FieldLocation, jobposting.FieldStatus, jobposting.FieldSlug, jobposting.FieldEmploymentType:
+		case jobposting.FieldTitle, jobposting.FieldDescription, jobposting.FieldRequirements, jobposting.FieldResponsibilities, jobposting.FieldSalaryMin, jobposting.FieldSalaryMax, jobposting.FieldSalaryCurrency, jobposting.FieldDepartment, jobposting.FieldLocation, jobposting.FieldStatus, jobposting.FieldSlug, jobposting.FieldEmploymentType:
 			values[i] = new(sql.NullString)
 		case jobposting.FieldApplicationDeadline, jobposting.FieldPostedAt, jobposting.FieldClosedAt, jobposting.FieldCreatedAt, jobposting.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -104,6 +114,41 @@ func (_m *JobPosting) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field description", values[i])
 			} else if value.Valid {
 				_m.Description = value.String
+			}
+		case jobposting.FieldRequirements:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field requirements", values[i])
+			} else if value.Valid {
+				_m.Requirements = new(string)
+				*_m.Requirements = value.String
+			}
+		case jobposting.FieldResponsibilities:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field responsibilities", values[i])
+			} else if value.Valid {
+				_m.Responsibilities = new(string)
+				*_m.Responsibilities = value.String
+			}
+		case jobposting.FieldSalaryMin:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field salary_min", values[i])
+			} else if value.Valid {
+				_m.SalaryMin = new(string)
+				*_m.SalaryMin = value.String
+			}
+		case jobposting.FieldSalaryMax:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field salary_max", values[i])
+			} else if value.Valid {
+				_m.SalaryMax = new(string)
+				*_m.SalaryMax = value.String
+			}
+		case jobposting.FieldSalaryCurrency:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field salary_currency", values[i])
+			} else if value.Valid {
+				_m.SalaryCurrency = new(string)
+				*_m.SalaryCurrency = value.String
 			}
 		case jobposting.FieldDepartment:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -227,6 +272,31 @@ func (_m *JobPosting) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("description=")
 	builder.WriteString(_m.Description)
+	builder.WriteString(", ")
+	if v := _m.Requirements; v != nil {
+		builder.WriteString("requirements=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.Responsibilities; v != nil {
+		builder.WriteString("responsibilities=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.SalaryMin; v != nil {
+		builder.WriteString("salary_min=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.SalaryMax; v != nil {
+		builder.WriteString("salary_max=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.SalaryCurrency; v != nil {
+		builder.WriteString("salary_currency=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	if v := _m.Department; v != nil {
 		builder.WriteString("department=")

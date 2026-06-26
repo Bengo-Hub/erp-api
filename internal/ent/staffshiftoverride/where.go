@@ -70,6 +70,11 @@ func EmployeeID(v uuid.UUID) predicate.StaffShiftOverride {
 	return predicate.StaffShiftOverride(sql.FieldEQ(FieldEmployeeID, v))
 }
 
+// WorkShiftID applies equality check predicate on the "work_shift_id" field. It's identical to WorkShiftIDEQ.
+func WorkShiftID(v uuid.UUID) predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldEQ(FieldWorkShiftID, v))
+}
+
 // Date applies equality check predicate on the "date" field. It's identical to DateEQ.
 func Date(v time.Time) predicate.StaffShiftOverride {
 	return predicate.StaffShiftOverride(sql.FieldEQ(FieldDate, v))
@@ -238,6 +243,56 @@ func EmployeeIDLT(v uuid.UUID) predicate.StaffShiftOverride {
 // EmployeeIDLTE applies the LTE predicate on the "employee_id" field.
 func EmployeeIDLTE(v uuid.UUID) predicate.StaffShiftOverride {
 	return predicate.StaffShiftOverride(sql.FieldLTE(FieldEmployeeID, v))
+}
+
+// WorkShiftIDEQ applies the EQ predicate on the "work_shift_id" field.
+func WorkShiftIDEQ(v uuid.UUID) predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldEQ(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDNEQ applies the NEQ predicate on the "work_shift_id" field.
+func WorkShiftIDNEQ(v uuid.UUID) predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldNEQ(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDIn applies the In predicate on the "work_shift_id" field.
+func WorkShiftIDIn(vs ...uuid.UUID) predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldIn(FieldWorkShiftID, vs...))
+}
+
+// WorkShiftIDNotIn applies the NotIn predicate on the "work_shift_id" field.
+func WorkShiftIDNotIn(vs ...uuid.UUID) predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldNotIn(FieldWorkShiftID, vs...))
+}
+
+// WorkShiftIDGT applies the GT predicate on the "work_shift_id" field.
+func WorkShiftIDGT(v uuid.UUID) predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldGT(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDGTE applies the GTE predicate on the "work_shift_id" field.
+func WorkShiftIDGTE(v uuid.UUID) predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldGTE(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDLT applies the LT predicate on the "work_shift_id" field.
+func WorkShiftIDLT(v uuid.UUID) predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldLT(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDLTE applies the LTE predicate on the "work_shift_id" field.
+func WorkShiftIDLTE(v uuid.UUID) predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldLTE(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDIsNil applies the IsNil predicate on the "work_shift_id" field.
+func WorkShiftIDIsNil() predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldIsNull(FieldWorkShiftID))
+}
+
+// WorkShiftIDNotNil applies the NotNil predicate on the "work_shift_id" field.
+func WorkShiftIDNotNil() predicate.StaffShiftOverride {
+	return predicate.StaffShiftOverride(sql.FieldNotNull(FieldWorkShiftID))
 }
 
 // DateEQ applies the EQ predicate on the "date" field.

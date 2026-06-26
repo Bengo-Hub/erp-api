@@ -56,6 +56,11 @@ func (s *Service) ListPostings(ctx context.Context, tenantID uuid.UUID, status s
 type PostingInput struct {
 	Title               string
 	Description         string
+	Requirements        string
+	Responsibilities    string
+	SalaryMin           string
+	SalaryMax           string
+	SalaryCurrency      string
 	Department          string
 	Location            string
 	Status              string
@@ -63,6 +68,29 @@ type PostingInput struct {
 	EmploymentType      string
 	NumPositions        int
 	ApplicationDeadline *time.Time
+}
+
+// applyOptional sets the nullable rich-text / salary fields shared by create & update.
+// Empty strings clear the column (so editing a field to blank persists as NULL).
+func applyPostingOptional[B interface {
+	SetNillableRequirements(*string) B
+	SetNillableResponsibilities(*string) B
+	SetNillableSalaryMin(*string) B
+	SetNillableSalaryMax(*string) B
+	SetNillableSalaryCurrency(*string) B
+}](b B, in PostingInput) B {
+	ptr := func(v string) *string {
+		if v == "" {
+			return nil
+		}
+		return &v
+	}
+	return b.
+		SetNillableRequirements(ptr(in.Requirements)).
+		SetNillableResponsibilities(ptr(in.Responsibilities)).
+		SetNillableSalaryMin(ptr(in.SalaryMin)).
+		SetNillableSalaryMax(ptr(in.SalaryMax)).
+		SetNillableSalaryCurrency(ptr(in.SalaryCurrency))
 }
 
 // CreatePosting inserts a tenant-scoped job posting with a unique public slug.
@@ -93,6 +121,7 @@ func (s *Service) CreatePosting(ctx context.Context, tenantID uuid.UUID, in Post
 	if in.ApplicationDeadline != nil {
 		b = b.SetApplicationDeadline(*in.ApplicationDeadline)
 	}
+	b = applyPostingOptional(b, in)
 	row, err := b.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("recruitment: create posting: %w", err)
@@ -124,6 +153,7 @@ func (s *Service) UpdatePosting(ctx context.Context, tenantID, id uuid.UUID, in 
 	if in.ApplicationDeadline != nil {
 		u = u.SetApplicationDeadline(*in.ApplicationDeadline)
 	}
+	u = applyPostingOptional(u, in)
 	if in.Title != p.Title {
 		slug, err := s.uniquePostingSlug(ctx, tenantID, in.Title, id)
 		if err != nil {

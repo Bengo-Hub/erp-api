@@ -23,6 +23,108 @@ func (h *AttendanceHandler) registerRosterRoutes(ar chi.Router) {
 	ar.Delete("/assignments/{id}", h.DeleteAssignment)
 	ar.Get("/overrides", h.ListOverrides)
 	ar.Post("/overrides", h.CreateOverride)
+
+	// Weekly shift planner (drawable per-cell roster).
+	ar.Get("/shift-planner", h.ResolvePlanner)
+	ar.Put("/shift-planner/cell", h.UpsertPlannerCell)
+	ar.Delete("/shift-planner/cell", h.ClearPlannerCell)
+}
+
+// ---- Shift planner (per-cell) ----
+
+func (h *AttendanceHandler) ResolvePlanner(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAttendanceView) {
+		return
+	}
+	from, err := parseDate(r.URL.Query().Get("from"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid or missing 'from'")
+		return
+	}
+	to, err := parseDate(r.URL.Query().Get("to"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid or missing 'to'")
+		return
+	}
+	rows, err := h.svc.ResolvePlanner(r.Context(), scope.TenantID, from, to)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to resolve planner")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": rows})
+}
+
+type plannerCellBody struct {
+	EmployeeID  string `json:"employee_id"`
+	Date        string `json:"date"`
+	WorkShiftID string `json:"work_shift_id"`
+	StartTime   string `json:"start_time"`
+	EndTime     string `json:"end_time"`
+}
+
+func (h *AttendanceHandler) UpsertPlannerCell(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAttendanceManage) {
+		return
+	}
+	var b plannerCellBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	empID, err := uuid.Parse(b.EmployeeID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
+		return
+	}
+	date, err := parseDate(b.Date)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid date")
+		return
+	}
+	in := attendance.PlannerCellInput{
+		EmployeeID: empID, Date: date,
+		StartTime: b.StartTime, EndTime: b.EndTime,
+	}
+	if b.WorkShiftID != "" {
+		sid, perr := uuid.Parse(b.WorkShiftID)
+		if perr != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", "invalid work_shift_id")
+			return
+		}
+		in.WorkShiftID = &sid
+	}
+	uid := scope.UserID
+	in.CreatedBy = &uid
+	row, err := h.svc.UpsertPlannerCell(r.Context(), scope.TenantID, in)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "upsert_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+func (h *AttendanceHandler) ClearPlannerCell(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAttendanceManage) {
+		return
+	}
+	empID, err := uuid.Parse(r.URL.Query().Get("employee_id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
+		return
+	}
+	date, err := parseDate(r.URL.Query().Get("date"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid date")
+		return
+	}
+	if err := h.svc.ClearPlannerCell(r.Context(), scope.TenantID, empID, date); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ---- Rosters ----

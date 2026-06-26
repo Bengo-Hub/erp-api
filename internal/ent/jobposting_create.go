@@ -50,6 +50,76 @@ func (_c *JobPostingCreate) SetNillableDescription(v *string) *JobPostingCreate 
 	return _c
 }
 
+// SetRequirements sets the "requirements" field.
+func (_c *JobPostingCreate) SetRequirements(v string) *JobPostingCreate {
+	_c.mutation.SetRequirements(v)
+	return _c
+}
+
+// SetNillableRequirements sets the "requirements" field if the given value is not nil.
+func (_c *JobPostingCreate) SetNillableRequirements(v *string) *JobPostingCreate {
+	if v != nil {
+		_c.SetRequirements(*v)
+	}
+	return _c
+}
+
+// SetResponsibilities sets the "responsibilities" field.
+func (_c *JobPostingCreate) SetResponsibilities(v string) *JobPostingCreate {
+	_c.mutation.SetResponsibilities(v)
+	return _c
+}
+
+// SetNillableResponsibilities sets the "responsibilities" field if the given value is not nil.
+func (_c *JobPostingCreate) SetNillableResponsibilities(v *string) *JobPostingCreate {
+	if v != nil {
+		_c.SetResponsibilities(*v)
+	}
+	return _c
+}
+
+// SetSalaryMin sets the "salary_min" field.
+func (_c *JobPostingCreate) SetSalaryMin(v string) *JobPostingCreate {
+	_c.mutation.SetSalaryMin(v)
+	return _c
+}
+
+// SetNillableSalaryMin sets the "salary_min" field if the given value is not nil.
+func (_c *JobPostingCreate) SetNillableSalaryMin(v *string) *JobPostingCreate {
+	if v != nil {
+		_c.SetSalaryMin(*v)
+	}
+	return _c
+}
+
+// SetSalaryMax sets the "salary_max" field.
+func (_c *JobPostingCreate) SetSalaryMax(v string) *JobPostingCreate {
+	_c.mutation.SetSalaryMax(v)
+	return _c
+}
+
+// SetNillableSalaryMax sets the "salary_max" field if the given value is not nil.
+func (_c *JobPostingCreate) SetNillableSalaryMax(v *string) *JobPostingCreate {
+	if v != nil {
+		_c.SetSalaryMax(*v)
+	}
+	return _c
+}
+
+// SetSalaryCurrency sets the "salary_currency" field.
+func (_c *JobPostingCreate) SetSalaryCurrency(v string) *JobPostingCreate {
+	_c.mutation.SetSalaryCurrency(v)
+	return _c
+}
+
+// SetNillableSalaryCurrency sets the "salary_currency" field if the given value is not nil.
+func (_c *JobPostingCreate) SetNillableSalaryCurrency(v *string) *JobPostingCreate {
+	if v != nil {
+		_c.SetSalaryCurrency(*v)
+	}
+	return _c
+}
+
 // SetDepartment sets the "department" field.
 func (_c *JobPostingCreate) SetDepartment(v string) *JobPostingCreate {
 	_c.mutation.SetDepartment(v)
@@ -376,6 +446,26 @@ func (_c *JobPostingCreate) createSpec() (*JobPosting, *sqlgraph.CreateSpec) {
 		_spec.SetField(jobposting.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
+	if value, ok := _c.mutation.Requirements(); ok {
+		_spec.SetField(jobposting.FieldRequirements, field.TypeString, value)
+		_node.Requirements = &value
+	}
+	if value, ok := _c.mutation.Responsibilities(); ok {
+		_spec.SetField(jobposting.FieldResponsibilities, field.TypeString, value)
+		_node.Responsibilities = &value
+	}
+	if value, ok := _c.mutation.SalaryMin(); ok {
+		_spec.SetField(jobposting.FieldSalaryMin, field.TypeString, value)
+		_node.SalaryMin = &value
+	}
+	if value, ok := _c.mutation.SalaryMax(); ok {
+		_spec.SetField(jobposting.FieldSalaryMax, field.TypeString, value)
+		_node.SalaryMax = &value
+	}
+	if value, ok := _c.mutation.SalaryCurrency(); ok {
+		_spec.SetField(jobposting.FieldSalaryCurrency, field.TypeString, value)
+		_node.SalaryCurrency = &value
+	}
 	if value, ok := _c.mutation.Department(); ok {
 		_spec.SetField(jobposting.FieldDepartment, field.TypeString, value)
 		_node.Department = &value
@@ -515,6 +605,96 @@ func (u *JobPostingUpsert) UpdateDescription() *JobPostingUpsert {
 // ClearDescription clears the value of the "description" field.
 func (u *JobPostingUpsert) ClearDescription() *JobPostingUpsert {
 	u.SetNull(jobposting.FieldDescription)
+	return u
+}
+
+// SetRequirements sets the "requirements" field.
+func (u *JobPostingUpsert) SetRequirements(v string) *JobPostingUpsert {
+	u.Set(jobposting.FieldRequirements, v)
+	return u
+}
+
+// UpdateRequirements sets the "requirements" field to the value that was provided on create.
+func (u *JobPostingUpsert) UpdateRequirements() *JobPostingUpsert {
+	u.SetExcluded(jobposting.FieldRequirements)
+	return u
+}
+
+// ClearRequirements clears the value of the "requirements" field.
+func (u *JobPostingUpsert) ClearRequirements() *JobPostingUpsert {
+	u.SetNull(jobposting.FieldRequirements)
+	return u
+}
+
+// SetResponsibilities sets the "responsibilities" field.
+func (u *JobPostingUpsert) SetResponsibilities(v string) *JobPostingUpsert {
+	u.Set(jobposting.FieldResponsibilities, v)
+	return u
+}
+
+// UpdateResponsibilities sets the "responsibilities" field to the value that was provided on create.
+func (u *JobPostingUpsert) UpdateResponsibilities() *JobPostingUpsert {
+	u.SetExcluded(jobposting.FieldResponsibilities)
+	return u
+}
+
+// ClearResponsibilities clears the value of the "responsibilities" field.
+func (u *JobPostingUpsert) ClearResponsibilities() *JobPostingUpsert {
+	u.SetNull(jobposting.FieldResponsibilities)
+	return u
+}
+
+// SetSalaryMin sets the "salary_min" field.
+func (u *JobPostingUpsert) SetSalaryMin(v string) *JobPostingUpsert {
+	u.Set(jobposting.FieldSalaryMin, v)
+	return u
+}
+
+// UpdateSalaryMin sets the "salary_min" field to the value that was provided on create.
+func (u *JobPostingUpsert) UpdateSalaryMin() *JobPostingUpsert {
+	u.SetExcluded(jobposting.FieldSalaryMin)
+	return u
+}
+
+// ClearSalaryMin clears the value of the "salary_min" field.
+func (u *JobPostingUpsert) ClearSalaryMin() *JobPostingUpsert {
+	u.SetNull(jobposting.FieldSalaryMin)
+	return u
+}
+
+// SetSalaryMax sets the "salary_max" field.
+func (u *JobPostingUpsert) SetSalaryMax(v string) *JobPostingUpsert {
+	u.Set(jobposting.FieldSalaryMax, v)
+	return u
+}
+
+// UpdateSalaryMax sets the "salary_max" field to the value that was provided on create.
+func (u *JobPostingUpsert) UpdateSalaryMax() *JobPostingUpsert {
+	u.SetExcluded(jobposting.FieldSalaryMax)
+	return u
+}
+
+// ClearSalaryMax clears the value of the "salary_max" field.
+func (u *JobPostingUpsert) ClearSalaryMax() *JobPostingUpsert {
+	u.SetNull(jobposting.FieldSalaryMax)
+	return u
+}
+
+// SetSalaryCurrency sets the "salary_currency" field.
+func (u *JobPostingUpsert) SetSalaryCurrency(v string) *JobPostingUpsert {
+	u.Set(jobposting.FieldSalaryCurrency, v)
+	return u
+}
+
+// UpdateSalaryCurrency sets the "salary_currency" field to the value that was provided on create.
+func (u *JobPostingUpsert) UpdateSalaryCurrency() *JobPostingUpsert {
+	u.SetExcluded(jobposting.FieldSalaryCurrency)
+	return u
+}
+
+// ClearSalaryCurrency clears the value of the "salary_currency" field.
+func (u *JobPostingUpsert) ClearSalaryCurrency() *JobPostingUpsert {
+	u.SetNull(jobposting.FieldSalaryCurrency)
 	return u
 }
 
@@ -789,6 +969,111 @@ func (u *JobPostingUpsertOne) UpdateDescription() *JobPostingUpsertOne {
 func (u *JobPostingUpsertOne) ClearDescription() *JobPostingUpsertOne {
 	return u.Update(func(s *JobPostingUpsert) {
 		s.ClearDescription()
+	})
+}
+
+// SetRequirements sets the "requirements" field.
+func (u *JobPostingUpsertOne) SetRequirements(v string) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetRequirements(v)
+	})
+}
+
+// UpdateRequirements sets the "requirements" field to the value that was provided on create.
+func (u *JobPostingUpsertOne) UpdateRequirements() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateRequirements()
+	})
+}
+
+// ClearRequirements clears the value of the "requirements" field.
+func (u *JobPostingUpsertOne) ClearRequirements() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearRequirements()
+	})
+}
+
+// SetResponsibilities sets the "responsibilities" field.
+func (u *JobPostingUpsertOne) SetResponsibilities(v string) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetResponsibilities(v)
+	})
+}
+
+// UpdateResponsibilities sets the "responsibilities" field to the value that was provided on create.
+func (u *JobPostingUpsertOne) UpdateResponsibilities() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateResponsibilities()
+	})
+}
+
+// ClearResponsibilities clears the value of the "responsibilities" field.
+func (u *JobPostingUpsertOne) ClearResponsibilities() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearResponsibilities()
+	})
+}
+
+// SetSalaryMin sets the "salary_min" field.
+func (u *JobPostingUpsertOne) SetSalaryMin(v string) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetSalaryMin(v)
+	})
+}
+
+// UpdateSalaryMin sets the "salary_min" field to the value that was provided on create.
+func (u *JobPostingUpsertOne) UpdateSalaryMin() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateSalaryMin()
+	})
+}
+
+// ClearSalaryMin clears the value of the "salary_min" field.
+func (u *JobPostingUpsertOne) ClearSalaryMin() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearSalaryMin()
+	})
+}
+
+// SetSalaryMax sets the "salary_max" field.
+func (u *JobPostingUpsertOne) SetSalaryMax(v string) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetSalaryMax(v)
+	})
+}
+
+// UpdateSalaryMax sets the "salary_max" field to the value that was provided on create.
+func (u *JobPostingUpsertOne) UpdateSalaryMax() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateSalaryMax()
+	})
+}
+
+// ClearSalaryMax clears the value of the "salary_max" field.
+func (u *JobPostingUpsertOne) ClearSalaryMax() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearSalaryMax()
+	})
+}
+
+// SetSalaryCurrency sets the "salary_currency" field.
+func (u *JobPostingUpsertOne) SetSalaryCurrency(v string) *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetSalaryCurrency(v)
+	})
+}
+
+// UpdateSalaryCurrency sets the "salary_currency" field to the value that was provided on create.
+func (u *JobPostingUpsertOne) UpdateSalaryCurrency() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateSalaryCurrency()
+	})
+}
+
+// ClearSalaryCurrency clears the value of the "salary_currency" field.
+func (u *JobPostingUpsertOne) ClearSalaryCurrency() *JobPostingUpsertOne {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearSalaryCurrency()
 	})
 }
 
@@ -1259,6 +1544,111 @@ func (u *JobPostingUpsertBulk) UpdateDescription() *JobPostingUpsertBulk {
 func (u *JobPostingUpsertBulk) ClearDescription() *JobPostingUpsertBulk {
 	return u.Update(func(s *JobPostingUpsert) {
 		s.ClearDescription()
+	})
+}
+
+// SetRequirements sets the "requirements" field.
+func (u *JobPostingUpsertBulk) SetRequirements(v string) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetRequirements(v)
+	})
+}
+
+// UpdateRequirements sets the "requirements" field to the value that was provided on create.
+func (u *JobPostingUpsertBulk) UpdateRequirements() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateRequirements()
+	})
+}
+
+// ClearRequirements clears the value of the "requirements" field.
+func (u *JobPostingUpsertBulk) ClearRequirements() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearRequirements()
+	})
+}
+
+// SetResponsibilities sets the "responsibilities" field.
+func (u *JobPostingUpsertBulk) SetResponsibilities(v string) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetResponsibilities(v)
+	})
+}
+
+// UpdateResponsibilities sets the "responsibilities" field to the value that was provided on create.
+func (u *JobPostingUpsertBulk) UpdateResponsibilities() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateResponsibilities()
+	})
+}
+
+// ClearResponsibilities clears the value of the "responsibilities" field.
+func (u *JobPostingUpsertBulk) ClearResponsibilities() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearResponsibilities()
+	})
+}
+
+// SetSalaryMin sets the "salary_min" field.
+func (u *JobPostingUpsertBulk) SetSalaryMin(v string) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetSalaryMin(v)
+	})
+}
+
+// UpdateSalaryMin sets the "salary_min" field to the value that was provided on create.
+func (u *JobPostingUpsertBulk) UpdateSalaryMin() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateSalaryMin()
+	})
+}
+
+// ClearSalaryMin clears the value of the "salary_min" field.
+func (u *JobPostingUpsertBulk) ClearSalaryMin() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearSalaryMin()
+	})
+}
+
+// SetSalaryMax sets the "salary_max" field.
+func (u *JobPostingUpsertBulk) SetSalaryMax(v string) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetSalaryMax(v)
+	})
+}
+
+// UpdateSalaryMax sets the "salary_max" field to the value that was provided on create.
+func (u *JobPostingUpsertBulk) UpdateSalaryMax() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateSalaryMax()
+	})
+}
+
+// ClearSalaryMax clears the value of the "salary_max" field.
+func (u *JobPostingUpsertBulk) ClearSalaryMax() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearSalaryMax()
+	})
+}
+
+// SetSalaryCurrency sets the "salary_currency" field.
+func (u *JobPostingUpsertBulk) SetSalaryCurrency(v string) *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.SetSalaryCurrency(v)
+	})
+}
+
+// UpdateSalaryCurrency sets the "salary_currency" field to the value that was provided on create.
+func (u *JobPostingUpsertBulk) UpdateSalaryCurrency() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.UpdateSalaryCurrency()
+	})
+}
+
+// ClearSalaryCurrency clears the value of the "salary_currency" field.
+func (u *JobPostingUpsertBulk) ClearSalaryCurrency() *JobPostingUpsertBulk {
+	return u.Update(func(s *JobPostingUpsert) {
+		s.ClearSalaryCurrency()
 	})
 }
 

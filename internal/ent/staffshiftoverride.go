@@ -24,6 +24,8 @@ type StaffShiftOverride struct {
 	OutletID *uuid.UUID `json:"outlet_id,omitempty"`
 	// FK -> employee.id
 	EmployeeID uuid.UUID `json:"employee_id,omitempty"`
+	// FK -> work_shifts.id; set when a named shift is planned for this cell
+	WorkShiftID *uuid.UUID `json:"work_shift_id,omitempty"`
 	// Date holds the value of the "date" field.
 	Date time.Time `json:"date,omitempty"`
 	// OverrideType holds the value of the "override_type" field.
@@ -52,7 +54,7 @@ func (*StaffShiftOverride) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case staffshiftoverride.FieldOutletID, staffshiftoverride.FieldCreatedBy, staffshiftoverride.FieldApprovedBy:
+		case staffshiftoverride.FieldOutletID, staffshiftoverride.FieldWorkShiftID, staffshiftoverride.FieldCreatedBy, staffshiftoverride.FieldApprovedBy:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case staffshiftoverride.FieldOverrideType, staffshiftoverride.FieldStartTime, staffshiftoverride.FieldEndTime, staffshiftoverride.FieldReason, staffshiftoverride.FieldStatus:
 			values[i] = new(sql.NullString)
@@ -99,6 +101,13 @@ func (_m *StaffShiftOverride) assignValues(columns []string, values []any) error
 				return fmt.Errorf("unexpected type %T for field employee_id", values[i])
 			} else if value != nil {
 				_m.EmployeeID = *value
+			}
+		case staffshiftoverride.FieldWorkShiftID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field work_shift_id", values[i])
+			} else if value.Valid {
+				_m.WorkShiftID = new(uuid.UUID)
+				*_m.WorkShiftID = *value.S.(*uuid.UUID)
 			}
 		case staffshiftoverride.FieldDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -211,6 +220,11 @@ func (_m *StaffShiftOverride) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("employee_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.EmployeeID))
+	builder.WriteString(", ")
+	if v := _m.WorkShiftID; v != nil {
+		builder.WriteString("work_shift_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("date=")
 	builder.WriteString(_m.Date.Format(time.ANSIC))

@@ -22,6 +22,7 @@ func (StaffShiftOverride) Fields() []ent.Field {
 		field.UUID("tenant_id", uuid.UUID{}).Comment("Owning tenant"),
 		field.UUID("outlet_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("employee_id", uuid.UUID{}).Comment("FK -> employee.id"),
+		field.UUID("work_shift_id", uuid.UUID{}).Optional().Nillable().Comment("FK -> work_shifts.id; set when a named shift is planned for this cell"),
 		field.Time("date"),
 		field.Enum("override_type").Values("off_duty", "manual_shift", "half_day"),
 		field.String("start_time").Optional().Nillable().Comment("HH:MM; required for manual_shift/half_day"),

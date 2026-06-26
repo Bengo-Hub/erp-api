@@ -77,6 +77,26 @@ func (_u *StaffShiftOverrideUpdate) SetNillableEmployeeID(v *uuid.UUID) *StaffSh
 	return _u
 }
 
+// SetWorkShiftID sets the "work_shift_id" field.
+func (_u *StaffShiftOverrideUpdate) SetWorkShiftID(v uuid.UUID) *StaffShiftOverrideUpdate {
+	_u.mutation.SetWorkShiftID(v)
+	return _u
+}
+
+// SetNillableWorkShiftID sets the "work_shift_id" field if the given value is not nil.
+func (_u *StaffShiftOverrideUpdate) SetNillableWorkShiftID(v *uuid.UUID) *StaffShiftOverrideUpdate {
+	if v != nil {
+		_u.SetWorkShiftID(*v)
+	}
+	return _u
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (_u *StaffShiftOverrideUpdate) ClearWorkShiftID() *StaffShiftOverrideUpdate {
+	_u.mutation.ClearWorkShiftID()
+	return _u
+}
+
 // SetDate sets the "date" field.
 func (_u *StaffShiftOverrideUpdate) SetDate(v time.Time) *StaffShiftOverrideUpdate {
 	_u.mutation.SetDate(v)
@@ -305,6 +325,12 @@ func (_u *StaffShiftOverrideUpdate) sqlSave(ctx context.Context) (_node int, err
 	if value, ok := _u.mutation.EmployeeID(); ok {
 		_spec.SetField(staffshiftoverride.FieldEmployeeID, field.TypeUUID, value)
 	}
+	if value, ok := _u.mutation.WorkShiftID(); ok {
+		_spec.SetField(staffshiftoverride.FieldWorkShiftID, field.TypeUUID, value)
+	}
+	if _u.mutation.WorkShiftIDCleared() {
+		_spec.ClearField(staffshiftoverride.FieldWorkShiftID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.Date(); ok {
 		_spec.SetField(staffshiftoverride.FieldDate, field.TypeTime, value)
 	}
@@ -412,6 +438,26 @@ func (_u *StaffShiftOverrideUpdateOne) SetNillableEmployeeID(v *uuid.UUID) *Staf
 	if v != nil {
 		_u.SetEmployeeID(*v)
 	}
+	return _u
+}
+
+// SetWorkShiftID sets the "work_shift_id" field.
+func (_u *StaffShiftOverrideUpdateOne) SetWorkShiftID(v uuid.UUID) *StaffShiftOverrideUpdateOne {
+	_u.mutation.SetWorkShiftID(v)
+	return _u
+}
+
+// SetNillableWorkShiftID sets the "work_shift_id" field if the given value is not nil.
+func (_u *StaffShiftOverrideUpdateOne) SetNillableWorkShiftID(v *uuid.UUID) *StaffShiftOverrideUpdateOne {
+	if v != nil {
+		_u.SetWorkShiftID(*v)
+	}
+	return _u
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (_u *StaffShiftOverrideUpdateOne) ClearWorkShiftID() *StaffShiftOverrideUpdateOne {
+	_u.mutation.ClearWorkShiftID()
 	return _u
 }
 
@@ -672,6 +718,12 @@ func (_u *StaffShiftOverrideUpdateOne) sqlSave(ctx context.Context) (_node *Staf
 	}
 	if value, ok := _u.mutation.EmployeeID(); ok {
 		_spec.SetField(staffshiftoverride.FieldEmployeeID, field.TypeUUID, value)
+	}
+	if value, ok := _u.mutation.WorkShiftID(); ok {
+		_spec.SetField(staffshiftoverride.FieldWorkShiftID, field.TypeUUID, value)
+	}
+	if _u.mutation.WorkShiftIDCleared() {
+		_spec.ClearField(staffshiftoverride.FieldWorkShiftID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Date(); ok {
 		_spec.SetField(staffshiftoverride.FieldDate, field.TypeTime, value)
