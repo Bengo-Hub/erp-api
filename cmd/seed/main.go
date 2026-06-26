@@ -42,7 +42,7 @@ var permissionCodes = []string{
 	"hrm.training.view", "hrm.training.manage",
 	"hrm.appraisal.view", "hrm.appraisal.manage",
 	"hrm.performance.view", "hrm.performance.manage",
-	"hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process",
+	"hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "hrm.payroll.disburse",
 	// Cross-cutting
 	"approvals.view", "approvals.manage", "approvals.decide",
 	"tasks.view", "tasks.manage",
@@ -109,8 +109,8 @@ var roleGrants = map[string][]string{
 	"hr_assistant": bundle([]string{"hrm.employee.view", "hrm.leave.view", "hrm.leave.manage", "hrm.attendance.view", "hrm.attendance.manage", "hrm.recruitment.view", "hrm.recruitment.manage", "hrm.training.view", "hrm.training.manage", "tasks.view", "reports.view"}),
 	"hr_viewer":    bundle(hrmViewAll, []string{"tasks.view", "reports.view"}),
 	// Payroll / Finance
-	"payroll_manager": bundle([]string{"hrm.employee.view", "hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "reports.view", "approvals.view", "approvals.decide", "business.view", "business.manage", "fx.view", "fx.manage"}),
-	"finance_manager": bundle([]string{"hrm.employee.view", "hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "reports.view", "approvals.view", "approvals.decide", "business.view", "business.manage", "fx.view", "fx.manage"}),
+	"payroll_manager": bundle([]string{"hrm.employee.view", "hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "hrm.payroll.disburse", "reports.view", "approvals.view", "approvals.decide", "business.view", "business.manage", "fx.view", "fx.manage"}),
+	"finance_manager": bundle([]string{"hrm.employee.view", "hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "hrm.payroll.disburse", "reports.view", "approvals.view", "approvals.decide", "business.view", "business.manage", "fx.view", "fx.manage"}),
 	// Operations
 	"operations_manager": bundle([]string{"hrm.employee.view", "hrm.employee.manage", "hrm.leave.view", "hrm.leave.manage", "hrm.leave.approve", "hrm.attendance.view", "hrm.attendance.manage", "tasks.view", "tasks.manage", "approvals.view", "approvals.decide", "reports.view", "business.view"}),
 	// Procurement / Sales (thin in HR-scope ERP)

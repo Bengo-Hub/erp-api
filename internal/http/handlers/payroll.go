@@ -18,9 +18,10 @@ import (
 
 // Payroll RBAC permission codes.
 const (
-	permPayrollView    = "hrm.payroll.view"
-	permPayrollManage  = "hrm.payroll.manage"
-	permPayrollProcess = "hrm.payroll.process"
+	permPayrollView     = "hrm.payroll.view"
+	permPayrollManage   = "hrm.payroll.manage"
+	permPayrollProcess  = "hrm.payroll.process"
+	permPayrollDisburse = "hrm.payroll.disburse" // segregation of duties: paying out is distinct from processing
 )
 
 // PayrollHandler serves /api/v1/hrm/payroll/* (runs, preview, process, payslips,
@@ -432,12 +433,13 @@ func (h *PayrollHandler) Command(w http.ResponseWriter, r *http.Request) {
 	}
 	switch body.Command {
 	case "disburse":
-		if !requirePermission(w, scope, permPayrollProcess) {
+		// Paying out is a segregation-of-duties step distinct from processing.
+		if !requirePermission(w, scope, permPayrollDisburse) {
 			return
 		}
 		h.disburse(w, r, scope, body)
 	case "reverse":
-		if !requirePermission(w, scope, permPayrollProcess) {
+		if !requirePermission(w, scope, permPayrollDisburse) {
 			return
 		}
 		h.reverse(w, r, scope, body)

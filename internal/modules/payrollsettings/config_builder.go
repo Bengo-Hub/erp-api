@@ -14,6 +14,18 @@ import (
 // hundred converts a stored percentage (e.g. 30.00) to a fraction (0.30).
 var hundred = decimal.NewFromInt(100)
 
+// defaultEmployerPercentage returns the employer matching fraction (1 == 100%) for a
+// statutory category when no explicit PayrollSplitRatio row is configured. NSSF and the
+// Housing Levy are matched by the employer; SHIF/NHIF and income tax are employee-only.
+func defaultEmployerPercentage(category string) decimal.Decimal {
+	switch category {
+	case "social_security_fund", "housing_levy":
+		return decimal.NewFromInt(1)
+	default:
+		return decimal.Zero
+	}
+}
+
 // BuildEngineConfig resolves the tenant-scoped, period-effective rate sets into a
 // payrollengine.Config. A missing required statutory formula (income/NSSF/housing, plus
 // at least one of SHIF/NHIF) is a fail-loud error — the run aborts (gaps §2.2/§2.4).
@@ -72,6 +84,11 @@ func (s *Service) resolveRates(ctx context.Context, tenantID uuid.UUID, ftype, c
 	}
 	rates := &payrollengine.FormulaRates{
 		EmployeePercentage: decimal.NewFromInt(1),
+		// Employer-side default by statutory category when no explicit PayrollSplitRatio row
+		// exists: NSSF and Housing Levy are matched 100% by the employer; SHIF/NHIF/PAYE are
+		// employee-only. A split row (below) overrides this. Without this, a tenant missing
+		// split rows silently reports KES 0 employer contributions (muster roll / GL / P9).
+		EmployerPercentage: defaultEmployerPercentage(category),
 	}
 	for _, it := range items {
 		to := it.AmountTo
