@@ -31,7 +31,15 @@ func periodMeta(f Filter) PeriodMeta {
 
 func money(d decimal.Decimal) string { return d.StringFixed(2) }
 
-// P9 is the KRA Tax Deduction Card: per-employee gross, reliefs, taxable pay, PAYE.
+// p9Acc accumulates a single employee's figures across the period's payslips (a true P9 is the
+// per-employee annual card, so multiple monthly payslips collapse into one row).
+type p9Acc struct {
+	e                                       *ent.Employee
+	gross, taxable, relief, paye, nssf, net decimal.Decimal
+}
+
+// P9 is the KRA Tax Deduction Card: ONE row per employee with year-to-date gross, deductions,
+// chargeable (taxable) pay and PAYE. Column keys match the erp-ui report-runner contract.
 func (s *Service) P9(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
 	slips, err := s.fetchPayslips(ctx, tenantID, f)
 	if err != nil {
@@ -41,40 +49,61 @@ func (s *Service) P9(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report
 	if err != nil {
 		return nil, err
 	}
+	byEmp := map[uuid.UUID]*p9Acc{}
+	order := []uuid.UUID{}
+	for _, p := range slips {
+		a := byEmp[p.EmployeeID]
+		if a == nil {
+			a = &p9Acc{e: emps[p.EmployeeID]}
+			byEmp[p.EmployeeID] = a
+			order = append(order, p.EmployeeID)
+		}
+		a.gross = a.gross.Add(p.GrossPay)
+		a.taxable = a.taxable.Add(p.TaxablePay)
+		a.relief = a.relief.Add(p.TaxRelief)
+		a.paye = a.paye.Add(p.Paye)
+		a.nssf = a.nssf.Add(p.NssfEmployeeTier1).Add(p.NssfEmployeeTier2)
+		a.net = a.net.Add(p.NetPay)
+	}
 	rep := &Report{
 		Report:  "P9",
 		Period:  periodMeta(f),
-		Columns: []string{"employee", "pin", "gross_pay", "shif_nhif", "nssf", "taxable_pay", "tax_relief", "paye", "net_pay"},
+		Columns: []string{"employee_name", "employee_pin", "national_id", "total_gross_pay", "total_deductions", "chargeable_pay", "total_tax", "net_pay"},
 		Rows:    []map[string]any{},
 	}
-	totGross, totTaxable, totPaye, totNet := d(), d(), d(), d()
-	for _, p := range slips {
-		e := emps[p.EmployeeID]
-		nssf := p.NssfEmployeeTier1.Add(p.NssfEmployeeTier2)
+	totChargeable, totPaye, totNet := d(), d(), d()
+	for _, id := range order {
+		a := byEmp[id]
+		deductions := a.gross.Sub(a.net)
 		rep.Rows = append(rep.Rows, map[string]any{
-			"employee":    empName(e),
-			"pin":         pin(e),
-			"gross_pay":   money(p.GrossPay),
-			"shif_nhif":   money(p.ShifOrNhifContribution),
-			"nssf":        money(nssf),
-			"taxable_pay": money(p.TaxablePay),
-			"tax_relief":  money(p.TaxRelief),
-			"paye":        money(p.Paye),
-			"net_pay":     money(p.NetPay),
+			"employee_name":    empName(a.e),
+			"employee_pin":     pin(a.e),
+			"national_id":      natID(a.e),
+			"total_gross_pay":  money(a.gross),
+			"total_deductions": money(deductions),
+			"chargeable_pay":   money(a.taxable),
+			"total_tax":        money(a.paye),
+			"net_pay":          money(a.net),
 		})
-		totGross = totGross.Add(p.GrossPay)
-		totTaxable = totTaxable.Add(p.TaxablePay)
-		totPaye = totPaye.Add(p.Paye)
-		totNet = totNet.Add(p.NetPay)
+		totChargeable = totChargeable.Add(a.taxable)
+		totPaye = totPaye.Add(a.paye)
+		totNet = totNet.Add(a.net)
 	}
 	rep.Totals = map[string]any{
-		"count": len(slips), "gross_pay": money(totGross), "taxable_pay": money(totTaxable),
-		"paye": money(totPaye), "net_pay": money(totNet),
+		"count": len(order), "chargeable_pay": money(totChargeable),
+		"total_tax": money(totPaye), "net_pay": money(totNet),
 	}
 	return rep, nil
 }
 
-// P10A is the PAYE return: per-employee taxable pay, PAYE charged and relief.
+// p10aAcc accumulates an employer-return row per employee across the period.
+type p10aAcc struct {
+	e                       *ent.Employee
+	gross, paye, nssf, nhif decimal.Decimal
+}
+
+// P10A is the employer PAYE return: ONE row per employee with year-to-date gross, PAYE, NSSF and
+// SHIF/NHIF. Column keys match the erp-ui report-runner contract (total_gross_pay/total_paye/…).
 func (s *Service) P10A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
 	slips, err := s.fetchPayslips(ctx, tenantID, f)
 	if err != nil {
@@ -84,27 +113,41 @@ func (s *Service) P10A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	if err != nil {
 		return nil, err
 	}
+	byEmp := map[uuid.UUID]*p10aAcc{}
+	order := []uuid.UUID{}
+	for _, p := range slips {
+		a := byEmp[p.EmployeeID]
+		if a == nil {
+			a = &p10aAcc{e: emps[p.EmployeeID]}
+			byEmp[p.EmployeeID] = a
+			order = append(order, p.EmployeeID)
+		}
+		a.gross = a.gross.Add(p.GrossPay)
+		a.paye = a.paye.Add(p.Paye)
+		a.nssf = a.nssf.Add(p.NssfEmployeeTier1).Add(p.NssfEmployeeTier2)
+		a.nhif = a.nhif.Add(p.ShifOrNhifContribution)
+	}
 	rep := &Report{
 		Report:  "P10A",
 		Period:  periodMeta(f),
-		Columns: []string{"employee", "pin", "national_id", "taxable_pay", "tax_relief", "paye"},
+		Columns: []string{"employee_name", "employee_pin", "total_gross_pay", "total_paye", "total_nssf", "total_nhif"},
 		Rows:    []map[string]any{},
 	}
-	totTaxable, totPaye := d(), d()
-	for _, p := range slips {
-		e := emps[p.EmployeeID]
+	totGross, totPaye := d(), d()
+	for _, id := range order {
+		a := byEmp[id]
 		rep.Rows = append(rep.Rows, map[string]any{
-			"employee":    empName(e),
-			"pin":         pin(e),
-			"national_id": natID(e),
-			"taxable_pay": money(p.TaxablePay),
-			"tax_relief":  money(p.TaxRelief),
-			"paye":        money(p.Paye),
+			"employee_name":   empName(a.e),
+			"employee_pin":    pin(a.e),
+			"total_gross_pay": money(a.gross),
+			"total_paye":      money(a.paye),
+			"total_nssf":      money(a.nssf),
+			"total_nhif":      money(a.nhif),
 		})
-		totTaxable = totTaxable.Add(p.TaxablePay)
-		totPaye = totPaye.Add(p.Paye)
+		totGross = totGross.Add(a.gross)
+		totPaye = totPaye.Add(a.paye)
 	}
-	rep.Totals = map[string]any{"count": len(slips), "taxable_pay": money(totTaxable), "paye": money(totPaye)}
+	rep.Totals = map[string]any{"count": len(order), "total_gross_pay": money(totGross), "total_paye": money(totPaye)}
 	return rep, nil
 }
 

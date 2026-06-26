@@ -71,6 +71,46 @@ func (s *Service) NSSF(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	return rep, nil
 }
 
+// HousingLevy is the Affordable Housing Levy return: 1.5% employee matched by 1.5% employer.
+// The payslip stores the employee side; the employer match equals it (matched contribution).
+func (s *Service) HousingLevy(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
+	slips, err := s.fetchPayslips(ctx, tenantID, f)
+	if err != nil {
+		return nil, err
+	}
+	emps, err := s.employeeMap(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	rep := &Report{
+		Report:  "housing-levy",
+		Period:  periodMeta(f),
+		Columns: []string{"employee_name", "employee_pin", "gross_pay", "employee_levy", "employer_levy", "total_levy"},
+		Rows:    []map[string]any{},
+	}
+	totEmp, totEmpr := d(), d()
+	for _, p := range slips {
+		e := emps[p.EmployeeID]
+		emp := p.HousingLevy
+		empr := p.HousingLevy // matched 1.5%
+		rep.Rows = append(rep.Rows, map[string]any{
+			"employee_name": empName(e),
+			"employee_pin":  pin(e),
+			"gross_pay":     money(p.GrossPay),
+			"employee_levy": money(emp),
+			"employer_levy": money(empr),
+			"total_levy":    money(emp.Add(empr)),
+		})
+		totEmp = totEmp.Add(emp)
+		totEmpr = totEmpr.Add(empr)
+	}
+	rep.Totals = map[string]any{
+		"count": len(slips), "employee_levy": money(totEmp),
+		"employer_levy": money(totEmpr), "total_levy": money(totEmp.Add(totEmpr)),
+	}
+	return rep, nil
+}
+
 // NITA is the Industrial Training Levy return: a flat per-employee monthly levy.
 func (s *Service) NITA(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
 	slips, err := s.fetchPayslips(ctx, tenantID, f)
