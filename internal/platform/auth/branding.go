@@ -20,15 +20,59 @@ import (
 const brandingTTL = 6 * time.Hour
 
 // Branding is the subset of the auth-api tenant payload the ERP surfaces (login page +
-// PDF/report headers). Unknown fields are ignored.
+// careers portal + PDF/report headers). Unknown fields are ignored.
 type Branding struct {
 	Name           string `json:"name"`
 	Slug           string `json:"slug"`
 	LogoURL        string `json:"logo_url"`
 	PrimaryColor   string `json:"primary_color"`
 	SecondaryColor string `json:"secondary_color"`
+	AccentColor    string `json:"accent_color"`
 	KraPin         string `json:"kra_pin"`
 	Address        string `json:"address"`
+}
+
+// rawTenant mirrors the auth-api by-slug payload shape: brand colours live under brand_colors
+// and kra_pin/address under metadata (NOT as flat fields), so a flat decode yields empty
+// colours. We also accept flat fields as a fallback for older payloads.
+type rawTenant struct {
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	LogoURL     string `json:"logo_url"`
+	BrandColors struct {
+		Primary   string `json:"primary"`
+		Secondary string `json:"secondary"`
+		Accent    string `json:"accent"`
+	} `json:"brand_colors"`
+	Metadata struct {
+		KraPin  string `json:"kra_pin"`
+		Address string `json:"address"`
+	} `json:"metadata"`
+	// Flat fallbacks.
+	PrimaryColor   string `json:"primary_color"`
+	SecondaryColor string `json:"secondary_color"`
+	KraPin         string `json:"kra_pin"`
+	Address        string `json:"address"`
+}
+
+func (r rawTenant) toBranding(slug string) *Branding {
+	pick := func(a, b string) string {
+		if a != "" {
+			return a
+		}
+		return b
+	}
+	b := &Branding{
+		Name:           r.Name,
+		Slug:           pick(r.Slug, slug),
+		LogoURL:        r.LogoURL,
+		PrimaryColor:   pick(r.BrandColors.Primary, r.PrimaryColor),
+		SecondaryColor: pick(r.BrandColors.Secondary, r.SecondaryColor),
+		AccentColor:    r.BrandColors.Accent,
+		KraPin:         pick(r.Metadata.KraPin, r.KraPin),
+		Address:        pick(r.Metadata.Address, r.Address),
+	}
+	return b
 }
 
 // BrandingClient fetches tenant branding from auth-api with a shared cache-aside
@@ -58,7 +102,8 @@ func (c *BrandingClient) GetBySlug(ctx context.Context, slug string) (*Branding,
 		return nil, nil
 	}
 	if c.cache != nil {
-		key := sharedcache.Key("erp", "branding", slug)
+		// "branding2" busts entries cached under the old flat-decode (empty brand colours).
+		key := sharedcache.Key("erp", "branding2", slug)
 		b, err := sharedcache.GetOrSet(ctx, c.cache, key, brandingTTL, func(ctx context.Context) (*Branding, error) {
 			return c.fetch(ctx, slug)
 		})
@@ -91,12 +136,9 @@ func (c *BrandingClient) fetch(ctx context.Context, slug string) (*Branding, err
 	if resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("auth branding: status %d", resp.StatusCode)
 	}
-	var b Branding
-	if err := json.NewDecoder(resp.Body).Decode(&b); err != nil {
+	var raw rawTenant
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("auth branding: decode: %w", err)
 	}
-	if b.Slug == "" {
-		b.Slug = slug
-	}
-	return &b, nil
+	return raw.toBranding(slug), nil
 }
