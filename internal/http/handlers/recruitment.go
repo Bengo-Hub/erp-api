@@ -73,6 +73,11 @@ func (h *RecruitmentHandler) ListPostings(w http.ResponseWriter, r *http.Request
 type postingBody struct {
 	Title               string `json:"title"`
 	Description         string `json:"description"`
+	Requirements        string `json:"requirements"`
+	Responsibilities    string `json:"responsibilities"`
+	SalaryMin           string `json:"salary_min"`
+	SalaryMax           string `json:"salary_max"`
+	SalaryCurrency      string `json:"salary_currency"`
 	Department          string `json:"department"`
 	Location            string `json:"location"`
 	Status              string `json:"status"`
@@ -85,6 +90,8 @@ type postingBody struct {
 func (b postingBody) toInput() recruitment.PostingInput {
 	in := recruitment.PostingInput{
 		Title: b.Title, Description: b.Description, Department: b.Department,
+		Requirements: b.Requirements, Responsibilities: b.Responsibilities,
+		SalaryMin: b.SalaryMin, SalaryMax: b.SalaryMax, SalaryCurrency: b.SalaryCurrency,
 		Location: b.Location, Status: b.Status, IsPublic: b.IsPublic,
 		EmploymentType: b.EmploymentType, NumPositions: b.NumPositions,
 	}

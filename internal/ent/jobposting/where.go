@@ -70,6 +70,31 @@ func Description(v string) predicate.JobPosting {
 	return predicate.JobPosting(sql.FieldEQ(FieldDescription, v))
 }
 
+// Requirements applies equality check predicate on the "requirements" field. It's identical to RequirementsEQ.
+func Requirements(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldRequirements, v))
+}
+
+// Responsibilities applies equality check predicate on the "responsibilities" field. It's identical to ResponsibilitiesEQ.
+func Responsibilities(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldResponsibilities, v))
+}
+
+// SalaryMin applies equality check predicate on the "salary_min" field. It's identical to SalaryMinEQ.
+func SalaryMin(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldSalaryMin, v))
+}
+
+// SalaryMax applies equality check predicate on the "salary_max" field. It's identical to SalaryMaxEQ.
+func SalaryMax(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldSalaryMax, v))
+}
+
+// SalaryCurrency applies equality check predicate on the "salary_currency" field. It's identical to SalaryCurrencyEQ.
+func SalaryCurrency(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldSalaryCurrency, v))
+}
+
 // Department applies equality check predicate on the "department" field. It's identical to DepartmentEQ.
 func Department(v string) predicate.JobPosting {
 	return predicate.JobPosting(sql.FieldEQ(FieldDepartment, v))
@@ -303,6 +328,381 @@ func DescriptionEqualFold(v string) predicate.JobPosting {
 // DescriptionContainsFold applies the ContainsFold predicate on the "description" field.
 func DescriptionContainsFold(v string) predicate.JobPosting {
 	return predicate.JobPosting(sql.FieldContainsFold(FieldDescription, v))
+}
+
+// RequirementsEQ applies the EQ predicate on the "requirements" field.
+func RequirementsEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldRequirements, v))
+}
+
+// RequirementsNEQ applies the NEQ predicate on the "requirements" field.
+func RequirementsNEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNEQ(FieldRequirements, v))
+}
+
+// RequirementsIn applies the In predicate on the "requirements" field.
+func RequirementsIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIn(FieldRequirements, vs...))
+}
+
+// RequirementsNotIn applies the NotIn predicate on the "requirements" field.
+func RequirementsNotIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotIn(FieldRequirements, vs...))
+}
+
+// RequirementsGT applies the GT predicate on the "requirements" field.
+func RequirementsGT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGT(FieldRequirements, v))
+}
+
+// RequirementsGTE applies the GTE predicate on the "requirements" field.
+func RequirementsGTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGTE(FieldRequirements, v))
+}
+
+// RequirementsLT applies the LT predicate on the "requirements" field.
+func RequirementsLT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLT(FieldRequirements, v))
+}
+
+// RequirementsLTE applies the LTE predicate on the "requirements" field.
+func RequirementsLTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLTE(FieldRequirements, v))
+}
+
+// RequirementsContains applies the Contains predicate on the "requirements" field.
+func RequirementsContains(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContains(FieldRequirements, v))
+}
+
+// RequirementsHasPrefix applies the HasPrefix predicate on the "requirements" field.
+func RequirementsHasPrefix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasPrefix(FieldRequirements, v))
+}
+
+// RequirementsHasSuffix applies the HasSuffix predicate on the "requirements" field.
+func RequirementsHasSuffix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasSuffix(FieldRequirements, v))
+}
+
+// RequirementsIsNil applies the IsNil predicate on the "requirements" field.
+func RequirementsIsNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIsNull(FieldRequirements))
+}
+
+// RequirementsNotNil applies the NotNil predicate on the "requirements" field.
+func RequirementsNotNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotNull(FieldRequirements))
+}
+
+// RequirementsEqualFold applies the EqualFold predicate on the "requirements" field.
+func RequirementsEqualFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEqualFold(FieldRequirements, v))
+}
+
+// RequirementsContainsFold applies the ContainsFold predicate on the "requirements" field.
+func RequirementsContainsFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContainsFold(FieldRequirements, v))
+}
+
+// ResponsibilitiesEQ applies the EQ predicate on the "responsibilities" field.
+func ResponsibilitiesEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldResponsibilities, v))
+}
+
+// ResponsibilitiesNEQ applies the NEQ predicate on the "responsibilities" field.
+func ResponsibilitiesNEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNEQ(FieldResponsibilities, v))
+}
+
+// ResponsibilitiesIn applies the In predicate on the "responsibilities" field.
+func ResponsibilitiesIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIn(FieldResponsibilities, vs...))
+}
+
+// ResponsibilitiesNotIn applies the NotIn predicate on the "responsibilities" field.
+func ResponsibilitiesNotIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotIn(FieldResponsibilities, vs...))
+}
+
+// ResponsibilitiesGT applies the GT predicate on the "responsibilities" field.
+func ResponsibilitiesGT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGT(FieldResponsibilities, v))
+}
+
+// ResponsibilitiesGTE applies the GTE predicate on the "responsibilities" field.
+func ResponsibilitiesGTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGTE(FieldResponsibilities, v))
+}
+
+// ResponsibilitiesLT applies the LT predicate on the "responsibilities" field.
+func ResponsibilitiesLT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLT(FieldResponsibilities, v))
+}
+
+// ResponsibilitiesLTE applies the LTE predicate on the "responsibilities" field.
+func ResponsibilitiesLTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLTE(FieldResponsibilities, v))
+}
+
+// ResponsibilitiesContains applies the Contains predicate on the "responsibilities" field.
+func ResponsibilitiesContains(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContains(FieldResponsibilities, v))
+}
+
+// ResponsibilitiesHasPrefix applies the HasPrefix predicate on the "responsibilities" field.
+func ResponsibilitiesHasPrefix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasPrefix(FieldResponsibilities, v))
+}
+
+// ResponsibilitiesHasSuffix applies the HasSuffix predicate on the "responsibilities" field.
+func ResponsibilitiesHasSuffix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasSuffix(FieldResponsibilities, v))
+}
+
+// ResponsibilitiesIsNil applies the IsNil predicate on the "responsibilities" field.
+func ResponsibilitiesIsNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIsNull(FieldResponsibilities))
+}
+
+// ResponsibilitiesNotNil applies the NotNil predicate on the "responsibilities" field.
+func ResponsibilitiesNotNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotNull(FieldResponsibilities))
+}
+
+// ResponsibilitiesEqualFold applies the EqualFold predicate on the "responsibilities" field.
+func ResponsibilitiesEqualFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEqualFold(FieldResponsibilities, v))
+}
+
+// ResponsibilitiesContainsFold applies the ContainsFold predicate on the "responsibilities" field.
+func ResponsibilitiesContainsFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContainsFold(FieldResponsibilities, v))
+}
+
+// SalaryMinEQ applies the EQ predicate on the "salary_min" field.
+func SalaryMinEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldSalaryMin, v))
+}
+
+// SalaryMinNEQ applies the NEQ predicate on the "salary_min" field.
+func SalaryMinNEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNEQ(FieldSalaryMin, v))
+}
+
+// SalaryMinIn applies the In predicate on the "salary_min" field.
+func SalaryMinIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIn(FieldSalaryMin, vs...))
+}
+
+// SalaryMinNotIn applies the NotIn predicate on the "salary_min" field.
+func SalaryMinNotIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotIn(FieldSalaryMin, vs...))
+}
+
+// SalaryMinGT applies the GT predicate on the "salary_min" field.
+func SalaryMinGT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGT(FieldSalaryMin, v))
+}
+
+// SalaryMinGTE applies the GTE predicate on the "salary_min" field.
+func SalaryMinGTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGTE(FieldSalaryMin, v))
+}
+
+// SalaryMinLT applies the LT predicate on the "salary_min" field.
+func SalaryMinLT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLT(FieldSalaryMin, v))
+}
+
+// SalaryMinLTE applies the LTE predicate on the "salary_min" field.
+func SalaryMinLTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLTE(FieldSalaryMin, v))
+}
+
+// SalaryMinContains applies the Contains predicate on the "salary_min" field.
+func SalaryMinContains(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContains(FieldSalaryMin, v))
+}
+
+// SalaryMinHasPrefix applies the HasPrefix predicate on the "salary_min" field.
+func SalaryMinHasPrefix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasPrefix(FieldSalaryMin, v))
+}
+
+// SalaryMinHasSuffix applies the HasSuffix predicate on the "salary_min" field.
+func SalaryMinHasSuffix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasSuffix(FieldSalaryMin, v))
+}
+
+// SalaryMinIsNil applies the IsNil predicate on the "salary_min" field.
+func SalaryMinIsNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIsNull(FieldSalaryMin))
+}
+
+// SalaryMinNotNil applies the NotNil predicate on the "salary_min" field.
+func SalaryMinNotNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotNull(FieldSalaryMin))
+}
+
+// SalaryMinEqualFold applies the EqualFold predicate on the "salary_min" field.
+func SalaryMinEqualFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEqualFold(FieldSalaryMin, v))
+}
+
+// SalaryMinContainsFold applies the ContainsFold predicate on the "salary_min" field.
+func SalaryMinContainsFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContainsFold(FieldSalaryMin, v))
+}
+
+// SalaryMaxEQ applies the EQ predicate on the "salary_max" field.
+func SalaryMaxEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldSalaryMax, v))
+}
+
+// SalaryMaxNEQ applies the NEQ predicate on the "salary_max" field.
+func SalaryMaxNEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNEQ(FieldSalaryMax, v))
+}
+
+// SalaryMaxIn applies the In predicate on the "salary_max" field.
+func SalaryMaxIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIn(FieldSalaryMax, vs...))
+}
+
+// SalaryMaxNotIn applies the NotIn predicate on the "salary_max" field.
+func SalaryMaxNotIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotIn(FieldSalaryMax, vs...))
+}
+
+// SalaryMaxGT applies the GT predicate on the "salary_max" field.
+func SalaryMaxGT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGT(FieldSalaryMax, v))
+}
+
+// SalaryMaxGTE applies the GTE predicate on the "salary_max" field.
+func SalaryMaxGTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGTE(FieldSalaryMax, v))
+}
+
+// SalaryMaxLT applies the LT predicate on the "salary_max" field.
+func SalaryMaxLT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLT(FieldSalaryMax, v))
+}
+
+// SalaryMaxLTE applies the LTE predicate on the "salary_max" field.
+func SalaryMaxLTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLTE(FieldSalaryMax, v))
+}
+
+// SalaryMaxContains applies the Contains predicate on the "salary_max" field.
+func SalaryMaxContains(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContains(FieldSalaryMax, v))
+}
+
+// SalaryMaxHasPrefix applies the HasPrefix predicate on the "salary_max" field.
+func SalaryMaxHasPrefix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasPrefix(FieldSalaryMax, v))
+}
+
+// SalaryMaxHasSuffix applies the HasSuffix predicate on the "salary_max" field.
+func SalaryMaxHasSuffix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasSuffix(FieldSalaryMax, v))
+}
+
+// SalaryMaxIsNil applies the IsNil predicate on the "salary_max" field.
+func SalaryMaxIsNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIsNull(FieldSalaryMax))
+}
+
+// SalaryMaxNotNil applies the NotNil predicate on the "salary_max" field.
+func SalaryMaxNotNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotNull(FieldSalaryMax))
+}
+
+// SalaryMaxEqualFold applies the EqualFold predicate on the "salary_max" field.
+func SalaryMaxEqualFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEqualFold(FieldSalaryMax, v))
+}
+
+// SalaryMaxContainsFold applies the ContainsFold predicate on the "salary_max" field.
+func SalaryMaxContainsFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContainsFold(FieldSalaryMax, v))
+}
+
+// SalaryCurrencyEQ applies the EQ predicate on the "salary_currency" field.
+func SalaryCurrencyEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEQ(FieldSalaryCurrency, v))
+}
+
+// SalaryCurrencyNEQ applies the NEQ predicate on the "salary_currency" field.
+func SalaryCurrencyNEQ(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNEQ(FieldSalaryCurrency, v))
+}
+
+// SalaryCurrencyIn applies the In predicate on the "salary_currency" field.
+func SalaryCurrencyIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIn(FieldSalaryCurrency, vs...))
+}
+
+// SalaryCurrencyNotIn applies the NotIn predicate on the "salary_currency" field.
+func SalaryCurrencyNotIn(vs ...string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotIn(FieldSalaryCurrency, vs...))
+}
+
+// SalaryCurrencyGT applies the GT predicate on the "salary_currency" field.
+func SalaryCurrencyGT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGT(FieldSalaryCurrency, v))
+}
+
+// SalaryCurrencyGTE applies the GTE predicate on the "salary_currency" field.
+func SalaryCurrencyGTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldGTE(FieldSalaryCurrency, v))
+}
+
+// SalaryCurrencyLT applies the LT predicate on the "salary_currency" field.
+func SalaryCurrencyLT(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLT(FieldSalaryCurrency, v))
+}
+
+// SalaryCurrencyLTE applies the LTE predicate on the "salary_currency" field.
+func SalaryCurrencyLTE(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldLTE(FieldSalaryCurrency, v))
+}
+
+// SalaryCurrencyContains applies the Contains predicate on the "salary_currency" field.
+func SalaryCurrencyContains(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContains(FieldSalaryCurrency, v))
+}
+
+// SalaryCurrencyHasPrefix applies the HasPrefix predicate on the "salary_currency" field.
+func SalaryCurrencyHasPrefix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasPrefix(FieldSalaryCurrency, v))
+}
+
+// SalaryCurrencyHasSuffix applies the HasSuffix predicate on the "salary_currency" field.
+func SalaryCurrencyHasSuffix(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldHasSuffix(FieldSalaryCurrency, v))
+}
+
+// SalaryCurrencyIsNil applies the IsNil predicate on the "salary_currency" field.
+func SalaryCurrencyIsNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldIsNull(FieldSalaryCurrency))
+}
+
+// SalaryCurrencyNotNil applies the NotNil predicate on the "salary_currency" field.
+func SalaryCurrencyNotNil() predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldNotNull(FieldSalaryCurrency))
+}
+
+// SalaryCurrencyEqualFold applies the EqualFold predicate on the "salary_currency" field.
+func SalaryCurrencyEqualFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldEqualFold(FieldSalaryCurrency, v))
+}
+
+// SalaryCurrencyContainsFold applies the ContainsFold predicate on the "salary_currency" field.
+func SalaryCurrencyContainsFold(v string) predicate.JobPosting {
+	return predicate.JobPosting(sql.FieldContainsFold(FieldSalaryCurrency, v))
 }
 
 // DepartmentEQ applies the EQ predicate on the "department" field.

@@ -77,6 +77,106 @@ func (_u *JobPostingUpdate) ClearDescription() *JobPostingUpdate {
 	return _u
 }
 
+// SetRequirements sets the "requirements" field.
+func (_u *JobPostingUpdate) SetRequirements(v string) *JobPostingUpdate {
+	_u.mutation.SetRequirements(v)
+	return _u
+}
+
+// SetNillableRequirements sets the "requirements" field if the given value is not nil.
+func (_u *JobPostingUpdate) SetNillableRequirements(v *string) *JobPostingUpdate {
+	if v != nil {
+		_u.SetRequirements(*v)
+	}
+	return _u
+}
+
+// ClearRequirements clears the value of the "requirements" field.
+func (_u *JobPostingUpdate) ClearRequirements() *JobPostingUpdate {
+	_u.mutation.ClearRequirements()
+	return _u
+}
+
+// SetResponsibilities sets the "responsibilities" field.
+func (_u *JobPostingUpdate) SetResponsibilities(v string) *JobPostingUpdate {
+	_u.mutation.SetResponsibilities(v)
+	return _u
+}
+
+// SetNillableResponsibilities sets the "responsibilities" field if the given value is not nil.
+func (_u *JobPostingUpdate) SetNillableResponsibilities(v *string) *JobPostingUpdate {
+	if v != nil {
+		_u.SetResponsibilities(*v)
+	}
+	return _u
+}
+
+// ClearResponsibilities clears the value of the "responsibilities" field.
+func (_u *JobPostingUpdate) ClearResponsibilities() *JobPostingUpdate {
+	_u.mutation.ClearResponsibilities()
+	return _u
+}
+
+// SetSalaryMin sets the "salary_min" field.
+func (_u *JobPostingUpdate) SetSalaryMin(v string) *JobPostingUpdate {
+	_u.mutation.SetSalaryMin(v)
+	return _u
+}
+
+// SetNillableSalaryMin sets the "salary_min" field if the given value is not nil.
+func (_u *JobPostingUpdate) SetNillableSalaryMin(v *string) *JobPostingUpdate {
+	if v != nil {
+		_u.SetSalaryMin(*v)
+	}
+	return _u
+}
+
+// ClearSalaryMin clears the value of the "salary_min" field.
+func (_u *JobPostingUpdate) ClearSalaryMin() *JobPostingUpdate {
+	_u.mutation.ClearSalaryMin()
+	return _u
+}
+
+// SetSalaryMax sets the "salary_max" field.
+func (_u *JobPostingUpdate) SetSalaryMax(v string) *JobPostingUpdate {
+	_u.mutation.SetSalaryMax(v)
+	return _u
+}
+
+// SetNillableSalaryMax sets the "salary_max" field if the given value is not nil.
+func (_u *JobPostingUpdate) SetNillableSalaryMax(v *string) *JobPostingUpdate {
+	if v != nil {
+		_u.SetSalaryMax(*v)
+	}
+	return _u
+}
+
+// ClearSalaryMax clears the value of the "salary_max" field.
+func (_u *JobPostingUpdate) ClearSalaryMax() *JobPostingUpdate {
+	_u.mutation.ClearSalaryMax()
+	return _u
+}
+
+// SetSalaryCurrency sets the "salary_currency" field.
+func (_u *JobPostingUpdate) SetSalaryCurrency(v string) *JobPostingUpdate {
+	_u.mutation.SetSalaryCurrency(v)
+	return _u
+}
+
+// SetNillableSalaryCurrency sets the "salary_currency" field if the given value is not nil.
+func (_u *JobPostingUpdate) SetNillableSalaryCurrency(v *string) *JobPostingUpdate {
+	if v != nil {
+		_u.SetSalaryCurrency(*v)
+	}
+	return _u
+}
+
+// ClearSalaryCurrency clears the value of the "salary_currency" field.
+func (_u *JobPostingUpdate) ClearSalaryCurrency() *JobPostingUpdate {
+	_u.mutation.ClearSalaryCurrency()
+	return _u
+}
+
 // SetDepartment sets the "department" field.
 func (_u *JobPostingUpdate) SetDepartment(v string) *JobPostingUpdate {
 	_u.mutation.SetDepartment(v)
@@ -341,6 +441,36 @@ func (_u *JobPostingUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.DescriptionCleared() {
 		_spec.ClearField(jobposting.FieldDescription, field.TypeString)
 	}
+	if value, ok := _u.mutation.Requirements(); ok {
+		_spec.SetField(jobposting.FieldRequirements, field.TypeString, value)
+	}
+	if _u.mutation.RequirementsCleared() {
+		_spec.ClearField(jobposting.FieldRequirements, field.TypeString)
+	}
+	if value, ok := _u.mutation.Responsibilities(); ok {
+		_spec.SetField(jobposting.FieldResponsibilities, field.TypeString, value)
+	}
+	if _u.mutation.ResponsibilitiesCleared() {
+		_spec.ClearField(jobposting.FieldResponsibilities, field.TypeString)
+	}
+	if value, ok := _u.mutation.SalaryMin(); ok {
+		_spec.SetField(jobposting.FieldSalaryMin, field.TypeString, value)
+	}
+	if _u.mutation.SalaryMinCleared() {
+		_spec.ClearField(jobposting.FieldSalaryMin, field.TypeString)
+	}
+	if value, ok := _u.mutation.SalaryMax(); ok {
+		_spec.SetField(jobposting.FieldSalaryMax, field.TypeString, value)
+	}
+	if _u.mutation.SalaryMaxCleared() {
+		_spec.ClearField(jobposting.FieldSalaryMax, field.TypeString)
+	}
+	if value, ok := _u.mutation.SalaryCurrency(); ok {
+		_spec.SetField(jobposting.FieldSalaryCurrency, field.TypeString, value)
+	}
+	if _u.mutation.SalaryCurrencyCleared() {
+		_spec.ClearField(jobposting.FieldSalaryCurrency, field.TypeString)
+	}
 	if value, ok := _u.mutation.Department(); ok {
 		_spec.SetField(jobposting.FieldDepartment, field.TypeString, value)
 	}
@@ -460,6 +590,106 @@ func (_u *JobPostingUpdateOne) SetNillableDescription(v *string) *JobPostingUpda
 // ClearDescription clears the value of the "description" field.
 func (_u *JobPostingUpdateOne) ClearDescription() *JobPostingUpdateOne {
 	_u.mutation.ClearDescription()
+	return _u
+}
+
+// SetRequirements sets the "requirements" field.
+func (_u *JobPostingUpdateOne) SetRequirements(v string) *JobPostingUpdateOne {
+	_u.mutation.SetRequirements(v)
+	return _u
+}
+
+// SetNillableRequirements sets the "requirements" field if the given value is not nil.
+func (_u *JobPostingUpdateOne) SetNillableRequirements(v *string) *JobPostingUpdateOne {
+	if v != nil {
+		_u.SetRequirements(*v)
+	}
+	return _u
+}
+
+// ClearRequirements clears the value of the "requirements" field.
+func (_u *JobPostingUpdateOne) ClearRequirements() *JobPostingUpdateOne {
+	_u.mutation.ClearRequirements()
+	return _u
+}
+
+// SetResponsibilities sets the "responsibilities" field.
+func (_u *JobPostingUpdateOne) SetResponsibilities(v string) *JobPostingUpdateOne {
+	_u.mutation.SetResponsibilities(v)
+	return _u
+}
+
+// SetNillableResponsibilities sets the "responsibilities" field if the given value is not nil.
+func (_u *JobPostingUpdateOne) SetNillableResponsibilities(v *string) *JobPostingUpdateOne {
+	if v != nil {
+		_u.SetResponsibilities(*v)
+	}
+	return _u
+}
+
+// ClearResponsibilities clears the value of the "responsibilities" field.
+func (_u *JobPostingUpdateOne) ClearResponsibilities() *JobPostingUpdateOne {
+	_u.mutation.ClearResponsibilities()
+	return _u
+}
+
+// SetSalaryMin sets the "salary_min" field.
+func (_u *JobPostingUpdateOne) SetSalaryMin(v string) *JobPostingUpdateOne {
+	_u.mutation.SetSalaryMin(v)
+	return _u
+}
+
+// SetNillableSalaryMin sets the "salary_min" field if the given value is not nil.
+func (_u *JobPostingUpdateOne) SetNillableSalaryMin(v *string) *JobPostingUpdateOne {
+	if v != nil {
+		_u.SetSalaryMin(*v)
+	}
+	return _u
+}
+
+// ClearSalaryMin clears the value of the "salary_min" field.
+func (_u *JobPostingUpdateOne) ClearSalaryMin() *JobPostingUpdateOne {
+	_u.mutation.ClearSalaryMin()
+	return _u
+}
+
+// SetSalaryMax sets the "salary_max" field.
+func (_u *JobPostingUpdateOne) SetSalaryMax(v string) *JobPostingUpdateOne {
+	_u.mutation.SetSalaryMax(v)
+	return _u
+}
+
+// SetNillableSalaryMax sets the "salary_max" field if the given value is not nil.
+func (_u *JobPostingUpdateOne) SetNillableSalaryMax(v *string) *JobPostingUpdateOne {
+	if v != nil {
+		_u.SetSalaryMax(*v)
+	}
+	return _u
+}
+
+// ClearSalaryMax clears the value of the "salary_max" field.
+func (_u *JobPostingUpdateOne) ClearSalaryMax() *JobPostingUpdateOne {
+	_u.mutation.ClearSalaryMax()
+	return _u
+}
+
+// SetSalaryCurrency sets the "salary_currency" field.
+func (_u *JobPostingUpdateOne) SetSalaryCurrency(v string) *JobPostingUpdateOne {
+	_u.mutation.SetSalaryCurrency(v)
+	return _u
+}
+
+// SetNillableSalaryCurrency sets the "salary_currency" field if the given value is not nil.
+func (_u *JobPostingUpdateOne) SetNillableSalaryCurrency(v *string) *JobPostingUpdateOne {
+	if v != nil {
+		_u.SetSalaryCurrency(*v)
+	}
+	return _u
+}
+
+// ClearSalaryCurrency clears the value of the "salary_currency" field.
+func (_u *JobPostingUpdateOne) ClearSalaryCurrency() *JobPostingUpdateOne {
+	_u.mutation.ClearSalaryCurrency()
 	return _u
 }
 
@@ -756,6 +986,36 @@ func (_u *JobPostingUpdateOne) sqlSave(ctx context.Context) (_node *JobPosting, 
 	}
 	if _u.mutation.DescriptionCleared() {
 		_spec.ClearField(jobposting.FieldDescription, field.TypeString)
+	}
+	if value, ok := _u.mutation.Requirements(); ok {
+		_spec.SetField(jobposting.FieldRequirements, field.TypeString, value)
+	}
+	if _u.mutation.RequirementsCleared() {
+		_spec.ClearField(jobposting.FieldRequirements, field.TypeString)
+	}
+	if value, ok := _u.mutation.Responsibilities(); ok {
+		_spec.SetField(jobposting.FieldResponsibilities, field.TypeString, value)
+	}
+	if _u.mutation.ResponsibilitiesCleared() {
+		_spec.ClearField(jobposting.FieldResponsibilities, field.TypeString)
+	}
+	if value, ok := _u.mutation.SalaryMin(); ok {
+		_spec.SetField(jobposting.FieldSalaryMin, field.TypeString, value)
+	}
+	if _u.mutation.SalaryMinCleared() {
+		_spec.ClearField(jobposting.FieldSalaryMin, field.TypeString)
+	}
+	if value, ok := _u.mutation.SalaryMax(); ok {
+		_spec.SetField(jobposting.FieldSalaryMax, field.TypeString, value)
+	}
+	if _u.mutation.SalaryMaxCleared() {
+		_spec.ClearField(jobposting.FieldSalaryMax, field.TypeString)
+	}
+	if value, ok := _u.mutation.SalaryCurrency(); ok {
+		_spec.SetField(jobposting.FieldSalaryCurrency, field.TypeString, value)
+	}
+	if _u.mutation.SalaryCurrencyCleared() {
+		_spec.ClearField(jobposting.FieldSalaryCurrency, field.TypeString)
 	}
 	if value, ok := _u.mutation.Department(); ok {
 		_spec.SetField(jobposting.FieldDepartment, field.TypeString, value)

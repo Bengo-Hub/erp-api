@@ -134,6 +134,8 @@ type Tx struct {
 	MetricCategory *MetricCategoryClient
 	// MetricTarget is the client for interacting with the MetricTarget builders.
 	MetricTarget *MetricTargetClient
+	// MileageRoute is the client for interacting with the MileageRoute builders.
+	MileageRoute *MileageRouteClient
 	// NextOfKin is the client for interacting with the NextOfKin builders.
 	NextOfKin *NextOfKinClient
 	// OffDay is the client for interacting with the OffDay builders.
@@ -406,6 +408,7 @@ func (tx *Tx) init() {
 	tx.LossAndDamage = NewLossAndDamageClient(tx.config)
 	tx.MetricCategory = NewMetricCategoryClient(tx.config)
 	tx.MetricTarget = NewMetricTargetClient(tx.config)
+	tx.MileageRoute = NewMileageRouteClient(tx.config)
 	tx.NextOfKin = NewNextOfKinClient(tx.config)
 	tx.OffDay = NewOffDayClient(tx.config)
 	tx.OnboardingTask = NewOnboardingTaskClient(tx.config)

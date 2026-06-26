@@ -189,6 +189,9 @@ type MetricCategory func(*sql.Selector)
 // MetricTarget is the predicate function for metrictarget builders.
 type MetricTarget func(*sql.Selector)
 
+// MileageRoute is the predicate function for mileageroute builders.
+type MileageRoute func(*sql.Selector)
+
 // NextOfKin is the predicate function for nextofkin builders.
 type NextOfKin func(*sql.Selector)
 

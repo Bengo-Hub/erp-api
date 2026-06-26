@@ -51,6 +51,14 @@ func hoursField(name string) ent.Field {
 		Default(decimal.Zero)
 }
 
+// distanceField builds a decimal column for travel distance/km (numeric(10,2)) — used by
+// mileage expense routes. Decimal (never float) per gaps §2.1.
+func distanceField(name string) ent.Field {
+	return field.Other(name, decimal.Decimal{}).
+		SchemaType(map[string]string{"postgres": "numeric(10,2)"}).
+		Default(decimal.Zero)
+}
+
 // ratingFieldOptional builds a nullable 0-5 rating decimal column (numeric(3,1)) used by
 // appraisals/performance reviews. Decimal (never float) per gaps §2.1.
 func ratingFieldOptional(name string) ent.Field {

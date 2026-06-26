@@ -20,6 +20,14 @@ func (JobPosting) Fields() []ent.Field {
 		field.UUID("tenant_id", uuid.UUID{}).Comment("Owning tenant"),
 		field.String("title"),
 		field.String("description").Optional(),
+		// Long-form rich-text sections (HTML). Nullable → online additive-migration safe.
+		field.Text("requirements").Optional().Nillable().Comment("Rich-text (HTML) requirements"),
+		field.Text("responsibilities").Optional().Nillable().Comment("Rich-text (HTML) responsibilities"),
+		// Salary range advertised on the posting. Strings (decimal-as-text) + ISO currency,
+		// all nullable → online additive-migration safe.
+		field.String("salary_min").Optional().Nillable().Comment("Advertised minimum salary"),
+		field.String("salary_max").Optional().Nillable().Comment("Advertised maximum salary"),
+		field.String("salary_currency").Optional().Nillable().Comment("ISO currency code, e.g. KES"),
 		field.String("department").Optional().Nillable(),
 		field.String("location").Optional().Nillable(),
 		field.Enum("status").Values("draft", "open", "closed", "archived").Default("draft"),
