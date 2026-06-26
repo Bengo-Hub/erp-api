@@ -31,22 +31,22 @@ func NewDisburser(orm *ent.Client, publisher *events.Publisher, treasuryClient *
 
 // DisburseParams selects the batch to disburse.
 type DisburseParams struct {
-	TenantID    uuid.UUID
-	OutletID    uuid.UUID // uuid.Nil = all outlets
-	Period      time.Time
-	PayslipIDs  []uuid.UUID // optional explicit selection
-	IdemKey     string      // client Idempotency-Key (optional; batch_ref used otherwise)
+	TenantID   uuid.UUID
+	OutletID   uuid.UUID // uuid.Nil = all outlets
+	Period     time.Time
+	PayslipIDs []uuid.UUID // optional explicit selection
+	IdemKey    string      // client Idempotency-Key (optional; batch_ref used otherwise)
 }
 
 // DisburseResult summarises the outcome.
 type DisburseResult struct {
-	BatchRef       string          `json:"batch_ref"`
-	Published      bool            `json:"published"`
-	Disbursed      bool            `json:"disbursed"`
-	Count          int             `json:"count"`
-	NetTotal       decimal.Decimal `json:"net_total"`
-	DisburseError  string          `json:"disburse_error,omitempty"`
-	AlreadyDone    bool            `json:"already_done,omitempty"`
+	BatchRef      string          `json:"batch_ref"`
+	Published     bool            `json:"published"`
+	Disbursed     bool            `json:"disbursed"`
+	Count         int             `json:"count"`
+	NetTotal      decimal.Decimal `json:"net_total"`
+	DisburseError string          `json:"disburse_error,omitempty"`
+	AlreadyDone   bool            `json:"already_done,omitempty"`
 }
 
 // Disburse selects approved+complete payslips, publishes the GL event in a tx, persists
@@ -145,6 +145,79 @@ func (d *Disburser) Disburse(ctx context.Context, p DisburseParams) (DisburseRes
 		}
 	}
 	return res, nil
+}
+
+// Reverse reverses a previously-disbursed payroll batch: it publishes erp.payroll.reversed (which
+// treasury consumes to post the inverse GL journal) and flips the batch's payslips back to
+// unpublished + approval_status="rejected" so they can be corrected and re-run. Idempotent per
+// batch via a dedicated reversal idempotency scope.
+func (d *Disburser) Reverse(ctx context.Context, p DisburseParams) (DisburseResult, error) {
+	batchRef := buildBatchRef(p.TenantID, p.Period, p.OutletID)
+	idemKey := p.IdemKey
+	if idemKey == "" {
+		idemKey = batchRef
+	}
+	if exists, err := d.orm.IdempotencyKey.Query().
+		Where(idempotencykey.Key(idemKey), idempotencykey.Scope("payroll.reverse")).
+		Exist(ctx); err != nil {
+		return DisburseResult{}, fmt.Errorf("reverse: idem check: %w", err)
+	} else if exists {
+		return DisburseResult{BatchRef: batchRef, AlreadyDone: true}, nil
+	}
+
+	// Select the batch's payslips (those tagged with this batch_ref).
+	slips, err := d.orm.Payslip.Query().Where(
+		payslip.TenantID(p.TenantID),
+		payslip.BatchRef(batchRef),
+		payslip.DeleteStatus(false),
+	).All(ctx)
+	if err != nil {
+		return DisburseResult{}, fmt.Errorf("reverse: select payslips: %w", err)
+	}
+	if len(slips) == 0 {
+		return DisburseResult{BatchRef: batchRef}, nil
+	}
+	empByID, err := d.loadEmployees(ctx, p.TenantID, slips)
+	if err != nil {
+		return DisburseResult{}, err
+	}
+	payload, netTotal := buildPayrollEvent(slips, empByID, p, batchRef)
+
+	tx, err := d.orm.Tx(ctx)
+	if err != nil {
+		return DisburseResult{}, fmt.Errorf("reverse: begin tx: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+	txPub := events.NewPublisher(tx.Client(), "erp")
+	if err := txPub.Publish(ctx, p.TenantID, batchRef, "payroll.reversed", payload); err != nil {
+		return DisburseResult{}, fmt.Errorf("reverse: publish: %w", err)
+	}
+	ids := make([]uuid.UUID, len(slips))
+	for i, s := range slips {
+		ids[i] = s.ID
+	}
+	if _, err := tx.Payslip.Update().
+		Where(payslip.IDIn(ids...)).
+		SetPublished(false).
+		SetApprovalStatus("rejected").
+		Save(ctx); err != nil {
+		return DisburseResult{}, fmt.Errorf("reverse: flip payslips: %w", err)
+	}
+	if _, err := tx.IdempotencyKey.Create().
+		SetKey(idemKey).SetScope("payroll.reverse").SetTenantID(p.TenantID).SetStatus("processed").
+		Save(ctx); err != nil {
+		return DisburseResult{}, fmt.Errorf("reverse: idem write: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return DisburseResult{}, fmt.Errorf("reverse: commit: %w", err)
+	}
+	committed = true
+	return DisburseResult{BatchRef: batchRef, Count: len(slips), NetTotal: netTotal}, nil
 }
 
 func (d *Disburser) selectPayslips(ctx context.Context, p DisburseParams) ([]*ent.Payslip, error) {
