@@ -123,3 +123,60 @@ func TestSecondaryNoRelief(t *testing.T) {
 		t.Errorf("secondary should have 0 relief, got %s", res.PersonalRelief)
 	}
 }
+
+// TestTaxableAllowances_IncreaseGrossAndPAYE verifies that taxable allowances add to gross,
+// statutory base, taxable pay and net pay (additive lane for per-diem/mileage excess etc.).
+func TestTaxableAllowances_IncreaseGrossAndPAYE(t *testing.T) {
+	cfg := kra2025Config()
+	base, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatalf("base compute: %v", err)
+	}
+	withAllow, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxableAllowances: d("20000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatalf("allow compute: %v", err)
+	}
+	if !withAllow.GrossPay.Equal(d("120000")) {
+		t.Fatalf("gross: got %s want 120000", withAllow.GrossPay)
+	}
+	// Taxable pay must rise by more than zero and PAYE must increase vs the base run.
+	if !withAllow.TaxablePay.GreaterThan(base.TaxablePay) {
+		t.Fatalf("taxable did not increase: base %s vs %s", base.TaxablePay, withAllow.TaxablePay)
+	}
+	if !withAllow.PAYE.GreaterThan(base.PAYE) {
+		t.Fatalf("PAYE did not increase: base %s vs %s", base.PAYE, withAllow.PAYE)
+	}
+}
+
+// TestNonCashAsTaxable verifies the corrected non-cash treatment: excess over the monthly
+// exemption is taxed (added to taxable pay) and NOT deducted from net pay; the legacy default
+// keeps deducting it from net, untaxed.
+func TestNonCashAsTaxable(t *testing.T) {
+	legacy := kra2025Config()
+	corrected := kra2025Config()
+	corrected.NonCashAsTaxable = true
+	corrected.NonCashMonthlyExemption = d("3000")
+
+	in := EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary", NonCashBenefits: d("10000")}
+
+	legRes, err := Compute(legacy, in)
+	if err != nil {
+		t.Fatalf("legacy: %v", err)
+	}
+	corRes, err := Compute(corrected, in)
+	if err != nil {
+		t.Fatalf("corrected: %v", err)
+	}
+	// Corrected mode: taxable pay includes the 7000 excess (10000-3000) -> higher PAYE.
+	if !corRes.PAYE.GreaterThan(legRes.PAYE) {
+		t.Fatalf("corrected PAYE should exceed legacy: %s vs %s", corRes.PAYE, legRes.PAYE)
+	}
+	// Corrected mode: non-cash is NOT deducted from net (final deductions exclude it) -> higher net
+	// final deductions than legacy by the non-cash amount.
+	if !legRes.DeductionsFinal.Equal(d("10000")) {
+		t.Fatalf("legacy final deductions should equal non-cash 10000, got %s", legRes.DeductionsFinal)
+	}
+	if !corRes.DeductionsFinal.Equal(d("0")) {
+		t.Fatalf("corrected final deductions should be 0 (in-kind), got %s", corRes.DeductionsFinal)
+	}
+}

@@ -41,12 +41,18 @@ type FormulaRates struct {
 // EmployeeInput is the per-employee data the engine needs for one period. All amounts
 // are decimal. Recoverables are passed in already filtered/effective-dated by the caller.
 type EmployeeInput struct {
-	GrossPay     decimal.Decimal
-	TaxCategory  string // "primary" | "secondary" | "none"
-	Loans        []Recoverable
-	Advances     []Recoverable
-	LossDamages  []Recoverable
-	NonCashBenefits decimal.Decimal // sum of effective non-cash benefit amounts
+	GrossPay    decimal.Decimal
+	TaxCategory string // "primary" | "secondary" | "none"
+	// TaxableAllowances is additional TAXABLE cash income for the period — taxable cash allowances
+	// plus the taxable EXCESS of per-diem/mileage over their KRA caps. It is added to gross for
+	// PAYE/statutory and to net pay (the employee receives this cash). NON-taxable reimbursements
+	// must NOT be put here — they are paid via AP (treasury), never through payroll gross, so they
+	// don't inflate PAYE. Additive: zero by default (no change to existing callers).
+	TaxableAllowances decimal.Decimal
+	Loans             []Recoverable
+	Advances          []Recoverable
+	LossDamages       []Recoverable
+	NonCashBenefits   decimal.Decimal // sum of effective non-cash benefit amounts
 }
 
 // Recoverable is an installment-based deduction (loan/advance/loss-damage). The engine
@@ -69,6 +75,16 @@ type Config struct {
 	DeductionOrder []Phase
 	// RecoverAdvances gates salary-advance recovery for this run.
 	RecoverAdvances bool
+	// NonCashAsTaxable corrects non-cash benefit handling: when true the taxable EXCESS of
+	// non-cash benefits over NonCashMonthlyExemption is ADDED to taxable pay (so PAYE is charged
+	// on the benefit) and the benefit is NOT deducted from cash net pay (it is in-kind). Default
+	// false preserves the legacy behaviour (non-cash deducted from net, untaxed) until a tenant
+	// opts in, so existing payslips are unchanged.
+	NonCashAsTaxable bool
+	// NonCashMonthlyExemption is the de-minimis monthly non-cash benefit exemption (KRA: aggregate
+	// non-cash benefits up to KES 36,000/yr ≈ KES 3,000/month are not taxable). Only the excess is
+	// taxed. Applied only when NonCashAsTaxable is true.
+	NonCashMonthlyExemption decimal.Decimal
 }
 
 // Phase is one deduction phase with the components applied in it.
