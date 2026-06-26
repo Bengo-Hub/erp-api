@@ -69,6 +69,9 @@ type BenefitTax func(*sql.Selector)
 // Candidate is the predicate function for candidate builders.
 type Candidate func(*sql.Selector)
 
+// CasualLaborRecord is the predicate function for casuallaborrecord builders.
+type CasualLaborRecord func(*sql.Selector)
+
 // ClaimItem is the predicate function for claimitem builders.
 type ClaimItem func(*sql.Selector)
 

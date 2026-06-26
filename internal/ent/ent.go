@@ -33,6 +33,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/backupsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
+	"github.com/Bengo-Hub/erp-api/internal/ent/casuallaborrecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
@@ -191,6 +192,7 @@ func checkColumn(t, c string) error {
 			backupsetting.Table:           backupsetting.ValidColumn,
 			benefittax.Table:              benefittax.ValidColumn,
 			candidate.Table:               candidate.ValidColumn,
+			casuallaborrecord.Table:       casuallaborrecord.ValidColumn,
 			claimitem.Table:               claimitem.ValidColumn,
 			companysettings.Table:         companysettings.ValidColumn,
 			contactdetails.Table:          contactdetails.ValidColumn,

@@ -70,6 +70,13 @@ func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 		pr.Put("/claims/{id}", h.UpdateClaim)
 		pr.Post("/claims/{id}/approve", h.ApproveClaim)
 		pr.Delete("/claims/{id}", h.DeleteClaim)
+
+		// Casual / subcontracted labour register.
+		pr.Get("/casual-labor", h.ListCasualLabor)
+		pr.Post("/casual-labor", h.CreateCasualLabor)
+		pr.Put("/casual-labor/{id}", h.UpdateCasualLabor)
+		pr.Post("/casual-labor/{id}/approve", h.ApproveCasualLabor)
+		pr.Delete("/casual-labor/{id}", h.DeleteCasualLabor)
 	})
 }
 
@@ -899,6 +906,159 @@ func (h *PayrollHandler) GetClaim(w http.ResponseWriter, r *http.Request) {
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, c.EmployeeID)
 	writeJSON(w, http.StatusOK, claimView(c, name))
+}
+
+// ---- Casual labour ----
+
+type casualLaborBody struct {
+	EngagedByEmployeeID string `json:"engaged_by_employee_id"`
+	ProjectID           string `json:"project_id"`
+	CostCenterID        string `json:"cost_center_id"`
+	WorkerName          string `json:"worker_name"`
+	WorkerIDNumber      string `json:"worker_id_number"`
+	WorkerPhone         string `json:"worker_phone"`
+	TaskDescription     string `json:"task_description"`
+	Amount              string `json:"amount"`
+	PaymentMethod       string `json:"payment_method"`
+}
+
+func (b casualLaborBody) toInput() payroll.CasualLaborInput {
+	in := payroll.CasualLaborInput{
+		WorkerName: b.WorkerName, WorkerIDNumber: b.WorkerIDNumber, WorkerPhone: b.WorkerPhone,
+		TaskDescription: b.TaskDescription, PaymentMethod: b.PaymentMethod,
+	}
+	if b.Amount != "" {
+		if amt, err := decimal.NewFromString(b.Amount); err == nil {
+			in.Amount = amt
+		}
+	}
+	if id, err := uuid.Parse(b.EngagedByEmployeeID); err == nil {
+		in.EngagedByEmployeeID = &id
+	}
+	if id, err := uuid.Parse(b.ProjectID); err == nil {
+		in.ProjectID = &id
+	}
+	if id, err := uuid.Parse(b.CostCenterID); err == nil {
+		in.CostCenterID = &id
+	}
+	return in
+}
+
+func casualLaborView(c *ent.CasualLaborRecord) map[string]any {
+	v := map[string]any{
+		"id": c.ID, "worker_name": c.WorkerName, "worker_id_number": c.WorkerIDNumber,
+		"worker_phone": c.WorkerPhone, "task_description": c.TaskDescription,
+		"amount": c.Amount.StringFixed(2), "payment_method": c.PaymentMethod,
+		"status": string(c.Status), "created_at": c.CreatedAt.Format(time.RFC3339),
+	}
+	if c.EngagedByEmployeeID != nil {
+		v["engaged_by_employee_id"] = c.EngagedByEmployeeID
+	}
+	if c.ProjectID != nil {
+		v["project_id"] = c.ProjectID
+	}
+	if c.CostCenterID != nil {
+		v["cost_center_id"] = c.CostCenterID
+	}
+	return v
+}
+
+func (h *PayrollHandler) ListCasualLabor(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollView) {
+		return
+	}
+	p := pagination.Parse(r)
+	rows, total, err := h.svc.ListCasualLabor(r.Context(), scope.TenantID, nil, p.Limit, p.Offset)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list casual labour")
+		return
+	}
+	out := make([]map[string]any, 0, len(rows))
+	for _, c := range rows {
+		out = append(out, casualLaborView(c))
+	}
+	writePaginated(w, out, total, p)
+}
+
+func (h *PayrollHandler) CreateCasualLabor(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	var body casualLaborBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	c, err := h.svc.CreateCasualLabor(r.Context(), scope.TenantID, body.toInput())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, casualLaborView(c))
+}
+
+func (h *PayrollHandler) UpdateCasualLabor(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var body casualLaborBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	c, err := h.svc.UpdateCasualLabor(r.Context(), scope.TenantID, id, body.toInput())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, casualLaborView(c))
+}
+
+func (h *PayrollHandler) ApproveCasualLabor(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	c, err := h.svc.ApproveCasualLabor(r.Context(), scope.TenantID, id, scope.UserID)
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "record not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to approve")
+		return
+	}
+	writeJSON(w, http.StatusOK, casualLaborView(c))
+}
+
+func (h *PayrollHandler) DeleteCasualLabor(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	if err := h.svc.DeleteCasualLabor(r.Context(), scope.TenantID, id); err != nil {
+		writeError(w, http.StatusBadRequest, "delete_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 // ApproveClaim approves a claim and emits erp.expense_claim.approved for treasury GL posting.
