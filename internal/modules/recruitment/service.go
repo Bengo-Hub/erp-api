@@ -13,14 +13,33 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/application"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobposting"
+	"github.com/Bengo-Hub/erp-api/internal/platform/events"
 )
 
 // Service holds recruitment CRUD + the application FSM + onboarding seeding. Tenant-scoped.
 type Service struct {
-	orm *ent.Client
+	orm    *ent.Client
+	notify *events.Notifications // optional: candidate emails on apply/transition
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
+
+// WithNotifier wires the outbox notifications emitter so the careers portal + hiring pipeline can
+// email candidates (application received, status updates, hire). Optional — nil = no emails.
+func (s *Service) WithNotifier(n *events.Notifications) *Service {
+	s.notify = n
+	return s
+}
+
+// emailCandidate sends a best-effort plain-text email to a candidate (never fails the caller).
+func (s *Service) emailCandidate(ctx context.Context, tenantID uuid.UUID, aggregateID, to, subject, body string) {
+	if s.notify == nil || to == "" {
+		return
+	}
+	_ = s.notify.RequestEmail(ctx, tenantID, aggregateID, events.EmailRequest{
+		To: []string{to}, Subject: subject, Body: body,
+	})
+}
 
 // ---- Job postings ----
 
