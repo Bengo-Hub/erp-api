@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // PayrollComponentCreate is the builder for creating a PayrollComponent entity.
@@ -102,6 +103,160 @@ func (_c *PayrollComponentCreate) SetMode(v string) *PayrollComponentCreate {
 func (_c *PayrollComponentCreate) SetNillableMode(v *string) *PayrollComponentCreate {
 	if v != nil {
 		_c.SetMode(*v)
+	}
+	return _c
+}
+
+// SetAmount sets the "amount" field.
+func (_c *PayrollComponentCreate) SetAmount(v decimal.Decimal) *PayrollComponentCreate {
+	_c.mutation.SetAmount(v)
+	return _c
+}
+
+// SetNillableAmount sets the "amount" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillableAmount(v *decimal.Decimal) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetAmount(*v)
+	}
+	return _c
+}
+
+// SetPercentage sets the "percentage" field.
+func (_c *PayrollComponentCreate) SetPercentage(v decimal.Decimal) *PayrollComponentCreate {
+	_c.mutation.SetPercentage(v)
+	return _c
+}
+
+// SetNillablePercentage sets the "percentage" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillablePercentage(v *decimal.Decimal) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetPercentage(*v)
+	}
+	return _c
+}
+
+// SetPercentOf sets the "percent_of" field.
+func (_c *PayrollComponentCreate) SetPercentOf(v string) *PayrollComponentCreate {
+	_c.mutation.SetPercentOf(v)
+	return _c
+}
+
+// SetNillablePercentOf sets the "percent_of" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillablePercentOf(v *string) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetPercentOf(*v)
+	}
+	return _c
+}
+
+// SetEmployerAmount sets the "employer_amount" field.
+func (_c *PayrollComponentCreate) SetEmployerAmount(v decimal.Decimal) *PayrollComponentCreate {
+	_c.mutation.SetEmployerAmount(v)
+	return _c
+}
+
+// SetNillableEmployerAmount sets the "employer_amount" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillableEmployerAmount(v *decimal.Decimal) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetEmployerAmount(*v)
+	}
+	return _c
+}
+
+// SetEmployerPercentage sets the "employer_percentage" field.
+func (_c *PayrollComponentCreate) SetEmployerPercentage(v decimal.Decimal) *PayrollComponentCreate {
+	_c.mutation.SetEmployerPercentage(v)
+	return _c
+}
+
+// SetNillableEmployerPercentage sets the "employer_percentage" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillableEmployerPercentage(v *decimal.Decimal) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetEmployerPercentage(*v)
+	}
+	return _c
+}
+
+// SetRegistrationNo sets the "registration_no" field.
+func (_c *PayrollComponentCreate) SetRegistrationNo(v string) *PayrollComponentCreate {
+	_c.mutation.SetRegistrationNo(v)
+	return _c
+}
+
+// SetNillableRegistrationNo sets the "registration_no" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillableRegistrationNo(v *string) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetRegistrationNo(*v)
+	}
+	return _c
+}
+
+// SetUnitType sets the "unit_type" field.
+func (_c *PayrollComponentCreate) SetUnitType(v string) *PayrollComponentCreate {
+	_c.mutation.SetUnitType(v)
+	return _c
+}
+
+// SetNillableUnitType sets the "unit_type" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillableUnitType(v *string) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetUnitType(*v)
+	}
+	return _c
+}
+
+// SetUnitRate sets the "unit_rate" field.
+func (_c *PayrollComponentCreate) SetUnitRate(v decimal.Decimal) *PayrollComponentCreate {
+	_c.mutation.SetUnitRate(v)
+	return _c
+}
+
+// SetNillableUnitRate sets the "unit_rate" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillableUnitRate(v *decimal.Decimal) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetUnitRate(*v)
+	}
+	return _c
+}
+
+// SetQuantity sets the "quantity" field.
+func (_c *PayrollComponentCreate) SetQuantity(v decimal.Decimal) *PayrollComponentCreate {
+	_c.mutation.SetQuantity(v)
+	return _c
+}
+
+// SetNillableQuantity sets the "quantity" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillableQuantity(v *decimal.Decimal) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetQuantity(*v)
+	}
+	return _c
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (_c *PayrollComponentCreate) SetEffectiveFrom(v time.Time) *PayrollComponentCreate {
+	_c.mutation.SetEffectiveFrom(v)
+	return _c
+}
+
+// SetNillableEffectiveFrom sets the "effective_from" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillableEffectiveFrom(v *time.Time) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetEffectiveFrom(*v)
+	}
+	return _c
+}
+
+// SetEffectiveTo sets the "effective_to" field.
+func (_c *PayrollComponentCreate) SetEffectiveTo(v time.Time) *PayrollComponentCreate {
+	_c.mutation.SetEffectiveTo(v)
+	return _c
+}
+
+// SetNillableEffectiveTo sets the "effective_to" field if the given value is not nil.
+func (_c *PayrollComponentCreate) SetNillableEffectiveTo(v *time.Time) *PayrollComponentCreate {
+	if v != nil {
+		_c.SetEffectiveTo(*v)
 	}
 	return _c
 }
@@ -337,6 +492,30 @@ func (_c *PayrollComponentCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *PayrollComponentCreate) defaults() {
+	if _, ok := _c.mutation.Amount(); !ok {
+		v := payrollcomponent.DefaultAmount
+		_c.mutation.SetAmount(v)
+	}
+	if _, ok := _c.mutation.Percentage(); !ok {
+		v := payrollcomponent.DefaultPercentage
+		_c.mutation.SetPercentage(v)
+	}
+	if _, ok := _c.mutation.EmployerAmount(); !ok {
+		v := payrollcomponent.DefaultEmployerAmount
+		_c.mutation.SetEmployerAmount(v)
+	}
+	if _, ok := _c.mutation.EmployerPercentage(); !ok {
+		v := payrollcomponent.DefaultEmployerPercentage
+		_c.mutation.SetEmployerPercentage(v)
+	}
+	if _, ok := _c.mutation.UnitRate(); !ok {
+		v := payrollcomponent.DefaultUnitRate
+		_c.mutation.SetUnitRate(v)
+	}
+	if _, ok := _c.mutation.Quantity(); !ok {
+		v := payrollcomponent.DefaultQuantity
+		_c.mutation.SetQuantity(v)
+	}
 	if _, ok := _c.mutation.NonCash(); !ok {
 		v := payrollcomponent.DefaultNonCash
 		_c.mutation.SetNonCash(v)
@@ -395,6 +574,24 @@ func (_c *PayrollComponentCreate) check() error {
 		if err := payrollcomponent.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "PayrollComponent.title": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.Amount(); !ok {
+		return &ValidationError{Name: "amount", err: errors.New(`ent: missing required field "PayrollComponent.amount"`)}
+	}
+	if _, ok := _c.mutation.Percentage(); !ok {
+		return &ValidationError{Name: "percentage", err: errors.New(`ent: missing required field "PayrollComponent.percentage"`)}
+	}
+	if _, ok := _c.mutation.EmployerAmount(); !ok {
+		return &ValidationError{Name: "employer_amount", err: errors.New(`ent: missing required field "PayrollComponent.employer_amount"`)}
+	}
+	if _, ok := _c.mutation.EmployerPercentage(); !ok {
+		return &ValidationError{Name: "employer_percentage", err: errors.New(`ent: missing required field "PayrollComponent.employer_percentage"`)}
+	}
+	if _, ok := _c.mutation.UnitRate(); !ok {
+		return &ValidationError{Name: "unit_rate", err: errors.New(`ent: missing required field "PayrollComponent.unit_rate"`)}
+	}
+	if _, ok := _c.mutation.Quantity(); !ok {
+		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "PayrollComponent.quantity"`)}
 	}
 	if _, ok := _c.mutation.NonCash(); !ok {
 		return &ValidationError{Name: "non_cash", err: errors.New(`ent: missing required field "PayrollComponent.non_cash"`)}
@@ -489,6 +686,50 @@ func (_c *PayrollComponentCreate) createSpec() (*PayrollComponent, *sqlgraph.Cre
 	if value, ok := _c.mutation.Mode(); ok {
 		_spec.SetField(payrollcomponent.FieldMode, field.TypeString, value)
 		_node.Mode = value
+	}
+	if value, ok := _c.mutation.Amount(); ok {
+		_spec.SetField(payrollcomponent.FieldAmount, field.TypeOther, value)
+		_node.Amount = value
+	}
+	if value, ok := _c.mutation.Percentage(); ok {
+		_spec.SetField(payrollcomponent.FieldPercentage, field.TypeOther, value)
+		_node.Percentage = value
+	}
+	if value, ok := _c.mutation.PercentOf(); ok {
+		_spec.SetField(payrollcomponent.FieldPercentOf, field.TypeString, value)
+		_node.PercentOf = value
+	}
+	if value, ok := _c.mutation.EmployerAmount(); ok {
+		_spec.SetField(payrollcomponent.FieldEmployerAmount, field.TypeOther, value)
+		_node.EmployerAmount = value
+	}
+	if value, ok := _c.mutation.EmployerPercentage(); ok {
+		_spec.SetField(payrollcomponent.FieldEmployerPercentage, field.TypeOther, value)
+		_node.EmployerPercentage = value
+	}
+	if value, ok := _c.mutation.RegistrationNo(); ok {
+		_spec.SetField(payrollcomponent.FieldRegistrationNo, field.TypeString, value)
+		_node.RegistrationNo = &value
+	}
+	if value, ok := _c.mutation.UnitType(); ok {
+		_spec.SetField(payrollcomponent.FieldUnitType, field.TypeString, value)
+		_node.UnitType = value
+	}
+	if value, ok := _c.mutation.UnitRate(); ok {
+		_spec.SetField(payrollcomponent.FieldUnitRate, field.TypeOther, value)
+		_node.UnitRate = value
+	}
+	if value, ok := _c.mutation.Quantity(); ok {
+		_spec.SetField(payrollcomponent.FieldQuantity, field.TypeOther, value)
+		_node.Quantity = value
+	}
+	if value, ok := _c.mutation.EffectiveFrom(); ok {
+		_spec.SetField(payrollcomponent.FieldEffectiveFrom, field.TypeTime, value)
+		_node.EffectiveFrom = &value
+	}
+	if value, ok := _c.mutation.EffectiveTo(); ok {
+		_spec.SetField(payrollcomponent.FieldEffectiveTo, field.TypeTime, value)
+		_node.EffectiveTo = &value
 	}
 	if value, ok := _c.mutation.NonCash(); ok {
 		_spec.SetField(payrollcomponent.FieldNonCash, field.TypeBool, value)
@@ -705,6 +946,168 @@ func (u *PayrollComponentUpsert) UpdateMode() *PayrollComponentUpsert {
 // ClearMode clears the value of the "mode" field.
 func (u *PayrollComponentUpsert) ClearMode() *PayrollComponentUpsert {
 	u.SetNull(payrollcomponent.FieldMode)
+	return u
+}
+
+// SetAmount sets the "amount" field.
+func (u *PayrollComponentUpsert) SetAmount(v decimal.Decimal) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldAmount, v)
+	return u
+}
+
+// UpdateAmount sets the "amount" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdateAmount() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldAmount)
+	return u
+}
+
+// SetPercentage sets the "percentage" field.
+func (u *PayrollComponentUpsert) SetPercentage(v decimal.Decimal) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldPercentage, v)
+	return u
+}
+
+// UpdatePercentage sets the "percentage" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdatePercentage() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldPercentage)
+	return u
+}
+
+// SetPercentOf sets the "percent_of" field.
+func (u *PayrollComponentUpsert) SetPercentOf(v string) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldPercentOf, v)
+	return u
+}
+
+// UpdatePercentOf sets the "percent_of" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdatePercentOf() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldPercentOf)
+	return u
+}
+
+// ClearPercentOf clears the value of the "percent_of" field.
+func (u *PayrollComponentUpsert) ClearPercentOf() *PayrollComponentUpsert {
+	u.SetNull(payrollcomponent.FieldPercentOf)
+	return u
+}
+
+// SetEmployerAmount sets the "employer_amount" field.
+func (u *PayrollComponentUpsert) SetEmployerAmount(v decimal.Decimal) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldEmployerAmount, v)
+	return u
+}
+
+// UpdateEmployerAmount sets the "employer_amount" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdateEmployerAmount() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldEmployerAmount)
+	return u
+}
+
+// SetEmployerPercentage sets the "employer_percentage" field.
+func (u *PayrollComponentUpsert) SetEmployerPercentage(v decimal.Decimal) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldEmployerPercentage, v)
+	return u
+}
+
+// UpdateEmployerPercentage sets the "employer_percentage" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdateEmployerPercentage() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldEmployerPercentage)
+	return u
+}
+
+// SetRegistrationNo sets the "registration_no" field.
+func (u *PayrollComponentUpsert) SetRegistrationNo(v string) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldRegistrationNo, v)
+	return u
+}
+
+// UpdateRegistrationNo sets the "registration_no" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdateRegistrationNo() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldRegistrationNo)
+	return u
+}
+
+// ClearRegistrationNo clears the value of the "registration_no" field.
+func (u *PayrollComponentUpsert) ClearRegistrationNo() *PayrollComponentUpsert {
+	u.SetNull(payrollcomponent.FieldRegistrationNo)
+	return u
+}
+
+// SetUnitType sets the "unit_type" field.
+func (u *PayrollComponentUpsert) SetUnitType(v string) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldUnitType, v)
+	return u
+}
+
+// UpdateUnitType sets the "unit_type" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdateUnitType() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldUnitType)
+	return u
+}
+
+// ClearUnitType clears the value of the "unit_type" field.
+func (u *PayrollComponentUpsert) ClearUnitType() *PayrollComponentUpsert {
+	u.SetNull(payrollcomponent.FieldUnitType)
+	return u
+}
+
+// SetUnitRate sets the "unit_rate" field.
+func (u *PayrollComponentUpsert) SetUnitRate(v decimal.Decimal) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldUnitRate, v)
+	return u
+}
+
+// UpdateUnitRate sets the "unit_rate" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdateUnitRate() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldUnitRate)
+	return u
+}
+
+// SetQuantity sets the "quantity" field.
+func (u *PayrollComponentUpsert) SetQuantity(v decimal.Decimal) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldQuantity, v)
+	return u
+}
+
+// UpdateQuantity sets the "quantity" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdateQuantity() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldQuantity)
+	return u
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (u *PayrollComponentUpsert) SetEffectiveFrom(v time.Time) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldEffectiveFrom, v)
+	return u
+}
+
+// UpdateEffectiveFrom sets the "effective_from" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdateEffectiveFrom() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldEffectiveFrom)
+	return u
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (u *PayrollComponentUpsert) ClearEffectiveFrom() *PayrollComponentUpsert {
+	u.SetNull(payrollcomponent.FieldEffectiveFrom)
+	return u
+}
+
+// SetEffectiveTo sets the "effective_to" field.
+func (u *PayrollComponentUpsert) SetEffectiveTo(v time.Time) *PayrollComponentUpsert {
+	u.Set(payrollcomponent.FieldEffectiveTo, v)
+	return u
+}
+
+// UpdateEffectiveTo sets the "effective_to" field to the value that was provided on create.
+func (u *PayrollComponentUpsert) UpdateEffectiveTo() *PayrollComponentUpsert {
+	u.SetExcluded(payrollcomponent.FieldEffectiveTo)
+	return u
+}
+
+// ClearEffectiveTo clears the value of the "effective_to" field.
+func (u *PayrollComponentUpsert) ClearEffectiveTo() *PayrollComponentUpsert {
+	u.SetNull(payrollcomponent.FieldEffectiveTo)
 	return u
 }
 
@@ -1057,6 +1460,195 @@ func (u *PayrollComponentUpsertOne) UpdateMode() *PayrollComponentUpsertOne {
 func (u *PayrollComponentUpsertOne) ClearMode() *PayrollComponentUpsertOne {
 	return u.Update(func(s *PayrollComponentUpsert) {
 		s.ClearMode()
+	})
+}
+
+// SetAmount sets the "amount" field.
+func (u *PayrollComponentUpsertOne) SetAmount(v decimal.Decimal) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetAmount(v)
+	})
+}
+
+// UpdateAmount sets the "amount" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdateAmount() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateAmount()
+	})
+}
+
+// SetPercentage sets the "percentage" field.
+func (u *PayrollComponentUpsertOne) SetPercentage(v decimal.Decimal) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetPercentage(v)
+	})
+}
+
+// UpdatePercentage sets the "percentage" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdatePercentage() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdatePercentage()
+	})
+}
+
+// SetPercentOf sets the "percent_of" field.
+func (u *PayrollComponentUpsertOne) SetPercentOf(v string) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetPercentOf(v)
+	})
+}
+
+// UpdatePercentOf sets the "percent_of" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdatePercentOf() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdatePercentOf()
+	})
+}
+
+// ClearPercentOf clears the value of the "percent_of" field.
+func (u *PayrollComponentUpsertOne) ClearPercentOf() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.ClearPercentOf()
+	})
+}
+
+// SetEmployerAmount sets the "employer_amount" field.
+func (u *PayrollComponentUpsertOne) SetEmployerAmount(v decimal.Decimal) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetEmployerAmount(v)
+	})
+}
+
+// UpdateEmployerAmount sets the "employer_amount" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdateEmployerAmount() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateEmployerAmount()
+	})
+}
+
+// SetEmployerPercentage sets the "employer_percentage" field.
+func (u *PayrollComponentUpsertOne) SetEmployerPercentage(v decimal.Decimal) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetEmployerPercentage(v)
+	})
+}
+
+// UpdateEmployerPercentage sets the "employer_percentage" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdateEmployerPercentage() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateEmployerPercentage()
+	})
+}
+
+// SetRegistrationNo sets the "registration_no" field.
+func (u *PayrollComponentUpsertOne) SetRegistrationNo(v string) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetRegistrationNo(v)
+	})
+}
+
+// UpdateRegistrationNo sets the "registration_no" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdateRegistrationNo() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateRegistrationNo()
+	})
+}
+
+// ClearRegistrationNo clears the value of the "registration_no" field.
+func (u *PayrollComponentUpsertOne) ClearRegistrationNo() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.ClearRegistrationNo()
+	})
+}
+
+// SetUnitType sets the "unit_type" field.
+func (u *PayrollComponentUpsertOne) SetUnitType(v string) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetUnitType(v)
+	})
+}
+
+// UpdateUnitType sets the "unit_type" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdateUnitType() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateUnitType()
+	})
+}
+
+// ClearUnitType clears the value of the "unit_type" field.
+func (u *PayrollComponentUpsertOne) ClearUnitType() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.ClearUnitType()
+	})
+}
+
+// SetUnitRate sets the "unit_rate" field.
+func (u *PayrollComponentUpsertOne) SetUnitRate(v decimal.Decimal) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetUnitRate(v)
+	})
+}
+
+// UpdateUnitRate sets the "unit_rate" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdateUnitRate() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateUnitRate()
+	})
+}
+
+// SetQuantity sets the "quantity" field.
+func (u *PayrollComponentUpsertOne) SetQuantity(v decimal.Decimal) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetQuantity(v)
+	})
+}
+
+// UpdateQuantity sets the "quantity" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdateQuantity() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateQuantity()
+	})
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (u *PayrollComponentUpsertOne) SetEffectiveFrom(v time.Time) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetEffectiveFrom(v)
+	})
+}
+
+// UpdateEffectiveFrom sets the "effective_from" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdateEffectiveFrom() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateEffectiveFrom()
+	})
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (u *PayrollComponentUpsertOne) ClearEffectiveFrom() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.ClearEffectiveFrom()
+	})
+}
+
+// SetEffectiveTo sets the "effective_to" field.
+func (u *PayrollComponentUpsertOne) SetEffectiveTo(v time.Time) *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetEffectiveTo(v)
+	})
+}
+
+// UpdateEffectiveTo sets the "effective_to" field to the value that was provided on create.
+func (u *PayrollComponentUpsertOne) UpdateEffectiveTo() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateEffectiveTo()
+	})
+}
+
+// ClearEffectiveTo clears the value of the "effective_to" field.
+func (u *PayrollComponentUpsertOne) ClearEffectiveTo() *PayrollComponentUpsertOne {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.ClearEffectiveTo()
 	})
 }
 
@@ -1604,6 +2196,195 @@ func (u *PayrollComponentUpsertBulk) UpdateMode() *PayrollComponentUpsertBulk {
 func (u *PayrollComponentUpsertBulk) ClearMode() *PayrollComponentUpsertBulk {
 	return u.Update(func(s *PayrollComponentUpsert) {
 		s.ClearMode()
+	})
+}
+
+// SetAmount sets the "amount" field.
+func (u *PayrollComponentUpsertBulk) SetAmount(v decimal.Decimal) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetAmount(v)
+	})
+}
+
+// UpdateAmount sets the "amount" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdateAmount() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateAmount()
+	})
+}
+
+// SetPercentage sets the "percentage" field.
+func (u *PayrollComponentUpsertBulk) SetPercentage(v decimal.Decimal) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetPercentage(v)
+	})
+}
+
+// UpdatePercentage sets the "percentage" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdatePercentage() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdatePercentage()
+	})
+}
+
+// SetPercentOf sets the "percent_of" field.
+func (u *PayrollComponentUpsertBulk) SetPercentOf(v string) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetPercentOf(v)
+	})
+}
+
+// UpdatePercentOf sets the "percent_of" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdatePercentOf() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdatePercentOf()
+	})
+}
+
+// ClearPercentOf clears the value of the "percent_of" field.
+func (u *PayrollComponentUpsertBulk) ClearPercentOf() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.ClearPercentOf()
+	})
+}
+
+// SetEmployerAmount sets the "employer_amount" field.
+func (u *PayrollComponentUpsertBulk) SetEmployerAmount(v decimal.Decimal) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetEmployerAmount(v)
+	})
+}
+
+// UpdateEmployerAmount sets the "employer_amount" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdateEmployerAmount() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateEmployerAmount()
+	})
+}
+
+// SetEmployerPercentage sets the "employer_percentage" field.
+func (u *PayrollComponentUpsertBulk) SetEmployerPercentage(v decimal.Decimal) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetEmployerPercentage(v)
+	})
+}
+
+// UpdateEmployerPercentage sets the "employer_percentage" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdateEmployerPercentage() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateEmployerPercentage()
+	})
+}
+
+// SetRegistrationNo sets the "registration_no" field.
+func (u *PayrollComponentUpsertBulk) SetRegistrationNo(v string) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetRegistrationNo(v)
+	})
+}
+
+// UpdateRegistrationNo sets the "registration_no" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdateRegistrationNo() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateRegistrationNo()
+	})
+}
+
+// ClearRegistrationNo clears the value of the "registration_no" field.
+func (u *PayrollComponentUpsertBulk) ClearRegistrationNo() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.ClearRegistrationNo()
+	})
+}
+
+// SetUnitType sets the "unit_type" field.
+func (u *PayrollComponentUpsertBulk) SetUnitType(v string) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetUnitType(v)
+	})
+}
+
+// UpdateUnitType sets the "unit_type" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdateUnitType() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateUnitType()
+	})
+}
+
+// ClearUnitType clears the value of the "unit_type" field.
+func (u *PayrollComponentUpsertBulk) ClearUnitType() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.ClearUnitType()
+	})
+}
+
+// SetUnitRate sets the "unit_rate" field.
+func (u *PayrollComponentUpsertBulk) SetUnitRate(v decimal.Decimal) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetUnitRate(v)
+	})
+}
+
+// UpdateUnitRate sets the "unit_rate" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdateUnitRate() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateUnitRate()
+	})
+}
+
+// SetQuantity sets the "quantity" field.
+func (u *PayrollComponentUpsertBulk) SetQuantity(v decimal.Decimal) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetQuantity(v)
+	})
+}
+
+// UpdateQuantity sets the "quantity" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdateQuantity() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateQuantity()
+	})
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (u *PayrollComponentUpsertBulk) SetEffectiveFrom(v time.Time) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetEffectiveFrom(v)
+	})
+}
+
+// UpdateEffectiveFrom sets the "effective_from" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdateEffectiveFrom() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateEffectiveFrom()
+	})
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (u *PayrollComponentUpsertBulk) ClearEffectiveFrom() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.ClearEffectiveFrom()
+	})
+}
+
+// SetEffectiveTo sets the "effective_to" field.
+func (u *PayrollComponentUpsertBulk) SetEffectiveTo(v time.Time) *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.SetEffectiveTo(v)
+	})
+}
+
+// UpdateEffectiveTo sets the "effective_to" field to the value that was provided on create.
+func (u *PayrollComponentUpsertBulk) UpdateEffectiveTo() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.UpdateEffectiveTo()
+	})
+}
+
+// ClearEffectiveTo clears the value of the "effective_to" field.
+func (u *PayrollComponentUpsertBulk) ClearEffectiveTo() *PayrollComponentUpsertBulk {
+	return u.Update(func(s *PayrollComponentUpsert) {
+		s.ClearEffectiveTo()
 	})
 }
 

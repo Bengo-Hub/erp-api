@@ -60,17 +60,38 @@ func (h *PayrollSettingsHandler) RegisterRoutes(r chi.Router) {
 
 func componentView(c *ent.PayrollComponent) map[string]any {
 	v := map[string]any{
-		"id":          c.ID,
-		"name":        c.Title,
-		"title":       c.Title,
-		"category":    c.Category,
-		"is_active":   c.IsActive,
-		"non_cash":    c.NonCash,
-		"statutory":   c.Statutory,
-		"created_at":  c.CreatedAt.Format(time.RFC3339),
+		"id":         c.ID,
+		"name":       c.Title,
+		"title":      c.Title,
+		"category":   c.Category,
+		"mode":       c.Mode,
+		"is_active":  c.IsActive,
+		"non_cash":   c.NonCash,
+		"statutory":  c.Statutory,
+		"checkoff":   c.Checkoff,
+		// Default monetary config (employee + employer side) so the UI shows the rate/amount.
+		"amount":              c.Amount.StringFixed(2),
+		"percentage":          c.Percentage.StringFixed(2),
+		"percent_of":          c.PercentOf,
+		"employer_amount":     c.EmployerAmount.StringFixed(2),
+		"employer_percentage": c.EmployerPercentage.StringFixed(2),
+		"unit_type":           c.UnitType,
+		"unit_rate":           c.UnitRate.StringFixed(2),
+		"quantity":            c.Quantity.StringFixed(2),
+		"deduction_phase":     c.DeductionPhase,
+		"created_at":          c.CreatedAt.Format(time.RFC3339),
 	}
 	if c.Description != nil {
 		v["description"] = *c.Description
+	}
+	if c.RegistrationNo != nil {
+		v["registration_no"] = *c.RegistrationNo
+	}
+	if c.EffectiveFrom != nil {
+		v["effective_from"] = c.EffectiveFrom.Format("2006-01-02")
+	}
+	if c.EffectiveTo != nil {
+		v["effective_to"] = c.EffectiveTo.Format("2006-01-02")
 	}
 	if c.TaxableStatus != "" {
 		v["is_taxable"] = c.TaxableStatus == "taxable"
@@ -123,13 +144,70 @@ func (h *PayrollSettingsHandler) GetComponent(w http.ResponseWriter, r *http.Req
 }
 
 type componentBody struct {
-	Name        string `json:"name"`
-	Title       string `json:"title"`
-	Category    string `json:"category"`
-	Description string `json:"description"`
-	IsActive    *bool  `json:"is_active"`
-	IsTaxable   *bool  `json:"is_taxable"`
-	NonCash     *bool  `json:"non_cash"`
+	Name               string `json:"name"`
+	Title              string `json:"title"`
+	Category           string `json:"category"`
+	Description        string `json:"description"`
+	Mode               string `json:"mode"`
+	IsActive           *bool  `json:"is_active"`
+	IsTaxable          *bool  `json:"is_taxable"`
+	NonCash            *bool  `json:"non_cash"`
+	Checkoff           *bool  `json:"checkoff"`
+	Amount             string `json:"amount"`
+	Percentage         string `json:"percentage"`
+	PercentOf          string `json:"percent_of"`
+	EmployerAmount     string `json:"employer_amount"`
+	EmployerPercentage string `json:"employer_percentage"`
+	RegistrationNo     string `json:"registration_no"`
+	UnitType           string `json:"unit_type"`
+	UnitRate           string `json:"unit_rate"`
+	Quantity           string `json:"quantity"`
+	EffectiveFrom      string `json:"effective_from"`
+	EffectiveTo        string `json:"effective_to"`
+}
+
+// applyComponentMoney sets the decimal/money + unit fields on a create/update builder from
+// the request body. Shared by Create and Update so the two never drift. Each money field is
+// only applied when the caller sent a value (empty string = leave default/unchanged).
+func applyComponentMoney[B interface {
+	SetAmount(decimal.Decimal) B
+	SetPercentage(decimal.Decimal) B
+	SetPercentOf(string) B
+	SetEmployerAmount(decimal.Decimal) B
+	SetEmployerPercentage(decimal.Decimal) B
+	SetRegistrationNo(string) B
+	SetUnitType(string) B
+	SetUnitRate(decimal.Decimal) B
+	SetQuantity(decimal.Decimal) B
+	SetMode(string) B
+}](c B, b componentBody) B {
+	setDec := func(s string, set func(decimal.Decimal) B) {
+		if s == "" {
+			return
+		}
+		if d, err := decimal.NewFromString(s); err == nil {
+			c = set(d)
+		}
+	}
+	setDec(b.Amount, c.SetAmount)
+	setDec(b.Percentage, c.SetPercentage)
+	setDec(b.EmployerAmount, c.SetEmployerAmount)
+	setDec(b.EmployerPercentage, c.SetEmployerPercentage)
+	setDec(b.UnitRate, c.SetUnitRate)
+	setDec(b.Quantity, c.SetQuantity)
+	if b.PercentOf != "" {
+		c = c.SetPercentOf(b.PercentOf)
+	}
+	if b.RegistrationNo != "" {
+		c = c.SetRegistrationNo(b.RegistrationNo)
+	}
+	if b.UnitType != "" {
+		c = c.SetUnitType(b.UnitType)
+	}
+	if b.Mode != "" {
+		c = c.SetMode(b.Mode)
+	}
+	return c
 }
 
 func (b componentBody) title() string {
@@ -166,12 +244,22 @@ func (h *PayrollSettingsHandler) CreateComponent(w http.ResponseWriter, r *http.
 	if b.NonCash != nil {
 		c = c.SetNonCash(*b.NonCash)
 	}
+	if b.Checkoff != nil {
+		c = c.SetCheckoff(*b.Checkoff)
+	}
 	if b.IsTaxable != nil {
 		if *b.IsTaxable {
 			c = c.SetTaxableStatus("taxable")
 		} else {
 			c = c.SetTaxableStatus("nontaxable")
 		}
+	}
+	c = applyComponentMoney(c, b)
+	if d, e := parseDate(b.EffectiveFrom); e == nil {
+		c = c.SetEffectiveFrom(d)
+	}
+	if d, e := parseDate(b.EffectiveTo); e == nil {
+		c = c.SetEffectiveTo(d)
 	}
 	row, err := c.Save(r.Context())
 	if err != nil {
@@ -222,12 +310,22 @@ func (h *PayrollSettingsHandler) UpdateComponent(w http.ResponseWriter, r *http.
 	if b.NonCash != nil {
 		u = u.SetNonCash(*b.NonCash)
 	}
+	if b.Checkoff != nil {
+		u = u.SetCheckoff(*b.Checkoff)
+	}
 	if b.IsTaxable != nil {
 		if *b.IsTaxable {
 			u = u.SetTaxableStatus("taxable")
 		} else {
 			u = u.SetTaxableStatus("nontaxable")
 		}
+	}
+	u = applyComponentMoney(u, b)
+	if d, e := parseDate(b.EffectiveFrom); e == nil {
+		u = u.SetEffectiveFrom(d)
+	}
+	if d, e := parseDate(b.EffectiveTo); e == nil {
+		u = u.SetEffectiveTo(d)
 	}
 	row, err := u.Save(r.Context())
 	if err != nil {

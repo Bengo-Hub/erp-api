@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // PayrollComponent is the model entity for the PayrollComponent schema.
@@ -32,6 +33,28 @@ type PayrollComponent struct {
 	Description *string `json:"description,omitempty"`
 	// monthly | weekly | daily | perhour | perday | perpiece | commission
 	Mode string `json:"mode,omitempty"`
+	// Amount holds the value of the "amount" field.
+	Amount decimal.Decimal `json:"amount,omitempty"`
+	// Percentage holds the value of the "percentage" field.
+	Percentage decimal.Decimal `json:"percentage,omitempty"`
+	// basic | gross | none — base a percentage applies to
+	PercentOf string `json:"percent_of,omitempty"`
+	// EmployerAmount holds the value of the "employer_amount" field.
+	EmployerAmount decimal.Decimal `json:"employer_amount,omitempty"`
+	// EmployerPercentage holds the value of the "employer_percentage" field.
+	EmployerPercentage decimal.Decimal `json:"employer_percentage,omitempty"`
+	// e.g. insurer/pension scheme registration
+	RegistrationNo *string `json:"registration_no,omitempty"`
+	// days | hours | pieces — for per-unit earnings
+	UnitType string `json:"unit_type,omitempty"`
+	// UnitRate holds the value of the "unit_rate" field.
+	UnitRate decimal.Decimal `json:"unit_rate,omitempty"`
+	// Quantity holds the value of the "quantity" field.
+	Quantity decimal.Decimal `json:"quantity,omitempty"`
+	// EffectiveFrom holds the value of the "effective_from" field.
+	EffectiveFrom *time.Time `json:"effective_from,omitempty"`
+	// EffectiveTo holds the value of the "effective_to" field.
+	EffectiveTo *time.Time `json:"effective_to,omitempty"`
 	// NonCash holds the value of the "non_cash" field.
 	NonCash bool `json:"non_cash,omitempty"`
 	// DeductAfterTaxing holds the value of the "deduct_after_taxing" field.
@@ -68,13 +91,15 @@ func (*PayrollComponent) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case payrollcomponent.FieldApplicableReliefID, payrollcomponent.FieldApplicableTaxFormulaID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case payrollcomponent.FieldAmount, payrollcomponent.FieldPercentage, payrollcomponent.FieldEmployerAmount, payrollcomponent.FieldEmployerPercentage, payrollcomponent.FieldUnitRate, payrollcomponent.FieldQuantity:
+			values[i] = new(decimal.Decimal)
 		case payrollcomponent.FieldNonCash, payrollcomponent.FieldDeductAfterTaxing, payrollcomponent.FieldCheckoff, payrollcomponent.FieldConstant, payrollcomponent.FieldStatutory, payrollcomponent.FieldIsActive:
 			values[i] = new(sql.NullBool)
 		case payrollcomponent.FieldDeductionPriority:
 			values[i] = new(sql.NullInt64)
-		case payrollcomponent.FieldWbCode, payrollcomponent.FieldAccCode, payrollcomponent.FieldTitle, payrollcomponent.FieldCategory, payrollcomponent.FieldDescription, payrollcomponent.FieldMode, payrollcomponent.FieldTaxableStatus, payrollcomponent.FieldDeductionPhase:
+		case payrollcomponent.FieldWbCode, payrollcomponent.FieldAccCode, payrollcomponent.FieldTitle, payrollcomponent.FieldCategory, payrollcomponent.FieldDescription, payrollcomponent.FieldMode, payrollcomponent.FieldPercentOf, payrollcomponent.FieldRegistrationNo, payrollcomponent.FieldUnitType, payrollcomponent.FieldTaxableStatus, payrollcomponent.FieldDeductionPhase:
 			values[i] = new(sql.NullString)
-		case payrollcomponent.FieldCreatedAt, payrollcomponent.FieldUpdatedAt:
+		case payrollcomponent.FieldEffectiveFrom, payrollcomponent.FieldEffectiveTo, payrollcomponent.FieldCreatedAt, payrollcomponent.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case payrollcomponent.FieldID, payrollcomponent.FieldTenantID:
 			values[i] = new(uuid.UUID)
@@ -143,6 +168,75 @@ func (_m *PayrollComponent) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field mode", values[i])
 			} else if value.Valid {
 				_m.Mode = value.String
+			}
+		case payrollcomponent.FieldAmount:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field amount", values[i])
+			} else if value != nil {
+				_m.Amount = *value
+			}
+		case payrollcomponent.FieldPercentage:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field percentage", values[i])
+			} else if value != nil {
+				_m.Percentage = *value
+			}
+		case payrollcomponent.FieldPercentOf:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field percent_of", values[i])
+			} else if value.Valid {
+				_m.PercentOf = value.String
+			}
+		case payrollcomponent.FieldEmployerAmount:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field employer_amount", values[i])
+			} else if value != nil {
+				_m.EmployerAmount = *value
+			}
+		case payrollcomponent.FieldEmployerPercentage:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field employer_percentage", values[i])
+			} else if value != nil {
+				_m.EmployerPercentage = *value
+			}
+		case payrollcomponent.FieldRegistrationNo:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field registration_no", values[i])
+			} else if value.Valid {
+				_m.RegistrationNo = new(string)
+				*_m.RegistrationNo = value.String
+			}
+		case payrollcomponent.FieldUnitType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field unit_type", values[i])
+			} else if value.Valid {
+				_m.UnitType = value.String
+			}
+		case payrollcomponent.FieldUnitRate:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field unit_rate", values[i])
+			} else if value != nil {
+				_m.UnitRate = *value
+			}
+		case payrollcomponent.FieldQuantity:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field quantity", values[i])
+			} else if value != nil {
+				_m.Quantity = *value
+			}
+		case payrollcomponent.FieldEffectiveFrom:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field effective_from", values[i])
+			} else if value.Valid {
+				_m.EffectiveFrom = new(time.Time)
+				*_m.EffectiveFrom = value.Time
+			}
+		case payrollcomponent.FieldEffectiveTo:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field effective_to", values[i])
+			} else if value.Valid {
+				_m.EffectiveTo = new(time.Time)
+				*_m.EffectiveTo = value.Time
 			}
 		case payrollcomponent.FieldNonCash:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -286,6 +380,45 @@ func (_m *PayrollComponent) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("mode=")
 	builder.WriteString(_m.Mode)
+	builder.WriteString(", ")
+	builder.WriteString("amount=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Amount))
+	builder.WriteString(", ")
+	builder.WriteString("percentage=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Percentage))
+	builder.WriteString(", ")
+	builder.WriteString("percent_of=")
+	builder.WriteString(_m.PercentOf)
+	builder.WriteString(", ")
+	builder.WriteString("employer_amount=")
+	builder.WriteString(fmt.Sprintf("%v", _m.EmployerAmount))
+	builder.WriteString(", ")
+	builder.WriteString("employer_percentage=")
+	builder.WriteString(fmt.Sprintf("%v", _m.EmployerPercentage))
+	builder.WriteString(", ")
+	if v := _m.RegistrationNo; v != nil {
+		builder.WriteString("registration_no=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("unit_type=")
+	builder.WriteString(_m.UnitType)
+	builder.WriteString(", ")
+	builder.WriteString("unit_rate=")
+	builder.WriteString(fmt.Sprintf("%v", _m.UnitRate))
+	builder.WriteString(", ")
+	builder.WriteString("quantity=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Quantity))
+	builder.WriteString(", ")
+	if v := _m.EffectiveFrom; v != nil {
+		builder.WriteString("effective_from=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.EffectiveTo; v != nil {
+		builder.WriteString("effective_to=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("non_cash=")
 	builder.WriteString(fmt.Sprintf("%v", _m.NonCash))

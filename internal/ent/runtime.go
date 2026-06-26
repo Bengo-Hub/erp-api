@@ -1757,44 +1757,68 @@ func init() {
 	payrollcomponentDescTitle := payrollcomponentFields[4].Descriptor()
 	// payrollcomponent.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	payrollcomponent.TitleValidator = payrollcomponentDescTitle.Validators[0].(func(string) error)
+	// payrollcomponentDescAmount is the schema descriptor for amount field.
+	payrollcomponentDescAmount := payrollcomponentFields[8].Descriptor()
+	// payrollcomponent.DefaultAmount holds the default value on creation for the amount field.
+	payrollcomponent.DefaultAmount = payrollcomponentDescAmount.Default.(decimal.Decimal)
+	// payrollcomponentDescPercentage is the schema descriptor for percentage field.
+	payrollcomponentDescPercentage := payrollcomponentFields[9].Descriptor()
+	// payrollcomponent.DefaultPercentage holds the default value on creation for the percentage field.
+	payrollcomponent.DefaultPercentage = payrollcomponentDescPercentage.Default.(decimal.Decimal)
+	// payrollcomponentDescEmployerAmount is the schema descriptor for employer_amount field.
+	payrollcomponentDescEmployerAmount := payrollcomponentFields[11].Descriptor()
+	// payrollcomponent.DefaultEmployerAmount holds the default value on creation for the employer_amount field.
+	payrollcomponent.DefaultEmployerAmount = payrollcomponentDescEmployerAmount.Default.(decimal.Decimal)
+	// payrollcomponentDescEmployerPercentage is the schema descriptor for employer_percentage field.
+	payrollcomponentDescEmployerPercentage := payrollcomponentFields[12].Descriptor()
+	// payrollcomponent.DefaultEmployerPercentage holds the default value on creation for the employer_percentage field.
+	payrollcomponent.DefaultEmployerPercentage = payrollcomponentDescEmployerPercentage.Default.(decimal.Decimal)
+	// payrollcomponentDescUnitRate is the schema descriptor for unit_rate field.
+	payrollcomponentDescUnitRate := payrollcomponentFields[15].Descriptor()
+	// payrollcomponent.DefaultUnitRate holds the default value on creation for the unit_rate field.
+	payrollcomponent.DefaultUnitRate = payrollcomponentDescUnitRate.Default.(decimal.Decimal)
+	// payrollcomponentDescQuantity is the schema descriptor for quantity field.
+	payrollcomponentDescQuantity := payrollcomponentFields[16].Descriptor()
+	// payrollcomponent.DefaultQuantity holds the default value on creation for the quantity field.
+	payrollcomponent.DefaultQuantity = payrollcomponentDescQuantity.Default.(decimal.Decimal)
 	// payrollcomponentDescNonCash is the schema descriptor for non_cash field.
-	payrollcomponentDescNonCash := payrollcomponentFields[8].Descriptor()
+	payrollcomponentDescNonCash := payrollcomponentFields[19].Descriptor()
 	// payrollcomponent.DefaultNonCash holds the default value on creation for the non_cash field.
 	payrollcomponent.DefaultNonCash = payrollcomponentDescNonCash.Default.(bool)
 	// payrollcomponentDescDeductAfterTaxing is the schema descriptor for deduct_after_taxing field.
-	payrollcomponentDescDeductAfterTaxing := payrollcomponentFields[9].Descriptor()
+	payrollcomponentDescDeductAfterTaxing := payrollcomponentFields[20].Descriptor()
 	// payrollcomponent.DefaultDeductAfterTaxing holds the default value on creation for the deduct_after_taxing field.
 	payrollcomponent.DefaultDeductAfterTaxing = payrollcomponentDescDeductAfterTaxing.Default.(bool)
 	// payrollcomponentDescCheckoff is the schema descriptor for checkoff field.
-	payrollcomponentDescCheckoff := payrollcomponentFields[12].Descriptor()
+	payrollcomponentDescCheckoff := payrollcomponentFields[23].Descriptor()
 	// payrollcomponent.DefaultCheckoff holds the default value on creation for the checkoff field.
 	payrollcomponent.DefaultCheckoff = payrollcomponentDescCheckoff.Default.(bool)
 	// payrollcomponentDescConstant is the schema descriptor for constant field.
-	payrollcomponentDescConstant := payrollcomponentFields[13].Descriptor()
+	payrollcomponentDescConstant := payrollcomponentFields[24].Descriptor()
 	// payrollcomponent.DefaultConstant holds the default value on creation for the constant field.
 	payrollcomponent.DefaultConstant = payrollcomponentDescConstant.Default.(bool)
 	// payrollcomponentDescStatutory is the schema descriptor for statutory field.
-	payrollcomponentDescStatutory := payrollcomponentFields[14].Descriptor()
+	payrollcomponentDescStatutory := payrollcomponentFields[25].Descriptor()
 	// payrollcomponent.DefaultStatutory holds the default value on creation for the statutory field.
 	payrollcomponent.DefaultStatutory = payrollcomponentDescStatutory.Default.(bool)
 	// payrollcomponentDescIsActive is the schema descriptor for is_active field.
-	payrollcomponentDescIsActive := payrollcomponentFields[15].Descriptor()
+	payrollcomponentDescIsActive := payrollcomponentFields[26].Descriptor()
 	// payrollcomponent.DefaultIsActive holds the default value on creation for the is_active field.
 	payrollcomponent.DefaultIsActive = payrollcomponentDescIsActive.Default.(bool)
 	// payrollcomponentDescDeductionPhase is the schema descriptor for deduction_phase field.
-	payrollcomponentDescDeductionPhase := payrollcomponentFields[17].Descriptor()
+	payrollcomponentDescDeductionPhase := payrollcomponentFields[28].Descriptor()
 	// payrollcomponent.DefaultDeductionPhase holds the default value on creation for the deduction_phase field.
 	payrollcomponent.DefaultDeductionPhase = payrollcomponentDescDeductionPhase.Default.(string)
 	// payrollcomponentDescDeductionPriority is the schema descriptor for deduction_priority field.
-	payrollcomponentDescDeductionPriority := payrollcomponentFields[18].Descriptor()
+	payrollcomponentDescDeductionPriority := payrollcomponentFields[29].Descriptor()
 	// payrollcomponent.DefaultDeductionPriority holds the default value on creation for the deduction_priority field.
 	payrollcomponent.DefaultDeductionPriority = payrollcomponentDescDeductionPriority.Default.(int)
 	// payrollcomponentDescCreatedAt is the schema descriptor for created_at field.
-	payrollcomponentDescCreatedAt := payrollcomponentFields[19].Descriptor()
+	payrollcomponentDescCreatedAt := payrollcomponentFields[30].Descriptor()
 	// payrollcomponent.DefaultCreatedAt holds the default value on creation for the created_at field.
 	payrollcomponent.DefaultCreatedAt = payrollcomponentDescCreatedAt.Default.(func() time.Time)
 	// payrollcomponentDescUpdatedAt is the schema descriptor for updated_at field.
-	payrollcomponentDescUpdatedAt := payrollcomponentFields[20].Descriptor()
+	payrollcomponentDescUpdatedAt := payrollcomponentFields[31].Descriptor()
 	// payrollcomponent.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	payrollcomponent.DefaultUpdatedAt = payrollcomponentDescUpdatedAt.Default.(func() time.Time)
 	// payrollcomponent.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

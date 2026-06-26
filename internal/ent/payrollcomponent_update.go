@@ -14,6 +14,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // PayrollComponentUpdate is the builder for updating PayrollComponent entities.
@@ -154,6 +155,190 @@ func (_u *PayrollComponentUpdate) SetNillableMode(v *string) *PayrollComponentUp
 // ClearMode clears the value of the "mode" field.
 func (_u *PayrollComponentUpdate) ClearMode() *PayrollComponentUpdate {
 	_u.mutation.ClearMode()
+	return _u
+}
+
+// SetAmount sets the "amount" field.
+func (_u *PayrollComponentUpdate) SetAmount(v decimal.Decimal) *PayrollComponentUpdate {
+	_u.mutation.SetAmount(v)
+	return _u
+}
+
+// SetNillableAmount sets the "amount" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillableAmount(v *decimal.Decimal) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetAmount(*v)
+	}
+	return _u
+}
+
+// SetPercentage sets the "percentage" field.
+func (_u *PayrollComponentUpdate) SetPercentage(v decimal.Decimal) *PayrollComponentUpdate {
+	_u.mutation.SetPercentage(v)
+	return _u
+}
+
+// SetNillablePercentage sets the "percentage" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillablePercentage(v *decimal.Decimal) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetPercentage(*v)
+	}
+	return _u
+}
+
+// SetPercentOf sets the "percent_of" field.
+func (_u *PayrollComponentUpdate) SetPercentOf(v string) *PayrollComponentUpdate {
+	_u.mutation.SetPercentOf(v)
+	return _u
+}
+
+// SetNillablePercentOf sets the "percent_of" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillablePercentOf(v *string) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetPercentOf(*v)
+	}
+	return _u
+}
+
+// ClearPercentOf clears the value of the "percent_of" field.
+func (_u *PayrollComponentUpdate) ClearPercentOf() *PayrollComponentUpdate {
+	_u.mutation.ClearPercentOf()
+	return _u
+}
+
+// SetEmployerAmount sets the "employer_amount" field.
+func (_u *PayrollComponentUpdate) SetEmployerAmount(v decimal.Decimal) *PayrollComponentUpdate {
+	_u.mutation.SetEmployerAmount(v)
+	return _u
+}
+
+// SetNillableEmployerAmount sets the "employer_amount" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillableEmployerAmount(v *decimal.Decimal) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetEmployerAmount(*v)
+	}
+	return _u
+}
+
+// SetEmployerPercentage sets the "employer_percentage" field.
+func (_u *PayrollComponentUpdate) SetEmployerPercentage(v decimal.Decimal) *PayrollComponentUpdate {
+	_u.mutation.SetEmployerPercentage(v)
+	return _u
+}
+
+// SetNillableEmployerPercentage sets the "employer_percentage" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillableEmployerPercentage(v *decimal.Decimal) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetEmployerPercentage(*v)
+	}
+	return _u
+}
+
+// SetRegistrationNo sets the "registration_no" field.
+func (_u *PayrollComponentUpdate) SetRegistrationNo(v string) *PayrollComponentUpdate {
+	_u.mutation.SetRegistrationNo(v)
+	return _u
+}
+
+// SetNillableRegistrationNo sets the "registration_no" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillableRegistrationNo(v *string) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetRegistrationNo(*v)
+	}
+	return _u
+}
+
+// ClearRegistrationNo clears the value of the "registration_no" field.
+func (_u *PayrollComponentUpdate) ClearRegistrationNo() *PayrollComponentUpdate {
+	_u.mutation.ClearRegistrationNo()
+	return _u
+}
+
+// SetUnitType sets the "unit_type" field.
+func (_u *PayrollComponentUpdate) SetUnitType(v string) *PayrollComponentUpdate {
+	_u.mutation.SetUnitType(v)
+	return _u
+}
+
+// SetNillableUnitType sets the "unit_type" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillableUnitType(v *string) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetUnitType(*v)
+	}
+	return _u
+}
+
+// ClearUnitType clears the value of the "unit_type" field.
+func (_u *PayrollComponentUpdate) ClearUnitType() *PayrollComponentUpdate {
+	_u.mutation.ClearUnitType()
+	return _u
+}
+
+// SetUnitRate sets the "unit_rate" field.
+func (_u *PayrollComponentUpdate) SetUnitRate(v decimal.Decimal) *PayrollComponentUpdate {
+	_u.mutation.SetUnitRate(v)
+	return _u
+}
+
+// SetNillableUnitRate sets the "unit_rate" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillableUnitRate(v *decimal.Decimal) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetUnitRate(*v)
+	}
+	return _u
+}
+
+// SetQuantity sets the "quantity" field.
+func (_u *PayrollComponentUpdate) SetQuantity(v decimal.Decimal) *PayrollComponentUpdate {
+	_u.mutation.SetQuantity(v)
+	return _u
+}
+
+// SetNillableQuantity sets the "quantity" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillableQuantity(v *decimal.Decimal) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetQuantity(*v)
+	}
+	return _u
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (_u *PayrollComponentUpdate) SetEffectiveFrom(v time.Time) *PayrollComponentUpdate {
+	_u.mutation.SetEffectiveFrom(v)
+	return _u
+}
+
+// SetNillableEffectiveFrom sets the "effective_from" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillableEffectiveFrom(v *time.Time) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetEffectiveFrom(*v)
+	}
+	return _u
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (_u *PayrollComponentUpdate) ClearEffectiveFrom() *PayrollComponentUpdate {
+	_u.mutation.ClearEffectiveFrom()
+	return _u
+}
+
+// SetEffectiveTo sets the "effective_to" field.
+func (_u *PayrollComponentUpdate) SetEffectiveTo(v time.Time) *PayrollComponentUpdate {
+	_u.mutation.SetEffectiveTo(v)
+	return _u
+}
+
+// SetNillableEffectiveTo sets the "effective_to" field if the given value is not nil.
+func (_u *PayrollComponentUpdate) SetNillableEffectiveTo(v *time.Time) *PayrollComponentUpdate {
+	if v != nil {
+		_u.SetEffectiveTo(*v)
+	}
+	return _u
+}
+
+// ClearEffectiveTo clears the value of the "effective_to" field.
+func (_u *PayrollComponentUpdate) ClearEffectiveTo() *PayrollComponentUpdate {
+	_u.mutation.ClearEffectiveTo()
 	return _u
 }
 
@@ -441,6 +626,54 @@ func (_u *PayrollComponentUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if _u.mutation.ModeCleared() {
 		_spec.ClearField(payrollcomponent.FieldMode, field.TypeString)
 	}
+	if value, ok := _u.mutation.Amount(); ok {
+		_spec.SetField(payrollcomponent.FieldAmount, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.Percentage(); ok {
+		_spec.SetField(payrollcomponent.FieldPercentage, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.PercentOf(); ok {
+		_spec.SetField(payrollcomponent.FieldPercentOf, field.TypeString, value)
+	}
+	if _u.mutation.PercentOfCleared() {
+		_spec.ClearField(payrollcomponent.FieldPercentOf, field.TypeString)
+	}
+	if value, ok := _u.mutation.EmployerAmount(); ok {
+		_spec.SetField(payrollcomponent.FieldEmployerAmount, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.EmployerPercentage(); ok {
+		_spec.SetField(payrollcomponent.FieldEmployerPercentage, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.RegistrationNo(); ok {
+		_spec.SetField(payrollcomponent.FieldRegistrationNo, field.TypeString, value)
+	}
+	if _u.mutation.RegistrationNoCleared() {
+		_spec.ClearField(payrollcomponent.FieldRegistrationNo, field.TypeString)
+	}
+	if value, ok := _u.mutation.UnitType(); ok {
+		_spec.SetField(payrollcomponent.FieldUnitType, field.TypeString, value)
+	}
+	if _u.mutation.UnitTypeCleared() {
+		_spec.ClearField(payrollcomponent.FieldUnitType, field.TypeString)
+	}
+	if value, ok := _u.mutation.UnitRate(); ok {
+		_spec.SetField(payrollcomponent.FieldUnitRate, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.Quantity(); ok {
+		_spec.SetField(payrollcomponent.FieldQuantity, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.EffectiveFrom(); ok {
+		_spec.SetField(payrollcomponent.FieldEffectiveFrom, field.TypeTime, value)
+	}
+	if _u.mutation.EffectiveFromCleared() {
+		_spec.ClearField(payrollcomponent.FieldEffectiveFrom, field.TypeTime)
+	}
+	if value, ok := _u.mutation.EffectiveTo(); ok {
+		_spec.SetField(payrollcomponent.FieldEffectiveTo, field.TypeTime, value)
+	}
+	if _u.mutation.EffectiveToCleared() {
+		_spec.ClearField(payrollcomponent.FieldEffectiveTo, field.TypeTime)
+	}
 	if value, ok := _u.mutation.NonCash(); ok {
 		_spec.SetField(payrollcomponent.FieldNonCash, field.TypeBool, value)
 	}
@@ -634,6 +867,190 @@ func (_u *PayrollComponentUpdateOne) SetNillableMode(v *string) *PayrollComponen
 // ClearMode clears the value of the "mode" field.
 func (_u *PayrollComponentUpdateOne) ClearMode() *PayrollComponentUpdateOne {
 	_u.mutation.ClearMode()
+	return _u
+}
+
+// SetAmount sets the "amount" field.
+func (_u *PayrollComponentUpdateOne) SetAmount(v decimal.Decimal) *PayrollComponentUpdateOne {
+	_u.mutation.SetAmount(v)
+	return _u
+}
+
+// SetNillableAmount sets the "amount" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillableAmount(v *decimal.Decimal) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetAmount(*v)
+	}
+	return _u
+}
+
+// SetPercentage sets the "percentage" field.
+func (_u *PayrollComponentUpdateOne) SetPercentage(v decimal.Decimal) *PayrollComponentUpdateOne {
+	_u.mutation.SetPercentage(v)
+	return _u
+}
+
+// SetNillablePercentage sets the "percentage" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillablePercentage(v *decimal.Decimal) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetPercentage(*v)
+	}
+	return _u
+}
+
+// SetPercentOf sets the "percent_of" field.
+func (_u *PayrollComponentUpdateOne) SetPercentOf(v string) *PayrollComponentUpdateOne {
+	_u.mutation.SetPercentOf(v)
+	return _u
+}
+
+// SetNillablePercentOf sets the "percent_of" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillablePercentOf(v *string) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetPercentOf(*v)
+	}
+	return _u
+}
+
+// ClearPercentOf clears the value of the "percent_of" field.
+func (_u *PayrollComponentUpdateOne) ClearPercentOf() *PayrollComponentUpdateOne {
+	_u.mutation.ClearPercentOf()
+	return _u
+}
+
+// SetEmployerAmount sets the "employer_amount" field.
+func (_u *PayrollComponentUpdateOne) SetEmployerAmount(v decimal.Decimal) *PayrollComponentUpdateOne {
+	_u.mutation.SetEmployerAmount(v)
+	return _u
+}
+
+// SetNillableEmployerAmount sets the "employer_amount" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillableEmployerAmount(v *decimal.Decimal) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetEmployerAmount(*v)
+	}
+	return _u
+}
+
+// SetEmployerPercentage sets the "employer_percentage" field.
+func (_u *PayrollComponentUpdateOne) SetEmployerPercentage(v decimal.Decimal) *PayrollComponentUpdateOne {
+	_u.mutation.SetEmployerPercentage(v)
+	return _u
+}
+
+// SetNillableEmployerPercentage sets the "employer_percentage" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillableEmployerPercentage(v *decimal.Decimal) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetEmployerPercentage(*v)
+	}
+	return _u
+}
+
+// SetRegistrationNo sets the "registration_no" field.
+func (_u *PayrollComponentUpdateOne) SetRegistrationNo(v string) *PayrollComponentUpdateOne {
+	_u.mutation.SetRegistrationNo(v)
+	return _u
+}
+
+// SetNillableRegistrationNo sets the "registration_no" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillableRegistrationNo(v *string) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetRegistrationNo(*v)
+	}
+	return _u
+}
+
+// ClearRegistrationNo clears the value of the "registration_no" field.
+func (_u *PayrollComponentUpdateOne) ClearRegistrationNo() *PayrollComponentUpdateOne {
+	_u.mutation.ClearRegistrationNo()
+	return _u
+}
+
+// SetUnitType sets the "unit_type" field.
+func (_u *PayrollComponentUpdateOne) SetUnitType(v string) *PayrollComponentUpdateOne {
+	_u.mutation.SetUnitType(v)
+	return _u
+}
+
+// SetNillableUnitType sets the "unit_type" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillableUnitType(v *string) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetUnitType(*v)
+	}
+	return _u
+}
+
+// ClearUnitType clears the value of the "unit_type" field.
+func (_u *PayrollComponentUpdateOne) ClearUnitType() *PayrollComponentUpdateOne {
+	_u.mutation.ClearUnitType()
+	return _u
+}
+
+// SetUnitRate sets the "unit_rate" field.
+func (_u *PayrollComponentUpdateOne) SetUnitRate(v decimal.Decimal) *PayrollComponentUpdateOne {
+	_u.mutation.SetUnitRate(v)
+	return _u
+}
+
+// SetNillableUnitRate sets the "unit_rate" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillableUnitRate(v *decimal.Decimal) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetUnitRate(*v)
+	}
+	return _u
+}
+
+// SetQuantity sets the "quantity" field.
+func (_u *PayrollComponentUpdateOne) SetQuantity(v decimal.Decimal) *PayrollComponentUpdateOne {
+	_u.mutation.SetQuantity(v)
+	return _u
+}
+
+// SetNillableQuantity sets the "quantity" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillableQuantity(v *decimal.Decimal) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetQuantity(*v)
+	}
+	return _u
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (_u *PayrollComponentUpdateOne) SetEffectiveFrom(v time.Time) *PayrollComponentUpdateOne {
+	_u.mutation.SetEffectiveFrom(v)
+	return _u
+}
+
+// SetNillableEffectiveFrom sets the "effective_from" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillableEffectiveFrom(v *time.Time) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetEffectiveFrom(*v)
+	}
+	return _u
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (_u *PayrollComponentUpdateOne) ClearEffectiveFrom() *PayrollComponentUpdateOne {
+	_u.mutation.ClearEffectiveFrom()
+	return _u
+}
+
+// SetEffectiveTo sets the "effective_to" field.
+func (_u *PayrollComponentUpdateOne) SetEffectiveTo(v time.Time) *PayrollComponentUpdateOne {
+	_u.mutation.SetEffectiveTo(v)
+	return _u
+}
+
+// SetNillableEffectiveTo sets the "effective_to" field if the given value is not nil.
+func (_u *PayrollComponentUpdateOne) SetNillableEffectiveTo(v *time.Time) *PayrollComponentUpdateOne {
+	if v != nil {
+		_u.SetEffectiveTo(*v)
+	}
+	return _u
+}
+
+// ClearEffectiveTo clears the value of the "effective_to" field.
+func (_u *PayrollComponentUpdateOne) ClearEffectiveTo() *PayrollComponentUpdateOne {
+	_u.mutation.ClearEffectiveTo()
 	return _u
 }
 
@@ -950,6 +1367,54 @@ func (_u *PayrollComponentUpdateOne) sqlSave(ctx context.Context) (_node *Payrol
 	}
 	if _u.mutation.ModeCleared() {
 		_spec.ClearField(payrollcomponent.FieldMode, field.TypeString)
+	}
+	if value, ok := _u.mutation.Amount(); ok {
+		_spec.SetField(payrollcomponent.FieldAmount, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.Percentage(); ok {
+		_spec.SetField(payrollcomponent.FieldPercentage, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.PercentOf(); ok {
+		_spec.SetField(payrollcomponent.FieldPercentOf, field.TypeString, value)
+	}
+	if _u.mutation.PercentOfCleared() {
+		_spec.ClearField(payrollcomponent.FieldPercentOf, field.TypeString)
+	}
+	if value, ok := _u.mutation.EmployerAmount(); ok {
+		_spec.SetField(payrollcomponent.FieldEmployerAmount, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.EmployerPercentage(); ok {
+		_spec.SetField(payrollcomponent.FieldEmployerPercentage, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.RegistrationNo(); ok {
+		_spec.SetField(payrollcomponent.FieldRegistrationNo, field.TypeString, value)
+	}
+	if _u.mutation.RegistrationNoCleared() {
+		_spec.ClearField(payrollcomponent.FieldRegistrationNo, field.TypeString)
+	}
+	if value, ok := _u.mutation.UnitType(); ok {
+		_spec.SetField(payrollcomponent.FieldUnitType, field.TypeString, value)
+	}
+	if _u.mutation.UnitTypeCleared() {
+		_spec.ClearField(payrollcomponent.FieldUnitType, field.TypeString)
+	}
+	if value, ok := _u.mutation.UnitRate(); ok {
+		_spec.SetField(payrollcomponent.FieldUnitRate, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.Quantity(); ok {
+		_spec.SetField(payrollcomponent.FieldQuantity, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.EffectiveFrom(); ok {
+		_spec.SetField(payrollcomponent.FieldEffectiveFrom, field.TypeTime, value)
+	}
+	if _u.mutation.EffectiveFromCleared() {
+		_spec.ClearField(payrollcomponent.FieldEffectiveFrom, field.TypeTime)
+	}
+	if value, ok := _u.mutation.EffectiveTo(); ok {
+		_spec.SetField(payrollcomponent.FieldEffectiveTo, field.TypeTime, value)
+	}
+	if _u.mutation.EffectiveToCleared() {
+		_spec.ClearField(payrollcomponent.FieldEffectiveTo, field.TypeTime)
 	}
 	if value, ok := _u.mutation.NonCash(); ok {
 		_spec.SetField(payrollcomponent.FieldNonCash, field.TypeBool, value)
