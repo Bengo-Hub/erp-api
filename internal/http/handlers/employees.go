@@ -59,6 +59,14 @@ func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 		kr.Patch("/{id}", h.UpdateNextOfKin)
 		kr.Delete("/{id}", h.DeleteNextOfKin)
 	})
+	// Employee ↔ project allocations (consultants on multiple projects, % / fixed split).
+	r.Route("/hrm/project-allocations", func(pa chi.Router) {
+		pa.Get("/", h.ListAllocations)
+		pa.Post("/", h.CreateAllocation)
+		pa.Put("/{id}", h.UpdateAllocation)
+		pa.Patch("/{id}", h.UpdateAllocation)
+		pa.Delete("/{id}", h.DeleteAllocation)
+	})
 	// Education / employment-history / disciplinary sub-records (employee_records.go).
 	h.registerRecordRoutes(r)
 }

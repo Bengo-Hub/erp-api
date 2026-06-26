@@ -123,6 +123,9 @@ type EmployeeMetric func(*sql.Selector)
 // EmployeeOnboarding is the predicate function for employeeonboarding builders.
 type EmployeeOnboarding func(*sql.Selector)
 
+// EmployeeProjectAllocation is the predicate function for employeeprojectallocation builders.
+type EmployeeProjectAllocation func(*sql.Selector)
+
 // EmploymentHistory is the predicate function for employmenthistory builders.
 type EmploymentHistory func(*sql.Selector)
 

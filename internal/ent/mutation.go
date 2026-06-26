@@ -50,6 +50,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeonboarding"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeeprojectallocation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employmenthistory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/exchangerate"
@@ -126,105 +127,106 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAdvance                 = "Advance"
-	TypeApiRequestMetric        = "ApiRequestMetric"
-	TypeAppSetting              = "AppSetting"
-	TypeApplication             = "Application"
-	TypeAppraisal               = "Appraisal"
-	TypeAppraisalCycle          = "AppraisalCycle"
-	TypeAppraisalQuestion       = "AppraisalQuestion"
-	TypeAppraisalResponse       = "AppraisalResponse"
-	TypeAppraisalTemplate       = "AppraisalTemplate"
-	TypeApprovalRequest         = "ApprovalRequest"
-	TypeApprovalStepAction      = "ApprovalStepAction"
-	TypeApprovalWorkflow        = "ApprovalWorkflow"
-	TypeApprovalWorkflowStep    = "ApprovalWorkflowStep"
-	TypeAttendanceRecord        = "AttendanceRecord"
-	TypeAttendanceRule          = "AttendanceRule"
-	TypeAuthOutlet              = "AuthOutlet"
-	TypeAuthTenant              = "AuthTenant"
-	TypeBackup                  = "Backup"
-	TypeBackupSetting           = "BackupSetting"
-	TypeBenefitTax              = "BenefitTax"
-	TypeCandidate               = "Candidate"
-	TypeCasualLaborRecord       = "CasualLaborRecord"
-	TypeClaimItem               = "ClaimItem"
-	TypeCompanySettings         = "CompanySettings"
-	TypeContactDetails          = "ContactDetails"
-	TypeContract                = "Contract"
-	TypeCustomUser              = "CustomUser"
-	TypeDepartment              = "Department"
-	TypeDocumentSequence        = "DocumentSequence"
-	TypeESSSettings             = "ESSSettings"
-	TypeEmployee                = "Employee"
-	TypeEmployeeBankAccount     = "EmployeeBankAccount"
-	TypeEmployeeBenefit         = "EmployeeBenefit"
-	TypeEmployeeDisciplinary    = "EmployeeDisciplinary"
-	TypeEmployeeDocument        = "EmployeeDocument"
-	TypeEmployeeEducation       = "EmployeeEducation"
-	TypeEmployeeLoan            = "EmployeeLoan"
-	TypeEmployeeMetric          = "EmployeeMetric"
-	TypeEmployeeOnboarding      = "EmployeeOnboarding"
-	TypeEmploymentHistory       = "EmploymentHistory"
-	TypeExchangeRate            = "ExchangeRate"
-	TypeExchangeRateAPISettings = "ExchangeRateAPISettings"
-	TypeExpenseClaim            = "ExpenseClaim"
-	TypeGeneralHRSettings       = "GeneralHRSettings"
-	TypeGoal                    = "Goal"
-	TypeGoalProgress            = "GoalProgress"
-	TypeHRDetails               = "HRDetails"
-	TypeIdempotencyKey          = "IdempotencyKey"
-	TypeJobGroup                = "JobGroup"
-	TypeJobPosting              = "JobPosting"
-	TypeJobTitle                = "JobTitle"
-	TypeLeaveBalance            = "LeaveBalance"
-	TypeLeaveCategory           = "LeaveCategory"
-	TypeLeaveEntitlement        = "LeaveEntitlement"
-	TypeLeaveLog                = "LeaveLog"
-	TypeLeaveRequest            = "LeaveRequest"
-	TypeLoanType                = "LoanType"
-	TypeLossAndDamage           = "LossAndDamage"
-	TypeMetricCategory          = "MetricCategory"
-	TypeMetricTarget            = "MetricTarget"
-	TypeNextOfKin               = "NextOfKin"
-	TypeOffDay                  = "OffDay"
-	TypeOnboardingTask          = "OnboardingTask"
-	TypeOutboxEvent             = "OutboxEvent"
-	TypePayrollComponent        = "PayrollComponent"
-	TypePayrollFormula          = "PayrollFormula"
-	TypePayrollFormulaItem      = "PayrollFormulaItem"
-	TypePayrollRelief           = "PayrollRelief"
-	TypePayrollSplitRatio       = "PayrollSplitRatio"
-	TypePayslip                 = "Payslip"
-	TypePayslipAudit            = "PayslipAudit"
-	TypePerformanceMetric       = "PerformanceMetric"
-	TypePerformanceReview       = "PerformanceReview"
-	TypePermission              = "Permission"
-	TypePublicHoliday           = "PublicHoliday"
-	TypeRegion                  = "Region"
-	TypeRepayOption             = "RepayOption"
-	TypeReviewMetric            = "ReviewMetric"
-	TypeRole                    = "Role"
-	TypeRolePermission          = "RolePermission"
-	TypeSalaryDetails           = "SalaryDetails"
-	TypeShiftAssignment         = "ShiftAssignment"
-	TypeShiftRoster             = "ShiftRoster"
-	TypeShiftRosterSlot         = "ShiftRosterSlot"
-	TypeShiftRotation           = "ShiftRotation"
-	TypeStaffShiftOverride      = "StaffShiftOverride"
-	TypeTask                    = "Task"
-	TypeTaskComment             = "TaskComment"
-	TypeTaskLog                 = "TaskLog"
-	TypeTimesheet               = "Timesheet"
-	TypeTimesheetEntry          = "TimesheetEntry"
-	TypeTrainingCourse          = "TrainingCourse"
-	TypeTrainingEnrollment      = "TrainingEnrollment"
-	TypeTrainingEvaluation      = "TrainingEvaluation"
-	TypeUserRoleAssignment      = "UserRoleAssignment"
-	TypeWithHoldingTax          = "WithHoldingTax"
-	TypeWorkShift               = "WorkShift"
-	TypeWorkShiftSchedule       = "WorkShiftSchedule"
-	TypeWorkersUnion            = "WorkersUnion"
+	TypeAdvance                   = "Advance"
+	TypeApiRequestMetric          = "ApiRequestMetric"
+	TypeAppSetting                = "AppSetting"
+	TypeApplication               = "Application"
+	TypeAppraisal                 = "Appraisal"
+	TypeAppraisalCycle            = "AppraisalCycle"
+	TypeAppraisalQuestion         = "AppraisalQuestion"
+	TypeAppraisalResponse         = "AppraisalResponse"
+	TypeAppraisalTemplate         = "AppraisalTemplate"
+	TypeApprovalRequest           = "ApprovalRequest"
+	TypeApprovalStepAction        = "ApprovalStepAction"
+	TypeApprovalWorkflow          = "ApprovalWorkflow"
+	TypeApprovalWorkflowStep      = "ApprovalWorkflowStep"
+	TypeAttendanceRecord          = "AttendanceRecord"
+	TypeAttendanceRule            = "AttendanceRule"
+	TypeAuthOutlet                = "AuthOutlet"
+	TypeAuthTenant                = "AuthTenant"
+	TypeBackup                    = "Backup"
+	TypeBackupSetting             = "BackupSetting"
+	TypeBenefitTax                = "BenefitTax"
+	TypeCandidate                 = "Candidate"
+	TypeCasualLaborRecord         = "CasualLaborRecord"
+	TypeClaimItem                 = "ClaimItem"
+	TypeCompanySettings           = "CompanySettings"
+	TypeContactDetails            = "ContactDetails"
+	TypeContract                  = "Contract"
+	TypeCustomUser                = "CustomUser"
+	TypeDepartment                = "Department"
+	TypeDocumentSequence          = "DocumentSequence"
+	TypeESSSettings               = "ESSSettings"
+	TypeEmployee                  = "Employee"
+	TypeEmployeeBankAccount       = "EmployeeBankAccount"
+	TypeEmployeeBenefit           = "EmployeeBenefit"
+	TypeEmployeeDisciplinary      = "EmployeeDisciplinary"
+	TypeEmployeeDocument          = "EmployeeDocument"
+	TypeEmployeeEducation         = "EmployeeEducation"
+	TypeEmployeeLoan              = "EmployeeLoan"
+	TypeEmployeeMetric            = "EmployeeMetric"
+	TypeEmployeeOnboarding        = "EmployeeOnboarding"
+	TypeEmployeeProjectAllocation = "EmployeeProjectAllocation"
+	TypeEmploymentHistory         = "EmploymentHistory"
+	TypeExchangeRate              = "ExchangeRate"
+	TypeExchangeRateAPISettings   = "ExchangeRateAPISettings"
+	TypeExpenseClaim              = "ExpenseClaim"
+	TypeGeneralHRSettings         = "GeneralHRSettings"
+	TypeGoal                      = "Goal"
+	TypeGoalProgress              = "GoalProgress"
+	TypeHRDetails                 = "HRDetails"
+	TypeIdempotencyKey            = "IdempotencyKey"
+	TypeJobGroup                  = "JobGroup"
+	TypeJobPosting                = "JobPosting"
+	TypeJobTitle                  = "JobTitle"
+	TypeLeaveBalance              = "LeaveBalance"
+	TypeLeaveCategory             = "LeaveCategory"
+	TypeLeaveEntitlement          = "LeaveEntitlement"
+	TypeLeaveLog                  = "LeaveLog"
+	TypeLeaveRequest              = "LeaveRequest"
+	TypeLoanType                  = "LoanType"
+	TypeLossAndDamage             = "LossAndDamage"
+	TypeMetricCategory            = "MetricCategory"
+	TypeMetricTarget              = "MetricTarget"
+	TypeNextOfKin                 = "NextOfKin"
+	TypeOffDay                    = "OffDay"
+	TypeOnboardingTask            = "OnboardingTask"
+	TypeOutboxEvent               = "OutboxEvent"
+	TypePayrollComponent          = "PayrollComponent"
+	TypePayrollFormula            = "PayrollFormula"
+	TypePayrollFormulaItem        = "PayrollFormulaItem"
+	TypePayrollRelief             = "PayrollRelief"
+	TypePayrollSplitRatio         = "PayrollSplitRatio"
+	TypePayslip                   = "Payslip"
+	TypePayslipAudit              = "PayslipAudit"
+	TypePerformanceMetric         = "PerformanceMetric"
+	TypePerformanceReview         = "PerformanceReview"
+	TypePermission                = "Permission"
+	TypePublicHoliday             = "PublicHoliday"
+	TypeRegion                    = "Region"
+	TypeRepayOption               = "RepayOption"
+	TypeReviewMetric              = "ReviewMetric"
+	TypeRole                      = "Role"
+	TypeRolePermission            = "RolePermission"
+	TypeSalaryDetails             = "SalaryDetails"
+	TypeShiftAssignment           = "ShiftAssignment"
+	TypeShiftRoster               = "ShiftRoster"
+	TypeShiftRosterSlot           = "ShiftRosterSlot"
+	TypeShiftRotation             = "ShiftRotation"
+	TypeStaffShiftOverride        = "StaffShiftOverride"
+	TypeTask                      = "Task"
+	TypeTaskComment               = "TaskComment"
+	TypeTaskLog                   = "TaskLog"
+	TypeTimesheet                 = "Timesheet"
+	TypeTimesheetEntry            = "TimesheetEntry"
+	TypeTrainingCourse            = "TrainingCourse"
+	TypeTrainingEnrollment        = "TrainingEnrollment"
+	TypeTrainingEvaluation        = "TrainingEvaluation"
+	TypeUserRoleAssignment        = "UserRoleAssignment"
+	TypeWithHoldingTax            = "WithHoldingTax"
+	TypeWorkShift                 = "WorkShift"
+	TypeWorkShiftSchedule         = "WorkShiftSchedule"
+	TypeWorkersUnion              = "WorkersUnion"
 )
 
 // AdvanceMutation represents an operation that mutates the Advance nodes in the graph.
@@ -38057,6 +38059,1067 @@ func (m *EmployeeOnboardingMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *EmployeeOnboardingMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown EmployeeOnboarding edge %s", name)
+}
+
+// EmployeeProjectAllocationMutation represents an operation that mutates the EmployeeProjectAllocation nodes in the graph.
+type EmployeeProjectAllocationMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	tenant_id          *uuid.UUID
+	employee_id        *uuid.UUID
+	project_id         *uuid.UUID
+	project_name       *string
+	cost_center_id     *uuid.UUID
+	allocation_percent *decimal.Decimal
+	fixed_amount       *float64
+	addfixed_amount    *float64
+	start_date         *time.Time
+	end_date           *time.Time
+	is_active          *bool
+	created_at         *time.Time
+	updated_at         *time.Time
+	clearedFields      map[string]struct{}
+	done               bool
+	oldValue           func(context.Context) (*EmployeeProjectAllocation, error)
+	predicates         []predicate.EmployeeProjectAllocation
+}
+
+var _ ent.Mutation = (*EmployeeProjectAllocationMutation)(nil)
+
+// employeeprojectallocationOption allows management of the mutation configuration using functional options.
+type employeeprojectallocationOption func(*EmployeeProjectAllocationMutation)
+
+// newEmployeeProjectAllocationMutation creates new mutation for the EmployeeProjectAllocation entity.
+func newEmployeeProjectAllocationMutation(c config, op Op, opts ...employeeprojectallocationOption) *EmployeeProjectAllocationMutation {
+	m := &EmployeeProjectAllocationMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeEmployeeProjectAllocation,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withEmployeeProjectAllocationID sets the ID field of the mutation.
+func withEmployeeProjectAllocationID(id uuid.UUID) employeeprojectallocationOption {
+	return func(m *EmployeeProjectAllocationMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *EmployeeProjectAllocation
+		)
+		m.oldValue = func(ctx context.Context) (*EmployeeProjectAllocation, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().EmployeeProjectAllocation.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withEmployeeProjectAllocation sets the old EmployeeProjectAllocation of the mutation.
+func withEmployeeProjectAllocation(node *EmployeeProjectAllocation) employeeprojectallocationOption {
+	return func(m *EmployeeProjectAllocationMutation) {
+		m.oldValue = func(context.Context) (*EmployeeProjectAllocation, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m EmployeeProjectAllocationMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m EmployeeProjectAllocationMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of EmployeeProjectAllocation entities.
+func (m *EmployeeProjectAllocationMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *EmployeeProjectAllocationMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *EmployeeProjectAllocationMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().EmployeeProjectAllocation.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *EmployeeProjectAllocationMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *EmployeeProjectAllocationMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetEmployeeID sets the "employee_id" field.
+func (m *EmployeeProjectAllocationMutation) SetEmployeeID(u uuid.UUID) {
+	m.employee_id = &u
+}
+
+// EmployeeID returns the value of the "employee_id" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) EmployeeID() (r uuid.UUID, exists bool) {
+	v := m.employee_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployeeID returns the old "employee_id" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployeeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployeeID: %w", err)
+	}
+	return oldValue.EmployeeID, nil
+}
+
+// ResetEmployeeID resets all changes to the "employee_id" field.
+func (m *EmployeeProjectAllocationMutation) ResetEmployeeID() {
+	m.employee_id = nil
+}
+
+// SetProjectID sets the "project_id" field.
+func (m *EmployeeProjectAllocationMutation) SetProjectID(u uuid.UUID) {
+	m.project_id = &u
+}
+
+// ProjectID returns the value of the "project_id" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) ProjectID() (r uuid.UUID, exists bool) {
+	v := m.project_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProjectID returns the old "project_id" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldProjectID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProjectID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProjectID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProjectID: %w", err)
+	}
+	return oldValue.ProjectID, nil
+}
+
+// ResetProjectID resets all changes to the "project_id" field.
+func (m *EmployeeProjectAllocationMutation) ResetProjectID() {
+	m.project_id = nil
+}
+
+// SetProjectName sets the "project_name" field.
+func (m *EmployeeProjectAllocationMutation) SetProjectName(s string) {
+	m.project_name = &s
+}
+
+// ProjectName returns the value of the "project_name" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) ProjectName() (r string, exists bool) {
+	v := m.project_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProjectName returns the old "project_name" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldProjectName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProjectName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProjectName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProjectName: %w", err)
+	}
+	return oldValue.ProjectName, nil
+}
+
+// ClearProjectName clears the value of the "project_name" field.
+func (m *EmployeeProjectAllocationMutation) ClearProjectName() {
+	m.project_name = nil
+	m.clearedFields[employeeprojectallocation.FieldProjectName] = struct{}{}
+}
+
+// ProjectNameCleared returns if the "project_name" field was cleared in this mutation.
+func (m *EmployeeProjectAllocationMutation) ProjectNameCleared() bool {
+	_, ok := m.clearedFields[employeeprojectallocation.FieldProjectName]
+	return ok
+}
+
+// ResetProjectName resets all changes to the "project_name" field.
+func (m *EmployeeProjectAllocationMutation) ResetProjectName() {
+	m.project_name = nil
+	delete(m.clearedFields, employeeprojectallocation.FieldProjectName)
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (m *EmployeeProjectAllocationMutation) SetCostCenterID(u uuid.UUID) {
+	m.cost_center_id = &u
+}
+
+// CostCenterID returns the value of the "cost_center_id" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) CostCenterID() (r uuid.UUID, exists bool) {
+	v := m.cost_center_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostCenterID returns the old "cost_center_id" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldCostCenterID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostCenterID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostCenterID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostCenterID: %w", err)
+	}
+	return oldValue.CostCenterID, nil
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (m *EmployeeProjectAllocationMutation) ClearCostCenterID() {
+	m.cost_center_id = nil
+	m.clearedFields[employeeprojectallocation.FieldCostCenterID] = struct{}{}
+}
+
+// CostCenterIDCleared returns if the "cost_center_id" field was cleared in this mutation.
+func (m *EmployeeProjectAllocationMutation) CostCenterIDCleared() bool {
+	_, ok := m.clearedFields[employeeprojectallocation.FieldCostCenterID]
+	return ok
+}
+
+// ResetCostCenterID resets all changes to the "cost_center_id" field.
+func (m *EmployeeProjectAllocationMutation) ResetCostCenterID() {
+	m.cost_center_id = nil
+	delete(m.clearedFields, employeeprojectallocation.FieldCostCenterID)
+}
+
+// SetAllocationPercent sets the "allocation_percent" field.
+func (m *EmployeeProjectAllocationMutation) SetAllocationPercent(d decimal.Decimal) {
+	m.allocation_percent = &d
+}
+
+// AllocationPercent returns the value of the "allocation_percent" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) AllocationPercent() (r decimal.Decimal, exists bool) {
+	v := m.allocation_percent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAllocationPercent returns the old "allocation_percent" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldAllocationPercent(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAllocationPercent is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAllocationPercent requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAllocationPercent: %w", err)
+	}
+	return oldValue.AllocationPercent, nil
+}
+
+// ResetAllocationPercent resets all changes to the "allocation_percent" field.
+func (m *EmployeeProjectAllocationMutation) ResetAllocationPercent() {
+	m.allocation_percent = nil
+}
+
+// SetFixedAmount sets the "fixed_amount" field.
+func (m *EmployeeProjectAllocationMutation) SetFixedAmount(f float64) {
+	m.fixed_amount = &f
+	m.addfixed_amount = nil
+}
+
+// FixedAmount returns the value of the "fixed_amount" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) FixedAmount() (r float64, exists bool) {
+	v := m.fixed_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFixedAmount returns the old "fixed_amount" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldFixedAmount(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFixedAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFixedAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFixedAmount: %w", err)
+	}
+	return oldValue.FixedAmount, nil
+}
+
+// AddFixedAmount adds f to the "fixed_amount" field.
+func (m *EmployeeProjectAllocationMutation) AddFixedAmount(f float64) {
+	if m.addfixed_amount != nil {
+		*m.addfixed_amount += f
+	} else {
+		m.addfixed_amount = &f
+	}
+}
+
+// AddedFixedAmount returns the value that was added to the "fixed_amount" field in this mutation.
+func (m *EmployeeProjectAllocationMutation) AddedFixedAmount() (r float64, exists bool) {
+	v := m.addfixed_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearFixedAmount clears the value of the "fixed_amount" field.
+func (m *EmployeeProjectAllocationMutation) ClearFixedAmount() {
+	m.fixed_amount = nil
+	m.addfixed_amount = nil
+	m.clearedFields[employeeprojectallocation.FieldFixedAmount] = struct{}{}
+}
+
+// FixedAmountCleared returns if the "fixed_amount" field was cleared in this mutation.
+func (m *EmployeeProjectAllocationMutation) FixedAmountCleared() bool {
+	_, ok := m.clearedFields[employeeprojectallocation.FieldFixedAmount]
+	return ok
+}
+
+// ResetFixedAmount resets all changes to the "fixed_amount" field.
+func (m *EmployeeProjectAllocationMutation) ResetFixedAmount() {
+	m.fixed_amount = nil
+	m.addfixed_amount = nil
+	delete(m.clearedFields, employeeprojectallocation.FieldFixedAmount)
+}
+
+// SetStartDate sets the "start_date" field.
+func (m *EmployeeProjectAllocationMutation) SetStartDate(t time.Time) {
+	m.start_date = &t
+}
+
+// StartDate returns the value of the "start_date" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) StartDate() (r time.Time, exists bool) {
+	v := m.start_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartDate returns the old "start_date" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldStartDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartDate: %w", err)
+	}
+	return oldValue.StartDate, nil
+}
+
+// ClearStartDate clears the value of the "start_date" field.
+func (m *EmployeeProjectAllocationMutation) ClearStartDate() {
+	m.start_date = nil
+	m.clearedFields[employeeprojectallocation.FieldStartDate] = struct{}{}
+}
+
+// StartDateCleared returns if the "start_date" field was cleared in this mutation.
+func (m *EmployeeProjectAllocationMutation) StartDateCleared() bool {
+	_, ok := m.clearedFields[employeeprojectallocation.FieldStartDate]
+	return ok
+}
+
+// ResetStartDate resets all changes to the "start_date" field.
+func (m *EmployeeProjectAllocationMutation) ResetStartDate() {
+	m.start_date = nil
+	delete(m.clearedFields, employeeprojectallocation.FieldStartDate)
+}
+
+// SetEndDate sets the "end_date" field.
+func (m *EmployeeProjectAllocationMutation) SetEndDate(t time.Time) {
+	m.end_date = &t
+}
+
+// EndDate returns the value of the "end_date" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) EndDate() (r time.Time, exists bool) {
+	v := m.end_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndDate returns the old "end_date" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldEndDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndDate: %w", err)
+	}
+	return oldValue.EndDate, nil
+}
+
+// ClearEndDate clears the value of the "end_date" field.
+func (m *EmployeeProjectAllocationMutation) ClearEndDate() {
+	m.end_date = nil
+	m.clearedFields[employeeprojectallocation.FieldEndDate] = struct{}{}
+}
+
+// EndDateCleared returns if the "end_date" field was cleared in this mutation.
+func (m *EmployeeProjectAllocationMutation) EndDateCleared() bool {
+	_, ok := m.clearedFields[employeeprojectallocation.FieldEndDate]
+	return ok
+}
+
+// ResetEndDate resets all changes to the "end_date" field.
+func (m *EmployeeProjectAllocationMutation) ResetEndDate() {
+	m.end_date = nil
+	delete(m.clearedFields, employeeprojectallocation.FieldEndDate)
+}
+
+// SetIsActive sets the "is_active" field.
+func (m *EmployeeProjectAllocationMutation) SetIsActive(b bool) {
+	m.is_active = &b
+}
+
+// IsActive returns the value of the "is_active" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) IsActive() (r bool, exists bool) {
+	v := m.is_active
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsActive returns the old "is_active" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldIsActive(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsActive is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsActive requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsActive: %w", err)
+	}
+	return oldValue.IsActive, nil
+}
+
+// ResetIsActive resets all changes to the "is_active" field.
+func (m *EmployeeProjectAllocationMutation) ResetIsActive() {
+	m.is_active = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *EmployeeProjectAllocationMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *EmployeeProjectAllocationMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *EmployeeProjectAllocationMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *EmployeeProjectAllocationMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the EmployeeProjectAllocation entity.
+// If the EmployeeProjectAllocation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeProjectAllocationMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *EmployeeProjectAllocationMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the EmployeeProjectAllocationMutation builder.
+func (m *EmployeeProjectAllocationMutation) Where(ps ...predicate.EmployeeProjectAllocation) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the EmployeeProjectAllocationMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *EmployeeProjectAllocationMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.EmployeeProjectAllocation, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *EmployeeProjectAllocationMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *EmployeeProjectAllocationMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (EmployeeProjectAllocation).
+func (m *EmployeeProjectAllocationMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *EmployeeProjectAllocationMutation) Fields() []string {
+	fields := make([]string, 0, 12)
+	if m.tenant_id != nil {
+		fields = append(fields, employeeprojectallocation.FieldTenantID)
+	}
+	if m.employee_id != nil {
+		fields = append(fields, employeeprojectallocation.FieldEmployeeID)
+	}
+	if m.project_id != nil {
+		fields = append(fields, employeeprojectallocation.FieldProjectID)
+	}
+	if m.project_name != nil {
+		fields = append(fields, employeeprojectallocation.FieldProjectName)
+	}
+	if m.cost_center_id != nil {
+		fields = append(fields, employeeprojectallocation.FieldCostCenterID)
+	}
+	if m.allocation_percent != nil {
+		fields = append(fields, employeeprojectallocation.FieldAllocationPercent)
+	}
+	if m.fixed_amount != nil {
+		fields = append(fields, employeeprojectallocation.FieldFixedAmount)
+	}
+	if m.start_date != nil {
+		fields = append(fields, employeeprojectallocation.FieldStartDate)
+	}
+	if m.end_date != nil {
+		fields = append(fields, employeeprojectallocation.FieldEndDate)
+	}
+	if m.is_active != nil {
+		fields = append(fields, employeeprojectallocation.FieldIsActive)
+	}
+	if m.created_at != nil {
+		fields = append(fields, employeeprojectallocation.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, employeeprojectallocation.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *EmployeeProjectAllocationMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case employeeprojectallocation.FieldTenantID:
+		return m.TenantID()
+	case employeeprojectallocation.FieldEmployeeID:
+		return m.EmployeeID()
+	case employeeprojectallocation.FieldProjectID:
+		return m.ProjectID()
+	case employeeprojectallocation.FieldProjectName:
+		return m.ProjectName()
+	case employeeprojectallocation.FieldCostCenterID:
+		return m.CostCenterID()
+	case employeeprojectallocation.FieldAllocationPercent:
+		return m.AllocationPercent()
+	case employeeprojectallocation.FieldFixedAmount:
+		return m.FixedAmount()
+	case employeeprojectallocation.FieldStartDate:
+		return m.StartDate()
+	case employeeprojectallocation.FieldEndDate:
+		return m.EndDate()
+	case employeeprojectallocation.FieldIsActive:
+		return m.IsActive()
+	case employeeprojectallocation.FieldCreatedAt:
+		return m.CreatedAt()
+	case employeeprojectallocation.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *EmployeeProjectAllocationMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case employeeprojectallocation.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case employeeprojectallocation.FieldEmployeeID:
+		return m.OldEmployeeID(ctx)
+	case employeeprojectallocation.FieldProjectID:
+		return m.OldProjectID(ctx)
+	case employeeprojectallocation.FieldProjectName:
+		return m.OldProjectName(ctx)
+	case employeeprojectallocation.FieldCostCenterID:
+		return m.OldCostCenterID(ctx)
+	case employeeprojectallocation.FieldAllocationPercent:
+		return m.OldAllocationPercent(ctx)
+	case employeeprojectallocation.FieldFixedAmount:
+		return m.OldFixedAmount(ctx)
+	case employeeprojectallocation.FieldStartDate:
+		return m.OldStartDate(ctx)
+	case employeeprojectallocation.FieldEndDate:
+		return m.OldEndDate(ctx)
+	case employeeprojectallocation.FieldIsActive:
+		return m.OldIsActive(ctx)
+	case employeeprojectallocation.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case employeeprojectallocation.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown EmployeeProjectAllocation field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *EmployeeProjectAllocationMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case employeeprojectallocation.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case employeeprojectallocation.FieldEmployeeID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployeeID(v)
+		return nil
+	case employeeprojectallocation.FieldProjectID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProjectID(v)
+		return nil
+	case employeeprojectallocation.FieldProjectName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProjectName(v)
+		return nil
+	case employeeprojectallocation.FieldCostCenterID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostCenterID(v)
+		return nil
+	case employeeprojectallocation.FieldAllocationPercent:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAllocationPercent(v)
+		return nil
+	case employeeprojectallocation.FieldFixedAmount:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFixedAmount(v)
+		return nil
+	case employeeprojectallocation.FieldStartDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartDate(v)
+		return nil
+	case employeeprojectallocation.FieldEndDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndDate(v)
+		return nil
+	case employeeprojectallocation.FieldIsActive:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsActive(v)
+		return nil
+	case employeeprojectallocation.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case employeeprojectallocation.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown EmployeeProjectAllocation field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *EmployeeProjectAllocationMutation) AddedFields() []string {
+	var fields []string
+	if m.addfixed_amount != nil {
+		fields = append(fields, employeeprojectallocation.FieldFixedAmount)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *EmployeeProjectAllocationMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case employeeprojectallocation.FieldFixedAmount:
+		return m.AddedFixedAmount()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *EmployeeProjectAllocationMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case employeeprojectallocation.FieldFixedAmount:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddFixedAmount(v)
+		return nil
+	}
+	return fmt.Errorf("unknown EmployeeProjectAllocation numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *EmployeeProjectAllocationMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(employeeprojectallocation.FieldProjectName) {
+		fields = append(fields, employeeprojectallocation.FieldProjectName)
+	}
+	if m.FieldCleared(employeeprojectallocation.FieldCostCenterID) {
+		fields = append(fields, employeeprojectallocation.FieldCostCenterID)
+	}
+	if m.FieldCleared(employeeprojectallocation.FieldFixedAmount) {
+		fields = append(fields, employeeprojectallocation.FieldFixedAmount)
+	}
+	if m.FieldCleared(employeeprojectallocation.FieldStartDate) {
+		fields = append(fields, employeeprojectallocation.FieldStartDate)
+	}
+	if m.FieldCleared(employeeprojectallocation.FieldEndDate) {
+		fields = append(fields, employeeprojectallocation.FieldEndDate)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *EmployeeProjectAllocationMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *EmployeeProjectAllocationMutation) ClearField(name string) error {
+	switch name {
+	case employeeprojectallocation.FieldProjectName:
+		m.ClearProjectName()
+		return nil
+	case employeeprojectallocation.FieldCostCenterID:
+		m.ClearCostCenterID()
+		return nil
+	case employeeprojectallocation.FieldFixedAmount:
+		m.ClearFixedAmount()
+		return nil
+	case employeeprojectallocation.FieldStartDate:
+		m.ClearStartDate()
+		return nil
+	case employeeprojectallocation.FieldEndDate:
+		m.ClearEndDate()
+		return nil
+	}
+	return fmt.Errorf("unknown EmployeeProjectAllocation nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *EmployeeProjectAllocationMutation) ResetField(name string) error {
+	switch name {
+	case employeeprojectallocation.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case employeeprojectallocation.FieldEmployeeID:
+		m.ResetEmployeeID()
+		return nil
+	case employeeprojectallocation.FieldProjectID:
+		m.ResetProjectID()
+		return nil
+	case employeeprojectallocation.FieldProjectName:
+		m.ResetProjectName()
+		return nil
+	case employeeprojectallocation.FieldCostCenterID:
+		m.ResetCostCenterID()
+		return nil
+	case employeeprojectallocation.FieldAllocationPercent:
+		m.ResetAllocationPercent()
+		return nil
+	case employeeprojectallocation.FieldFixedAmount:
+		m.ResetFixedAmount()
+		return nil
+	case employeeprojectallocation.FieldStartDate:
+		m.ResetStartDate()
+		return nil
+	case employeeprojectallocation.FieldEndDate:
+		m.ResetEndDate()
+		return nil
+	case employeeprojectallocation.FieldIsActive:
+		m.ResetIsActive()
+		return nil
+	case employeeprojectallocation.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case employeeprojectallocation.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown EmployeeProjectAllocation field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *EmployeeProjectAllocationMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *EmployeeProjectAllocationMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *EmployeeProjectAllocationMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *EmployeeProjectAllocationMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *EmployeeProjectAllocationMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *EmployeeProjectAllocationMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *EmployeeProjectAllocationMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown EmployeeProjectAllocation unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *EmployeeProjectAllocationMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown EmployeeProjectAllocation edge %s", name)
 }
 
 // EmploymentHistoryMutation represents an operation that mutates the EmploymentHistory nodes in the graph.
