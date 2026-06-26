@@ -27,6 +27,14 @@ type ExpenseClaim struct {
 	ApproverID *uuid.UUID `json:"approver_id,omitempty"`
 	// Approved holds the value of the "approved" field.
 	Approved bool `json:"approved,omitempty"`
+	// projects-service project id
+	ProjectID *uuid.UUID `json:"project_id,omitempty"`
+	// treasury cost-center id
+	CostCenterID *uuid.UUID `json:"cost_center_id,omitempty"`
+	// per_diem | mileage | reimbursement | other
+	ClaimType string `json:"claim_type,omitempty"`
+	// Taxable holds the value of the "taxable" field.
+	Taxable bool `json:"taxable,omitempty"`
 	// Other | Mileage
 	Category string `json:"category,omitempty"`
 	// ApplicationDate holds the value of the "application_date" field.
@@ -57,13 +65,13 @@ func (*ExpenseClaim) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case expenseclaim.FieldApproverID:
+		case expenseclaim.FieldApproverID, expenseclaim.FieldProjectID, expenseclaim.FieldCostCenterID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case expenseclaim.FieldAmount:
 			values[i] = new(decimal.Decimal)
-		case expenseclaim.FieldApproved, expenseclaim.FieldIsActive, expenseclaim.FieldIsPaid, expenseclaim.FieldScheduleToPayroll, expenseclaim.FieldDeleteStatus:
+		case expenseclaim.FieldApproved, expenseclaim.FieldTaxable, expenseclaim.FieldIsActive, expenseclaim.FieldIsPaid, expenseclaim.FieldScheduleToPayroll, expenseclaim.FieldDeleteStatus:
 			values[i] = new(sql.NullBool)
-		case expenseclaim.FieldCategory, expenseclaim.FieldAttachmentURL:
+		case expenseclaim.FieldClaimType, expenseclaim.FieldCategory, expenseclaim.FieldAttachmentURL:
 			values[i] = new(sql.NullString)
 		case expenseclaim.FieldApplicationDate, expenseclaim.FieldPaymentDate, expenseclaim.FieldCreatedAt, expenseclaim.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -114,6 +122,32 @@ func (_m *ExpenseClaim) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field approved", values[i])
 			} else if value.Valid {
 				_m.Approved = value.Bool
+			}
+		case expenseclaim.FieldProjectID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field project_id", values[i])
+			} else if value.Valid {
+				_m.ProjectID = new(uuid.UUID)
+				*_m.ProjectID = *value.S.(*uuid.UUID)
+			}
+		case expenseclaim.FieldCostCenterID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field cost_center_id", values[i])
+			} else if value.Valid {
+				_m.CostCenterID = new(uuid.UUID)
+				*_m.CostCenterID = *value.S.(*uuid.UUID)
+			}
+		case expenseclaim.FieldClaimType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field claim_type", values[i])
+			} else if value.Valid {
+				_m.ClaimType = value.String
+			}
+		case expenseclaim.FieldTaxable:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field taxable", values[i])
+			} else if value.Valid {
+				_m.Taxable = value.Bool
 			}
 		case expenseclaim.FieldCategory:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -233,6 +267,22 @@ func (_m *ExpenseClaim) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("approved=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Approved))
+	builder.WriteString(", ")
+	if v := _m.ProjectID; v != nil {
+		builder.WriteString("project_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.CostCenterID; v != nil {
+		builder.WriteString("cost_center_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("claim_type=")
+	builder.WriteString(_m.ClaimType)
+	builder.WriteString(", ")
+	builder.WriteString("taxable=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Taxable))
 	builder.WriteString(", ")
 	builder.WriteString("category=")
 	builder.WriteString(_m.Category)

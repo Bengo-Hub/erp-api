@@ -23,6 +23,14 @@ const (
 	FieldApproverID = "approver_id"
 	// FieldApproved holds the string denoting the approved field in the database.
 	FieldApproved = "approved"
+	// FieldProjectID holds the string denoting the project_id field in the database.
+	FieldProjectID = "project_id"
+	// FieldCostCenterID holds the string denoting the cost_center_id field in the database.
+	FieldCostCenterID = "cost_center_id"
+	// FieldClaimType holds the string denoting the claim_type field in the database.
+	FieldClaimType = "claim_type"
+	// FieldTaxable holds the string denoting the taxable field in the database.
+	FieldTaxable = "taxable"
 	// FieldCategory holds the string denoting the category field in the database.
 	FieldCategory = "category"
 	// FieldApplicationDate holds the string denoting the application_date field in the database.
@@ -56,6 +64,10 @@ var Columns = []string{
 	FieldEmployeeID,
 	FieldApproverID,
 	FieldApproved,
+	FieldProjectID,
+	FieldCostCenterID,
+	FieldClaimType,
+	FieldTaxable,
 	FieldCategory,
 	FieldApplicationDate,
 	FieldPaymentDate,
@@ -82,6 +94,10 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultApproved holds the default value on creation for the "approved" field.
 	DefaultApproved bool
+	// DefaultClaimType holds the default value on creation for the "claim_type" field.
+	DefaultClaimType string
+	// DefaultTaxable holds the default value on creation for the "taxable" field.
+	DefaultTaxable bool
 	// DefaultAmount holds the default value on creation for the "amount" field.
 	DefaultAmount decimal.Decimal
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
@@ -128,6 +144,26 @@ func ByApproverID(opts ...sql.OrderTermOption) OrderOption {
 // ByApproved orders the results by the approved field.
 func ByApproved(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldApproved, opts...).ToFunc()
+}
+
+// ByProjectID orders the results by the project_id field.
+func ByProjectID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProjectID, opts...).ToFunc()
+}
+
+// ByCostCenterID orders the results by the cost_center_id field.
+func ByCostCenterID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCostCenterID, opts...).ToFunc()
+}
+
+// ByClaimType orders the results by the claim_type field.
+func ByClaimType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClaimType, opts...).ToFunc()
+}
+
+// ByTaxable orders the results by the taxable field.
+func ByTaxable(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTaxable, opts...).ToFunc()
 }
 
 // ByCategory orders the results by the category field.

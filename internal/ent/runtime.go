@@ -1183,32 +1183,40 @@ func init() {
 	expenseclaimDescApproved := expenseclaimFields[4].Descriptor()
 	// expenseclaim.DefaultApproved holds the default value on creation for the approved field.
 	expenseclaim.DefaultApproved = expenseclaimDescApproved.Default.(bool)
+	// expenseclaimDescClaimType is the schema descriptor for claim_type field.
+	expenseclaimDescClaimType := expenseclaimFields[7].Descriptor()
+	// expenseclaim.DefaultClaimType holds the default value on creation for the claim_type field.
+	expenseclaim.DefaultClaimType = expenseclaimDescClaimType.Default.(string)
+	// expenseclaimDescTaxable is the schema descriptor for taxable field.
+	expenseclaimDescTaxable := expenseclaimFields[8].Descriptor()
+	// expenseclaim.DefaultTaxable holds the default value on creation for the taxable field.
+	expenseclaim.DefaultTaxable = expenseclaimDescTaxable.Default.(bool)
 	// expenseclaimDescAmount is the schema descriptor for amount field.
-	expenseclaimDescAmount := expenseclaimFields[9].Descriptor()
+	expenseclaimDescAmount := expenseclaimFields[13].Descriptor()
 	// expenseclaim.DefaultAmount holds the default value on creation for the amount field.
 	expenseclaim.DefaultAmount = expenseclaimDescAmount.Default.(decimal.Decimal)
 	// expenseclaimDescIsActive is the schema descriptor for is_active field.
-	expenseclaimDescIsActive := expenseclaimFields[10].Descriptor()
+	expenseclaimDescIsActive := expenseclaimFields[14].Descriptor()
 	// expenseclaim.DefaultIsActive holds the default value on creation for the is_active field.
 	expenseclaim.DefaultIsActive = expenseclaimDescIsActive.Default.(bool)
 	// expenseclaimDescIsPaid is the schema descriptor for is_paid field.
-	expenseclaimDescIsPaid := expenseclaimFields[11].Descriptor()
+	expenseclaimDescIsPaid := expenseclaimFields[15].Descriptor()
 	// expenseclaim.DefaultIsPaid holds the default value on creation for the is_paid field.
 	expenseclaim.DefaultIsPaid = expenseclaimDescIsPaid.Default.(bool)
 	// expenseclaimDescScheduleToPayroll is the schema descriptor for schedule_to_payroll field.
-	expenseclaimDescScheduleToPayroll := expenseclaimFields[12].Descriptor()
+	expenseclaimDescScheduleToPayroll := expenseclaimFields[16].Descriptor()
 	// expenseclaim.DefaultScheduleToPayroll holds the default value on creation for the schedule_to_payroll field.
 	expenseclaim.DefaultScheduleToPayroll = expenseclaimDescScheduleToPayroll.Default.(bool)
 	// expenseclaimDescDeleteStatus is the schema descriptor for delete_status field.
-	expenseclaimDescDeleteStatus := expenseclaimFields[13].Descriptor()
+	expenseclaimDescDeleteStatus := expenseclaimFields[17].Descriptor()
 	// expenseclaim.DefaultDeleteStatus holds the default value on creation for the delete_status field.
 	expenseclaim.DefaultDeleteStatus = expenseclaimDescDeleteStatus.Default.(bool)
 	// expenseclaimDescCreatedAt is the schema descriptor for created_at field.
-	expenseclaimDescCreatedAt := expenseclaimFields[14].Descriptor()
+	expenseclaimDescCreatedAt := expenseclaimFields[18].Descriptor()
 	// expenseclaim.DefaultCreatedAt holds the default value on creation for the created_at field.
 	expenseclaim.DefaultCreatedAt = expenseclaimDescCreatedAt.Default.(func() time.Time)
 	// expenseclaimDescUpdatedAt is the schema descriptor for updated_at field.
-	expenseclaimDescUpdatedAt := expenseclaimFields[15].Descriptor()
+	expenseclaimDescUpdatedAt := expenseclaimFields[19].Descriptor()
 	// expenseclaim.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	expenseclaim.DefaultUpdatedAt = expenseclaimDescUpdatedAt.Default.(func() time.Time)
 	// expenseclaim.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

@@ -221,7 +221,7 @@ func run() error {
 	// Payroll: engine service (reuses payroll-settings for rate resolution) + disburser
 	// (publishes the GL event + best-effort treasury S2S payout).
 	payrollSettingsSvc := payrollsettings.NewService(orm, uuid.Nil)
-	payrollSvc := payroll.NewService(orm, payrollSettingsSvc)
+	payrollSvc := payroll.NewService(orm, payrollSettingsSvc).WithPublisher(notifyPublisher)
 	treasuryClient := treasury.NewClient(cfg.Services.TreasuryURL, cfg.Auth.APIKey, log)
 	payrollDisburser := payroll.NewDisburser(orm, notifyPublisher, treasuryClient, log)
 	payrollHandler := handlers.NewPayrollHandler(log, payrollSvc, payrollDisburser)

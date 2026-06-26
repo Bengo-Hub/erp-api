@@ -92,6 +92,74 @@ func (_u *ExpenseClaimUpdate) SetNillableApproved(v *bool) *ExpenseClaimUpdate {
 	return _u
 }
 
+// SetProjectID sets the "project_id" field.
+func (_u *ExpenseClaimUpdate) SetProjectID(v uuid.UUID) *ExpenseClaimUpdate {
+	_u.mutation.SetProjectID(v)
+	return _u
+}
+
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_u *ExpenseClaimUpdate) SetNillableProjectID(v *uuid.UUID) *ExpenseClaimUpdate {
+	if v != nil {
+		_u.SetProjectID(*v)
+	}
+	return _u
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (_u *ExpenseClaimUpdate) ClearProjectID() *ExpenseClaimUpdate {
+	_u.mutation.ClearProjectID()
+	return _u
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (_u *ExpenseClaimUpdate) SetCostCenterID(v uuid.UUID) *ExpenseClaimUpdate {
+	_u.mutation.SetCostCenterID(v)
+	return _u
+}
+
+// SetNillableCostCenterID sets the "cost_center_id" field if the given value is not nil.
+func (_u *ExpenseClaimUpdate) SetNillableCostCenterID(v *uuid.UUID) *ExpenseClaimUpdate {
+	if v != nil {
+		_u.SetCostCenterID(*v)
+	}
+	return _u
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (_u *ExpenseClaimUpdate) ClearCostCenterID() *ExpenseClaimUpdate {
+	_u.mutation.ClearCostCenterID()
+	return _u
+}
+
+// SetClaimType sets the "claim_type" field.
+func (_u *ExpenseClaimUpdate) SetClaimType(v string) *ExpenseClaimUpdate {
+	_u.mutation.SetClaimType(v)
+	return _u
+}
+
+// SetNillableClaimType sets the "claim_type" field if the given value is not nil.
+func (_u *ExpenseClaimUpdate) SetNillableClaimType(v *string) *ExpenseClaimUpdate {
+	if v != nil {
+		_u.SetClaimType(*v)
+	}
+	return _u
+}
+
+// SetTaxable sets the "taxable" field.
+func (_u *ExpenseClaimUpdate) SetTaxable(v bool) *ExpenseClaimUpdate {
+	_u.mutation.SetTaxable(v)
+	return _u
+}
+
+// SetNillableTaxable sets the "taxable" field if the given value is not nil.
+func (_u *ExpenseClaimUpdate) SetNillableTaxable(v *bool) *ExpenseClaimUpdate {
+	if v != nil {
+		_u.SetTaxable(*v)
+	}
+	return _u
+}
+
 // SetCategory sets the "category" field.
 func (_u *ExpenseClaimUpdate) SetCategory(v string) *ExpenseClaimUpdate {
 	_u.mutation.SetCategory(v)
@@ -313,6 +381,24 @@ func (_u *ExpenseClaimUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.Approved(); ok {
 		_spec.SetField(expenseclaim.FieldApproved, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.ProjectID(); ok {
+		_spec.SetField(expenseclaim.FieldProjectID, field.TypeUUID, value)
+	}
+	if _u.mutation.ProjectIDCleared() {
+		_spec.ClearField(expenseclaim.FieldProjectID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.CostCenterID(); ok {
+		_spec.SetField(expenseclaim.FieldCostCenterID, field.TypeUUID, value)
+	}
+	if _u.mutation.CostCenterIDCleared() {
+		_spec.ClearField(expenseclaim.FieldCostCenterID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.ClaimType(); ok {
+		_spec.SetField(expenseclaim.FieldClaimType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Taxable(); ok {
+		_spec.SetField(expenseclaim.FieldTaxable, field.TypeBool, value)
+	}
 	if value, ok := _u.mutation.Category(); ok {
 		_spec.SetField(expenseclaim.FieldCategory, field.TypeString, value)
 	}
@@ -433,6 +519,74 @@ func (_u *ExpenseClaimUpdateOne) SetApproved(v bool) *ExpenseClaimUpdateOne {
 func (_u *ExpenseClaimUpdateOne) SetNillableApproved(v *bool) *ExpenseClaimUpdateOne {
 	if v != nil {
 		_u.SetApproved(*v)
+	}
+	return _u
+}
+
+// SetProjectID sets the "project_id" field.
+func (_u *ExpenseClaimUpdateOne) SetProjectID(v uuid.UUID) *ExpenseClaimUpdateOne {
+	_u.mutation.SetProjectID(v)
+	return _u
+}
+
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_u *ExpenseClaimUpdateOne) SetNillableProjectID(v *uuid.UUID) *ExpenseClaimUpdateOne {
+	if v != nil {
+		_u.SetProjectID(*v)
+	}
+	return _u
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (_u *ExpenseClaimUpdateOne) ClearProjectID() *ExpenseClaimUpdateOne {
+	_u.mutation.ClearProjectID()
+	return _u
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (_u *ExpenseClaimUpdateOne) SetCostCenterID(v uuid.UUID) *ExpenseClaimUpdateOne {
+	_u.mutation.SetCostCenterID(v)
+	return _u
+}
+
+// SetNillableCostCenterID sets the "cost_center_id" field if the given value is not nil.
+func (_u *ExpenseClaimUpdateOne) SetNillableCostCenterID(v *uuid.UUID) *ExpenseClaimUpdateOne {
+	if v != nil {
+		_u.SetCostCenterID(*v)
+	}
+	return _u
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (_u *ExpenseClaimUpdateOne) ClearCostCenterID() *ExpenseClaimUpdateOne {
+	_u.mutation.ClearCostCenterID()
+	return _u
+}
+
+// SetClaimType sets the "claim_type" field.
+func (_u *ExpenseClaimUpdateOne) SetClaimType(v string) *ExpenseClaimUpdateOne {
+	_u.mutation.SetClaimType(v)
+	return _u
+}
+
+// SetNillableClaimType sets the "claim_type" field if the given value is not nil.
+func (_u *ExpenseClaimUpdateOne) SetNillableClaimType(v *string) *ExpenseClaimUpdateOne {
+	if v != nil {
+		_u.SetClaimType(*v)
+	}
+	return _u
+}
+
+// SetTaxable sets the "taxable" field.
+func (_u *ExpenseClaimUpdateOne) SetTaxable(v bool) *ExpenseClaimUpdateOne {
+	_u.mutation.SetTaxable(v)
+	return _u
+}
+
+// SetNillableTaxable sets the "taxable" field if the given value is not nil.
+func (_u *ExpenseClaimUpdateOne) SetNillableTaxable(v *bool) *ExpenseClaimUpdateOne {
+	if v != nil {
+		_u.SetTaxable(*v)
 	}
 	return _u
 }
@@ -687,6 +841,24 @@ func (_u *ExpenseClaimUpdateOne) sqlSave(ctx context.Context) (_node *ExpenseCla
 	}
 	if value, ok := _u.mutation.Approved(); ok {
 		_spec.SetField(expenseclaim.FieldApproved, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ProjectID(); ok {
+		_spec.SetField(expenseclaim.FieldProjectID, field.TypeUUID, value)
+	}
+	if _u.mutation.ProjectIDCleared() {
+		_spec.ClearField(expenseclaim.FieldProjectID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.CostCenterID(); ok {
+		_spec.SetField(expenseclaim.FieldCostCenterID, field.TypeUUID, value)
+	}
+	if _u.mutation.CostCenterIDCleared() {
+		_spec.ClearField(expenseclaim.FieldCostCenterID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.ClaimType(); ok {
+		_spec.SetField(expenseclaim.FieldClaimType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Taxable(); ok {
+		_spec.SetField(expenseclaim.FieldTaxable, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Category(); ok {
 		_spec.SetField(expenseclaim.FieldCategory, field.TypeString, value)
