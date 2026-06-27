@@ -243,7 +243,7 @@ func run() error {
 	recruitmentHandler := handlers.NewRecruitmentHandler(log, recruitmentSvc, mediaStore)
 	careersHandler := handlers.NewCareersHandler(log, recruitmentSvc) // PUBLIC careers portal
 	trainingHandler := handlers.NewTrainingHandler(log, training.NewService(orm))
-	appraisalsSvc := appraisals.NewService(orm)
+	appraisalsSvc := appraisals.NewService(orm).WithSystemTenant(systemTenant)
 	appraisalsHandler := handlers.NewAppraisalsHandler(log, appraisalsSvc)
 	performanceHandler := handlers.NewPerformanceHandler(log, performance.NewService(orm))
 

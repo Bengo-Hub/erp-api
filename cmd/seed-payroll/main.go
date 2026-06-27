@@ -129,6 +129,13 @@ func seed(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
 		return err
 	}
 	log.Printf("  seeded global leave types")
+
+	// Global standard appraisal template + questions under the system tenant; tenants inherit
+	// these unless they define their own (appraisals.Service.ListTemplates falls back).
+	if err := defaults.NewService(client).EnsureAppraisalTemplate(ctx, tenantID); err != nil {
+		return err
+	}
+	log.Printf("  seeded global appraisal template")
 	return nil
 }
 
