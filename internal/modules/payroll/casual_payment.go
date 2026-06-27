@@ -222,22 +222,36 @@ func (s *Service) ApproveCasualPayment(ctx context.Context, tenantID, id, approv
 		return nil, fmt.Errorf("casual payment: approve: %w", err)
 	}
 	if s.publisher != nil {
+		// worker_name: informal worker name (reimburse mode) or the casual employee's name
+		// (direct_payout) — treasury labels the GL line with it.
+		workerName := updated.WorkerName
+		if workerName == "" && updated.EmployeeID != nil {
+			if name, _ := s.EmployeeLabel(ctx, tenantID, *updated.EmployeeID); name != "" {
+				workerName = name
+			}
+		}
+		projectID := ""
+		if updated.ProjectID != nil {
+			projectID = updated.ProjectID.String()
+		}
+		// Inner payload MUST match treasury casualLaborPayload exactly
+		// (record_id/tenant_id/worker_name/amount/currency/project_id). The settlement_mode/
+		// wage_type/employee_id/cost_center_id fields are additive context (treasury ignores them).
 		payload := map[string]any{
 			"record_id":       updated.ID.String(),
 			"tenant_id":       tenantID.String(),
+			"worker_name":     workerName,
+			"amount":          updated.Amount.StringFixed(2),
+			"currency":        "KES",
+			"project_id":      projectID,
 			"settlement_mode": updated.SettlementMode.String(),
 			"wage_type":       updated.WageType.String(),
-			"amount":          updated.Amount.String(),
-			"currency":        "KES",
 		}
 		if updated.EmployeeID != nil {
 			payload["employee_id"] = updated.EmployeeID.String()
 		}
 		if updated.EngagedByEmployeeID != nil {
 			payload["engaged_by_employee_id"] = updated.EngagedByEmployeeID.String()
-		}
-		if updated.ProjectID != nil {
-			payload["project_id"] = updated.ProjectID.String()
 		}
 		if updated.CostCenterID != nil {
 			payload["cost_center_id"] = updated.CostCenterID.String()

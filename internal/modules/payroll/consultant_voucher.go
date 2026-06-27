@@ -154,24 +154,40 @@ func (s *Service) ApproveConsultantVoucher(ctx context.Context, tenantID, id, ap
 		if updated.Period != nil {
 			period = updated.Period.Format("2006-01")
 		}
-		payload := map[string]any{
-			"voucher_id":   updated.ID.String(),
-			"tenant_id":    tenantID.String(),
-			"consultant_id": updated.EmployeeID.String(),
-			"amount_gross": updated.GrossAmount.StringFixed(2),
-			"wht_rate":     updated.WhtRate.String(),
-			"wht_amount":   updated.WhtAmount.StringFixed(2),
-			"deductions":   updated.DeductionsAmount.StringFixed(2),
-			"amount_net":   updated.NetAmount.StringFixed(2),
-			"currency":     updated.Currency,
-			"period":       period,
-			"reference_id": updated.ID.String(),
+		currency := updated.Currency
+		if currency == "" {
+			currency = "KES"
 		}
+		projectID := ""
 		if updated.ProjectID != nil {
-			payload["project_id"] = updated.ProjectID.String()
+			projectID = updated.ProjectID.String()
 		}
+		costCenter := ""
 		if updated.CostCenterID != nil {
-			payload["cost_center"] = updated.CostCenterID.String()
+			costCenter = updated.CostCenterID.String()
+		}
+		// CRITICAL INVARIANT: treasury skips the entry unless the emitted strings satisfy
+		// amount_net + wht_amount + deductions == amount_gross. Round gross/wht/deductions to 2dp
+		// then DERIVE net from those rounded values so the four emitted strings always reconcile
+		// (avoids a 1-cent residual from rounding each stored decimal independently).
+		gross2 := updated.GrossAmount.Round(2)
+		wht2 := updated.WhtAmount.Round(2)
+		ded2 := updated.DeductionsAmount.Round(2)
+		net2 := gross2.Sub(wht2).Sub(ded2)
+		payload := map[string]any{
+			"voucher_id":    updated.ID.String(),
+			"tenant_id":     tenantID.String(),
+			"consultant_id": updated.EmployeeID.String(),
+			"amount_gross":  gross2.StringFixed(2),
+			"wht_rate":      updated.WhtRate.String(),
+			"wht_amount":    wht2.StringFixed(2),
+			"deductions":    ded2.StringFixed(2),
+			"amount_net":    net2.StringFixed(2),
+			"currency":      currency,
+			"period":        period,
+			"reference_id":  updated.ID.String(),
+			"project_id":    projectID,
+			"cost_center":   costCenter,
 		}
 		if err := s.publisher.Publish(ctx, tenantID, updated.ID.String(), "consultant_voucher.approved", payload); err != nil {
 			return updated, fmt.Errorf("consultant voucher: publish approved: %w", err)

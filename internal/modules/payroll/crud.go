@@ -447,18 +447,22 @@ func (s *Service) ApproveClaim(ctx context.Context, tenantID, id, approverID uui
 		return nil, fmt.Errorf("payroll: approve claim: %w", err)
 	}
 	if s.publisher != nil {
+		projectID := ""
+		if updated.ProjectID != nil {
+			projectID = updated.ProjectID.String()
+		}
+		// Inner payload MUST match treasury claimApprovedPayload exactly. taxable=true makes
+		// treasury skip AP (the taxable portion is taxed via the payslip lane instead).
 		payload := map[string]any{
 			"claim_id":    updated.ID.String(),
 			"tenant_id":   tenantID.String(),
 			"employee_id": updated.EmployeeID.String(),
-			"amount":      updated.Amount.String(),
+			"amount":      updated.Amount.StringFixed(2),
 			"currency":    "KES",
 			"claim_type":  updated.ClaimType,
 			"taxable":     updated.Taxable,
 			"category":    updated.Category,
-		}
-		if updated.ProjectID != nil {
-			payload["project_id"] = updated.ProjectID.String()
+			"project_id":  projectID,
 		}
 		if updated.CostCenterID != nil {
 			payload["cost_center_id"] = updated.CostCenterID.String()
