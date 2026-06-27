@@ -62,6 +62,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/platform/cache"
 	"github.com/Bengo-Hub/erp-api/internal/platform/database"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
+	"github.com/Bengo-Hub/erp-api/internal/platform/lookups"
 	"github.com/Bengo-Hub/erp-api/internal/platform/media"
 	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 	"github.com/Bengo-Hub/erp-api/internal/services/usersync"
@@ -228,12 +229,16 @@ func run() error {
 	treasuryClient := treasury.NewClient(cfg.Services.TreasuryURL, cfg.Auth.APIKey, log)
 	employeesHandler.WithTreasury(treasuryClient) // enables /hrm/banks/* verify proxy
 	payrollDisburser := payroll.NewDisburser(orm, notifyPublisher, treasuryClient, log)
-	payrollHandler := handlers.NewPayrollHandler(log, payrollSvc, payrollDisburser)
+	mediaStore := media.NewStore(cfg.Media.Root, cfg.Media.URLBase)
+	// Cost-allocation lookups: proxy projects-service + treasury cost-centers (JWT-forwarded);
+	// falls back to ERP-derived distinct ids when an upstream is unconfigured/unavailable.
+	lookupsClient := lookups.NewClient(cfg.Services.ProjectsURL, cfg.Services.TreasuryURL, cfg.Auth.APIKey, log)
+	payrollHandler := handlers.NewPayrollHandler(log, payrollSvc, payrollDisburser).
+		WithMedia(mediaStore).WithLookups(lookupsClient)
 	payrollSettingsHandler := handlers.NewPayrollSettingsHandler(log, payrollSettingsSvc, orm)
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher))
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
-	mediaStore := media.NewStore(cfg.Media.Root, cfg.Media.URLBase)
 	recruitmentSvc := recruitment.NewService(orm).WithNotifier(events.NewNotifications(notifyPublisher))
 	recruitmentHandler := handlers.NewRecruitmentHandler(log, recruitmentSvc, mediaStore)
 	careersHandler := handlers.NewCareersHandler(log, recruitmentSvc) // PUBLIC careers portal

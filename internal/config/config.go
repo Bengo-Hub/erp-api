@@ -160,6 +160,10 @@ type AuthConfig struct {
 type ServicesConfig struct {
 	TreasuryURL      string `envconfig:"TREASURY_SERVICE_URL" default:"https://booksapi.codevertexitsolutions.com"`
 	NotificationsURL string `envconfig:"NOTIFICATIONS_SERVICE_URL" default:""`
+	// ProjectsURL is the projects-service base URL for the payroll cost-allocation project
+	// lookup (projectsapi per reference_production_service_hosts). The list endpoint is
+	// GET /api/v1/{tenant}/projects (JWT-gated; erp-api forwards the caller's bearer token).
+	ProjectsURL string `envconfig:"PROJECTS_SERVICE_URL" default:"https://projectsapi.codevertexitsolutions.com"`
 }
 
 type MediaConfig struct {
