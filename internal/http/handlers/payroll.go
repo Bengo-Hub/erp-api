@@ -487,9 +487,47 @@ func (h *PayrollHandler) Command(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.reverse(w, r, scope, body)
+	case "approve":
+		if !requirePermission(w, scope, permPayrollManage) {
+			return
+		}
+		h.setApproval(w, r, scope, body, "approved")
+	case "reject":
+		if !requirePermission(w, scope, permPayrollManage) {
+			return
+		}
+		h.setApproval(w, r, scope, body, "rejected")
 	default:
 		writeError(w, http.StatusBadRequest, "bad_request", "unknown command")
 	}
+}
+
+// setApproval transitions the period's payslips to approved/rejected — the explicit review step
+// between process and disburse (the disburser then only pays out approved+complete payslips).
+func (h *PayrollHandler) setApproval(w http.ResponseWriter, r *http.Request, scope RequestScope, body commandBody, status string) {
+	period := body.PaymentPeriod
+	if period == "" {
+		period = body.FromDate
+	}
+	p, ok := parsePeriod(period)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "bad_request", "payment_period is required")
+		return
+	}
+	var outlet *uuid.UUID
+	if body.OutletID != "" {
+		if oid, err := uuid.Parse(body.OutletID); err == nil {
+			outlet = &oid
+		}
+	} else if scope.OutletID != uuid.Nil {
+		outlet = &scope.OutletID
+	}
+	n, err := h.svc.SetPayslipsApproval(r.Context(), scope.TenantID, p, outlet, status)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "approval_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": status, "count": n, "payment_period": p.Format("2006-01")})
 }
 
 // reverse reverses a disbursed payroll batch (emits erp.payroll.reversed for treasury GL reversal).
