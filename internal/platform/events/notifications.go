@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -18,12 +19,15 @@ type Notifications struct {
 func NewNotifications(pub *Publisher) *Notifications { return &Notifications{pub: pub} }
 
 // EmailRequest is the payload for erp.email.requested. Attachments are base64-encoded.
+// DeliverAt, when set (future), asks the email worker to hold delivery until then
+// (scheduled/mass email); empty = deliver as soon as the outbox drains.
 type EmailRequest struct {
 	To          []string          `json:"to"`
 	Subject     string            `json:"subject"`
 	Body        string            `json:"body"`
 	HTML        bool              `json:"html"`
 	Attachments []EmailAttachment `json:"attachments,omitempty"`
+	DeliverAt   *time.Time        `json:"deliver_at,omitempty"`
 }
 
 // EmailAttachment is a base64-encoded file attachment (e.g. a payslip PDF).
@@ -50,6 +54,9 @@ func (n *Notifications) RequestEmail(ctx context.Context, tenantID uuid.UUID, ag
 			})
 		}
 		payload["attachments"] = atts
+	}
+	if req.DeliverAt != nil {
+		payload["deliver_at"] = req.DeliverAt.Format(time.RFC3339)
 	}
 	return n.pub.Publish(ctx, tenantID, aggregateID, "email.requested", payload)
 }

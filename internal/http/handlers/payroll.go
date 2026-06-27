@@ -61,7 +61,7 @@ func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 		pr.Post("/calculation-preview", h.Preview)
 		pr.Post("/process-with-formulas", h.Process)
 		pr.Get("/task_status", h.TaskStatus)
-		pr.Post("/email-payslips", h.EmailPayslips)
+		// /hrm/payroll/email-payslips is served by DocumentsHandler (it owns PDF rendering).
 
 		// Cost-allocation lookups (S2S proxy to projects-service + treasury, JWT-forwarded).
 		pr.Get("/lookups/projects", h.LookupProjects)
@@ -470,17 +470,6 @@ func (h *PayrollHandler) TaskStatus(w http.ResponseWriter, r *http.Request) {
 		"status":   "completed",
 		"progress": 100,
 	})
-}
-
-// EmailPayslips acknowledges the request. Payslip emailing is delegated to
-// notifications-service via the outbox elsewhere; this endpoint exists so the UI
-// action resolves without a 404.
-func (h *PayrollHandler) EmailPayslips(w http.ResponseWriter, r *http.Request) {
-	scope, ok := scopeFromRequest(w, r)
-	if !ok || !requirePermission(w, scope, permPayrollManage) {
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "queued"})
 }
 
 // ---- Command dispatcher (disburse) ----

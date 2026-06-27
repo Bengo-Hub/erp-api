@@ -264,7 +264,8 @@ func run() error {
 	// docs module: branded PDF/CSV/XLSX via fpdf/excelize + atomic doc-number sequences.
 	docService := &docs.DocumentService{}
 	docSeq := sequence.New(sqlDB, orm)
-	documentsHandler := handlers.NewDocumentsHandler(log, orm, brandingClient, payrollSvc, docService, docSeq)
+	documentsHandler := handlers.NewDocumentsHandler(log, orm, brandingClient, payrollSvc, docService, docSeq).
+		WithNotifications(events.NewNotifications(notifyPublisher))
 	reportsHandler.SetDocuments(documentsHandler) // enable /reports/{type}/export
 
 	// Sprint 4: slim business config (company settings + document numbering).
