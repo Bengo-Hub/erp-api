@@ -33,12 +33,18 @@ type Approver interface {
 type Service struct {
 	orm       *ent.Client
 	approvals Approver
+	// systemTenant owns the GLOBAL shared appraisal templates; a tenant with none of its own
+	// inherits them (feedback_shared_core_reference_data). uuid.Nil = no fallback.
+	systemTenant uuid.UUID
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
 
 // SetApprovals wires the approval engine into the appraisals module (called at startup).
 func (s *Service) SetApprovals(a Approver) { s.approvals = a }
+
+// WithSystemTenant sets the global-templates fallback tenant (chainable, startup wiring).
+func (s *Service) WithSystemTenant(id uuid.UUID) *Service { s.systemTenant = id; return s }
 
 // ---- Cycles ----
 
@@ -110,8 +116,18 @@ func (s *Service) SetCycleStatus(ctx context.Context, tenantID, id uuid.UUID, st
 
 // ListTemplates returns tenant-scoped appraisal templates.
 func (s *Service) ListTemplates(ctx context.Context, tenantID uuid.UUID) ([]*ent.AppraisalTemplate, error) {
-	return s.orm.AppraisalTemplate.Query().
+	own, err := s.orm.AppraisalTemplate.Query().
 		Where(appraisaltemplate.TenantID(tenantID)).
+		Order(ent.Desc(appraisaltemplate.FieldCreatedAt)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(own) > 0 || s.systemTenant == uuid.Nil || s.systemTenant == tenantID {
+		return own, nil
+	}
+	// Inherit the global standard appraisal template when the tenant has none of its own.
+	return s.orm.AppraisalTemplate.Query().
+		Where(appraisaltemplate.TenantID(s.systemTenant)).
 		Order(ent.Desc(appraisaltemplate.FieldCreatedAt)).All(ctx)
 }
 
