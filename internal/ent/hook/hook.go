@@ -261,16 +261,16 @@ func (f CandidateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CandidateMutation", m)
 }
 
-// The CasualLaborRecordFunc type is an adapter to allow the use of ordinary
-// function as CasualLaborRecord mutator.
-type CasualLaborRecordFunc func(context.Context, *ent.CasualLaborRecordMutation) (ent.Value, error)
+// The CasualPaymentFunc type is an adapter to allow the use of ordinary
+// function as CasualPayment mutator.
+type CasualPaymentFunc func(context.Context, *ent.CasualPaymentMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f CasualLaborRecordFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.CasualLaborRecordMutation); ok {
+func (f CasualPaymentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CasualPaymentMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CasualLaborRecordMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CasualPaymentMutation", m)
 }
 
 // The ClaimItemFunc type is an adapter to allow the use of ordinary

@@ -725,49 +725,66 @@ var (
 			},
 		},
 	}
-	// CasualLaborRecordsColumns holds the columns for the "casual_labor_records" table.
-	CasualLaborRecordsColumns = []*schema.Column{
+	// CasualPaymentsColumns holds the columns for the "casual_payments" table.
+	CasualPaymentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "tenant_id", Type: field.TypeUUID},
-		{Name: "engaged_by_employee_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "project_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "cost_center_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "worker_name", Type: field.TypeString},
+		{Name: "settlement_mode", Type: field.TypeEnum, Enums: []string{"direct_payout", "reimburse_engager"}, Default: "direct_payout"},
+		{Name: "employee_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "worker_name", Type: field.TypeString, Nullable: true},
 		{Name: "worker_id_number", Type: field.TypeString, Nullable: true},
 		{Name: "worker_phone", Type: field.TypeString, Nullable: true},
-		{Name: "task_description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "engaged_by_employee_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "imprest_advance_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "wage_type", Type: field.TypeEnum, Enums: []string{"daily_wages", "hourly_wages", "overtime_1_5x", "overtime_2x", "payment_in_lieu", "lump_sum"}, Default: "daily_wages"},
+		{Name: "quantity", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(7,2)"}},
+		{Name: "rate", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
 		{Name: "amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "task_description", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "work_date", Type: field.TypeTime, Nullable: true},
-		{Name: "payment_method", Type: field.TypeString, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "rejected", "paid"}, Default: "pending"},
+		{Name: "payment_date", Type: field.TypeTime, Nullable: true},
+		{Name: "payroll_month", Type: field.TypeTime, Nullable: true},
+		{Name: "project_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "cost_center_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "payment_option", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "paid"}, Default: "pending"},
 		{Name: "approver_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "approved_at", Type: field.TypeTime, Nullable: true},
-		{Name: "imprest_advance_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "attachment_url", Type: field.TypeString, Nullable: true},
 		{Name: "delete_status", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
-	// CasualLaborRecordsTable holds the schema information for the "casual_labor_records" table.
-	CasualLaborRecordsTable = &schema.Table{
-		Name:       "casual_labor_records",
-		Columns:    CasualLaborRecordsColumns,
-		PrimaryKey: []*schema.Column{CasualLaborRecordsColumns[0]},
+	// CasualPaymentsTable holds the schema information for the "casual_payments" table.
+	CasualPaymentsTable = &schema.Table{
+		Name:       "casual_payments",
+		Columns:    CasualPaymentsColumns,
+		PrimaryKey: []*schema.Column{CasualPaymentsColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "casuallaborrecord_tenant_id",
+				Name:    "casualpayment_tenant_id",
 				Unique:  false,
-				Columns: []*schema.Column{CasualLaborRecordsColumns[1]},
+				Columns: []*schema.Column{CasualPaymentsColumns[1]},
 			},
 			{
-				Name:    "casuallaborrecord_tenant_id_project_id",
+				Name:    "casualpayment_tenant_id_settlement_mode",
 				Unique:  false,
-				Columns: []*schema.Column{CasualLaborRecordsColumns[1], CasualLaborRecordsColumns[3]},
+				Columns: []*schema.Column{CasualPaymentsColumns[1], CasualPaymentsColumns[2]},
 			},
 			{
-				Name:    "casuallaborrecord_tenant_id_engaged_by_employee_id",
+				Name:    "casualpayment_tenant_id_payroll_month",
 				Unique:  false,
-				Columns: []*schema.Column{CasualLaborRecordsColumns[1], CasualLaborRecordsColumns[2]},
+				Columns: []*schema.Column{CasualPaymentsColumns[1], CasualPaymentsColumns[16]},
+			},
+			{
+				Name:    "casualpayment_tenant_id_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{CasualPaymentsColumns[1], CasualPaymentsColumns[3]},
+			},
+			{
+				Name:    "casualpayment_tenant_id_project_id",
+				Unique:  false,
+				Columns: []*schema.Column{CasualPaymentsColumns[1], CasualPaymentsColumns[17]},
 			},
 		},
 	}
@@ -3572,7 +3589,7 @@ var (
 		BackupSettingsTable,
 		BenefitTaxesTable,
 		CandidatesTable,
-		CasualLaborRecordsTable,
+		CasualPaymentsTable,
 		ClaimItemsTable,
 		CompanySettingsTable,
 		ContactDetailsTable,

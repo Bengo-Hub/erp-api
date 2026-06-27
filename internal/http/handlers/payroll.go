@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Bengo-Hub/pagination"
@@ -100,11 +101,18 @@ func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 		pr.Delete("/claims/{id}/mileage-routes/{routeId}", h.DeleteMileageRoute)
 
 		// Casual / subcontracted labour register.
-		pr.Get("/casual-labor", h.ListCasualLabor)
-		pr.Post("/casual-labor", h.CreateCasualLabor)
-		pr.Put("/casual-labor/{id}", h.UpdateCasualLabor)
-		pr.Post("/casual-labor/{id}/approve", h.ApproveCasualLabor)
-		pr.Delete("/casual-labor/{id}", h.DeleteCasualLabor)
+		// Casual payments (unified: casual-employee wages + informal-worker reimbursements).
+		// Legacy /casual-labor paths kept as aliases for the existing UI.
+		pr.Get("/casual-payments", h.ListCasualPayments)
+		pr.Post("/casual-payments", h.CreateCasualPayment)
+		pr.Put("/casual-payments/{id}", h.UpdateCasualPayment)
+		pr.Post("/casual-payments/{id}/approve", h.ApproveCasualPayment)
+		pr.Delete("/casual-payments/{id}", h.DeleteCasualPayment)
+		pr.Get("/casual-labor", h.ListCasualPayments)
+		pr.Post("/casual-labor", h.CreateCasualPayment)
+		pr.Put("/casual-labor/{id}", h.UpdateCasualPayment)
+		pr.Post("/casual-labor/{id}/approve", h.ApproveCasualPayment)
+		pr.Delete("/casual-labor/{id}", h.DeleteCasualPayment)
 	})
 }
 
@@ -1037,53 +1045,92 @@ func (h *PayrollHandler) GetClaim(w http.ResponseWriter, r *http.Request) {
 
 // ---- Casual labour ----
 
-type casualLaborBody struct {
-	EngagedByEmployeeID string `json:"engaged_by_employee_id"`
-	ProjectID           string `json:"project_id"`
-	CostCenterID        string `json:"cost_center_id"`
+type casualPaymentBody struct {
+	SettlementMode      string `json:"settlement_mode"`
+	EmployeeID          string `json:"employee_id"`
 	WorkerName          string `json:"worker_name"`
 	WorkerIDNumber      string `json:"worker_id_number"`
 	WorkerPhone         string `json:"worker_phone"`
-	TaskDescription     string `json:"task_description"`
-	Amount              string `json:"amount"`
-	PaymentMethod       string `json:"payment_method"`
+	EngagedByEmployeeID string `json:"engaged_by_employee_id"`
 	ImprestAdvanceID    string `json:"imprest_advance_id"`
+	WageType            string `json:"wage_type"`
+	Quantity            string `json:"quantity"`
+	Rate                string `json:"rate"`
+	Amount              string `json:"amount"` // lump-sum convenience: maps to rate with quantity 1
+	TaskDescription     string `json:"task_description"`
+	WorkDate            string `json:"work_date"`
+	PaymentDate         string `json:"payment_date"`
+	PayrollMonth        string `json:"payroll_month"`
+	ProjectID           string `json:"project_id"`
+	CostCenterID        string `json:"cost_center_id"`
+	PaymentOption       string `json:"payment_option"`
 }
 
-func (b casualLaborBody) toInput() payroll.CasualLaborInput {
-	in := payroll.CasualLaborInput{
+func casualUUIDPtr(s string) *uuid.UUID {
+	if id, err := uuid.Parse(s); err == nil {
+		return &id
+	}
+	return nil
+}
+
+func casualDatePtr(s string) *time.Time {
+	if s == "" {
+		return nil
+	}
+	if t, err := parseDate(s); err == nil {
+		return &t
+	}
+	if t, ok := parsePeriod(s); ok {
+		return &t
+	}
+	return nil
+}
+
+func (b casualPaymentBody) toInput() payroll.CasualPaymentInput {
+	in := payroll.CasualPaymentInput{
+		SettlementMode: b.SettlementMode, WageType: b.WageType,
 		WorkerName: b.WorkerName, WorkerIDNumber: b.WorkerIDNumber, WorkerPhone: b.WorkerPhone,
-		TaskDescription: b.TaskDescription, PaymentMethod: b.PaymentMethod,
+		TaskDescription: b.TaskDescription, PaymentOption: b.PaymentOption,
+		EmployeeID:          casualUUIDPtr(b.EmployeeID),
+		EngagedByEmployeeID: casualUUIDPtr(b.EngagedByEmployeeID),
+		ImprestAdvanceID:    casualUUIDPtr(b.ImprestAdvanceID),
+		ProjectID:           casualUUIDPtr(b.ProjectID),
+		CostCenterID:        casualUUIDPtr(b.CostCenterID),
+		WorkDate:            casualDatePtr(b.WorkDate),
+		PaymentDate:         casualDatePtr(b.PaymentDate),
+		PayrollMonth:        casualDatePtr(b.PayrollMonth),
 	}
-	if b.Amount != "" {
+	in.Quantity, _ = decimal.NewFromString(b.Quantity)
+	in.Rate, _ = decimal.NewFromString(b.Rate)
+	// Lump-sum convenience: a flat amount with no rate → rate=amount, quantity 1.
+	if in.Rate.IsZero() && b.Amount != "" {
 		if amt, err := decimal.NewFromString(b.Amount); err == nil {
-			in.Amount = amt
+			in.Rate = amt
+			in.Quantity = decimal.NewFromInt(1)
+			if in.WageType == "" {
+				in.WageType = "lump_sum"
+			}
 		}
-	}
-	if id, err := uuid.Parse(b.EngagedByEmployeeID); err == nil {
-		in.EngagedByEmployeeID = &id
-	}
-	if id, err := uuid.Parse(b.ProjectID); err == nil {
-		in.ProjectID = &id
-	}
-	if id, err := uuid.Parse(b.CostCenterID); err == nil {
-		in.CostCenterID = &id
-	}
-	if id, err := uuid.Parse(b.ImprestAdvanceID); err == nil {
-		in.ImprestAdvanceID = &id
 	}
 	return in
 }
 
-func casualLaborView(c *ent.CasualLaborRecord) map[string]any {
+func (h *PayrollHandler) casualPaymentView(ctx context.Context, tenantID uuid.UUID, c *ent.CasualPayment) map[string]any {
 	v := map[string]any{
-		"id": c.ID, "worker_name": c.WorkerName, "worker_id_number": c.WorkerIDNumber,
-		"worker_phone": c.WorkerPhone, "task_description": c.TaskDescription,
-		"amount": c.Amount.StringFixed(2), "payment_method": c.PaymentMethod,
-		"status": string(c.Status), "created_at": c.CreatedAt.Format(time.RFC3339),
+		"id": c.ID, "settlement_mode": string(c.SettlementMode), "wage_type": string(c.WageType),
+		"worker_name": c.WorkerName, "quantity": c.Quantity.String(), "rate": c.Rate.StringFixed(2),
+		"amount": c.Amount.StringFixed(2), "payment_option": c.PaymentOption,
+		"task_description": c.TaskDescription, "status": string(c.Status),
+		"created_at": c.CreatedAt.Format(time.RFC3339),
 	}
-	if c.EngagedByEmployeeID != nil {
-		v["engaged_by_employee_id"] = c.EngagedByEmployeeID
+	if c.PayrollMonth != nil {
+		v["payroll_month"] = c.PayrollMonth.Format("2006-01-02")
+	}
+	if c.PaymentDate != nil {
+		v["payment_date"] = c.PaymentDate.Format("2006-01-02")
+	}
+	if c.WorkDate != nil {
+		v["work_date"] = c.WorkDate.Format("2006-01-02")
 	}
 	if c.ProjectID != nil {
 		v["project_id"] = c.ProjectID
@@ -1091,49 +1138,72 @@ func casualLaborView(c *ent.CasualLaborRecord) map[string]any {
 	if c.CostCenterID != nil {
 		v["cost_center_id"] = c.CostCenterID
 	}
-	if c.ImprestAdvanceID != nil {
-		v["imprest_advance_id"] = c.ImprestAdvanceID
+	if c.EmployeeID != nil {
+		v["employee_id"] = c.EmployeeID
+		if emp, err := h.svc.GetEmployee(ctx, tenantID, *c.EmployeeID); err == nil && emp != nil {
+			v["employee_name"] = strings.TrimSpace(emp.FirstName + " " + emp.LastName)
+			v["employee_number"] = emp.EmployeeNumber
+		}
+	}
+	if v["employee_name"] == nil && c.WorkerName != "" {
+		v["employee_name"] = c.WorkerName
 	}
 	return v
 }
 
-func (h *PayrollHandler) ListCasualLabor(w http.ResponseWriter, r *http.Request) {
+func (h *PayrollHandler) casualFilter(r *http.Request) payroll.CasualPaymentFilter {
+	f := payroll.CasualPaymentFilter{
+		ProjectID:      casualUUIDPtr(r.URL.Query().Get("project_id")),
+		EmployeeID:     casualUUIDPtr(r.URL.Query().Get("employee_id")),
+		SettlementMode: r.URL.Query().Get("settlement_mode"),
+		WageType:       r.URL.Query().Get("wage_type"),
+		PayrollMonth:   casualDatePtr(r.URL.Query().Get("payroll_month")),
+	}
+	return f
+}
+
+func (h *PayrollHandler) ListCasualPayments(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permPayrollView) {
 		return
 	}
 	p := pagination.Parse(r)
-	rows, total, err := h.svc.ListCasualLabor(r.Context(), scope.TenantID, nil, p.Limit, p.Offset)
+	f := h.casualFilter(r)
+	rows, total, err := h.svc.ListCasualPayments(r.Context(), scope.TenantID, f, p.Limit, p.Offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list casual labour")
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list casual payments")
 		return
 	}
+	totalIssued, _ := h.svc.CasualTotalIssued(r.Context(), scope.TenantID, f)
 	out := make([]map[string]any, 0, len(rows))
 	for _, c := range rows {
-		out = append(out, casualLaborView(c))
+		out = append(out, h.casualPaymentView(r.Context(), scope.TenantID, c))
 	}
-	writePaginated(w, out, total, p)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"results": out, "count": total, "total_issued": totalIssued.StringFixed(2),
+		"limit": p.Limit, "offset": p.Offset,
+	})
 }
 
-func (h *PayrollHandler) CreateCasualLabor(w http.ResponseWriter, r *http.Request) {
+func (h *PayrollHandler) CreateCasualPayment(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permPayrollManage) {
 		return
 	}
-	var body casualLaborBody
+	var body casualPaymentBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	c, err := h.svc.CreateCasualLabor(r.Context(), scope.TenantID, body.toInput())
+	c, err := h.svc.CreateCasualPayment(r.Context(), scope.TenantID, body.toInput())
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, casualLaborView(c))
+	writeJSON(w, http.StatusCreated, h.casualPaymentView(r.Context(), scope.TenantID, c))
 }
 
-func (h *PayrollHandler) UpdateCasualLabor(w http.ResponseWriter, r *http.Request) {
+func (h *PayrollHandler) UpdateCasualPayment(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permPayrollManage) {
 		return
@@ -1143,20 +1213,20 @@ func (h *PayrollHandler) UpdateCasualLabor(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	var body casualLaborBody
+	var body casualPaymentBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	c, err := h.svc.UpdateCasualLabor(r.Context(), scope.TenantID, id, body.toInput())
+	c, err := h.svc.UpdateCasualPayment(r.Context(), scope.TenantID, id, body.toInput())
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, casualLaborView(c))
+	writeJSON(w, http.StatusOK, h.casualPaymentView(r.Context(), scope.TenantID, c))
 }
 
-func (h *PayrollHandler) ApproveCasualLabor(w http.ResponseWriter, r *http.Request) {
+func (h *PayrollHandler) ApproveCasualPayment(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permPayrollManage) {
 		return
@@ -1166,7 +1236,7 @@ func (h *PayrollHandler) ApproveCasualLabor(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	c, err := h.svc.ApproveCasualLabor(r.Context(), scope.TenantID, id, scope.UserID)
+	c, err := h.svc.ApproveCasualPayment(r.Context(), scope.TenantID, id, scope.UserID)
 	if ent.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "not_found", "record not found")
 		return
@@ -1175,10 +1245,10 @@ func (h *PayrollHandler) ApproveCasualLabor(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to approve")
 		return
 	}
-	writeJSON(w, http.StatusOK, casualLaborView(c))
+	writeJSON(w, http.StatusOK, h.casualPaymentView(r.Context(), scope.TenantID, c))
 }
 
-func (h *PayrollHandler) DeleteCasualLabor(w http.ResponseWriter, r *http.Request) {
+func (h *PayrollHandler) DeleteCasualPayment(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permPayrollManage) {
 		return
@@ -1188,7 +1258,7 @@ func (h *PayrollHandler) DeleteCasualLabor(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	if err := h.svc.DeleteCasualLabor(r.Context(), scope.TenantID, id); err != nil {
+	if err := h.svc.DeleteCasualPayment(r.Context(), scope.TenantID, id); err != nil {
 		writeError(w, http.StatusBadRequest, "delete_failed", err.Error())
 		return
 	}

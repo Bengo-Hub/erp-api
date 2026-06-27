@@ -54,8 +54,8 @@ type Tx struct {
 	BenefitTax *BenefitTaxClient
 	// Candidate is the client for interacting with the Candidate builders.
 	Candidate *CandidateClient
-	// CasualLaborRecord is the client for interacting with the CasualLaborRecord builders.
-	CasualLaborRecord *CasualLaborRecordClient
+	// CasualPayment is the client for interacting with the CasualPayment builders.
+	CasualPayment *CasualPaymentClient
 	// ClaimItem is the client for interacting with the ClaimItem builders.
 	ClaimItem *ClaimItemClient
 	// CompanySettings is the client for interacting with the CompanySettings builders.
@@ -368,7 +368,7 @@ func (tx *Tx) init() {
 	tx.BackupSetting = NewBackupSettingClient(tx.config)
 	tx.BenefitTax = NewBenefitTaxClient(tx.config)
 	tx.Candidate = NewCandidateClient(tx.config)
-	tx.CasualLaborRecord = NewCasualLaborRecordClient(tx.config)
+	tx.CasualPayment = NewCasualPaymentClient(tx.config)
 	tx.ClaimItem = NewClaimItemClient(tx.config)
 	tx.CompanySettings = NewCompanySettingsClient(tx.config)
 	tx.ContactDetails = NewContactDetailsClient(tx.config)

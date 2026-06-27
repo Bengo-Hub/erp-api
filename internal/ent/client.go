@@ -37,7 +37,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/backupsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
-	"github.com/Bengo-Hub/erp-api/internal/ent/casuallaborrecord"
+	"github.com/Bengo-Hub/erp-api/internal/ent/casualpayment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
@@ -167,8 +167,8 @@ type Client struct {
 	BenefitTax *BenefitTaxClient
 	// Candidate is the client for interacting with the Candidate builders.
 	Candidate *CandidateClient
-	// CasualLaborRecord is the client for interacting with the CasualLaborRecord builders.
-	CasualLaborRecord *CasualLaborRecordClient
+	// CasualPayment is the client for interacting with the CasualPayment builders.
+	CasualPayment *CasualPaymentClient
 	// ClaimItem is the client for interacting with the ClaimItem builders.
 	ClaimItem *ClaimItemClient
 	// CompanySettings is the client for interacting with the CompanySettings builders.
@@ -361,7 +361,7 @@ func (c *Client) init() {
 	c.BackupSetting = NewBackupSettingClient(c.config)
 	c.BenefitTax = NewBenefitTaxClient(c.config)
 	c.Candidate = NewCandidateClient(c.config)
-	c.CasualLaborRecord = NewCasualLaborRecordClient(c.config)
+	c.CasualPayment = NewCasualPaymentClient(c.config)
 	c.ClaimItem = NewClaimItemClient(c.config)
 	c.CompanySettings = NewCompanySettingsClient(c.config)
 	c.ContactDetails = NewContactDetailsClient(c.config)
@@ -555,7 +555,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		BackupSetting:             NewBackupSettingClient(cfg),
 		BenefitTax:                NewBenefitTaxClient(cfg),
 		Candidate:                 NewCandidateClient(cfg),
-		CasualLaborRecord:         NewCasualLaborRecordClient(cfg),
+		CasualPayment:             NewCasualPaymentClient(cfg),
 		ClaimItem:                 NewClaimItemClient(cfg),
 		CompanySettings:           NewCompanySettingsClient(cfg),
 		ContactDetails:            NewContactDetailsClient(cfg),
@@ -676,7 +676,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		BackupSetting:             NewBackupSettingClient(cfg),
 		BenefitTax:                NewBenefitTaxClient(cfg),
 		Candidate:                 NewCandidateClient(cfg),
-		CasualLaborRecord:         NewCasualLaborRecordClient(cfg),
+		CasualPayment:             NewCasualPaymentClient(cfg),
 		ClaimItem:                 NewClaimItemClient(cfg),
 		CompanySettings:           NewCompanySettingsClient(cfg),
 		ContactDetails:            NewContactDetailsClient(cfg),
@@ -791,7 +791,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
 		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BackupSetting,
-		c.BenefitTax, c.Candidate, c.CasualLaborRecord, c.ClaimItem, c.CompanySettings,
+		c.BenefitTax, c.Candidate, c.CasualPayment, c.ClaimItem, c.CompanySettings,
 		c.ContactDetails, c.Contract, c.CustomUser, c.Department, c.DocumentSequence,
 		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
 		c.EmployeeDisciplinary, c.EmployeeDocument, c.EmployeeEducation,
@@ -825,7 +825,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
 		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BackupSetting,
-		c.BenefitTax, c.Candidate, c.CasualLaborRecord, c.ClaimItem, c.CompanySettings,
+		c.BenefitTax, c.Candidate, c.CasualPayment, c.ClaimItem, c.CompanySettings,
 		c.ContactDetails, c.Contract, c.CustomUser, c.Department, c.DocumentSequence,
 		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
 		c.EmployeeDisciplinary, c.EmployeeDocument, c.EmployeeEducation,
@@ -895,8 +895,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.BenefitTax.mutate(ctx, m)
 	case *CandidateMutation:
 		return c.Candidate.mutate(ctx, m)
-	case *CasualLaborRecordMutation:
-		return c.CasualLaborRecord.mutate(ctx, m)
+	case *CasualPaymentMutation:
+		return c.CasualPayment.mutate(ctx, m)
 	case *ClaimItemMutation:
 		return c.ClaimItem.mutate(ctx, m)
 	case *CompanySettingsMutation:
@@ -3951,107 +3951,107 @@ func (c *CandidateClient) mutate(ctx context.Context, m *CandidateMutation) (Val
 	}
 }
 
-// CasualLaborRecordClient is a client for the CasualLaborRecord schema.
-type CasualLaborRecordClient struct {
+// CasualPaymentClient is a client for the CasualPayment schema.
+type CasualPaymentClient struct {
 	config
 }
 
-// NewCasualLaborRecordClient returns a client for the CasualLaborRecord from the given config.
-func NewCasualLaborRecordClient(c config) *CasualLaborRecordClient {
-	return &CasualLaborRecordClient{config: c}
+// NewCasualPaymentClient returns a client for the CasualPayment from the given config.
+func NewCasualPaymentClient(c config) *CasualPaymentClient {
+	return &CasualPaymentClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `casuallaborrecord.Hooks(f(g(h())))`.
-func (c *CasualLaborRecordClient) Use(hooks ...Hook) {
-	c.hooks.CasualLaborRecord = append(c.hooks.CasualLaborRecord, hooks...)
+// A call to `Use(f, g, h)` equals to `casualpayment.Hooks(f(g(h())))`.
+func (c *CasualPaymentClient) Use(hooks ...Hook) {
+	c.hooks.CasualPayment = append(c.hooks.CasualPayment, hooks...)
 }
 
 // Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `casuallaborrecord.Intercept(f(g(h())))`.
-func (c *CasualLaborRecordClient) Intercept(interceptors ...Interceptor) {
-	c.inters.CasualLaborRecord = append(c.inters.CasualLaborRecord, interceptors...)
+// A call to `Intercept(f, g, h)` equals to `casualpayment.Intercept(f(g(h())))`.
+func (c *CasualPaymentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CasualPayment = append(c.inters.CasualPayment, interceptors...)
 }
 
-// Create returns a builder for creating a CasualLaborRecord entity.
-func (c *CasualLaborRecordClient) Create() *CasualLaborRecordCreate {
-	mutation := newCasualLaborRecordMutation(c.config, OpCreate)
-	return &CasualLaborRecordCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a CasualPayment entity.
+func (c *CasualPaymentClient) Create() *CasualPaymentCreate {
+	mutation := newCasualPaymentMutation(c.config, OpCreate)
+	return &CasualPaymentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of CasualLaborRecord entities.
-func (c *CasualLaborRecordClient) CreateBulk(builders ...*CasualLaborRecordCreate) *CasualLaborRecordCreateBulk {
-	return &CasualLaborRecordCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of CasualPayment entities.
+func (c *CasualPaymentClient) CreateBulk(builders ...*CasualPaymentCreate) *CasualPaymentCreateBulk {
+	return &CasualPaymentCreateBulk{config: c.config, builders: builders}
 }
 
 // MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
 // a builder and applies setFunc on it.
-func (c *CasualLaborRecordClient) MapCreateBulk(slice any, setFunc func(*CasualLaborRecordCreate, int)) *CasualLaborRecordCreateBulk {
+func (c *CasualPaymentClient) MapCreateBulk(slice any, setFunc func(*CasualPaymentCreate, int)) *CasualPaymentCreateBulk {
 	rv := reflect.ValueOf(slice)
 	if rv.Kind() != reflect.Slice {
-		return &CasualLaborRecordCreateBulk{err: fmt.Errorf("calling to CasualLaborRecordClient.MapCreateBulk with wrong type %T, need slice", slice)}
+		return &CasualPaymentCreateBulk{err: fmt.Errorf("calling to CasualPaymentClient.MapCreateBulk with wrong type %T, need slice", slice)}
 	}
-	builders := make([]*CasualLaborRecordCreate, rv.Len())
+	builders := make([]*CasualPaymentCreate, rv.Len())
 	for i := 0; i < rv.Len(); i++ {
 		builders[i] = c.Create()
 		setFunc(builders[i], i)
 	}
-	return &CasualLaborRecordCreateBulk{config: c.config, builders: builders}
+	return &CasualPaymentCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for CasualLaborRecord.
-func (c *CasualLaborRecordClient) Update() *CasualLaborRecordUpdate {
-	mutation := newCasualLaborRecordMutation(c.config, OpUpdate)
-	return &CasualLaborRecordUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for CasualPayment.
+func (c *CasualPaymentClient) Update() *CasualPaymentUpdate {
+	mutation := newCasualPaymentMutation(c.config, OpUpdate)
+	return &CasualPaymentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *CasualLaborRecordClient) UpdateOne(_m *CasualLaborRecord) *CasualLaborRecordUpdateOne {
-	mutation := newCasualLaborRecordMutation(c.config, OpUpdateOne, withCasualLaborRecord(_m))
-	return &CasualLaborRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *CasualPaymentClient) UpdateOne(_m *CasualPayment) *CasualPaymentUpdateOne {
+	mutation := newCasualPaymentMutation(c.config, OpUpdateOne, withCasualPayment(_m))
+	return &CasualPaymentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *CasualLaborRecordClient) UpdateOneID(id uuid.UUID) *CasualLaborRecordUpdateOne {
-	mutation := newCasualLaborRecordMutation(c.config, OpUpdateOne, withCasualLaborRecordID(id))
-	return &CasualLaborRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *CasualPaymentClient) UpdateOneID(id uuid.UUID) *CasualPaymentUpdateOne {
+	mutation := newCasualPaymentMutation(c.config, OpUpdateOne, withCasualPaymentID(id))
+	return &CasualPaymentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for CasualLaborRecord.
-func (c *CasualLaborRecordClient) Delete() *CasualLaborRecordDelete {
-	mutation := newCasualLaborRecordMutation(c.config, OpDelete)
-	return &CasualLaborRecordDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for CasualPayment.
+func (c *CasualPaymentClient) Delete() *CasualPaymentDelete {
+	mutation := newCasualPaymentMutation(c.config, OpDelete)
+	return &CasualPaymentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *CasualLaborRecordClient) DeleteOne(_m *CasualLaborRecord) *CasualLaborRecordDeleteOne {
+func (c *CasualPaymentClient) DeleteOne(_m *CasualPayment) *CasualPaymentDeleteOne {
 	return c.DeleteOneID(_m.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *CasualLaborRecordClient) DeleteOneID(id uuid.UUID) *CasualLaborRecordDeleteOne {
-	builder := c.Delete().Where(casuallaborrecord.ID(id))
+func (c *CasualPaymentClient) DeleteOneID(id uuid.UUID) *CasualPaymentDeleteOne {
+	builder := c.Delete().Where(casualpayment.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &CasualLaborRecordDeleteOne{builder}
+	return &CasualPaymentDeleteOne{builder}
 }
 
-// Query returns a query builder for CasualLaborRecord.
-func (c *CasualLaborRecordClient) Query() *CasualLaborRecordQuery {
-	return &CasualLaborRecordQuery{
+// Query returns a query builder for CasualPayment.
+func (c *CasualPaymentClient) Query() *CasualPaymentQuery {
+	return &CasualPaymentQuery{
 		config: c.config,
-		ctx:    &QueryContext{Type: TypeCasualLaborRecord},
+		ctx:    &QueryContext{Type: TypeCasualPayment},
 		inters: c.Interceptors(),
 	}
 }
 
-// Get returns a CasualLaborRecord entity by its id.
-func (c *CasualLaborRecordClient) Get(ctx context.Context, id uuid.UUID) (*CasualLaborRecord, error) {
-	return c.Query().Where(casuallaborrecord.ID(id)).Only(ctx)
+// Get returns a CasualPayment entity by its id.
+func (c *CasualPaymentClient) Get(ctx context.Context, id uuid.UUID) (*CasualPayment, error) {
+	return c.Query().Where(casualpayment.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *CasualLaborRecordClient) GetX(ctx context.Context, id uuid.UUID) *CasualLaborRecord {
+func (c *CasualPaymentClient) GetX(ctx context.Context, id uuid.UUID) *CasualPayment {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -4060,27 +4060,27 @@ func (c *CasualLaborRecordClient) GetX(ctx context.Context, id uuid.UUID) *Casua
 }
 
 // Hooks returns the client hooks.
-func (c *CasualLaborRecordClient) Hooks() []Hook {
-	return c.hooks.CasualLaborRecord
+func (c *CasualPaymentClient) Hooks() []Hook {
+	return c.hooks.CasualPayment
 }
 
 // Interceptors returns the client interceptors.
-func (c *CasualLaborRecordClient) Interceptors() []Interceptor {
-	return c.inters.CasualLaborRecord
+func (c *CasualPaymentClient) Interceptors() []Interceptor {
+	return c.inters.CasualPayment
 }
 
-func (c *CasualLaborRecordClient) mutate(ctx context.Context, m *CasualLaborRecordMutation) (Value, error) {
+func (c *CasualPaymentClient) mutate(ctx context.Context, m *CasualPaymentMutation) (Value, error) {
 	switch m.Op() {
 	case OpCreate:
-		return (&CasualLaborRecordCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&CasualPaymentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdate:
-		return (&CasualLaborRecordUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&CasualPaymentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdateOne:
-		return (&CasualLaborRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&CasualPaymentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpDelete, OpDeleteOne:
-		return (&CasualLaborRecordDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+		return (&CasualPaymentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
-		return nil, fmt.Errorf("ent: unknown CasualLaborRecord mutation op: %q", m.Op())
+		return nil, fmt.Errorf("ent: unknown CasualPayment mutation op: %q", m.Op())
 	}
 }
 
@@ -14955,8 +14955,8 @@ type (
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
 		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
 		AttendanceRule, AuthOutlet, AuthTenant, Backup, BackupSetting, BenefitTax,
-		Candidate, CasualLaborRecord, ClaimItem, CompanySettings, ContactDetails,
-		Contract, CustomUser, Department, DocumentSequence, ESSSettings, Employee,
+		Candidate, CasualPayment, ClaimItem, CompanySettings, ContactDetails, Contract,
+		CustomUser, Department, DocumentSequence, ESSSettings, Employee,
 		EmployeeBankAccount, EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument,
 		EmployeeEducation, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
 		EmployeeProjectAllocation, EmploymentHistory, ExchangeRate,
@@ -14978,8 +14978,8 @@ type (
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
 		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
 		AttendanceRule, AuthOutlet, AuthTenant, Backup, BackupSetting, BenefitTax,
-		Candidate, CasualLaborRecord, ClaimItem, CompanySettings, ContactDetails,
-		Contract, CustomUser, Department, DocumentSequence, ESSSettings, Employee,
+		Candidate, CasualPayment, ClaimItem, CompanySettings, ContactDetails, Contract,
+		CustomUser, Department, DocumentSequence, ESSSettings, Employee,
 		EmployeeBankAccount, EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument,
 		EmployeeEducation, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
 		EmployeeProjectAllocation, EmploymentHistory, ExchangeRate,
