@@ -278,12 +278,28 @@ func (h *PayrollHandler) PayrollEmployees(w http.ResponseWriter, r *http.Request
 	if !ok || !requirePermission(w, scope, permPayrollView) {
 		return
 	}
-	res, err := h.svc.Run(r.Context(), payroll.RunParams{
+	rp := payroll.RunParams{
 		TenantID: scope.TenantID,
 		OutletID: scope.OutletID,
 		Period:   firstOfThisMonth(),
 		Persist:  false,
-	})
+	}
+	if v := r.URL.Query().Get("department_id"); v != "" {
+		if id, err := uuid.Parse(v); err == nil {
+			rp.DepartmentID = id
+		}
+	}
+	if v := r.URL.Query().Get("region_id"); v != "" {
+		if id, err := uuid.Parse(v); err == nil {
+			rp.RegionID = id
+		}
+	}
+	if v := r.URL.Query().Get("project_id"); v != "" {
+		if id, err := uuid.Parse(v); err == nil {
+			rp.ProjectID = id
+		}
+	}
+	res, err := h.svc.Run(r.Context(), rp)
 	if err != nil {
 		// Config/data not ready is not fatal for a listing — return empty.
 		h.log.Warn("payroll employees preview", zap.Error(err))
@@ -319,6 +335,9 @@ type processBody struct {
 	ToDate         string   `json:"to_date"`
 	EmploymentType string   `json:"employment_type"`
 	OutletID       string   `json:"outlet_id"`
+	DepartmentID   string   `json:"department_id"`
+	RegionID       string   `json:"region_id"`
+	ProjectID      string   `json:"project_id"`
 	EmployeeIDs    []string `json:"employee_ids"`
 }
 
@@ -356,6 +375,15 @@ func (h *PayrollHandler) runParams(scope RequestScope, b processBody, persist bo
 		if oid, err := uuid.Parse(b.OutletID); err == nil {
 			rp.OutletID = oid
 		}
+	}
+	if did, err := uuid.Parse(b.DepartmentID); err == nil {
+		rp.DepartmentID = did
+	}
+	if rid, err := uuid.Parse(b.RegionID); err == nil {
+		rp.RegionID = rid
+	}
+	if pid, err := uuid.Parse(b.ProjectID); err == nil {
+		rp.ProjectID = pid
 	}
 	return rp, true
 }
