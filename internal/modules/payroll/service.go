@@ -5,6 +5,7 @@ package payroll
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,9 +13,11 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
+	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
+	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
@@ -115,7 +118,72 @@ func (s *Service) selectEmployees(ctx context.Context, p RunParams) ([]*ent.Empl
 	if len(p.EmployeeIDs) > 0 {
 		q = q.Where(employee.IDIn(p.EmployeeIDs...))
 	}
-	return q.All(ctx)
+	candidates, err := q.All(ctx)
+	if err != nil || len(candidates) == 0 {
+		return candidates, err
+	}
+	return s.gateByContractAndType(ctx, p, candidates)
+}
+
+// gateByContractAndType applies the standard payroll-eligibility rules (decision 2026-06-26):
+// permanent (or unspecified) employees are always on PAYE payroll; fixed-term "contract" employees
+// are included only when an ACTIVE contract covers the period; "casual" workers are excluded (paid
+// via the casual-labour module) and "consultant" engagements are excluded (paid via WHT/AP, not
+// PAYE). Employees skipped here are recorded in s.lastSkipped for the run summary.
+func (s *Service) gateByContractAndType(ctx context.Context, p RunParams, candidates []*ent.Employee) ([]*ent.Employee, error) {
+	ids := make([]uuid.UUID, len(candidates))
+	for i, e := range candidates {
+		ids[i] = e.ID
+	}
+	// Employment type per employee (from hr_details).
+	etype := map[uuid.UUID]string{}
+	hrs, err := s.orm.HRDetails.Query().
+		Where(hrdetails.TenantID(p.TenantID), hrdetails.EmployeeIDIn(ids...)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, h := range hrs {
+		etype[h.EmployeeID] = strings.ToLower(strings.TrimSpace(h.EmploymentType))
+	}
+	// Employees with an active contract covering the period.
+	activeContract := map[uuid.UUID]bool{}
+	cons, err := s.orm.Contract.Query().
+		Where(contract.TenantID(p.TenantID), contract.EmployeeIDIn(ids...), contract.Status("active")).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range cons {
+		if contractCovers(c, p.Period) {
+			activeContract[c.EmployeeID] = true
+		}
+	}
+
+	out := make([]*ent.Employee, 0, len(candidates))
+	for _, e := range candidates {
+		switch etype[e.ID] {
+		case "casual", "consultant":
+			// casual -> casual-labour module; consultant -> WHT/AP, not PAYE payroll.
+		case "contract":
+			if activeContract[e.ID] { // fixed-term needs an active contract covering the period
+				out = append(out, e)
+			}
+		default: // permanent or unspecified -> always on payroll
+			out = append(out, e)
+		}
+	}
+	return out, nil
+}
+
+// contractCovers reports whether an active contract spans the payroll period (open-ended start/end
+// are treated as covering).
+func contractCovers(c *ent.Contract, period time.Time) bool {
+	if c.StartDate != nil && c.StartDate.After(period) {
+		return false
+	}
+	if c.EndDate != nil && c.EndDate.Before(period) {
+		return false
+	}
+	return true
 }
 
 // buildEmployeeInput loads salary + active, effective-dated recoverables for the employee
