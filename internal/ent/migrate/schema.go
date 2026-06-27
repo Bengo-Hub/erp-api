@@ -1565,7 +1565,7 @@ var (
 	GoalsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "tenant_id", Type: field.TypeUUID},
-		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "title", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "start_date", Type: field.TypeTime, Nullable: true},

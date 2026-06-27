@@ -18,18 +18,22 @@ type defaultAppraisalQuestion struct {
 	text         string
 	questionType appraisalquestion.QuestionType
 	order        int
+	category     string
+	weight       float64
+	maxScore     int
 }
 
 // defaultAppraisalQuestions are standard rating-scale competencies plus two free-text prompts.
+// Rating questions carry a weight + a 1-5 max score; the free-text prompts are unweighted.
 var defaultAppraisalQuestions = []defaultAppraisalQuestion{
-	{"Quality of Work", appraisalquestion.QuestionTypeRating, 1},
-	{"Productivity", appraisalquestion.QuestionTypeRating, 2},
-	{"Communication", appraisalquestion.QuestionTypeRating, 3},
-	{"Teamwork", appraisalquestion.QuestionTypeRating, 4},
-	{"Initiative", appraisalquestion.QuestionTypeRating, 5},
-	{"Punctuality", appraisalquestion.QuestionTypeRating, 6},
-	{"Key Achievements", appraisalquestion.QuestionTypeText, 7},
-	{"Areas for Improvement", appraisalquestion.QuestionTypeText, 8},
+	{"Quality of Work", appraisalquestion.QuestionTypeRating, 1, "Competency", 20, 5},
+	{"Productivity", appraisalquestion.QuestionTypeRating, 2, "Competency", 20, 5},
+	{"Communication", appraisalquestion.QuestionTypeRating, 3, "Competency", 15, 5},
+	{"Teamwork", appraisalquestion.QuestionTypeRating, 4, "Competency", 15, 5},
+	{"Initiative", appraisalquestion.QuestionTypeRating, 5, "Competency", 15, 5},
+	{"Punctuality", appraisalquestion.QuestionTypeRating, 6, "Competency", 15, 5},
+	{"Key Achievements", appraisalquestion.QuestionTypeText, 7, "Open Feedback", 0, 0},
+	{"Areas for Improvement", appraisalquestion.QuestionTypeText, 8, "Open Feedback", 0, 0},
 }
 
 // EnsureAppraisalTemplate idempotently creates one default appraisal template + its standard
@@ -54,14 +58,21 @@ func (s *Service) EnsureAppraisalTemplate(ctx context.Context, tenantID uuid.UUI
 		return err
 	}
 	for _, q := range defaultAppraisalQuestions {
-		if _, err := s.orm.AppraisalQuestion.Create().
+		c := s.orm.AppraisalQuestion.Create().
 			SetTenantID(tenantID).
 			SetTemplateID(tpl.ID).
 			SetQuestionText(q.text).
 			SetQuestionType(q.questionType).
 			SetIsRequired(q.questionType == appraisalquestion.QuestionTypeRating).
 			SetOrder(q.order).
-			Save(ctx); err != nil {
+			SetCategory(q.category)
+		if q.weight > 0 {
+			c.SetWeight(q.weight)
+		}
+		if q.maxScore > 0 {
+			c.SetMaxScore(q.maxScore)
+		}
+		if _, err := c.Save(ctx); err != nil {
 			return err
 		}
 	}

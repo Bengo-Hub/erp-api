@@ -36,6 +36,14 @@ func (_c *GoalCreate) SetEmployeeID(v uuid.UUID) *GoalCreate {
 	return _c
 }
 
+// SetNillableEmployeeID sets the "employee_id" field if the given value is not nil.
+func (_c *GoalCreate) SetNillableEmployeeID(v *uuid.UUID) *GoalCreate {
+	if v != nil {
+		_c.SetEmployeeID(*v)
+	}
+	return _c
+}
+
 // SetTitle sets the "title" field.
 func (_c *GoalCreate) SetTitle(v string) *GoalCreate {
 	_c.mutation.SetTitle(v)
@@ -248,9 +256,6 @@ func (_c *GoalCreate) check() error {
 	if _, ok := _c.mutation.TenantID(); !ok {
 		return &ValidationError{Name: "tenant_id", err: errors.New(`ent: missing required field "Goal.tenant_id"`)}
 	}
-	if _, ok := _c.mutation.EmployeeID(); !ok {
-		return &ValidationError{Name: "employee_id", err: errors.New(`ent: missing required field "Goal.employee_id"`)}
-	}
 	if _, ok := _c.mutation.Title(); !ok {
 		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Goal.title"`)}
 	}
@@ -316,7 +321,7 @@ func (_c *GoalCreate) createSpec() (*Goal, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := _c.mutation.EmployeeID(); ok {
 		_spec.SetField(goal.FieldEmployeeID, field.TypeUUID, value)
-		_node.EmployeeID = value
+		_node.EmployeeID = &value
 	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(goal.FieldTitle, field.TypeString, value)
@@ -431,6 +436,12 @@ func (u *GoalUpsert) SetEmployeeID(v uuid.UUID) *GoalUpsert {
 // UpdateEmployeeID sets the "employee_id" field to the value that was provided on create.
 func (u *GoalUpsert) UpdateEmployeeID() *GoalUpsert {
 	u.SetExcluded(goal.FieldEmployeeID)
+	return u
+}
+
+// ClearEmployeeID clears the value of the "employee_id" field.
+func (u *GoalUpsert) ClearEmployeeID() *GoalUpsert {
+	u.SetNull(goal.FieldEmployeeID)
 	return u
 }
 
@@ -648,6 +659,13 @@ func (u *GoalUpsertOne) SetEmployeeID(v uuid.UUID) *GoalUpsertOne {
 func (u *GoalUpsertOne) UpdateEmployeeID() *GoalUpsertOne {
 	return u.Update(func(s *GoalUpsert) {
 		s.UpdateEmployeeID()
+	})
+}
+
+// ClearEmployeeID clears the value of the "employee_id" field.
+func (u *GoalUpsertOne) ClearEmployeeID() *GoalUpsertOne {
+	return u.Update(func(s *GoalUpsert) {
+		s.ClearEmployeeID()
 	})
 }
 
@@ -1055,6 +1073,13 @@ func (u *GoalUpsertBulk) SetEmployeeID(v uuid.UUID) *GoalUpsertBulk {
 func (u *GoalUpsertBulk) UpdateEmployeeID() *GoalUpsertBulk {
 	return u.Update(func(s *GoalUpsert) {
 		s.UpdateEmployeeID()
+	})
+}
+
+// ClearEmployeeID clears the value of the "employee_id" field.
+func (u *GoalUpsertBulk) ClearEmployeeID() *GoalUpsertBulk {
+	return u.Update(func(s *GoalUpsert) {
+		s.ClearEmployeeID()
 	})
 }
 

@@ -407,9 +407,17 @@ func (h *AppraisalsHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	empID, err := uuid.Parse(b.EmployeeID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
+	// Library templates (is_template=true) have no employee; employee goals require one.
+	var empID *uuid.UUID
+	if b.EmployeeID != "" {
+		parsed, err := uuid.Parse(b.EmployeeID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
+			return
+		}
+		empID = &parsed
+	} else if !b.IsTemplate {
+		writeError(w, http.StatusBadRequest, "bad_request", "employee_id is required for a non-template goal")
 		return
 	}
 	uid := scope.UserID

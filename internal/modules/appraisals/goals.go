@@ -21,9 +21,9 @@ func (s *Service) ListGoals(ctx context.Context, tenantID uuid.UUID, employeeID 
 	return q.Order(ent.Desc(goal.FieldCreatedAt)).All(ctx)
 }
 
-// GoalInput is the create payload for an employee goal.
+// GoalInput is the create payload for an employee goal. EmployeeID is nil for a library template.
 type GoalInput struct {
-	EmployeeID  uuid.UUID
+	EmployeeID  *uuid.UUID
 	Title       string
 	Description string
 	StartDate   *time.Time
@@ -35,7 +35,7 @@ type GoalInput struct {
 // CreateGoal inserts a tenant-scoped goal (status not_started, progress 0).
 func (s *Service) CreateGoal(ctx context.Context, tenantID uuid.UUID, in GoalInput) (*ent.Goal, error) {
 	b := s.orm.Goal.Create().
-		SetTenantID(tenantID).SetEmployeeID(in.EmployeeID).
+		SetTenantID(tenantID).SetNillableEmployeeID(in.EmployeeID).
 		SetTitle(in.Title).SetDescription(in.Description).
 		SetStatus(goal.StatusNotStarted).SetProgress(0).SetIsTemplate(in.IsTemplate)
 	if in.StartDate != nil {
