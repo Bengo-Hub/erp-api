@@ -17,6 +17,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employeeprojectallocation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
@@ -50,6 +51,9 @@ func (s *Service) WithPublisher(p *events.Publisher) *Service {
 type RunParams struct {
 	TenantID        uuid.UUID
 	OutletID        uuid.UUID // uuid.Nil = all outlets
+	DepartmentID    uuid.UUID // uuid.Nil = all departments
+	RegionID        uuid.UUID // uuid.Nil = all regions
+	ProjectID       uuid.UUID // uuid.Nil = all projects (else: only employees allocated to it)
 	Period          time.Time // first of month
 	EmployeeIDs     []uuid.UUID
 	RecoverAdvances bool
@@ -117,6 +121,42 @@ func (s *Service) selectEmployees(ctx context.Context, p RunParams) ([]*ent.Empl
 	}
 	if len(p.EmployeeIDs) > 0 {
 		q = q.Where(employee.IDIn(p.EmployeeIDs...))
+	}
+	// Department / Region live on hr_details — restrict to the matching employees.
+	if p.DepartmentID != uuid.Nil || p.RegionID != uuid.Nil {
+		hq := s.orm.HRDetails.Query().Where(hrdetails.TenantID(p.TenantID))
+		if p.DepartmentID != uuid.Nil {
+			hq = hq.Where(hrdetails.DepartmentID(p.DepartmentID))
+		}
+		if p.RegionID != uuid.Nil {
+			hq = hq.Where(hrdetails.RegionID(p.RegionID))
+		}
+		hrs, err := hq.All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("payroll: filter dept/region: %w", err)
+		}
+		ids := make([]uuid.UUID, len(hrs))
+		for i, h := range hrs {
+			ids[i] = h.EmployeeID
+		}
+		q = q.Where(employee.IDIn(ids...))
+	}
+	// Project filter — only employees with an ACTIVE allocation to the project for the period.
+	if p.ProjectID != uuid.Nil {
+		allocs, err := s.orm.EmployeeProjectAllocation.Query().
+			Where(
+				employeeprojectallocation.TenantID(p.TenantID),
+				employeeprojectallocation.ProjectID(p.ProjectID),
+				employeeprojectallocation.IsActive(true),
+			).All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("payroll: filter project: %w", err)
+		}
+		ids := make([]uuid.UUID, len(allocs))
+		for i, a := range allocs {
+			ids[i] = a.EmployeeID
+		}
+		q = q.Where(employee.IDIn(ids...))
 	}
 	candidates, err := q.All(ctx)
 	if err != nil || len(candidates) == 0 {
