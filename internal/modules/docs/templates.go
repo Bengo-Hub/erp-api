@@ -43,6 +43,16 @@ func profileFor(t DocType) templateProfile {
 			showDueDate:      false,
 			reportBody:       true,
 		}
+	case DocTypePaymentVoucher:
+		// A consultant payment voucher: amount banner with the NET, a line breakdown
+		// (gross fee, WHT, deductions) and a "Net Amount" grand total. No How-to-Pay block.
+		return templateProfile{
+			showAmountBanner: true,
+			showTotals:       true,
+			showHowToPay:     false,
+			showDueDate:      true,
+			grandTotalLabel:  "Net Amount",
+		}
 	default:
 		return templateProfile{showAmountBanner: true, showTotals: true, showHowToPay: true, showDueDate: true}
 	}

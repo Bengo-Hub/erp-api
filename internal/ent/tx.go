@@ -60,6 +60,8 @@ type Tx struct {
 	ClaimItem *ClaimItemClient
 	// CompanySettings is the client for interacting with the CompanySettings builders.
 	CompanySettings *CompanySettingsClient
+	// ConsultantVoucher is the client for interacting with the ConsultantVoucher builders.
+	ConsultantVoucher *ConsultantVoucherClient
 	// ContactDetails is the client for interacting with the ContactDetails builders.
 	ContactDetails *ContactDetailsClient
 	// Contract is the client for interacting with the Contract builders.
@@ -371,6 +373,7 @@ func (tx *Tx) init() {
 	tx.CasualPayment = NewCasualPaymentClient(tx.config)
 	tx.ClaimItem = NewClaimItemClient(tx.config)
 	tx.CompanySettings = NewCompanySettingsClient(tx.config)
+	tx.ConsultantVoucher = NewConsultantVoucherClient(tx.config)
 	tx.ContactDetails = NewContactDetailsClient(tx.config)
 	tx.Contract = NewContractClient(tx.config)
 	tx.CustomUser = NewCustomUserClient(tx.config)

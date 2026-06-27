@@ -297,6 +297,18 @@ func (f CompanySettingsFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CompanySettingsMutation", m)
 }
 
+// The ConsultantVoucherFunc type is an adapter to allow the use of ordinary
+// function as ConsultantVoucher mutator.
+type ConsultantVoucherFunc func(context.Context, *ent.ConsultantVoucherMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ConsultantVoucherFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ConsultantVoucherMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ConsultantVoucherMutation", m)
+}
+
 // The ContactDetailsFunc type is an adapter to allow the use of ordinary
 // function as ContactDetails mutator.
 type ContactDetailsFunc func(context.Context, *ent.ContactDetailsMutation) (ent.Value, error)

@@ -40,6 +40,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/casualpayment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/consultantvoucher"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
@@ -173,6 +174,8 @@ type Client struct {
 	ClaimItem *ClaimItemClient
 	// CompanySettings is the client for interacting with the CompanySettings builders.
 	CompanySettings *CompanySettingsClient
+	// ConsultantVoucher is the client for interacting with the ConsultantVoucher builders.
+	ConsultantVoucher *ConsultantVoucherClient
 	// ContactDetails is the client for interacting with the ContactDetails builders.
 	ContactDetails *ContactDetailsClient
 	// Contract is the client for interacting with the Contract builders.
@@ -364,6 +367,7 @@ func (c *Client) init() {
 	c.CasualPayment = NewCasualPaymentClient(c.config)
 	c.ClaimItem = NewClaimItemClient(c.config)
 	c.CompanySettings = NewCompanySettingsClient(c.config)
+	c.ConsultantVoucher = NewConsultantVoucherClient(c.config)
 	c.ContactDetails = NewContactDetailsClient(c.config)
 	c.Contract = NewContractClient(c.config)
 	c.CustomUser = NewCustomUserClient(c.config)
@@ -558,6 +562,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		CasualPayment:             NewCasualPaymentClient(cfg),
 		ClaimItem:                 NewClaimItemClient(cfg),
 		CompanySettings:           NewCompanySettingsClient(cfg),
+		ConsultantVoucher:         NewConsultantVoucherClient(cfg),
 		ContactDetails:            NewContactDetailsClient(cfg),
 		Contract:                  NewContractClient(cfg),
 		CustomUser:                NewCustomUserClient(cfg),
@@ -679,6 +684,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		CasualPayment:             NewCasualPaymentClient(cfg),
 		ClaimItem:                 NewClaimItemClient(cfg),
 		CompanySettings:           NewCompanySettingsClient(cfg),
+		ConsultantVoucher:         NewConsultantVoucherClient(cfg),
 		ContactDetails:            NewContactDetailsClient(cfg),
 		Contract:                  NewContractClient(cfg),
 		CustomUser:                NewCustomUserClient(cfg),
@@ -792,10 +798,10 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
 		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BackupSetting,
 		c.BenefitTax, c.Candidate, c.CasualPayment, c.ClaimItem, c.CompanySettings,
-		c.ContactDetails, c.Contract, c.CustomUser, c.Department, c.DocumentSequence,
-		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
-		c.EmployeeDisciplinary, c.EmployeeDocument, c.EmployeeEducation,
-		c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
+		c.ConsultantVoucher, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
+		c.DocumentSequence, c.ESSSettings, c.Employee, c.EmployeeBankAccount,
+		c.EmployeeBenefit, c.EmployeeDisciplinary, c.EmployeeDocument,
+		c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
 		c.EmployeeProjectAllocation, c.EmploymentHistory, c.ExchangeRate,
 		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
 		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
@@ -826,10 +832,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
 		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BackupSetting,
 		c.BenefitTax, c.Candidate, c.CasualPayment, c.ClaimItem, c.CompanySettings,
-		c.ContactDetails, c.Contract, c.CustomUser, c.Department, c.DocumentSequence,
-		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
-		c.EmployeeDisciplinary, c.EmployeeDocument, c.EmployeeEducation,
-		c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
+		c.ConsultantVoucher, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
+		c.DocumentSequence, c.ESSSettings, c.Employee, c.EmployeeBankAccount,
+		c.EmployeeBenefit, c.EmployeeDisciplinary, c.EmployeeDocument,
+		c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
 		c.EmployeeProjectAllocation, c.EmploymentHistory, c.ExchangeRate,
 		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
 		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
@@ -901,6 +907,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ClaimItem.mutate(ctx, m)
 	case *CompanySettingsMutation:
 		return c.CompanySettings.mutate(ctx, m)
+	case *ConsultantVoucherMutation:
+		return c.ConsultantVoucher.mutate(ctx, m)
 	case *ContactDetailsMutation:
 		return c.ContactDetails.mutate(ctx, m)
 	case *ContractMutation:
@@ -4347,6 +4355,139 @@ func (c *CompanySettingsClient) mutate(ctx context.Context, m *CompanySettingsMu
 		return (&CompanySettingsDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown CompanySettings mutation op: %q", m.Op())
+	}
+}
+
+// ConsultantVoucherClient is a client for the ConsultantVoucher schema.
+type ConsultantVoucherClient struct {
+	config
+}
+
+// NewConsultantVoucherClient returns a client for the ConsultantVoucher from the given config.
+func NewConsultantVoucherClient(c config) *ConsultantVoucherClient {
+	return &ConsultantVoucherClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `consultantvoucher.Hooks(f(g(h())))`.
+func (c *ConsultantVoucherClient) Use(hooks ...Hook) {
+	c.hooks.ConsultantVoucher = append(c.hooks.ConsultantVoucher, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `consultantvoucher.Intercept(f(g(h())))`.
+func (c *ConsultantVoucherClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ConsultantVoucher = append(c.inters.ConsultantVoucher, interceptors...)
+}
+
+// Create returns a builder for creating a ConsultantVoucher entity.
+func (c *ConsultantVoucherClient) Create() *ConsultantVoucherCreate {
+	mutation := newConsultantVoucherMutation(c.config, OpCreate)
+	return &ConsultantVoucherCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ConsultantVoucher entities.
+func (c *ConsultantVoucherClient) CreateBulk(builders ...*ConsultantVoucherCreate) *ConsultantVoucherCreateBulk {
+	return &ConsultantVoucherCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ConsultantVoucherClient) MapCreateBulk(slice any, setFunc func(*ConsultantVoucherCreate, int)) *ConsultantVoucherCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ConsultantVoucherCreateBulk{err: fmt.Errorf("calling to ConsultantVoucherClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ConsultantVoucherCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ConsultantVoucherCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ConsultantVoucher.
+func (c *ConsultantVoucherClient) Update() *ConsultantVoucherUpdate {
+	mutation := newConsultantVoucherMutation(c.config, OpUpdate)
+	return &ConsultantVoucherUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ConsultantVoucherClient) UpdateOne(_m *ConsultantVoucher) *ConsultantVoucherUpdateOne {
+	mutation := newConsultantVoucherMutation(c.config, OpUpdateOne, withConsultantVoucher(_m))
+	return &ConsultantVoucherUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ConsultantVoucherClient) UpdateOneID(id uuid.UUID) *ConsultantVoucherUpdateOne {
+	mutation := newConsultantVoucherMutation(c.config, OpUpdateOne, withConsultantVoucherID(id))
+	return &ConsultantVoucherUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ConsultantVoucher.
+func (c *ConsultantVoucherClient) Delete() *ConsultantVoucherDelete {
+	mutation := newConsultantVoucherMutation(c.config, OpDelete)
+	return &ConsultantVoucherDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ConsultantVoucherClient) DeleteOne(_m *ConsultantVoucher) *ConsultantVoucherDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ConsultantVoucherClient) DeleteOneID(id uuid.UUID) *ConsultantVoucherDeleteOne {
+	builder := c.Delete().Where(consultantvoucher.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ConsultantVoucherDeleteOne{builder}
+}
+
+// Query returns a query builder for ConsultantVoucher.
+func (c *ConsultantVoucherClient) Query() *ConsultantVoucherQuery {
+	return &ConsultantVoucherQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeConsultantVoucher},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ConsultantVoucher entity by its id.
+func (c *ConsultantVoucherClient) Get(ctx context.Context, id uuid.UUID) (*ConsultantVoucher, error) {
+	return c.Query().Where(consultantvoucher.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ConsultantVoucherClient) GetX(ctx context.Context, id uuid.UUID) *ConsultantVoucher {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ConsultantVoucherClient) Hooks() []Hook {
+	return c.hooks.ConsultantVoucher
+}
+
+// Interceptors returns the client interceptors.
+func (c *ConsultantVoucherClient) Interceptors() []Interceptor {
+	return c.inters.ConsultantVoucher
+}
+
+func (c *ConsultantVoucherClient) mutate(ctx context.Context, m *ConsultantVoucherMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ConsultantVoucherCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ConsultantVoucherUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ConsultantVoucherUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ConsultantVoucherDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ConsultantVoucher mutation op: %q", m.Op())
 	}
 }
 
@@ -14955,20 +15096,20 @@ type (
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
 		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
 		AttendanceRule, AuthOutlet, AuthTenant, Backup, BackupSetting, BenefitTax,
-		Candidate, CasualPayment, ClaimItem, CompanySettings, ContactDetails, Contract,
-		CustomUser, Department, DocumentSequence, ESSSettings, Employee,
-		EmployeeBankAccount, EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument,
-		EmployeeEducation, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
-		EmployeeProjectAllocation, EmploymentHistory, ExchangeRate,
-		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
-		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
-		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
-		LossAndDamage, MetricCategory, MetricTarget, MileageRoute, NextOfKin, OffDay,
-		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
-		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
-		PayslipLine, PerformanceMetric, PerformanceReview, Permission, PublicHoliday,
-		Region, RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
-		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
+		Candidate, CasualPayment, ClaimItem, CompanySettings, ConsultantVoucher,
+		ContactDetails, Contract, CustomUser, Department, DocumentSequence,
+		ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
+		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
+		EmployeeMetric, EmployeeOnboarding, EmployeeProjectAllocation,
+		EmploymentHistory, ExchangeRate, ExchangeRateAPISettings, ExpenseClaim,
+		GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey, JobGroup,
+		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
+		LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
+		MileageRoute, NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
+		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
+		PayslipAudit, PayslipLine, PerformanceMetric, PerformanceReview, Permission,
+		PublicHoliday, Region, RepayOption, ReviewMetric, Role, RolePermission,
+		SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
 		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
 		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
 		WithHoldingTax, WorkShift, WorkShiftSchedule, WorkersUnion []ent.Hook
@@ -14978,20 +15119,20 @@ type (
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
 		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
 		AttendanceRule, AuthOutlet, AuthTenant, Backup, BackupSetting, BenefitTax,
-		Candidate, CasualPayment, ClaimItem, CompanySettings, ContactDetails, Contract,
-		CustomUser, Department, DocumentSequence, ESSSettings, Employee,
-		EmployeeBankAccount, EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument,
-		EmployeeEducation, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
-		EmployeeProjectAllocation, EmploymentHistory, ExchangeRate,
-		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
-		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
-		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
-		LossAndDamage, MetricCategory, MetricTarget, MileageRoute, NextOfKin, OffDay,
-		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
-		PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip, PayslipAudit,
-		PayslipLine, PerformanceMetric, PerformanceReview, Permission, PublicHoliday,
-		Region, RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
-		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
+		Candidate, CasualPayment, ClaimItem, CompanySettings, ConsultantVoucher,
+		ContactDetails, Contract, CustomUser, Department, DocumentSequence,
+		ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
+		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
+		EmployeeMetric, EmployeeOnboarding, EmployeeProjectAllocation,
+		EmploymentHistory, ExchangeRate, ExchangeRateAPISettings, ExpenseClaim,
+		GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey, JobGroup,
+		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
+		LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
+		MileageRoute, NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
+		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
+		PayslipAudit, PayslipLine, PerformanceMetric, PerformanceReview, Permission,
+		PublicHoliday, Region, RepayOption, ReviewMetric, Role, RolePermission,
+		SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
 		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
 		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
 		WithHoldingTax, WorkShift, WorkShiftSchedule, WorkersUnion []ent.Interceptor

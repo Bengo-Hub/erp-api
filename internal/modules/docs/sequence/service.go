@@ -16,14 +16,16 @@ import (
 
 // DocType constants — must match ent document_sequence.doc_type values.
 const (
-	DocTypePayslip       = "payslip"
-	DocTypePayrollReport = "payroll_report"
+	DocTypePayslip        = "payslip"
+	DocTypePayrollReport  = "payroll_report"
+	DocTypePaymentVoucher = "payment_voucher"
 )
 
 // Default sequence configs seeded per tenant on first use.
 var defaults = map[string]Config{
-	DocTypePayslip:       {Prefix: "PAY", Separator: "-", DateFormat: "YYMMDD", Padding: 6, ResetFreq: "never"},
-	DocTypePayrollReport: {Prefix: "RPT", Separator: "-", DateFormat: "YYMMDD", Padding: 6, ResetFreq: "never"},
+	DocTypePayslip:        {Prefix: "PAY", Separator: "-", DateFormat: "YYMMDD", Padding: 6, ResetFreq: "never"},
+	DocTypePayrollReport:  {Prefix: "RPT", Separator: "-", DateFormat: "YYMMDD", Padding: 6, ResetFreq: "never"},
+	DocTypePaymentVoucher: {Prefix: "VOC", Separator: "-", DateFormat: "YYMMDD", Padding: 6, ResetFreq: "never"},
 }
 
 // Config holds the formatting settings for a document sequence.

@@ -78,6 +78,9 @@ type ClaimItem func(*sql.Selector)
 // CompanySettings is the predicate function for companysettings builders.
 type CompanySettings func(*sql.Selector)
 
+// ConsultantVoucher is the predicate function for consultantvoucher builders.
+type ConsultantVoucher func(*sql.Selector)
+
 // ContactDetails is the predicate function for contactdetails builders.
 type ContactDetails func(*sql.Selector)
 
