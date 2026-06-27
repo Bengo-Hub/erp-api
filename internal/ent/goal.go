@@ -20,8 +20,8 @@ type Goal struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Owning tenant
 	TenantID uuid.UUID `json:"tenant_id,omitempty"`
-	// FK -> employee.id
-	EmployeeID uuid.UUID `json:"employee_id,omitempty"`
+	// FK -> employee.id (nil for library templates)
+	EmployeeID *uuid.UUID `json:"employee_id,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Description holds the value of the "description" field.
@@ -50,7 +50,7 @@ func (*Goal) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case goal.FieldCreatedBy:
+		case goal.FieldEmployeeID, goal.FieldCreatedBy:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case goal.FieldIsTemplate:
 			values[i] = new(sql.NullBool)
@@ -60,7 +60,7 @@ func (*Goal) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case goal.FieldStartDate, goal.FieldEndDate, goal.FieldCreatedAt, goal.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case goal.FieldID, goal.FieldTenantID, goal.FieldEmployeeID:
+		case goal.FieldID, goal.FieldTenantID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -90,10 +90,11 @@ func (_m *Goal) assignValues(columns []string, values []any) error {
 				_m.TenantID = *value
 			}
 		case goal.FieldEmployeeID:
-			if value, ok := values[i].(*uuid.UUID); !ok {
+			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field employee_id", values[i])
-			} else if value != nil {
-				_m.EmployeeID = *value
+			} else if value.Valid {
+				_m.EmployeeID = new(uuid.UUID)
+				*_m.EmployeeID = *value.S.(*uuid.UUID)
 			}
 		case goal.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -197,8 +198,10 @@ func (_m *Goal) String() string {
 	builder.WriteString("tenant_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.TenantID))
 	builder.WriteString(", ")
-	builder.WriteString("employee_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.EmployeeID))
+	if v := _m.EmployeeID; v != nil {
+		builder.WriteString("employee_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)

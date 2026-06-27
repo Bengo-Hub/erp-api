@@ -16,19 +16,20 @@ type defaultLeaveCategory struct {
 	annualDays     string // decimal string
 	allowCarryover bool
 	maxCarryover   string // decimal string (0 = none/unlimited per schema comment)
+	isPaid         bool
 }
 
 // defaultLeaveCategories are sensible Kenyan statutory + common leave types. Annual leave
 // (21 working days) is the only carryover-eligible default (capped at 5 days), matching the
 // Employment Act minimum + common practice.
 var defaultLeaveCategories = []defaultLeaveCategory{
-	{"Annual Leave", "Paid annual leave (Employment Act minimum)", "21", true, "5"},
-	{"Sick Leave", "Paid sick leave (14 days full + 30 half per Employment Act)", "14", false, "0"},
-	{"Maternity Leave", "Statutory maternity leave", "90", false, "0"},
-	{"Paternity Leave", "Statutory paternity leave", "14", false, "0"},
-	{"Compassionate Leave", "Bereavement / compassionate leave", "3", false, "0"},
-	{"Study Leave", "Approved study / examination leave", "0", false, "0"},
-	{"Unpaid Leave", "Leave without pay", "0", false, "0"},
+	{"Annual Leave", "Paid annual leave (Employment Act minimum)", "21", true, "5", true},
+	{"Sick Leave", "Paid sick leave (14 days full + 30 half per Employment Act)", "14", false, "0", true},
+	{"Maternity Leave", "Statutory maternity leave", "90", false, "0", true},
+	{"Paternity Leave", "Statutory paternity leave", "14", false, "0", true},
+	{"Compassionate Leave", "Bereavement / compassionate leave", "3", false, "0", true},
+	{"Study Leave", "Approved study / examination leave", "0", false, "0", true},
+	{"Unpaid Leave", "Leave without pay", "0", false, "0", false},
 }
 
 // EnsureLeaveCategories idempotently creates the default leave categories for a tenant.
@@ -49,6 +50,7 @@ func (s *Service) EnsureLeaveCategories(ctx context.Context, tenantID uuid.UUID)
 			SetName(c.name).
 			SetDescription(c.description).
 			SetIsActive(true).
+			SetIsPaid(c.isPaid).
 			SetDefaultAnnualDays(decimal.RequireFromString(c.annualDays)).
 			SetAllowCarryover(c.allowCarryover).
 			SetMaxCarryoverDays(decimal.RequireFromString(c.maxCarryover)).

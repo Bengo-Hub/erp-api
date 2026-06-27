@@ -57,6 +57,12 @@ func (_u *GoalUpdate) SetNillableEmployeeID(v *uuid.UUID) *GoalUpdate {
 	return _u
 }
 
+// ClearEmployeeID clears the value of the "employee_id" field.
+func (_u *GoalUpdate) ClearEmployeeID() *GoalUpdate {
+	_u.mutation.ClearEmployeeID()
+	return _u
+}
+
 // SetTitle sets the "title" field.
 func (_u *GoalUpdate) SetTitle(v string) *GoalUpdate {
 	_u.mutation.SetTitle(v)
@@ -275,6 +281,9 @@ func (_u *GoalUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.EmployeeID(); ok {
 		_spec.SetField(goal.FieldEmployeeID, field.TypeUUID, value)
 	}
+	if _u.mutation.EmployeeIDCleared() {
+		_spec.ClearField(goal.FieldEmployeeID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(goal.FieldTitle, field.TypeString, value)
 	}
@@ -362,6 +371,12 @@ func (_u *GoalUpdateOne) SetNillableEmployeeID(v *uuid.UUID) *GoalUpdateOne {
 	if v != nil {
 		_u.SetEmployeeID(*v)
 	}
+	return _u
+}
+
+// ClearEmployeeID clears the value of the "employee_id" field.
+func (_u *GoalUpdateOne) ClearEmployeeID() *GoalUpdateOne {
+	_u.mutation.ClearEmployeeID()
 	return _u
 }
 
@@ -612,6 +627,9 @@ func (_u *GoalUpdateOne) sqlSave(ctx context.Context) (_node *Goal, err error) {
 	}
 	if value, ok := _u.mutation.EmployeeID(); ok {
 		_spec.SetField(goal.FieldEmployeeID, field.TypeUUID, value)
+	}
+	if _u.mutation.EmployeeIDCleared() {
+		_spec.ClearField(goal.FieldEmployeeID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(goal.FieldTitle, field.TypeString, value)

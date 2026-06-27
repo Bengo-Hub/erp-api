@@ -44601,7 +44601,7 @@ func (m *GoalMutation) EmployeeID() (r uuid.UUID, exists bool) {
 // OldEmployeeID returns the old "employee_id" field's value of the Goal entity.
 // If the Goal object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *GoalMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *GoalMutation) OldEmployeeID(ctx context.Context) (v *uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
 	}
@@ -44615,9 +44615,22 @@ func (m *GoalMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err erro
 	return oldValue.EmployeeID, nil
 }
 
+// ClearEmployeeID clears the value of the "employee_id" field.
+func (m *GoalMutation) ClearEmployeeID() {
+	m.employee_id = nil
+	m.clearedFields[goal.FieldEmployeeID] = struct{}{}
+}
+
+// EmployeeIDCleared returns if the "employee_id" field was cleared in this mutation.
+func (m *GoalMutation) EmployeeIDCleared() bool {
+	_, ok := m.clearedFields[goal.FieldEmployeeID]
+	return ok
+}
+
 // ResetEmployeeID resets all changes to the "employee_id" field.
 func (m *GoalMutation) ResetEmployeeID() {
 	m.employee_id = nil
+	delete(m.clearedFields, goal.FieldEmployeeID)
 }
 
 // SetTitle sets the "title" field.
@@ -45326,6 +45339,9 @@ func (m *GoalMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *GoalMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(goal.FieldEmployeeID) {
+		fields = append(fields, goal.FieldEmployeeID)
+	}
 	if m.FieldCleared(goal.FieldDescription) {
 		fields = append(fields, goal.FieldDescription)
 	}
@@ -45352,6 +45368,9 @@ func (m *GoalMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *GoalMutation) ClearField(name string) error {
 	switch name {
+	case goal.FieldEmployeeID:
+		m.ClearEmployeeID()
+		return nil
 	case goal.FieldDescription:
 		m.ClearDescription()
 		return nil

@@ -19,7 +19,9 @@ func (Goal) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
 		field.UUID("tenant_id", uuid.UUID{}).Comment("Owning tenant"),
-		field.UUID("employee_id", uuid.UUID{}).Comment("FK -> employee.id"),
+		// employee_id is nil for reusable library templates (is_template=true); set for an
+		// employee's own goal.
+		field.UUID("employee_id", uuid.UUID{}).Optional().Nillable().Comment("FK -> employee.id (nil for library templates)"),
 		field.String("title"),
 		field.String("description").Optional(),
 		field.Time("start_date").Optional().Nillable(),

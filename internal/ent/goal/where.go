@@ -190,6 +190,16 @@ func EmployeeIDLTE(v uuid.UUID) predicate.Goal {
 	return predicate.Goal(sql.FieldLTE(FieldEmployeeID, v))
 }
 
+// EmployeeIDIsNil applies the IsNil predicate on the "employee_id" field.
+func EmployeeIDIsNil() predicate.Goal {
+	return predicate.Goal(sql.FieldIsNull(FieldEmployeeID))
+}
+
+// EmployeeIDNotNil applies the NotNil predicate on the "employee_id" field.
+func EmployeeIDNotNil() predicate.Goal {
+	return predicate.Goal(sql.FieldNotNull(FieldEmployeeID))
+}
+
 // TitleEQ applies the EQ predicate on the "title" field.
 func TitleEQ(v string) predicate.Goal {
 	return predicate.Goal(sql.FieldEQ(FieldTitle, v))

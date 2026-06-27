@@ -42,6 +42,9 @@ func (s *Service) EnsureAll(ctx context.Context, tenantID uuid.UUID) error {
 	if err := s.EnsureAppraisalTemplate(ctx, tenantID); err != nil {
 		return fmt.Errorf("defaults: appraisal template: %w", err)
 	}
+	if err := s.EnsureGoalLibrary(ctx, tenantID); err != nil {
+		return fmt.Errorf("defaults: goal library: %w", err)
+	}
 	if err := s.seq.EnsureDefaults(ctx, tenantID); err != nil {
 		return fmt.Errorf("defaults: document sequences: %w", err)
 	}
