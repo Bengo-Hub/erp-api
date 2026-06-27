@@ -19,6 +19,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll"
 	"github.com/Bengo-Hub/erp-api/internal/modules/reports"
 	platformauth "github.com/Bengo-Hub/erp-api/internal/platform/auth"
+	"github.com/Bengo-Hub/erp-api/internal/platform/events"
 )
 
 // DocumentsHandler serves authenticated document downloads (payslip PDFs). It owns the
@@ -30,6 +31,7 @@ type DocumentsHandler struct {
 	payroll  *payroll.Service
 	docs     *docs.DocumentService
 	seq      *docseq.Service
+	notify   *events.Notifications
 }
 
 func NewDocumentsHandler(
@@ -50,8 +52,16 @@ func NewDocumentsHandler(
 	}
 }
 
+// WithNotifications wires the outbox email emitter so payslips can be emailed (with the PDF
+// attached) via erp.email.requested. Optional — nil disables the email endpoint.
+func (h *DocumentsHandler) WithNotifications(n *events.Notifications) *DocumentsHandler {
+	h.notify = n
+	return h
+}
+
 func (h *DocumentsHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/hrm/payroll/{id}/pdf", h.PayslipPDF)
+	r.Post("/hrm/payroll/email-payslips", h.EmailPayslips)
 }
 
 // PayslipPDF streams a tenant-branded payslip PDF. Gated on hrm.payroll.view PLUS a
@@ -90,21 +100,28 @@ func (h *DocumentsHandler) PayslipPDF(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve tenant branding + employee identity, adapt, generate, stream.
-	ti := h.tenantInfo(r.Context(), scope.TenantID)
-	in := h.payslipInput(r.Context(), scope.TenantID, ps, emp)
-
-	lines, _ := h.payroll.LoadPayslipLines(r.Context(), scope.TenantID, ps.ID)
-	breakdown := payroll.BuildPayslipBreakdownWithLines(ps, lines)
-	doc := adapters.PayslipToDocument(in, breakdown, ti)
-
-	body, mime, err := h.docs.Generate(doc, docs.FormatPDF)
+	body, filename, mime, err := h.payslipPDFBytes(r.Context(), scope.TenantID, ps, emp)
 	if err != nil {
 		h.log.Error("payslip pdf generate", zap.Error(err))
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to generate payslip")
 		return
 	}
-	streamDownload(w, body, mime, in.DocNumber+".pdf")
+	streamDownload(w, body, mime, filename)
+}
+
+// payslipPDFBytes resolves branding + identity, builds the breakdown and renders the
+// tenant-branded payslip PDF. Shared by the download endpoint and the email flow.
+func (h *DocumentsHandler) payslipPDFBytes(ctx context.Context, tenantID uuid.UUID, ps *ent.Payslip, emp *ent.Employee) ([]byte, string, string, error) {
+	ti := h.tenantInfo(ctx, tenantID)
+	in := h.payslipInput(ctx, tenantID, ps, emp)
+	lines, _ := h.payroll.LoadPayslipLines(ctx, tenantID, ps.ID)
+	breakdown := payroll.BuildPayslipBreakdownWithLines(ps, lines)
+	doc := adapters.PayslipToDocument(in, breakdown, ti)
+	body, mime, err := h.docs.Generate(doc, docs.FormatPDF)
+	if err != nil {
+		return nil, "", "", err
+	}
+	return body, in.DocNumber + ".pdf", mime, nil
 }
 
 // canDownloadPayslip enforces the self-or-manager rule. Managers (manage/process perm)
