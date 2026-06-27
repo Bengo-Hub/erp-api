@@ -433,7 +433,13 @@ func (h *EmployeesHandler) List(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list employees")
 		return
 	}
-	writePaginated(w, rows, total, p)
+	views, err := h.svc.Enrich(r.Context(), scope.TenantID, rows)
+	if err != nil {
+		h.log.Error("enrich employees", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to enrich employees")
+		return
+	}
+	writePaginated(w, views, total, p)
 }
 
 func (h *EmployeesHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -458,7 +464,12 @@ func (h *EmployeesHandler) Get(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to fetch employee")
 		return
 	}
-	writeJSON(w, http.StatusOK, row)
+	views, err := h.svc.Enrich(r.Context(), scope.TenantID, []*ent.Employee{row})
+	if err != nil || len(views) == 0 {
+		writeJSON(w, http.StatusOK, row)
+		return
+	}
+	writeJSON(w, http.StatusOK, views[0])
 }
 
 type createEmployeeBody struct {
