@@ -33,7 +33,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/backupsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
-	"github.com/Bengo-Hub/erp-api/internal/ent/casuallaborrecord"
+	"github.com/Bengo-Hub/erp-api/internal/ent/casualpayment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
@@ -150,7 +150,7 @@ const (
 	TypeBackupSetting             = "BackupSetting"
 	TypeBenefitTax                = "BenefitTax"
 	TypeCandidate                 = "Candidate"
-	TypeCasualLaborRecord         = "CasualLaborRecord"
+	TypeCasualPayment             = "CasualPayment"
 	TypeClaimItem                 = "ClaimItem"
 	TypeCompanySettings           = "CompanySettings"
 	TypeContactDetails            = "ContactDetails"
@@ -19842,48 +19842,55 @@ func (m *CandidateMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Candidate edge %s", name)
 }
 
-// CasualLaborRecordMutation represents an operation that mutates the CasualLaborRecord nodes in the graph.
-type CasualLaborRecordMutation struct {
+// CasualPaymentMutation represents an operation that mutates the CasualPayment nodes in the graph.
+type CasualPaymentMutation struct {
 	config
 	op                     Op
 	typ                    string
 	id                     *uuid.UUID
 	tenant_id              *uuid.UUID
-	engaged_by_employee_id *uuid.UUID
-	project_id             *uuid.UUID
-	cost_center_id         *uuid.UUID
+	settlement_mode        *casualpayment.SettlementMode
+	employee_id            *uuid.UUID
 	worker_name            *string
 	worker_id_number       *string
 	worker_phone           *string
-	task_description       *string
+	engaged_by_employee_id *uuid.UUID
+	imprest_advance_id     *uuid.UUID
+	wage_type              *casualpayment.WageType
+	quantity               *decimal.Decimal
+	rate                   *decimal.Decimal
 	amount                 *decimal.Decimal
+	task_description       *string
 	work_date              *time.Time
-	payment_method         *string
-	status                 *casuallaborrecord.Status
+	payment_date           *time.Time
+	payroll_month          *time.Time
+	project_id             *uuid.UUID
+	cost_center_id         *uuid.UUID
+	payment_option         *string
+	status                 *casualpayment.Status
 	approver_id            *uuid.UUID
 	approved_at            *time.Time
-	imprest_advance_id     *uuid.UUID
 	attachment_url         *string
 	delete_status          *bool
 	created_at             *time.Time
 	updated_at             *time.Time
 	clearedFields          map[string]struct{}
 	done                   bool
-	oldValue               func(context.Context) (*CasualLaborRecord, error)
-	predicates             []predicate.CasualLaborRecord
+	oldValue               func(context.Context) (*CasualPayment, error)
+	predicates             []predicate.CasualPayment
 }
 
-var _ ent.Mutation = (*CasualLaborRecordMutation)(nil)
+var _ ent.Mutation = (*CasualPaymentMutation)(nil)
 
-// casuallaborrecordOption allows management of the mutation configuration using functional options.
-type casuallaborrecordOption func(*CasualLaborRecordMutation)
+// casualpaymentOption allows management of the mutation configuration using functional options.
+type casualpaymentOption func(*CasualPaymentMutation)
 
-// newCasualLaborRecordMutation creates new mutation for the CasualLaborRecord entity.
-func newCasualLaborRecordMutation(c config, op Op, opts ...casuallaborrecordOption) *CasualLaborRecordMutation {
-	m := &CasualLaborRecordMutation{
+// newCasualPaymentMutation creates new mutation for the CasualPayment entity.
+func newCasualPaymentMutation(c config, op Op, opts ...casualpaymentOption) *CasualPaymentMutation {
+	m := &CasualPaymentMutation{
 		config:        c,
 		op:            op,
-		typ:           TypeCasualLaborRecord,
+		typ:           TypeCasualPayment,
 		clearedFields: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
@@ -19892,20 +19899,20 @@ func newCasualLaborRecordMutation(c config, op Op, opts ...casuallaborrecordOpti
 	return m
 }
 
-// withCasualLaborRecordID sets the ID field of the mutation.
-func withCasualLaborRecordID(id uuid.UUID) casuallaborrecordOption {
-	return func(m *CasualLaborRecordMutation) {
+// withCasualPaymentID sets the ID field of the mutation.
+func withCasualPaymentID(id uuid.UUID) casualpaymentOption {
+	return func(m *CasualPaymentMutation) {
 		var (
 			err   error
 			once  sync.Once
-			value *CasualLaborRecord
+			value *CasualPayment
 		)
-		m.oldValue = func(ctx context.Context) (*CasualLaborRecord, error) {
+		m.oldValue = func(ctx context.Context) (*CasualPayment, error) {
 			once.Do(func() {
 				if m.done {
 					err = errors.New("querying old values post mutation is not allowed")
 				} else {
-					value, err = m.Client().CasualLaborRecord.Get(ctx, id)
+					value, err = m.Client().CasualPayment.Get(ctx, id)
 				}
 			})
 			return value, err
@@ -19914,10 +19921,10 @@ func withCasualLaborRecordID(id uuid.UUID) casuallaborrecordOption {
 	}
 }
 
-// withCasualLaborRecord sets the old CasualLaborRecord of the mutation.
-func withCasualLaborRecord(node *CasualLaborRecord) casuallaborrecordOption {
-	return func(m *CasualLaborRecordMutation) {
-		m.oldValue = func(context.Context) (*CasualLaborRecord, error) {
+// withCasualPayment sets the old CasualPayment of the mutation.
+func withCasualPayment(node *CasualPayment) casualpaymentOption {
+	return func(m *CasualPaymentMutation) {
+		m.oldValue = func(context.Context) (*CasualPayment, error) {
 			return node, nil
 		}
 		m.id = &node.ID
@@ -19926,7 +19933,7 @@ func withCasualLaborRecord(node *CasualLaborRecord) casuallaborrecordOption {
 
 // Client returns a new `ent.Client` from the mutation. If the mutation was
 // executed in a transaction (ent.Tx), a transactional client is returned.
-func (m CasualLaborRecordMutation) Client() *Client {
+func (m CasualPaymentMutation) Client() *Client {
 	client := &Client{config: m.config}
 	client.init()
 	return client
@@ -19934,7 +19941,7 @@ func (m CasualLaborRecordMutation) Client() *Client {
 
 // Tx returns an `ent.Tx` for mutations that were executed in transactions;
 // it returns an error otherwise.
-func (m CasualLaborRecordMutation) Tx() (*Tx, error) {
+func (m CasualPaymentMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
 		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
@@ -19944,14 +19951,14 @@ func (m CasualLaborRecordMutation) Tx() (*Tx, error) {
 }
 
 // SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of CasualLaborRecord entities.
-func (m *CasualLaborRecordMutation) SetID(id uuid.UUID) {
+// operation is only accepted on creation of CasualPayment entities.
+func (m *CasualPaymentMutation) SetID(id uuid.UUID) {
 	m.id = &id
 }
 
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *CasualLaborRecordMutation) ID() (id uuid.UUID, exists bool) {
+func (m *CasualPaymentMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -19962,7 +19969,7 @@ func (m *CasualLaborRecordMutation) ID() (id uuid.UUID, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *CasualLaborRecordMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+func (m *CasualPaymentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
@@ -19971,19 +19978,19 @@ func (m *CasualLaborRecordMutation) IDs(ctx context.Context) ([]uuid.UUID, error
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().CasualLaborRecord.Query().Where(m.predicates...).IDs(ctx)
+		return m.Client().CasualPayment.Query().Where(m.predicates...).IDs(ctx)
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
 }
 
 // SetTenantID sets the "tenant_id" field.
-func (m *CasualLaborRecordMutation) SetTenantID(u uuid.UUID) {
+func (m *CasualPaymentMutation) SetTenantID(u uuid.UUID) {
 	m.tenant_id = &u
 }
 
 // TenantID returns the value of the "tenant_id" field in the mutation.
-func (m *CasualLaborRecordMutation) TenantID() (r uuid.UUID, exists bool) {
+func (m *CasualPaymentMutation) TenantID() (r uuid.UUID, exists bool) {
 	v := m.tenant_id
 	if v == nil {
 		return
@@ -19991,10 +19998,10 @@ func (m *CasualLaborRecordMutation) TenantID() (r uuid.UUID, exists bool) {
 	return *v, true
 }
 
-// OldTenantID returns the old "tenant_id" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldTenantID returns the old "tenant_id" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *CasualPaymentMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
 	}
@@ -20009,164 +20016,102 @@ func (m *CasualLaborRecordMutation) OldTenantID(ctx context.Context) (v uuid.UUI
 }
 
 // ResetTenantID resets all changes to the "tenant_id" field.
-func (m *CasualLaborRecordMutation) ResetTenantID() {
+func (m *CasualPaymentMutation) ResetTenantID() {
 	m.tenant_id = nil
 }
 
-// SetEngagedByEmployeeID sets the "engaged_by_employee_id" field.
-func (m *CasualLaborRecordMutation) SetEngagedByEmployeeID(u uuid.UUID) {
-	m.engaged_by_employee_id = &u
+// SetSettlementMode sets the "settlement_mode" field.
+func (m *CasualPaymentMutation) SetSettlementMode(cm casualpayment.SettlementMode) {
+	m.settlement_mode = &cm
 }
 
-// EngagedByEmployeeID returns the value of the "engaged_by_employee_id" field in the mutation.
-func (m *CasualLaborRecordMutation) EngagedByEmployeeID() (r uuid.UUID, exists bool) {
-	v := m.engaged_by_employee_id
+// SettlementMode returns the value of the "settlement_mode" field in the mutation.
+func (m *CasualPaymentMutation) SettlementMode() (r casualpayment.SettlementMode, exists bool) {
+	v := m.settlement_mode
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldEngagedByEmployeeID returns the old "engaged_by_employee_id" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldSettlementMode returns the old "settlement_mode" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldEngagedByEmployeeID(ctx context.Context) (v *uuid.UUID, err error) {
+func (m *CasualPaymentMutation) OldSettlementMode(ctx context.Context) (v casualpayment.SettlementMode, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldEngagedByEmployeeID is only allowed on UpdateOne operations")
+		return v, errors.New("OldSettlementMode is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldEngagedByEmployeeID requires an ID field in the mutation")
+		return v, errors.New("OldSettlementMode requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldEngagedByEmployeeID: %w", err)
+		return v, fmt.Errorf("querying old value for OldSettlementMode: %w", err)
 	}
-	return oldValue.EngagedByEmployeeID, nil
+	return oldValue.SettlementMode, nil
 }
 
-// ClearEngagedByEmployeeID clears the value of the "engaged_by_employee_id" field.
-func (m *CasualLaborRecordMutation) ClearEngagedByEmployeeID() {
-	m.engaged_by_employee_id = nil
-	m.clearedFields[casuallaborrecord.FieldEngagedByEmployeeID] = struct{}{}
+// ResetSettlementMode resets all changes to the "settlement_mode" field.
+func (m *CasualPaymentMutation) ResetSettlementMode() {
+	m.settlement_mode = nil
 }
 
-// EngagedByEmployeeIDCleared returns if the "engaged_by_employee_id" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) EngagedByEmployeeIDCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldEngagedByEmployeeID]
-	return ok
+// SetEmployeeID sets the "employee_id" field.
+func (m *CasualPaymentMutation) SetEmployeeID(u uuid.UUID) {
+	m.employee_id = &u
 }
 
-// ResetEngagedByEmployeeID resets all changes to the "engaged_by_employee_id" field.
-func (m *CasualLaborRecordMutation) ResetEngagedByEmployeeID() {
-	m.engaged_by_employee_id = nil
-	delete(m.clearedFields, casuallaborrecord.FieldEngagedByEmployeeID)
-}
-
-// SetProjectID sets the "project_id" field.
-func (m *CasualLaborRecordMutation) SetProjectID(u uuid.UUID) {
-	m.project_id = &u
-}
-
-// ProjectID returns the value of the "project_id" field in the mutation.
-func (m *CasualLaborRecordMutation) ProjectID() (r uuid.UUID, exists bool) {
-	v := m.project_id
+// EmployeeID returns the value of the "employee_id" field in the mutation.
+func (m *CasualPaymentMutation) EmployeeID() (r uuid.UUID, exists bool) {
+	v := m.employee_id
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldProjectID returns the old "project_id" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldEmployeeID returns the old "employee_id" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldProjectID(ctx context.Context) (v *uuid.UUID, err error) {
+func (m *CasualPaymentMutation) OldEmployeeID(ctx context.Context) (v *uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldProjectID is only allowed on UpdateOne operations")
+		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldProjectID requires an ID field in the mutation")
+		return v, errors.New("OldEmployeeID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldProjectID: %w", err)
+		return v, fmt.Errorf("querying old value for OldEmployeeID: %w", err)
 	}
-	return oldValue.ProjectID, nil
+	return oldValue.EmployeeID, nil
 }
 
-// ClearProjectID clears the value of the "project_id" field.
-func (m *CasualLaborRecordMutation) ClearProjectID() {
-	m.project_id = nil
-	m.clearedFields[casuallaborrecord.FieldProjectID] = struct{}{}
+// ClearEmployeeID clears the value of the "employee_id" field.
+func (m *CasualPaymentMutation) ClearEmployeeID() {
+	m.employee_id = nil
+	m.clearedFields[casualpayment.FieldEmployeeID] = struct{}{}
 }
 
-// ProjectIDCleared returns if the "project_id" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) ProjectIDCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldProjectID]
+// EmployeeIDCleared returns if the "employee_id" field was cleared in this mutation.
+func (m *CasualPaymentMutation) EmployeeIDCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldEmployeeID]
 	return ok
 }
 
-// ResetProjectID resets all changes to the "project_id" field.
-func (m *CasualLaborRecordMutation) ResetProjectID() {
-	m.project_id = nil
-	delete(m.clearedFields, casuallaborrecord.FieldProjectID)
-}
-
-// SetCostCenterID sets the "cost_center_id" field.
-func (m *CasualLaborRecordMutation) SetCostCenterID(u uuid.UUID) {
-	m.cost_center_id = &u
-}
-
-// CostCenterID returns the value of the "cost_center_id" field in the mutation.
-func (m *CasualLaborRecordMutation) CostCenterID() (r uuid.UUID, exists bool) {
-	v := m.cost_center_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCostCenterID returns the old "cost_center_id" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldCostCenterID(ctx context.Context) (v *uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCostCenterID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCostCenterID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCostCenterID: %w", err)
-	}
-	return oldValue.CostCenterID, nil
-}
-
-// ClearCostCenterID clears the value of the "cost_center_id" field.
-func (m *CasualLaborRecordMutation) ClearCostCenterID() {
-	m.cost_center_id = nil
-	m.clearedFields[casuallaborrecord.FieldCostCenterID] = struct{}{}
-}
-
-// CostCenterIDCleared returns if the "cost_center_id" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) CostCenterIDCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldCostCenterID]
-	return ok
-}
-
-// ResetCostCenterID resets all changes to the "cost_center_id" field.
-func (m *CasualLaborRecordMutation) ResetCostCenterID() {
-	m.cost_center_id = nil
-	delete(m.clearedFields, casuallaborrecord.FieldCostCenterID)
+// ResetEmployeeID resets all changes to the "employee_id" field.
+func (m *CasualPaymentMutation) ResetEmployeeID() {
+	m.employee_id = nil
+	delete(m.clearedFields, casualpayment.FieldEmployeeID)
 }
 
 // SetWorkerName sets the "worker_name" field.
-func (m *CasualLaborRecordMutation) SetWorkerName(s string) {
+func (m *CasualPaymentMutation) SetWorkerName(s string) {
 	m.worker_name = &s
 }
 
 // WorkerName returns the value of the "worker_name" field in the mutation.
-func (m *CasualLaborRecordMutation) WorkerName() (r string, exists bool) {
+func (m *CasualPaymentMutation) WorkerName() (r string, exists bool) {
 	v := m.worker_name
 	if v == nil {
 		return
@@ -20174,10 +20119,10 @@ func (m *CasualLaborRecordMutation) WorkerName() (r string, exists bool) {
 	return *v, true
 }
 
-// OldWorkerName returns the old "worker_name" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldWorkerName returns the old "worker_name" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldWorkerName(ctx context.Context) (v string, err error) {
+func (m *CasualPaymentMutation) OldWorkerName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldWorkerName is only allowed on UpdateOne operations")
 	}
@@ -20191,18 +20136,31 @@ func (m *CasualLaborRecordMutation) OldWorkerName(ctx context.Context) (v string
 	return oldValue.WorkerName, nil
 }
 
-// ResetWorkerName resets all changes to the "worker_name" field.
-func (m *CasualLaborRecordMutation) ResetWorkerName() {
+// ClearWorkerName clears the value of the "worker_name" field.
+func (m *CasualPaymentMutation) ClearWorkerName() {
 	m.worker_name = nil
+	m.clearedFields[casualpayment.FieldWorkerName] = struct{}{}
+}
+
+// WorkerNameCleared returns if the "worker_name" field was cleared in this mutation.
+func (m *CasualPaymentMutation) WorkerNameCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldWorkerName]
+	return ok
+}
+
+// ResetWorkerName resets all changes to the "worker_name" field.
+func (m *CasualPaymentMutation) ResetWorkerName() {
+	m.worker_name = nil
+	delete(m.clearedFields, casualpayment.FieldWorkerName)
 }
 
 // SetWorkerIDNumber sets the "worker_id_number" field.
-func (m *CasualLaborRecordMutation) SetWorkerIDNumber(s string) {
+func (m *CasualPaymentMutation) SetWorkerIDNumber(s string) {
 	m.worker_id_number = &s
 }
 
 // WorkerIDNumber returns the value of the "worker_id_number" field in the mutation.
-func (m *CasualLaborRecordMutation) WorkerIDNumber() (r string, exists bool) {
+func (m *CasualPaymentMutation) WorkerIDNumber() (r string, exists bool) {
 	v := m.worker_id_number
 	if v == nil {
 		return
@@ -20210,10 +20168,10 @@ func (m *CasualLaborRecordMutation) WorkerIDNumber() (r string, exists bool) {
 	return *v, true
 }
 
-// OldWorkerIDNumber returns the old "worker_id_number" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldWorkerIDNumber returns the old "worker_id_number" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldWorkerIDNumber(ctx context.Context) (v string, err error) {
+func (m *CasualPaymentMutation) OldWorkerIDNumber(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldWorkerIDNumber is only allowed on UpdateOne operations")
 	}
@@ -20228,30 +20186,30 @@ func (m *CasualLaborRecordMutation) OldWorkerIDNumber(ctx context.Context) (v st
 }
 
 // ClearWorkerIDNumber clears the value of the "worker_id_number" field.
-func (m *CasualLaborRecordMutation) ClearWorkerIDNumber() {
+func (m *CasualPaymentMutation) ClearWorkerIDNumber() {
 	m.worker_id_number = nil
-	m.clearedFields[casuallaborrecord.FieldWorkerIDNumber] = struct{}{}
+	m.clearedFields[casualpayment.FieldWorkerIDNumber] = struct{}{}
 }
 
 // WorkerIDNumberCleared returns if the "worker_id_number" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) WorkerIDNumberCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldWorkerIDNumber]
+func (m *CasualPaymentMutation) WorkerIDNumberCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldWorkerIDNumber]
 	return ok
 }
 
 // ResetWorkerIDNumber resets all changes to the "worker_id_number" field.
-func (m *CasualLaborRecordMutation) ResetWorkerIDNumber() {
+func (m *CasualPaymentMutation) ResetWorkerIDNumber() {
 	m.worker_id_number = nil
-	delete(m.clearedFields, casuallaborrecord.FieldWorkerIDNumber)
+	delete(m.clearedFields, casualpayment.FieldWorkerIDNumber)
 }
 
 // SetWorkerPhone sets the "worker_phone" field.
-func (m *CasualLaborRecordMutation) SetWorkerPhone(s string) {
+func (m *CasualPaymentMutation) SetWorkerPhone(s string) {
 	m.worker_phone = &s
 }
 
 // WorkerPhone returns the value of the "worker_phone" field in the mutation.
-func (m *CasualLaborRecordMutation) WorkerPhone() (r string, exists bool) {
+func (m *CasualPaymentMutation) WorkerPhone() (r string, exists bool) {
 	v := m.worker_phone
 	if v == nil {
 		return
@@ -20259,10 +20217,10 @@ func (m *CasualLaborRecordMutation) WorkerPhone() (r string, exists bool) {
 	return *v, true
 }
 
-// OldWorkerPhone returns the old "worker_phone" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldWorkerPhone returns the old "worker_phone" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldWorkerPhone(ctx context.Context) (v string, err error) {
+func (m *CasualPaymentMutation) OldWorkerPhone(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldWorkerPhone is only allowed on UpdateOne operations")
 	}
@@ -20277,347 +20235,79 @@ func (m *CasualLaborRecordMutation) OldWorkerPhone(ctx context.Context) (v strin
 }
 
 // ClearWorkerPhone clears the value of the "worker_phone" field.
-func (m *CasualLaborRecordMutation) ClearWorkerPhone() {
+func (m *CasualPaymentMutation) ClearWorkerPhone() {
 	m.worker_phone = nil
-	m.clearedFields[casuallaborrecord.FieldWorkerPhone] = struct{}{}
+	m.clearedFields[casualpayment.FieldWorkerPhone] = struct{}{}
 }
 
 // WorkerPhoneCleared returns if the "worker_phone" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) WorkerPhoneCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldWorkerPhone]
+func (m *CasualPaymentMutation) WorkerPhoneCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldWorkerPhone]
 	return ok
 }
 
 // ResetWorkerPhone resets all changes to the "worker_phone" field.
-func (m *CasualLaborRecordMutation) ResetWorkerPhone() {
+func (m *CasualPaymentMutation) ResetWorkerPhone() {
 	m.worker_phone = nil
-	delete(m.clearedFields, casuallaborrecord.FieldWorkerPhone)
+	delete(m.clearedFields, casualpayment.FieldWorkerPhone)
 }
 
-// SetTaskDescription sets the "task_description" field.
-func (m *CasualLaborRecordMutation) SetTaskDescription(s string) {
-	m.task_description = &s
+// SetEngagedByEmployeeID sets the "engaged_by_employee_id" field.
+func (m *CasualPaymentMutation) SetEngagedByEmployeeID(u uuid.UUID) {
+	m.engaged_by_employee_id = &u
 }
 
-// TaskDescription returns the value of the "task_description" field in the mutation.
-func (m *CasualLaborRecordMutation) TaskDescription() (r string, exists bool) {
-	v := m.task_description
+// EngagedByEmployeeID returns the value of the "engaged_by_employee_id" field in the mutation.
+func (m *CasualPaymentMutation) EngagedByEmployeeID() (r uuid.UUID, exists bool) {
+	v := m.engaged_by_employee_id
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldTaskDescription returns the old "task_description" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldEngagedByEmployeeID returns the old "engaged_by_employee_id" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldTaskDescription(ctx context.Context) (v string, err error) {
+func (m *CasualPaymentMutation) OldEngagedByEmployeeID(ctx context.Context) (v *uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldTaskDescription is only allowed on UpdateOne operations")
+		return v, errors.New("OldEngagedByEmployeeID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldTaskDescription requires an ID field in the mutation")
+		return v, errors.New("OldEngagedByEmployeeID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldTaskDescription: %w", err)
+		return v, fmt.Errorf("querying old value for OldEngagedByEmployeeID: %w", err)
 	}
-	return oldValue.TaskDescription, nil
+	return oldValue.EngagedByEmployeeID, nil
 }
 
-// ClearTaskDescription clears the value of the "task_description" field.
-func (m *CasualLaborRecordMutation) ClearTaskDescription() {
-	m.task_description = nil
-	m.clearedFields[casuallaborrecord.FieldTaskDescription] = struct{}{}
+// ClearEngagedByEmployeeID clears the value of the "engaged_by_employee_id" field.
+func (m *CasualPaymentMutation) ClearEngagedByEmployeeID() {
+	m.engaged_by_employee_id = nil
+	m.clearedFields[casualpayment.FieldEngagedByEmployeeID] = struct{}{}
 }
 
-// TaskDescriptionCleared returns if the "task_description" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) TaskDescriptionCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldTaskDescription]
+// EngagedByEmployeeIDCleared returns if the "engaged_by_employee_id" field was cleared in this mutation.
+func (m *CasualPaymentMutation) EngagedByEmployeeIDCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldEngagedByEmployeeID]
 	return ok
 }
 
-// ResetTaskDescription resets all changes to the "task_description" field.
-func (m *CasualLaborRecordMutation) ResetTaskDescription() {
-	m.task_description = nil
-	delete(m.clearedFields, casuallaborrecord.FieldTaskDescription)
-}
-
-// SetAmount sets the "amount" field.
-func (m *CasualLaborRecordMutation) SetAmount(d decimal.Decimal) {
-	m.amount = &d
-}
-
-// Amount returns the value of the "amount" field in the mutation.
-func (m *CasualLaborRecordMutation) Amount() (r decimal.Decimal, exists bool) {
-	v := m.amount
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAmount returns the old "amount" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldAmount(ctx context.Context) (v decimal.Decimal, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAmount is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAmount requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAmount: %w", err)
-	}
-	return oldValue.Amount, nil
-}
-
-// ResetAmount resets all changes to the "amount" field.
-func (m *CasualLaborRecordMutation) ResetAmount() {
-	m.amount = nil
-}
-
-// SetWorkDate sets the "work_date" field.
-func (m *CasualLaborRecordMutation) SetWorkDate(t time.Time) {
-	m.work_date = &t
-}
-
-// WorkDate returns the value of the "work_date" field in the mutation.
-func (m *CasualLaborRecordMutation) WorkDate() (r time.Time, exists bool) {
-	v := m.work_date
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldWorkDate returns the old "work_date" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldWorkDate(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldWorkDate is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldWorkDate requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldWorkDate: %w", err)
-	}
-	return oldValue.WorkDate, nil
-}
-
-// ClearWorkDate clears the value of the "work_date" field.
-func (m *CasualLaborRecordMutation) ClearWorkDate() {
-	m.work_date = nil
-	m.clearedFields[casuallaborrecord.FieldWorkDate] = struct{}{}
-}
-
-// WorkDateCleared returns if the "work_date" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) WorkDateCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldWorkDate]
-	return ok
-}
-
-// ResetWorkDate resets all changes to the "work_date" field.
-func (m *CasualLaborRecordMutation) ResetWorkDate() {
-	m.work_date = nil
-	delete(m.clearedFields, casuallaborrecord.FieldWorkDate)
-}
-
-// SetPaymentMethod sets the "payment_method" field.
-func (m *CasualLaborRecordMutation) SetPaymentMethod(s string) {
-	m.payment_method = &s
-}
-
-// PaymentMethod returns the value of the "payment_method" field in the mutation.
-func (m *CasualLaborRecordMutation) PaymentMethod() (r string, exists bool) {
-	v := m.payment_method
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPaymentMethod returns the old "payment_method" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldPaymentMethod(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPaymentMethod is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPaymentMethod requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPaymentMethod: %w", err)
-	}
-	return oldValue.PaymentMethod, nil
-}
-
-// ClearPaymentMethod clears the value of the "payment_method" field.
-func (m *CasualLaborRecordMutation) ClearPaymentMethod() {
-	m.payment_method = nil
-	m.clearedFields[casuallaborrecord.FieldPaymentMethod] = struct{}{}
-}
-
-// PaymentMethodCleared returns if the "payment_method" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) PaymentMethodCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldPaymentMethod]
-	return ok
-}
-
-// ResetPaymentMethod resets all changes to the "payment_method" field.
-func (m *CasualLaborRecordMutation) ResetPaymentMethod() {
-	m.payment_method = nil
-	delete(m.clearedFields, casuallaborrecord.FieldPaymentMethod)
-}
-
-// SetStatus sets the "status" field.
-func (m *CasualLaborRecordMutation) SetStatus(c casuallaborrecord.Status) {
-	m.status = &c
-}
-
-// Status returns the value of the "status" field in the mutation.
-func (m *CasualLaborRecordMutation) Status() (r casuallaborrecord.Status, exists bool) {
-	v := m.status
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStatus returns the old "status" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldStatus(ctx context.Context) (v casuallaborrecord.Status, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStatus requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
-	}
-	return oldValue.Status, nil
-}
-
-// ResetStatus resets all changes to the "status" field.
-func (m *CasualLaborRecordMutation) ResetStatus() {
-	m.status = nil
-}
-
-// SetApproverID sets the "approver_id" field.
-func (m *CasualLaborRecordMutation) SetApproverID(u uuid.UUID) {
-	m.approver_id = &u
-}
-
-// ApproverID returns the value of the "approver_id" field in the mutation.
-func (m *CasualLaborRecordMutation) ApproverID() (r uuid.UUID, exists bool) {
-	v := m.approver_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldApproverID returns the old "approver_id" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldApproverID(ctx context.Context) (v *uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldApproverID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldApproverID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldApproverID: %w", err)
-	}
-	return oldValue.ApproverID, nil
-}
-
-// ClearApproverID clears the value of the "approver_id" field.
-func (m *CasualLaborRecordMutation) ClearApproverID() {
-	m.approver_id = nil
-	m.clearedFields[casuallaborrecord.FieldApproverID] = struct{}{}
-}
-
-// ApproverIDCleared returns if the "approver_id" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) ApproverIDCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldApproverID]
-	return ok
-}
-
-// ResetApproverID resets all changes to the "approver_id" field.
-func (m *CasualLaborRecordMutation) ResetApproverID() {
-	m.approver_id = nil
-	delete(m.clearedFields, casuallaborrecord.FieldApproverID)
-}
-
-// SetApprovedAt sets the "approved_at" field.
-func (m *CasualLaborRecordMutation) SetApprovedAt(t time.Time) {
-	m.approved_at = &t
-}
-
-// ApprovedAt returns the value of the "approved_at" field in the mutation.
-func (m *CasualLaborRecordMutation) ApprovedAt() (r time.Time, exists bool) {
-	v := m.approved_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldApprovedAt returns the old "approved_at" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldApprovedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldApprovedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldApprovedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldApprovedAt: %w", err)
-	}
-	return oldValue.ApprovedAt, nil
-}
-
-// ClearApprovedAt clears the value of the "approved_at" field.
-func (m *CasualLaborRecordMutation) ClearApprovedAt() {
-	m.approved_at = nil
-	m.clearedFields[casuallaborrecord.FieldApprovedAt] = struct{}{}
-}
-
-// ApprovedAtCleared returns if the "approved_at" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) ApprovedAtCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldApprovedAt]
-	return ok
-}
-
-// ResetApprovedAt resets all changes to the "approved_at" field.
-func (m *CasualLaborRecordMutation) ResetApprovedAt() {
-	m.approved_at = nil
-	delete(m.clearedFields, casuallaborrecord.FieldApprovedAt)
+// ResetEngagedByEmployeeID resets all changes to the "engaged_by_employee_id" field.
+func (m *CasualPaymentMutation) ResetEngagedByEmployeeID() {
+	m.engaged_by_employee_id = nil
+	delete(m.clearedFields, casualpayment.FieldEngagedByEmployeeID)
 }
 
 // SetImprestAdvanceID sets the "imprest_advance_id" field.
-func (m *CasualLaborRecordMutation) SetImprestAdvanceID(u uuid.UUID) {
+func (m *CasualPaymentMutation) SetImprestAdvanceID(u uuid.UUID) {
 	m.imprest_advance_id = &u
 }
 
 // ImprestAdvanceID returns the value of the "imprest_advance_id" field in the mutation.
-func (m *CasualLaborRecordMutation) ImprestAdvanceID() (r uuid.UUID, exists bool) {
+func (m *CasualPaymentMutation) ImprestAdvanceID() (r uuid.UUID, exists bool) {
 	v := m.imprest_advance_id
 	if v == nil {
 		return
@@ -20625,10 +20315,10 @@ func (m *CasualLaborRecordMutation) ImprestAdvanceID() (r uuid.UUID, exists bool
 	return *v, true
 }
 
-// OldImprestAdvanceID returns the old "imprest_advance_id" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldImprestAdvanceID returns the old "imprest_advance_id" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldImprestAdvanceID(ctx context.Context) (v *uuid.UUID, err error) {
+func (m *CasualPaymentMutation) OldImprestAdvanceID(ctx context.Context) (v *uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldImprestAdvanceID is only allowed on UpdateOne operations")
 	}
@@ -20643,30 +20333,651 @@ func (m *CasualLaborRecordMutation) OldImprestAdvanceID(ctx context.Context) (v 
 }
 
 // ClearImprestAdvanceID clears the value of the "imprest_advance_id" field.
-func (m *CasualLaborRecordMutation) ClearImprestAdvanceID() {
+func (m *CasualPaymentMutation) ClearImprestAdvanceID() {
 	m.imprest_advance_id = nil
-	m.clearedFields[casuallaborrecord.FieldImprestAdvanceID] = struct{}{}
+	m.clearedFields[casualpayment.FieldImprestAdvanceID] = struct{}{}
 }
 
 // ImprestAdvanceIDCleared returns if the "imprest_advance_id" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) ImprestAdvanceIDCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldImprestAdvanceID]
+func (m *CasualPaymentMutation) ImprestAdvanceIDCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldImprestAdvanceID]
 	return ok
 }
 
 // ResetImprestAdvanceID resets all changes to the "imprest_advance_id" field.
-func (m *CasualLaborRecordMutation) ResetImprestAdvanceID() {
+func (m *CasualPaymentMutation) ResetImprestAdvanceID() {
 	m.imprest_advance_id = nil
-	delete(m.clearedFields, casuallaborrecord.FieldImprestAdvanceID)
+	delete(m.clearedFields, casualpayment.FieldImprestAdvanceID)
+}
+
+// SetWageType sets the "wage_type" field.
+func (m *CasualPaymentMutation) SetWageType(ct casualpayment.WageType) {
+	m.wage_type = &ct
+}
+
+// WageType returns the value of the "wage_type" field in the mutation.
+func (m *CasualPaymentMutation) WageType() (r casualpayment.WageType, exists bool) {
+	v := m.wage_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWageType returns the old "wage_type" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldWageType(ctx context.Context) (v casualpayment.WageType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWageType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWageType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWageType: %w", err)
+	}
+	return oldValue.WageType, nil
+}
+
+// ResetWageType resets all changes to the "wage_type" field.
+func (m *CasualPaymentMutation) ResetWageType() {
+	m.wage_type = nil
+}
+
+// SetQuantity sets the "quantity" field.
+func (m *CasualPaymentMutation) SetQuantity(d decimal.Decimal) {
+	m.quantity = &d
+}
+
+// Quantity returns the value of the "quantity" field in the mutation.
+func (m *CasualPaymentMutation) Quantity() (r decimal.Decimal, exists bool) {
+	v := m.quantity
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuantity returns the old "quantity" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldQuantity(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuantity is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuantity requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuantity: %w", err)
+	}
+	return oldValue.Quantity, nil
+}
+
+// ResetQuantity resets all changes to the "quantity" field.
+func (m *CasualPaymentMutation) ResetQuantity() {
+	m.quantity = nil
+}
+
+// SetRate sets the "rate" field.
+func (m *CasualPaymentMutation) SetRate(d decimal.Decimal) {
+	m.rate = &d
+}
+
+// Rate returns the value of the "rate" field in the mutation.
+func (m *CasualPaymentMutation) Rate() (r decimal.Decimal, exists bool) {
+	v := m.rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRate returns the old "rate" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldRate(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRate: %w", err)
+	}
+	return oldValue.Rate, nil
+}
+
+// ResetRate resets all changes to the "rate" field.
+func (m *CasualPaymentMutation) ResetRate() {
+	m.rate = nil
+}
+
+// SetAmount sets the "amount" field.
+func (m *CasualPaymentMutation) SetAmount(d decimal.Decimal) {
+	m.amount = &d
+}
+
+// Amount returns the value of the "amount" field in the mutation.
+func (m *CasualPaymentMutation) Amount() (r decimal.Decimal, exists bool) {
+	v := m.amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmount returns the old "amount" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmount: %w", err)
+	}
+	return oldValue.Amount, nil
+}
+
+// ResetAmount resets all changes to the "amount" field.
+func (m *CasualPaymentMutation) ResetAmount() {
+	m.amount = nil
+}
+
+// SetTaskDescription sets the "task_description" field.
+func (m *CasualPaymentMutation) SetTaskDescription(s string) {
+	m.task_description = &s
+}
+
+// TaskDescription returns the value of the "task_description" field in the mutation.
+func (m *CasualPaymentMutation) TaskDescription() (r string, exists bool) {
+	v := m.task_description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaskDescription returns the old "task_description" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldTaskDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaskDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaskDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaskDescription: %w", err)
+	}
+	return oldValue.TaskDescription, nil
+}
+
+// ClearTaskDescription clears the value of the "task_description" field.
+func (m *CasualPaymentMutation) ClearTaskDescription() {
+	m.task_description = nil
+	m.clearedFields[casualpayment.FieldTaskDescription] = struct{}{}
+}
+
+// TaskDescriptionCleared returns if the "task_description" field was cleared in this mutation.
+func (m *CasualPaymentMutation) TaskDescriptionCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldTaskDescription]
+	return ok
+}
+
+// ResetTaskDescription resets all changes to the "task_description" field.
+func (m *CasualPaymentMutation) ResetTaskDescription() {
+	m.task_description = nil
+	delete(m.clearedFields, casualpayment.FieldTaskDescription)
+}
+
+// SetWorkDate sets the "work_date" field.
+func (m *CasualPaymentMutation) SetWorkDate(t time.Time) {
+	m.work_date = &t
+}
+
+// WorkDate returns the value of the "work_date" field in the mutation.
+func (m *CasualPaymentMutation) WorkDate() (r time.Time, exists bool) {
+	v := m.work_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkDate returns the old "work_date" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldWorkDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWorkDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWorkDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkDate: %w", err)
+	}
+	return oldValue.WorkDate, nil
+}
+
+// ClearWorkDate clears the value of the "work_date" field.
+func (m *CasualPaymentMutation) ClearWorkDate() {
+	m.work_date = nil
+	m.clearedFields[casualpayment.FieldWorkDate] = struct{}{}
+}
+
+// WorkDateCleared returns if the "work_date" field was cleared in this mutation.
+func (m *CasualPaymentMutation) WorkDateCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldWorkDate]
+	return ok
+}
+
+// ResetWorkDate resets all changes to the "work_date" field.
+func (m *CasualPaymentMutation) ResetWorkDate() {
+	m.work_date = nil
+	delete(m.clearedFields, casualpayment.FieldWorkDate)
+}
+
+// SetPaymentDate sets the "payment_date" field.
+func (m *CasualPaymentMutation) SetPaymentDate(t time.Time) {
+	m.payment_date = &t
+}
+
+// PaymentDate returns the value of the "payment_date" field in the mutation.
+func (m *CasualPaymentMutation) PaymentDate() (r time.Time, exists bool) {
+	v := m.payment_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPaymentDate returns the old "payment_date" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldPaymentDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPaymentDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPaymentDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPaymentDate: %w", err)
+	}
+	return oldValue.PaymentDate, nil
+}
+
+// ClearPaymentDate clears the value of the "payment_date" field.
+func (m *CasualPaymentMutation) ClearPaymentDate() {
+	m.payment_date = nil
+	m.clearedFields[casualpayment.FieldPaymentDate] = struct{}{}
+}
+
+// PaymentDateCleared returns if the "payment_date" field was cleared in this mutation.
+func (m *CasualPaymentMutation) PaymentDateCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldPaymentDate]
+	return ok
+}
+
+// ResetPaymentDate resets all changes to the "payment_date" field.
+func (m *CasualPaymentMutation) ResetPaymentDate() {
+	m.payment_date = nil
+	delete(m.clearedFields, casualpayment.FieldPaymentDate)
+}
+
+// SetPayrollMonth sets the "payroll_month" field.
+func (m *CasualPaymentMutation) SetPayrollMonth(t time.Time) {
+	m.payroll_month = &t
+}
+
+// PayrollMonth returns the value of the "payroll_month" field in the mutation.
+func (m *CasualPaymentMutation) PayrollMonth() (r time.Time, exists bool) {
+	v := m.payroll_month
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayrollMonth returns the old "payroll_month" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldPayrollMonth(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayrollMonth is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayrollMonth requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayrollMonth: %w", err)
+	}
+	return oldValue.PayrollMonth, nil
+}
+
+// ClearPayrollMonth clears the value of the "payroll_month" field.
+func (m *CasualPaymentMutation) ClearPayrollMonth() {
+	m.payroll_month = nil
+	m.clearedFields[casualpayment.FieldPayrollMonth] = struct{}{}
+}
+
+// PayrollMonthCleared returns if the "payroll_month" field was cleared in this mutation.
+func (m *CasualPaymentMutation) PayrollMonthCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldPayrollMonth]
+	return ok
+}
+
+// ResetPayrollMonth resets all changes to the "payroll_month" field.
+func (m *CasualPaymentMutation) ResetPayrollMonth() {
+	m.payroll_month = nil
+	delete(m.clearedFields, casualpayment.FieldPayrollMonth)
+}
+
+// SetProjectID sets the "project_id" field.
+func (m *CasualPaymentMutation) SetProjectID(u uuid.UUID) {
+	m.project_id = &u
+}
+
+// ProjectID returns the value of the "project_id" field in the mutation.
+func (m *CasualPaymentMutation) ProjectID() (r uuid.UUID, exists bool) {
+	v := m.project_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProjectID returns the old "project_id" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldProjectID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProjectID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProjectID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProjectID: %w", err)
+	}
+	return oldValue.ProjectID, nil
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (m *CasualPaymentMutation) ClearProjectID() {
+	m.project_id = nil
+	m.clearedFields[casualpayment.FieldProjectID] = struct{}{}
+}
+
+// ProjectIDCleared returns if the "project_id" field was cleared in this mutation.
+func (m *CasualPaymentMutation) ProjectIDCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldProjectID]
+	return ok
+}
+
+// ResetProjectID resets all changes to the "project_id" field.
+func (m *CasualPaymentMutation) ResetProjectID() {
+	m.project_id = nil
+	delete(m.clearedFields, casualpayment.FieldProjectID)
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (m *CasualPaymentMutation) SetCostCenterID(u uuid.UUID) {
+	m.cost_center_id = &u
+}
+
+// CostCenterID returns the value of the "cost_center_id" field in the mutation.
+func (m *CasualPaymentMutation) CostCenterID() (r uuid.UUID, exists bool) {
+	v := m.cost_center_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostCenterID returns the old "cost_center_id" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldCostCenterID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostCenterID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostCenterID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostCenterID: %w", err)
+	}
+	return oldValue.CostCenterID, nil
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (m *CasualPaymentMutation) ClearCostCenterID() {
+	m.cost_center_id = nil
+	m.clearedFields[casualpayment.FieldCostCenterID] = struct{}{}
+}
+
+// CostCenterIDCleared returns if the "cost_center_id" field was cleared in this mutation.
+func (m *CasualPaymentMutation) CostCenterIDCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldCostCenterID]
+	return ok
+}
+
+// ResetCostCenterID resets all changes to the "cost_center_id" field.
+func (m *CasualPaymentMutation) ResetCostCenterID() {
+	m.cost_center_id = nil
+	delete(m.clearedFields, casualpayment.FieldCostCenterID)
+}
+
+// SetPaymentOption sets the "payment_option" field.
+func (m *CasualPaymentMutation) SetPaymentOption(s string) {
+	m.payment_option = &s
+}
+
+// PaymentOption returns the value of the "payment_option" field in the mutation.
+func (m *CasualPaymentMutation) PaymentOption() (r string, exists bool) {
+	v := m.payment_option
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPaymentOption returns the old "payment_option" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldPaymentOption(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPaymentOption is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPaymentOption requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPaymentOption: %w", err)
+	}
+	return oldValue.PaymentOption, nil
+}
+
+// ClearPaymentOption clears the value of the "payment_option" field.
+func (m *CasualPaymentMutation) ClearPaymentOption() {
+	m.payment_option = nil
+	m.clearedFields[casualpayment.FieldPaymentOption] = struct{}{}
+}
+
+// PaymentOptionCleared returns if the "payment_option" field was cleared in this mutation.
+func (m *CasualPaymentMutation) PaymentOptionCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldPaymentOption]
+	return ok
+}
+
+// ResetPaymentOption resets all changes to the "payment_option" field.
+func (m *CasualPaymentMutation) ResetPaymentOption() {
+	m.payment_option = nil
+	delete(m.clearedFields, casualpayment.FieldPaymentOption)
+}
+
+// SetStatus sets the "status" field.
+func (m *CasualPaymentMutation) SetStatus(c casualpayment.Status) {
+	m.status = &c
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *CasualPaymentMutation) Status() (r casualpayment.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldStatus(ctx context.Context) (v casualpayment.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *CasualPaymentMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetApproverID sets the "approver_id" field.
+func (m *CasualPaymentMutation) SetApproverID(u uuid.UUID) {
+	m.approver_id = &u
+}
+
+// ApproverID returns the value of the "approver_id" field in the mutation.
+func (m *CasualPaymentMutation) ApproverID() (r uuid.UUID, exists bool) {
+	v := m.approver_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApproverID returns the old "approver_id" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldApproverID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApproverID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApproverID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApproverID: %w", err)
+	}
+	return oldValue.ApproverID, nil
+}
+
+// ClearApproverID clears the value of the "approver_id" field.
+func (m *CasualPaymentMutation) ClearApproverID() {
+	m.approver_id = nil
+	m.clearedFields[casualpayment.FieldApproverID] = struct{}{}
+}
+
+// ApproverIDCleared returns if the "approver_id" field was cleared in this mutation.
+func (m *CasualPaymentMutation) ApproverIDCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldApproverID]
+	return ok
+}
+
+// ResetApproverID resets all changes to the "approver_id" field.
+func (m *CasualPaymentMutation) ResetApproverID() {
+	m.approver_id = nil
+	delete(m.clearedFields, casualpayment.FieldApproverID)
+}
+
+// SetApprovedAt sets the "approved_at" field.
+func (m *CasualPaymentMutation) SetApprovedAt(t time.Time) {
+	m.approved_at = &t
+}
+
+// ApprovedAt returns the value of the "approved_at" field in the mutation.
+func (m *CasualPaymentMutation) ApprovedAt() (r time.Time, exists bool) {
+	v := m.approved_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApprovedAt returns the old "approved_at" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CasualPaymentMutation) OldApprovedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApprovedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApprovedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApprovedAt: %w", err)
+	}
+	return oldValue.ApprovedAt, nil
+}
+
+// ClearApprovedAt clears the value of the "approved_at" field.
+func (m *CasualPaymentMutation) ClearApprovedAt() {
+	m.approved_at = nil
+	m.clearedFields[casualpayment.FieldApprovedAt] = struct{}{}
+}
+
+// ApprovedAtCleared returns if the "approved_at" field was cleared in this mutation.
+func (m *CasualPaymentMutation) ApprovedAtCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldApprovedAt]
+	return ok
+}
+
+// ResetApprovedAt resets all changes to the "approved_at" field.
+func (m *CasualPaymentMutation) ResetApprovedAt() {
+	m.approved_at = nil
+	delete(m.clearedFields, casualpayment.FieldApprovedAt)
 }
 
 // SetAttachmentURL sets the "attachment_url" field.
-func (m *CasualLaborRecordMutation) SetAttachmentURL(s string) {
+func (m *CasualPaymentMutation) SetAttachmentURL(s string) {
 	m.attachment_url = &s
 }
 
 // AttachmentURL returns the value of the "attachment_url" field in the mutation.
-func (m *CasualLaborRecordMutation) AttachmentURL() (r string, exists bool) {
+func (m *CasualPaymentMutation) AttachmentURL() (r string, exists bool) {
 	v := m.attachment_url
 	if v == nil {
 		return
@@ -20674,10 +20985,10 @@ func (m *CasualLaborRecordMutation) AttachmentURL() (r string, exists bool) {
 	return *v, true
 }
 
-// OldAttachmentURL returns the old "attachment_url" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldAttachmentURL returns the old "attachment_url" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldAttachmentURL(ctx context.Context) (v *string, err error) {
+func (m *CasualPaymentMutation) OldAttachmentURL(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldAttachmentURL is only allowed on UpdateOne operations")
 	}
@@ -20692,30 +21003,30 @@ func (m *CasualLaborRecordMutation) OldAttachmentURL(ctx context.Context) (v *st
 }
 
 // ClearAttachmentURL clears the value of the "attachment_url" field.
-func (m *CasualLaborRecordMutation) ClearAttachmentURL() {
+func (m *CasualPaymentMutation) ClearAttachmentURL() {
 	m.attachment_url = nil
-	m.clearedFields[casuallaborrecord.FieldAttachmentURL] = struct{}{}
+	m.clearedFields[casualpayment.FieldAttachmentURL] = struct{}{}
 }
 
 // AttachmentURLCleared returns if the "attachment_url" field was cleared in this mutation.
-func (m *CasualLaborRecordMutation) AttachmentURLCleared() bool {
-	_, ok := m.clearedFields[casuallaborrecord.FieldAttachmentURL]
+func (m *CasualPaymentMutation) AttachmentURLCleared() bool {
+	_, ok := m.clearedFields[casualpayment.FieldAttachmentURL]
 	return ok
 }
 
 // ResetAttachmentURL resets all changes to the "attachment_url" field.
-func (m *CasualLaborRecordMutation) ResetAttachmentURL() {
+func (m *CasualPaymentMutation) ResetAttachmentURL() {
 	m.attachment_url = nil
-	delete(m.clearedFields, casuallaborrecord.FieldAttachmentURL)
+	delete(m.clearedFields, casualpayment.FieldAttachmentURL)
 }
 
 // SetDeleteStatus sets the "delete_status" field.
-func (m *CasualLaborRecordMutation) SetDeleteStatus(b bool) {
+func (m *CasualPaymentMutation) SetDeleteStatus(b bool) {
 	m.delete_status = &b
 }
 
 // DeleteStatus returns the value of the "delete_status" field in the mutation.
-func (m *CasualLaborRecordMutation) DeleteStatus() (r bool, exists bool) {
+func (m *CasualPaymentMutation) DeleteStatus() (r bool, exists bool) {
 	v := m.delete_status
 	if v == nil {
 		return
@@ -20723,10 +21034,10 @@ func (m *CasualLaborRecordMutation) DeleteStatus() (r bool, exists bool) {
 	return *v, true
 }
 
-// OldDeleteStatus returns the old "delete_status" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldDeleteStatus returns the old "delete_status" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldDeleteStatus(ctx context.Context) (v bool, err error) {
+func (m *CasualPaymentMutation) OldDeleteStatus(ctx context.Context) (v bool, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDeleteStatus is only allowed on UpdateOne operations")
 	}
@@ -20741,17 +21052,17 @@ func (m *CasualLaborRecordMutation) OldDeleteStatus(ctx context.Context) (v bool
 }
 
 // ResetDeleteStatus resets all changes to the "delete_status" field.
-func (m *CasualLaborRecordMutation) ResetDeleteStatus() {
+func (m *CasualPaymentMutation) ResetDeleteStatus() {
 	m.delete_status = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (m *CasualLaborRecordMutation) SetCreatedAt(t time.Time) {
+func (m *CasualPaymentMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
 }
 
 // CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *CasualLaborRecordMutation) CreatedAt() (r time.Time, exists bool) {
+func (m *CasualPaymentMutation) CreatedAt() (r time.Time, exists bool) {
 	v := m.created_at
 	if v == nil {
 		return
@@ -20759,10 +21070,10 @@ func (m *CasualLaborRecordMutation) CreatedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldCreatedAt returns the old "created_at" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldCreatedAt returns the old "created_at" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *CasualPaymentMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
 	}
@@ -20777,17 +21088,17 @@ func (m *CasualLaborRecordMutation) OldCreatedAt(ctx context.Context) (v time.Ti
 }
 
 // ResetCreatedAt resets all changes to the "created_at" field.
-func (m *CasualLaborRecordMutation) ResetCreatedAt() {
+func (m *CasualPaymentMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (m *CasualLaborRecordMutation) SetUpdatedAt(t time.Time) {
+func (m *CasualPaymentMutation) SetUpdatedAt(t time.Time) {
 	m.updated_at = &t
 }
 
 // UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *CasualLaborRecordMutation) UpdatedAt() (r time.Time, exists bool) {
+func (m *CasualPaymentMutation) UpdatedAt() (r time.Time, exists bool) {
 	v := m.updated_at
 	if v == nil {
 		return
@@ -20795,10 +21106,10 @@ func (m *CasualLaborRecordMutation) UpdatedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldUpdatedAt returns the old "updated_at" field's value of the CasualLaborRecord entity.
-// If the CasualLaborRecord object wasn't provided to the builder, the object is fetched from the database.
+// OldUpdatedAt returns the old "updated_at" field's value of the CasualPayment entity.
+// If the CasualPayment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CasualLaborRecordMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *CasualPaymentMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
 	}
@@ -20813,19 +21124,19 @@ func (m *CasualLaborRecordMutation) OldUpdatedAt(ctx context.Context) (v time.Ti
 }
 
 // ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *CasualLaborRecordMutation) ResetUpdatedAt() {
+func (m *CasualPaymentMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// Where appends a list predicates to the CasualLaborRecordMutation builder.
-func (m *CasualLaborRecordMutation) Where(ps ...predicate.CasualLaborRecord) {
+// Where appends a list predicates to the CasualPaymentMutation builder.
+func (m *CasualPaymentMutation) Where(ps ...predicate.CasualPayment) {
 	m.predicates = append(m.predicates, ps...)
 }
 
-// WhereP appends storage-level predicates to the CasualLaborRecordMutation builder. Using this method,
+// WhereP appends storage-level predicates to the CasualPaymentMutation builder. Using this method,
 // users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *CasualLaborRecordMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.CasualLaborRecord, len(ps))
+func (m *CasualPaymentMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.CasualPayment, len(ps))
 	for i := range ps {
 		p[i] = ps[i]
 	}
@@ -20833,81 +21144,102 @@ func (m *CasualLaborRecordMutation) WhereP(ps ...func(*sql.Selector)) {
 }
 
 // Op returns the operation name.
-func (m *CasualLaborRecordMutation) Op() Op {
+func (m *CasualPaymentMutation) Op() Op {
 	return m.op
 }
 
 // SetOp allows setting the mutation operation.
-func (m *CasualLaborRecordMutation) SetOp(op Op) {
+func (m *CasualPaymentMutation) SetOp(op Op) {
 	m.op = op
 }
 
-// Type returns the node type of this mutation (CasualLaborRecord).
-func (m *CasualLaborRecordMutation) Type() string {
+// Type returns the node type of this mutation (CasualPayment).
+func (m *CasualPaymentMutation) Type() string {
 	return m.typ
 }
 
 // Fields returns all fields that were changed during this mutation. Note that in
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
-func (m *CasualLaborRecordMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+func (m *CasualPaymentMutation) Fields() []string {
+	fields := make([]string, 0, 26)
 	if m.tenant_id != nil {
-		fields = append(fields, casuallaborrecord.FieldTenantID)
+		fields = append(fields, casualpayment.FieldTenantID)
 	}
-	if m.engaged_by_employee_id != nil {
-		fields = append(fields, casuallaborrecord.FieldEngagedByEmployeeID)
+	if m.settlement_mode != nil {
+		fields = append(fields, casualpayment.FieldSettlementMode)
 	}
-	if m.project_id != nil {
-		fields = append(fields, casuallaborrecord.FieldProjectID)
-	}
-	if m.cost_center_id != nil {
-		fields = append(fields, casuallaborrecord.FieldCostCenterID)
+	if m.employee_id != nil {
+		fields = append(fields, casualpayment.FieldEmployeeID)
 	}
 	if m.worker_name != nil {
-		fields = append(fields, casuallaborrecord.FieldWorkerName)
+		fields = append(fields, casualpayment.FieldWorkerName)
 	}
 	if m.worker_id_number != nil {
-		fields = append(fields, casuallaborrecord.FieldWorkerIDNumber)
+		fields = append(fields, casualpayment.FieldWorkerIDNumber)
 	}
 	if m.worker_phone != nil {
-		fields = append(fields, casuallaborrecord.FieldWorkerPhone)
+		fields = append(fields, casualpayment.FieldWorkerPhone)
 	}
-	if m.task_description != nil {
-		fields = append(fields, casuallaborrecord.FieldTaskDescription)
-	}
-	if m.amount != nil {
-		fields = append(fields, casuallaborrecord.FieldAmount)
-	}
-	if m.work_date != nil {
-		fields = append(fields, casuallaborrecord.FieldWorkDate)
-	}
-	if m.payment_method != nil {
-		fields = append(fields, casuallaborrecord.FieldPaymentMethod)
-	}
-	if m.status != nil {
-		fields = append(fields, casuallaborrecord.FieldStatus)
-	}
-	if m.approver_id != nil {
-		fields = append(fields, casuallaborrecord.FieldApproverID)
-	}
-	if m.approved_at != nil {
-		fields = append(fields, casuallaborrecord.FieldApprovedAt)
+	if m.engaged_by_employee_id != nil {
+		fields = append(fields, casualpayment.FieldEngagedByEmployeeID)
 	}
 	if m.imprest_advance_id != nil {
-		fields = append(fields, casuallaborrecord.FieldImprestAdvanceID)
+		fields = append(fields, casualpayment.FieldImprestAdvanceID)
+	}
+	if m.wage_type != nil {
+		fields = append(fields, casualpayment.FieldWageType)
+	}
+	if m.quantity != nil {
+		fields = append(fields, casualpayment.FieldQuantity)
+	}
+	if m.rate != nil {
+		fields = append(fields, casualpayment.FieldRate)
+	}
+	if m.amount != nil {
+		fields = append(fields, casualpayment.FieldAmount)
+	}
+	if m.task_description != nil {
+		fields = append(fields, casualpayment.FieldTaskDescription)
+	}
+	if m.work_date != nil {
+		fields = append(fields, casualpayment.FieldWorkDate)
+	}
+	if m.payment_date != nil {
+		fields = append(fields, casualpayment.FieldPaymentDate)
+	}
+	if m.payroll_month != nil {
+		fields = append(fields, casualpayment.FieldPayrollMonth)
+	}
+	if m.project_id != nil {
+		fields = append(fields, casualpayment.FieldProjectID)
+	}
+	if m.cost_center_id != nil {
+		fields = append(fields, casualpayment.FieldCostCenterID)
+	}
+	if m.payment_option != nil {
+		fields = append(fields, casualpayment.FieldPaymentOption)
+	}
+	if m.status != nil {
+		fields = append(fields, casualpayment.FieldStatus)
+	}
+	if m.approver_id != nil {
+		fields = append(fields, casualpayment.FieldApproverID)
+	}
+	if m.approved_at != nil {
+		fields = append(fields, casualpayment.FieldApprovedAt)
 	}
 	if m.attachment_url != nil {
-		fields = append(fields, casuallaborrecord.FieldAttachmentURL)
+		fields = append(fields, casualpayment.FieldAttachmentURL)
 	}
 	if m.delete_status != nil {
-		fields = append(fields, casuallaborrecord.FieldDeleteStatus)
+		fields = append(fields, casualpayment.FieldDeleteStatus)
 	}
 	if m.created_at != nil {
-		fields = append(fields, casuallaborrecord.FieldCreatedAt)
+		fields = append(fields, casualpayment.FieldCreatedAt)
 	}
 	if m.updated_at != nil {
-		fields = append(fields, casuallaborrecord.FieldUpdatedAt)
+		fields = append(fields, casualpayment.FieldUpdatedAt)
 	}
 	return fields
 }
@@ -20915,45 +21247,59 @@ func (m *CasualLaborRecordMutation) Fields() []string {
 // Field returns the value of a field with the given name. The second boolean
 // return value indicates that this field was not set, or was not defined in the
 // schema.
-func (m *CasualLaborRecordMutation) Field(name string) (ent.Value, bool) {
+func (m *CasualPaymentMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case casuallaborrecord.FieldTenantID:
+	case casualpayment.FieldTenantID:
 		return m.TenantID()
-	case casuallaborrecord.FieldEngagedByEmployeeID:
-		return m.EngagedByEmployeeID()
-	case casuallaborrecord.FieldProjectID:
-		return m.ProjectID()
-	case casuallaborrecord.FieldCostCenterID:
-		return m.CostCenterID()
-	case casuallaborrecord.FieldWorkerName:
+	case casualpayment.FieldSettlementMode:
+		return m.SettlementMode()
+	case casualpayment.FieldEmployeeID:
+		return m.EmployeeID()
+	case casualpayment.FieldWorkerName:
 		return m.WorkerName()
-	case casuallaborrecord.FieldWorkerIDNumber:
+	case casualpayment.FieldWorkerIDNumber:
 		return m.WorkerIDNumber()
-	case casuallaborrecord.FieldWorkerPhone:
+	case casualpayment.FieldWorkerPhone:
 		return m.WorkerPhone()
-	case casuallaborrecord.FieldTaskDescription:
-		return m.TaskDescription()
-	case casuallaborrecord.FieldAmount:
-		return m.Amount()
-	case casuallaborrecord.FieldWorkDate:
-		return m.WorkDate()
-	case casuallaborrecord.FieldPaymentMethod:
-		return m.PaymentMethod()
-	case casuallaborrecord.FieldStatus:
-		return m.Status()
-	case casuallaborrecord.FieldApproverID:
-		return m.ApproverID()
-	case casuallaborrecord.FieldApprovedAt:
-		return m.ApprovedAt()
-	case casuallaborrecord.FieldImprestAdvanceID:
+	case casualpayment.FieldEngagedByEmployeeID:
+		return m.EngagedByEmployeeID()
+	case casualpayment.FieldImprestAdvanceID:
 		return m.ImprestAdvanceID()
-	case casuallaborrecord.FieldAttachmentURL:
+	case casualpayment.FieldWageType:
+		return m.WageType()
+	case casualpayment.FieldQuantity:
+		return m.Quantity()
+	case casualpayment.FieldRate:
+		return m.Rate()
+	case casualpayment.FieldAmount:
+		return m.Amount()
+	case casualpayment.FieldTaskDescription:
+		return m.TaskDescription()
+	case casualpayment.FieldWorkDate:
+		return m.WorkDate()
+	case casualpayment.FieldPaymentDate:
+		return m.PaymentDate()
+	case casualpayment.FieldPayrollMonth:
+		return m.PayrollMonth()
+	case casualpayment.FieldProjectID:
+		return m.ProjectID()
+	case casualpayment.FieldCostCenterID:
+		return m.CostCenterID()
+	case casualpayment.FieldPaymentOption:
+		return m.PaymentOption()
+	case casualpayment.FieldStatus:
+		return m.Status()
+	case casualpayment.FieldApproverID:
+		return m.ApproverID()
+	case casualpayment.FieldApprovedAt:
+		return m.ApprovedAt()
+	case casualpayment.FieldAttachmentURL:
 		return m.AttachmentURL()
-	case casuallaborrecord.FieldDeleteStatus:
+	case casualpayment.FieldDeleteStatus:
 		return m.DeleteStatus()
-	case casuallaborrecord.FieldCreatedAt:
+	case casualpayment.FieldCreatedAt:
 		return m.CreatedAt()
-	case casuallaborrecord.FieldUpdatedAt:
+	case casualpayment.FieldUpdatedAt:
 		return m.UpdatedAt()
 	}
 	return nil, false
@@ -20962,182 +21308,245 @@ func (m *CasualLaborRecordMutation) Field(name string) (ent.Value, bool) {
 // OldField returns the old value of the field from the database. An error is
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
-func (m *CasualLaborRecordMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+func (m *CasualPaymentMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case casuallaborrecord.FieldTenantID:
+	case casualpayment.FieldTenantID:
 		return m.OldTenantID(ctx)
-	case casuallaborrecord.FieldEngagedByEmployeeID:
-		return m.OldEngagedByEmployeeID(ctx)
-	case casuallaborrecord.FieldProjectID:
-		return m.OldProjectID(ctx)
-	case casuallaborrecord.FieldCostCenterID:
-		return m.OldCostCenterID(ctx)
-	case casuallaborrecord.FieldWorkerName:
+	case casualpayment.FieldSettlementMode:
+		return m.OldSettlementMode(ctx)
+	case casualpayment.FieldEmployeeID:
+		return m.OldEmployeeID(ctx)
+	case casualpayment.FieldWorkerName:
 		return m.OldWorkerName(ctx)
-	case casuallaborrecord.FieldWorkerIDNumber:
+	case casualpayment.FieldWorkerIDNumber:
 		return m.OldWorkerIDNumber(ctx)
-	case casuallaborrecord.FieldWorkerPhone:
+	case casualpayment.FieldWorkerPhone:
 		return m.OldWorkerPhone(ctx)
-	case casuallaborrecord.FieldTaskDescription:
-		return m.OldTaskDescription(ctx)
-	case casuallaborrecord.FieldAmount:
-		return m.OldAmount(ctx)
-	case casuallaborrecord.FieldWorkDate:
-		return m.OldWorkDate(ctx)
-	case casuallaborrecord.FieldPaymentMethod:
-		return m.OldPaymentMethod(ctx)
-	case casuallaborrecord.FieldStatus:
-		return m.OldStatus(ctx)
-	case casuallaborrecord.FieldApproverID:
-		return m.OldApproverID(ctx)
-	case casuallaborrecord.FieldApprovedAt:
-		return m.OldApprovedAt(ctx)
-	case casuallaborrecord.FieldImprestAdvanceID:
+	case casualpayment.FieldEngagedByEmployeeID:
+		return m.OldEngagedByEmployeeID(ctx)
+	case casualpayment.FieldImprestAdvanceID:
 		return m.OldImprestAdvanceID(ctx)
-	case casuallaborrecord.FieldAttachmentURL:
+	case casualpayment.FieldWageType:
+		return m.OldWageType(ctx)
+	case casualpayment.FieldQuantity:
+		return m.OldQuantity(ctx)
+	case casualpayment.FieldRate:
+		return m.OldRate(ctx)
+	case casualpayment.FieldAmount:
+		return m.OldAmount(ctx)
+	case casualpayment.FieldTaskDescription:
+		return m.OldTaskDescription(ctx)
+	case casualpayment.FieldWorkDate:
+		return m.OldWorkDate(ctx)
+	case casualpayment.FieldPaymentDate:
+		return m.OldPaymentDate(ctx)
+	case casualpayment.FieldPayrollMonth:
+		return m.OldPayrollMonth(ctx)
+	case casualpayment.FieldProjectID:
+		return m.OldProjectID(ctx)
+	case casualpayment.FieldCostCenterID:
+		return m.OldCostCenterID(ctx)
+	case casualpayment.FieldPaymentOption:
+		return m.OldPaymentOption(ctx)
+	case casualpayment.FieldStatus:
+		return m.OldStatus(ctx)
+	case casualpayment.FieldApproverID:
+		return m.OldApproverID(ctx)
+	case casualpayment.FieldApprovedAt:
+		return m.OldApprovedAt(ctx)
+	case casualpayment.FieldAttachmentURL:
 		return m.OldAttachmentURL(ctx)
-	case casuallaborrecord.FieldDeleteStatus:
+	case casualpayment.FieldDeleteStatus:
 		return m.OldDeleteStatus(ctx)
-	case casuallaborrecord.FieldCreatedAt:
+	case casualpayment.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
-	case casuallaborrecord.FieldUpdatedAt:
+	case casualpayment.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	}
-	return nil, fmt.Errorf("unknown CasualLaborRecord field %s", name)
+	return nil, fmt.Errorf("unknown CasualPayment field %s", name)
 }
 
 // SetField sets the value of a field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *CasualLaborRecordMutation) SetField(name string, value ent.Value) error {
+func (m *CasualPaymentMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case casuallaborrecord.FieldTenantID:
+	case casualpayment.FieldTenantID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTenantID(v)
 		return nil
-	case casuallaborrecord.FieldEngagedByEmployeeID:
+	case casualpayment.FieldSettlementMode:
+		v, ok := value.(casualpayment.SettlementMode)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSettlementMode(v)
+		return nil
+	case casualpayment.FieldEmployeeID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetEngagedByEmployeeID(v)
+		m.SetEmployeeID(v)
 		return nil
-	case casuallaborrecord.FieldProjectID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetProjectID(v)
-		return nil
-	case casuallaborrecord.FieldCostCenterID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCostCenterID(v)
-		return nil
-	case casuallaborrecord.FieldWorkerName:
+	case casualpayment.FieldWorkerName:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetWorkerName(v)
 		return nil
-	case casuallaborrecord.FieldWorkerIDNumber:
+	case casualpayment.FieldWorkerIDNumber:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetWorkerIDNumber(v)
 		return nil
-	case casuallaborrecord.FieldWorkerPhone:
+	case casualpayment.FieldWorkerPhone:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetWorkerPhone(v)
 		return nil
-	case casuallaborrecord.FieldTaskDescription:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetTaskDescription(v)
-		return nil
-	case casuallaborrecord.FieldAmount:
-		v, ok := value.(decimal.Decimal)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAmount(v)
-		return nil
-	case casuallaborrecord.FieldWorkDate:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetWorkDate(v)
-		return nil
-	case casuallaborrecord.FieldPaymentMethod:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPaymentMethod(v)
-		return nil
-	case casuallaborrecord.FieldStatus:
-		v, ok := value.(casuallaborrecord.Status)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStatus(v)
-		return nil
-	case casuallaborrecord.FieldApproverID:
+	case casualpayment.FieldEngagedByEmployeeID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetApproverID(v)
+		m.SetEngagedByEmployeeID(v)
 		return nil
-	case casuallaborrecord.FieldApprovedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetApprovedAt(v)
-		return nil
-	case casuallaborrecord.FieldImprestAdvanceID:
+	case casualpayment.FieldImprestAdvanceID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetImprestAdvanceID(v)
 		return nil
-	case casuallaborrecord.FieldAttachmentURL:
+	case casualpayment.FieldWageType:
+		v, ok := value.(casualpayment.WageType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWageType(v)
+		return nil
+	case casualpayment.FieldQuantity:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuantity(v)
+		return nil
+	case casualpayment.FieldRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRate(v)
+		return nil
+	case casualpayment.FieldAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmount(v)
+		return nil
+	case casualpayment.FieldTaskDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaskDescription(v)
+		return nil
+	case casualpayment.FieldWorkDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkDate(v)
+		return nil
+	case casualpayment.FieldPaymentDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPaymentDate(v)
+		return nil
+	case casualpayment.FieldPayrollMonth:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayrollMonth(v)
+		return nil
+	case casualpayment.FieldProjectID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProjectID(v)
+		return nil
+	case casualpayment.FieldCostCenterID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostCenterID(v)
+		return nil
+	case casualpayment.FieldPaymentOption:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPaymentOption(v)
+		return nil
+	case casualpayment.FieldStatus:
+		v, ok := value.(casualpayment.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case casualpayment.FieldApproverID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApproverID(v)
+		return nil
+	case casualpayment.FieldApprovedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApprovedAt(v)
+		return nil
+	case casualpayment.FieldAttachmentURL:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAttachmentURL(v)
 		return nil
-	case casuallaborrecord.FieldDeleteStatus:
+	case casualpayment.FieldDeleteStatus:
 		v, ok := value.(bool)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDeleteStatus(v)
 		return nil
-	case casuallaborrecord.FieldCreatedAt:
+	case casualpayment.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCreatedAt(v)
 		return nil
-	case casuallaborrecord.FieldUpdatedAt:
+	case casualpayment.FieldUpdatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
@@ -21145,236 +21554,281 @@ func (m *CasualLaborRecordMutation) SetField(name string, value ent.Value) error
 		m.SetUpdatedAt(v)
 		return nil
 	}
-	return fmt.Errorf("unknown CasualLaborRecord field %s", name)
+	return fmt.Errorf("unknown CasualPayment field %s", name)
 }
 
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
-func (m *CasualLaborRecordMutation) AddedFields() []string {
+func (m *CasualPaymentMutation) AddedFields() []string {
 	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
-func (m *CasualLaborRecordMutation) AddedField(name string) (ent.Value, bool) {
+func (m *CasualPaymentMutation) AddedField(name string) (ent.Value, bool) {
 	return nil, false
 }
 
 // AddField adds the value to the field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *CasualLaborRecordMutation) AddField(name string, value ent.Value) error {
+func (m *CasualPaymentMutation) AddField(name string, value ent.Value) error {
 	switch name {
 	}
-	return fmt.Errorf("unknown CasualLaborRecord numeric field %s", name)
+	return fmt.Errorf("unknown CasualPayment numeric field %s", name)
 }
 
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
-func (m *CasualLaborRecordMutation) ClearedFields() []string {
+func (m *CasualPaymentMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(casuallaborrecord.FieldEngagedByEmployeeID) {
-		fields = append(fields, casuallaborrecord.FieldEngagedByEmployeeID)
+	if m.FieldCleared(casualpayment.FieldEmployeeID) {
+		fields = append(fields, casualpayment.FieldEmployeeID)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldProjectID) {
-		fields = append(fields, casuallaborrecord.FieldProjectID)
+	if m.FieldCleared(casualpayment.FieldWorkerName) {
+		fields = append(fields, casualpayment.FieldWorkerName)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldCostCenterID) {
-		fields = append(fields, casuallaborrecord.FieldCostCenterID)
+	if m.FieldCleared(casualpayment.FieldWorkerIDNumber) {
+		fields = append(fields, casualpayment.FieldWorkerIDNumber)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldWorkerIDNumber) {
-		fields = append(fields, casuallaborrecord.FieldWorkerIDNumber)
+	if m.FieldCleared(casualpayment.FieldWorkerPhone) {
+		fields = append(fields, casualpayment.FieldWorkerPhone)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldWorkerPhone) {
-		fields = append(fields, casuallaborrecord.FieldWorkerPhone)
+	if m.FieldCleared(casualpayment.FieldEngagedByEmployeeID) {
+		fields = append(fields, casualpayment.FieldEngagedByEmployeeID)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldTaskDescription) {
-		fields = append(fields, casuallaborrecord.FieldTaskDescription)
+	if m.FieldCleared(casualpayment.FieldImprestAdvanceID) {
+		fields = append(fields, casualpayment.FieldImprestAdvanceID)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldWorkDate) {
-		fields = append(fields, casuallaborrecord.FieldWorkDate)
+	if m.FieldCleared(casualpayment.FieldTaskDescription) {
+		fields = append(fields, casualpayment.FieldTaskDescription)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldPaymentMethod) {
-		fields = append(fields, casuallaborrecord.FieldPaymentMethod)
+	if m.FieldCleared(casualpayment.FieldWorkDate) {
+		fields = append(fields, casualpayment.FieldWorkDate)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldApproverID) {
-		fields = append(fields, casuallaborrecord.FieldApproverID)
+	if m.FieldCleared(casualpayment.FieldPaymentDate) {
+		fields = append(fields, casualpayment.FieldPaymentDate)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldApprovedAt) {
-		fields = append(fields, casuallaborrecord.FieldApprovedAt)
+	if m.FieldCleared(casualpayment.FieldPayrollMonth) {
+		fields = append(fields, casualpayment.FieldPayrollMonth)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldImprestAdvanceID) {
-		fields = append(fields, casuallaborrecord.FieldImprestAdvanceID)
+	if m.FieldCleared(casualpayment.FieldProjectID) {
+		fields = append(fields, casualpayment.FieldProjectID)
 	}
-	if m.FieldCleared(casuallaborrecord.FieldAttachmentURL) {
-		fields = append(fields, casuallaborrecord.FieldAttachmentURL)
+	if m.FieldCleared(casualpayment.FieldCostCenterID) {
+		fields = append(fields, casualpayment.FieldCostCenterID)
+	}
+	if m.FieldCleared(casualpayment.FieldPaymentOption) {
+		fields = append(fields, casualpayment.FieldPaymentOption)
+	}
+	if m.FieldCleared(casualpayment.FieldApproverID) {
+		fields = append(fields, casualpayment.FieldApproverID)
+	}
+	if m.FieldCleared(casualpayment.FieldApprovedAt) {
+		fields = append(fields, casualpayment.FieldApprovedAt)
+	}
+	if m.FieldCleared(casualpayment.FieldAttachmentURL) {
+		fields = append(fields, casualpayment.FieldAttachmentURL)
 	}
 	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
 // cleared in this mutation.
-func (m *CasualLaborRecordMutation) FieldCleared(name string) bool {
+func (m *CasualPaymentMutation) FieldCleared(name string) bool {
 	_, ok := m.clearedFields[name]
 	return ok
 }
 
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
-func (m *CasualLaborRecordMutation) ClearField(name string) error {
+func (m *CasualPaymentMutation) ClearField(name string) error {
 	switch name {
-	case casuallaborrecord.FieldEngagedByEmployeeID:
-		m.ClearEngagedByEmployeeID()
+	case casualpayment.FieldEmployeeID:
+		m.ClearEmployeeID()
 		return nil
-	case casuallaborrecord.FieldProjectID:
-		m.ClearProjectID()
+	case casualpayment.FieldWorkerName:
+		m.ClearWorkerName()
 		return nil
-	case casuallaborrecord.FieldCostCenterID:
-		m.ClearCostCenterID()
-		return nil
-	case casuallaborrecord.FieldWorkerIDNumber:
+	case casualpayment.FieldWorkerIDNumber:
 		m.ClearWorkerIDNumber()
 		return nil
-	case casuallaborrecord.FieldWorkerPhone:
+	case casualpayment.FieldWorkerPhone:
 		m.ClearWorkerPhone()
 		return nil
-	case casuallaborrecord.FieldTaskDescription:
-		m.ClearTaskDescription()
+	case casualpayment.FieldEngagedByEmployeeID:
+		m.ClearEngagedByEmployeeID()
 		return nil
-	case casuallaborrecord.FieldWorkDate:
-		m.ClearWorkDate()
-		return nil
-	case casuallaborrecord.FieldPaymentMethod:
-		m.ClearPaymentMethod()
-		return nil
-	case casuallaborrecord.FieldApproverID:
-		m.ClearApproverID()
-		return nil
-	case casuallaborrecord.FieldApprovedAt:
-		m.ClearApprovedAt()
-		return nil
-	case casuallaborrecord.FieldImprestAdvanceID:
+	case casualpayment.FieldImprestAdvanceID:
 		m.ClearImprestAdvanceID()
 		return nil
-	case casuallaborrecord.FieldAttachmentURL:
+	case casualpayment.FieldTaskDescription:
+		m.ClearTaskDescription()
+		return nil
+	case casualpayment.FieldWorkDate:
+		m.ClearWorkDate()
+		return nil
+	case casualpayment.FieldPaymentDate:
+		m.ClearPaymentDate()
+		return nil
+	case casualpayment.FieldPayrollMonth:
+		m.ClearPayrollMonth()
+		return nil
+	case casualpayment.FieldProjectID:
+		m.ClearProjectID()
+		return nil
+	case casualpayment.FieldCostCenterID:
+		m.ClearCostCenterID()
+		return nil
+	case casualpayment.FieldPaymentOption:
+		m.ClearPaymentOption()
+		return nil
+	case casualpayment.FieldApproverID:
+		m.ClearApproverID()
+		return nil
+	case casualpayment.FieldApprovedAt:
+		m.ClearApprovedAt()
+		return nil
+	case casualpayment.FieldAttachmentURL:
 		m.ClearAttachmentURL()
 		return nil
 	}
-	return fmt.Errorf("unknown CasualLaborRecord nullable field %s", name)
+	return fmt.Errorf("unknown CasualPayment nullable field %s", name)
 }
 
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
-func (m *CasualLaborRecordMutation) ResetField(name string) error {
+func (m *CasualPaymentMutation) ResetField(name string) error {
 	switch name {
-	case casuallaborrecord.FieldTenantID:
+	case casualpayment.FieldTenantID:
 		m.ResetTenantID()
 		return nil
-	case casuallaborrecord.FieldEngagedByEmployeeID:
-		m.ResetEngagedByEmployeeID()
+	case casualpayment.FieldSettlementMode:
+		m.ResetSettlementMode()
 		return nil
-	case casuallaborrecord.FieldProjectID:
-		m.ResetProjectID()
+	case casualpayment.FieldEmployeeID:
+		m.ResetEmployeeID()
 		return nil
-	case casuallaborrecord.FieldCostCenterID:
-		m.ResetCostCenterID()
-		return nil
-	case casuallaborrecord.FieldWorkerName:
+	case casualpayment.FieldWorkerName:
 		m.ResetWorkerName()
 		return nil
-	case casuallaborrecord.FieldWorkerIDNumber:
+	case casualpayment.FieldWorkerIDNumber:
 		m.ResetWorkerIDNumber()
 		return nil
-	case casuallaborrecord.FieldWorkerPhone:
+	case casualpayment.FieldWorkerPhone:
 		m.ResetWorkerPhone()
 		return nil
-	case casuallaborrecord.FieldTaskDescription:
-		m.ResetTaskDescription()
+	case casualpayment.FieldEngagedByEmployeeID:
+		m.ResetEngagedByEmployeeID()
 		return nil
-	case casuallaborrecord.FieldAmount:
-		m.ResetAmount()
-		return nil
-	case casuallaborrecord.FieldWorkDate:
-		m.ResetWorkDate()
-		return nil
-	case casuallaborrecord.FieldPaymentMethod:
-		m.ResetPaymentMethod()
-		return nil
-	case casuallaborrecord.FieldStatus:
-		m.ResetStatus()
-		return nil
-	case casuallaborrecord.FieldApproverID:
-		m.ResetApproverID()
-		return nil
-	case casuallaborrecord.FieldApprovedAt:
-		m.ResetApprovedAt()
-		return nil
-	case casuallaborrecord.FieldImprestAdvanceID:
+	case casualpayment.FieldImprestAdvanceID:
 		m.ResetImprestAdvanceID()
 		return nil
-	case casuallaborrecord.FieldAttachmentURL:
+	case casualpayment.FieldWageType:
+		m.ResetWageType()
+		return nil
+	case casualpayment.FieldQuantity:
+		m.ResetQuantity()
+		return nil
+	case casualpayment.FieldRate:
+		m.ResetRate()
+		return nil
+	case casualpayment.FieldAmount:
+		m.ResetAmount()
+		return nil
+	case casualpayment.FieldTaskDescription:
+		m.ResetTaskDescription()
+		return nil
+	case casualpayment.FieldWorkDate:
+		m.ResetWorkDate()
+		return nil
+	case casualpayment.FieldPaymentDate:
+		m.ResetPaymentDate()
+		return nil
+	case casualpayment.FieldPayrollMonth:
+		m.ResetPayrollMonth()
+		return nil
+	case casualpayment.FieldProjectID:
+		m.ResetProjectID()
+		return nil
+	case casualpayment.FieldCostCenterID:
+		m.ResetCostCenterID()
+		return nil
+	case casualpayment.FieldPaymentOption:
+		m.ResetPaymentOption()
+		return nil
+	case casualpayment.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case casualpayment.FieldApproverID:
+		m.ResetApproverID()
+		return nil
+	case casualpayment.FieldApprovedAt:
+		m.ResetApprovedAt()
+		return nil
+	case casualpayment.FieldAttachmentURL:
 		m.ResetAttachmentURL()
 		return nil
-	case casuallaborrecord.FieldDeleteStatus:
+	case casualpayment.FieldDeleteStatus:
 		m.ResetDeleteStatus()
 		return nil
-	case casuallaborrecord.FieldCreatedAt:
+	case casualpayment.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
-	case casuallaborrecord.FieldUpdatedAt:
+	case casualpayment.FieldUpdatedAt:
 		m.ResetUpdatedAt()
 		return nil
 	}
-	return fmt.Errorf("unknown CasualLaborRecord field %s", name)
+	return fmt.Errorf("unknown CasualPayment field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
-func (m *CasualLaborRecordMutation) AddedEdges() []string {
+func (m *CasualPaymentMutation) AddedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
-func (m *CasualLaborRecordMutation) AddedIDs(name string) []ent.Value {
+func (m *CasualPaymentMutation) AddedIDs(name string) []ent.Value {
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
-func (m *CasualLaborRecordMutation) RemovedEdges() []string {
+func (m *CasualPaymentMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
-func (m *CasualLaborRecordMutation) RemovedIDs(name string) []ent.Value {
+func (m *CasualPaymentMutation) RemovedIDs(name string) []ent.Value {
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *CasualLaborRecordMutation) ClearedEdges() []string {
+func (m *CasualPaymentMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
-func (m *CasualLaborRecordMutation) EdgeCleared(name string) bool {
+func (m *CasualPaymentMutation) EdgeCleared(name string) bool {
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
-func (m *CasualLaborRecordMutation) ClearEdge(name string) error {
-	return fmt.Errorf("unknown CasualLaborRecord unique edge %s", name)
+func (m *CasualPaymentMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown CasualPayment unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
-func (m *CasualLaborRecordMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown CasualLaborRecord edge %s", name)
+func (m *CasualPaymentMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown CasualPayment edge %s", name)
 }
 
 // ClaimItemMutation represents an operation that mutates the ClaimItem nodes in the graph.

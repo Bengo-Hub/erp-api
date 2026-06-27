@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/Bengo-Hub/erp-api/internal/ent/casuallaborrecord"
+	"github.com/Bengo-Hub/erp-api/internal/ent/casualpayment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/expenseclaim"
 )
 
@@ -41,9 +41,9 @@ func (s *Service) DistinctProjectIDs(ctx context.Context, tenantID uuid.UUID) ([
 	for _, c := range claims {
 		add(c.ProjectID)
 	}
-	casuals, err := s.orm.CasualLaborRecord.Query().
-		Where(casuallaborrecord.TenantID(tenantID), casuallaborrecord.ProjectIDNotNil()).
-		Select(casuallaborrecord.FieldProjectID).All(ctx)
+	casuals, err := s.orm.CasualPayment.Query().
+		Where(casualpayment.TenantID(tenantID), casualpayment.ProjectIDNotNil()).
+		Select(casualpayment.FieldProjectID).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -77,9 +77,9 @@ func (s *Service) DistinctCostCenterIDs(ctx context.Context, tenantID uuid.UUID)
 	for _, c := range claims {
 		add(c.CostCenterID)
 	}
-	casuals, err := s.orm.CasualLaborRecord.Query().
-		Where(casuallaborrecord.TenantID(tenantID), casuallaborrecord.CostCenterIDNotNil()).
-		Select(casuallaborrecord.FieldCostCenterID).All(ctx)
+	casuals, err := s.orm.CasualPayment.Query().
+		Where(casualpayment.TenantID(tenantID), casualpayment.CostCenterIDNotNil()).
+		Select(casualpayment.FieldCostCenterID).All(ctx)
 	if err != nil {
 		return nil, err
 	}

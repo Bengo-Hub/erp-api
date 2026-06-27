@@ -11,69 +11,69 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Bengo-Hub/erp-api/internal/ent/casuallaborrecord"
+	"github.com/Bengo-Hub/erp-api/internal/ent/casualpayment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
 	"github.com/google/uuid"
 )
 
-// CasualLaborRecordQuery is the builder for querying CasualLaborRecord entities.
-type CasualLaborRecordQuery struct {
+// CasualPaymentQuery is the builder for querying CasualPayment entities.
+type CasualPaymentQuery struct {
 	config
 	ctx        *QueryContext
-	order      []casuallaborrecord.OrderOption
+	order      []casualpayment.OrderOption
 	inters     []Interceptor
-	predicates []predicate.CasualLaborRecord
+	predicates []predicate.CasualPayment
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the CasualLaborRecordQuery builder.
-func (_q *CasualLaborRecordQuery) Where(ps ...predicate.CasualLaborRecord) *CasualLaborRecordQuery {
+// Where adds a new predicate for the CasualPaymentQuery builder.
+func (_q *CasualPaymentQuery) Where(ps ...predicate.CasualPayment) *CasualPaymentQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *CasualLaborRecordQuery) Limit(limit int) *CasualLaborRecordQuery {
+func (_q *CasualPaymentQuery) Limit(limit int) *CasualPaymentQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *CasualLaborRecordQuery) Offset(offset int) *CasualLaborRecordQuery {
+func (_q *CasualPaymentQuery) Offset(offset int) *CasualPaymentQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *CasualLaborRecordQuery) Unique(unique bool) *CasualLaborRecordQuery {
+func (_q *CasualPaymentQuery) Unique(unique bool) *CasualPaymentQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *CasualLaborRecordQuery) Order(o ...casuallaborrecord.OrderOption) *CasualLaborRecordQuery {
+func (_q *CasualPaymentQuery) Order(o ...casualpayment.OrderOption) *CasualPaymentQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
-// First returns the first CasualLaborRecord entity from the query.
-// Returns a *NotFoundError when no CasualLaborRecord was found.
-func (_q *CasualLaborRecordQuery) First(ctx context.Context) (*CasualLaborRecord, error) {
+// First returns the first CasualPayment entity from the query.
+// Returns a *NotFoundError when no CasualPayment was found.
+func (_q *CasualPaymentQuery) First(ctx context.Context) (*CasualPayment, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{casuallaborrecord.Label}
+		return nil, &NotFoundError{casualpayment.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *CasualLaborRecordQuery) FirstX(ctx context.Context) *CasualLaborRecord {
+func (_q *CasualPaymentQuery) FirstX(ctx context.Context) *CasualPayment {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -81,22 +81,22 @@ func (_q *CasualLaborRecordQuery) FirstX(ctx context.Context) *CasualLaborRecord
 	return node
 }
 
-// FirstID returns the first CasualLaborRecord ID from the query.
-// Returns a *NotFoundError when no CasualLaborRecord ID was found.
-func (_q *CasualLaborRecordQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+// FirstID returns the first CasualPayment ID from the query.
+// Returns a *NotFoundError when no CasualPayment ID was found.
+func (_q *CasualPaymentQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{casuallaborrecord.Label}
+		err = &NotFoundError{casualpayment.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *CasualLaborRecordQuery) FirstIDX(ctx context.Context) uuid.UUID {
+func (_q *CasualPaymentQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -104,10 +104,10 @@ func (_q *CasualLaborRecordQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// Only returns a single CasualLaborRecord entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one CasualLaborRecord entity is found.
-// Returns a *NotFoundError when no CasualLaborRecord entities are found.
-func (_q *CasualLaborRecordQuery) Only(ctx context.Context) (*CasualLaborRecord, error) {
+// Only returns a single CasualPayment entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one CasualPayment entity is found.
+// Returns a *NotFoundError when no CasualPayment entities are found.
+func (_q *CasualPaymentQuery) Only(ctx context.Context) (*CasualPayment, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -116,14 +116,14 @@ func (_q *CasualLaborRecordQuery) Only(ctx context.Context) (*CasualLaborRecord,
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{casuallaborrecord.Label}
+		return nil, &NotFoundError{casualpayment.Label}
 	default:
-		return nil, &NotSingularError{casuallaborrecord.Label}
+		return nil, &NotSingularError{casualpayment.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *CasualLaborRecordQuery) OnlyX(ctx context.Context) *CasualLaborRecord {
+func (_q *CasualPaymentQuery) OnlyX(ctx context.Context) *CasualPayment {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -131,10 +131,10 @@ func (_q *CasualLaborRecordQuery) OnlyX(ctx context.Context) *CasualLaborRecord 
 	return node
 }
 
-// OnlyID is like Only, but returns the only CasualLaborRecord ID in the query.
-// Returns a *NotSingularError when more than one CasualLaborRecord ID is found.
+// OnlyID is like Only, but returns the only CasualPayment ID in the query.
+// Returns a *NotSingularError when more than one CasualPayment ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *CasualLaborRecordQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *CasualPaymentQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -143,15 +143,15 @@ func (_q *CasualLaborRecordQuery) OnlyID(ctx context.Context) (id uuid.UUID, err
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{casuallaborrecord.Label}
+		err = &NotFoundError{casualpayment.Label}
 	default:
-		err = &NotSingularError{casuallaborrecord.Label}
+		err = &NotSingularError{casualpayment.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *CasualLaborRecordQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+func (_q *CasualPaymentQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -159,18 +159,18 @@ func (_q *CasualLaborRecordQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// All executes the query and returns a list of CasualLaborRecords.
-func (_q *CasualLaborRecordQuery) All(ctx context.Context) ([]*CasualLaborRecord, error) {
+// All executes the query and returns a list of CasualPayments.
+func (_q *CasualPaymentQuery) All(ctx context.Context) ([]*CasualPayment, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*CasualLaborRecord, *CasualLaborRecordQuery]()
-	return withInterceptors[[]*CasualLaborRecord](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*CasualPayment, *CasualPaymentQuery]()
+	return withInterceptors[[]*CasualPayment](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *CasualLaborRecordQuery) AllX(ctx context.Context) []*CasualLaborRecord {
+func (_q *CasualPaymentQuery) AllX(ctx context.Context) []*CasualPayment {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -178,20 +178,20 @@ func (_q *CasualLaborRecordQuery) AllX(ctx context.Context) []*CasualLaborRecord
 	return nodes
 }
 
-// IDs executes the query and returns a list of CasualLaborRecord IDs.
-func (_q *CasualLaborRecordQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+// IDs executes the query and returns a list of CasualPayment IDs.
+func (_q *CasualPaymentQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(casuallaborrecord.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(casualpayment.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *CasualLaborRecordQuery) IDsX(ctx context.Context) []uuid.UUID {
+func (_q *CasualPaymentQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -200,16 +200,16 @@ func (_q *CasualLaborRecordQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (_q *CasualLaborRecordQuery) Count(ctx context.Context) (int, error) {
+func (_q *CasualPaymentQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*CasualLaborRecordQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*CasualPaymentQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *CasualLaborRecordQuery) CountX(ctx context.Context) int {
+func (_q *CasualPaymentQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -218,7 +218,7 @@ func (_q *CasualLaborRecordQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *CasualLaborRecordQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *CasualPaymentQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -231,7 +231,7 @@ func (_q *CasualLaborRecordQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *CasualLaborRecordQuery) ExistX(ctx context.Context) bool {
+func (_q *CasualPaymentQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -239,18 +239,18 @@ func (_q *CasualLaborRecordQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the CasualLaborRecordQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the CasualPaymentQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *CasualLaborRecordQuery) Clone() *CasualLaborRecordQuery {
+func (_q *CasualPaymentQuery) Clone() *CasualPaymentQuery {
 	if _q == nil {
 		return nil
 	}
-	return &CasualLaborRecordQuery{
+	return &CasualPaymentQuery{
 		config:     _q.config,
 		ctx:        _q.ctx.Clone(),
-		order:      append([]casuallaborrecord.OrderOption{}, _q.order...),
+		order:      append([]casualpayment.OrderOption{}, _q.order...),
 		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.CasualLaborRecord{}, _q.predicates...),
+		predicates: append([]predicate.CasualPayment{}, _q.predicates...),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -267,15 +267,15 @@ func (_q *CasualLaborRecordQuery) Clone() *CasualLaborRecordQuery {
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.CasualLaborRecord.Query().
-//		GroupBy(casuallaborrecord.FieldTenantID).
+//	client.CasualPayment.Query().
+//		GroupBy(casualpayment.FieldTenantID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *CasualLaborRecordQuery) GroupBy(field string, fields ...string) *CasualLaborRecordGroupBy {
+func (_q *CasualPaymentQuery) GroupBy(field string, fields ...string) *CasualPaymentGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &CasualLaborRecordGroupBy{build: _q}
+	grbuild := &CasualPaymentGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = casuallaborrecord.Label
+	grbuild.label = casualpayment.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -289,23 +289,23 @@ func (_q *CasualLaborRecordQuery) GroupBy(field string, fields ...string) *Casua
 //		TenantID uuid.UUID `json:"tenant_id,omitempty"`
 //	}
 //
-//	client.CasualLaborRecord.Query().
-//		Select(casuallaborrecord.FieldTenantID).
+//	client.CasualPayment.Query().
+//		Select(casualpayment.FieldTenantID).
 //		Scan(ctx, &v)
-func (_q *CasualLaborRecordQuery) Select(fields ...string) *CasualLaborRecordSelect {
+func (_q *CasualPaymentQuery) Select(fields ...string) *CasualPaymentSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &CasualLaborRecordSelect{CasualLaborRecordQuery: _q}
-	sbuild.label = casuallaborrecord.Label
+	sbuild := &CasualPaymentSelect{CasualPaymentQuery: _q}
+	sbuild.label = casualpayment.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a CasualLaborRecordSelect configured with the given aggregations.
-func (_q *CasualLaborRecordQuery) Aggregate(fns ...AggregateFunc) *CasualLaborRecordSelect {
+// Aggregate returns a CasualPaymentSelect configured with the given aggregations.
+func (_q *CasualPaymentQuery) Aggregate(fns ...AggregateFunc) *CasualPaymentSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *CasualLaborRecordQuery) prepareQuery(ctx context.Context) error {
+func (_q *CasualPaymentQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -317,7 +317,7 @@ func (_q *CasualLaborRecordQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !casuallaborrecord.ValidColumn(f) {
+		if !casualpayment.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -331,16 +331,16 @@ func (_q *CasualLaborRecordQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *CasualLaborRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*CasualLaborRecord, error) {
+func (_q *CasualPaymentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*CasualPayment, error) {
 	var (
-		nodes = []*CasualLaborRecord{}
+		nodes = []*CasualPayment{}
 		_spec = _q.querySpec()
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*CasualLaborRecord).scanValues(nil, columns)
+		return (*CasualPayment).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &CasualLaborRecord{config: _q.config}
+		node := &CasualPayment{config: _q.config}
 		nodes = append(nodes, node)
 		return node.assignValues(columns, values)
 	}
@@ -356,7 +356,7 @@ func (_q *CasualLaborRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook
 	return nodes, nil
 }
 
-func (_q *CasualLaborRecordQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *CasualPaymentQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
@@ -365,8 +365,8 @@ func (_q *CasualLaborRecordQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *CasualLaborRecordQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(casuallaborrecord.Table, casuallaborrecord.Columns, sqlgraph.NewFieldSpec(casuallaborrecord.FieldID, field.TypeUUID))
+func (_q *CasualPaymentQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(casualpayment.Table, casualpayment.Columns, sqlgraph.NewFieldSpec(casualpayment.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -375,9 +375,9 @@ func (_q *CasualLaborRecordQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, casuallaborrecord.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, casualpayment.FieldID)
 		for i := range fields {
-			if fields[i] != casuallaborrecord.FieldID {
+			if fields[i] != casualpayment.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
@@ -405,12 +405,12 @@ func (_q *CasualLaborRecordQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *CasualLaborRecordQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *CasualPaymentQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(casuallaborrecord.Table)
+	t1 := builder.Table(casualpayment.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = casuallaborrecord.Columns
+		columns = casualpayment.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -437,28 +437,28 @@ func (_q *CasualLaborRecordQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	return selector
 }
 
-// CasualLaborRecordGroupBy is the group-by builder for CasualLaborRecord entities.
-type CasualLaborRecordGroupBy struct {
+// CasualPaymentGroupBy is the group-by builder for CasualPayment entities.
+type CasualPaymentGroupBy struct {
 	selector
-	build *CasualLaborRecordQuery
+	build *CasualPaymentQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *CasualLaborRecordGroupBy) Aggregate(fns ...AggregateFunc) *CasualLaborRecordGroupBy {
+func (_g *CasualPaymentGroupBy) Aggregate(fns ...AggregateFunc) *CasualPaymentGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *CasualLaborRecordGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *CasualPaymentGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*CasualLaborRecordQuery, *CasualLaborRecordGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*CasualPaymentQuery, *CasualPaymentGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *CasualLaborRecordGroupBy) sqlScan(ctx context.Context, root *CasualLaborRecordQuery, v any) error {
+func (_g *CasualPaymentGroupBy) sqlScan(ctx context.Context, root *CasualPaymentQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -485,28 +485,28 @@ func (_g *CasualLaborRecordGroupBy) sqlScan(ctx context.Context, root *CasualLab
 	return sql.ScanSlice(rows, v)
 }
 
-// CasualLaborRecordSelect is the builder for selecting fields of CasualLaborRecord entities.
-type CasualLaborRecordSelect struct {
-	*CasualLaborRecordQuery
+// CasualPaymentSelect is the builder for selecting fields of CasualPayment entities.
+type CasualPaymentSelect struct {
+	*CasualPaymentQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *CasualLaborRecordSelect) Aggregate(fns ...AggregateFunc) *CasualLaborRecordSelect {
+func (_s *CasualPaymentSelect) Aggregate(fns ...AggregateFunc) *CasualPaymentSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *CasualLaborRecordSelect) Scan(ctx context.Context, v any) error {
+func (_s *CasualPaymentSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*CasualLaborRecordQuery, *CasualLaborRecordSelect](ctx, _s.CasualLaborRecordQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*CasualPaymentQuery, *CasualPaymentSelect](ctx, _s.CasualPaymentQuery, _s, _s.inters, v)
 }
 
-func (_s *CasualLaborRecordSelect) sqlScan(ctx context.Context, root *CasualLaborRecordQuery, v any) error {
+func (_s *CasualPaymentSelect) sqlScan(ctx context.Context, root *CasualPaymentQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {
