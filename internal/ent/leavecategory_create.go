@@ -65,6 +65,20 @@ func (_c *LeaveCategoryCreate) SetNillableIsActive(v *bool) *LeaveCategoryCreate
 	return _c
 }
 
+// SetIsPaid sets the "is_paid" field.
+func (_c *LeaveCategoryCreate) SetIsPaid(v bool) *LeaveCategoryCreate {
+	_c.mutation.SetIsPaid(v)
+	return _c
+}
+
+// SetNillableIsPaid sets the "is_paid" field if the given value is not nil.
+func (_c *LeaveCategoryCreate) SetNillableIsPaid(v *bool) *LeaveCategoryCreate {
+	if v != nil {
+		_c.SetIsPaid(*v)
+	}
+	return _c
+}
+
 // SetDefaultAnnualDays sets the "default_annual_days" field.
 func (_c *LeaveCategoryCreate) SetDefaultAnnualDays(v decimal.Decimal) *LeaveCategoryCreate {
 	_c.mutation.SetDefaultAnnualDays(v)
@@ -188,6 +202,10 @@ func (_c *LeaveCategoryCreate) defaults() {
 		v := leavecategory.DefaultIsActive
 		_c.mutation.SetIsActive(v)
 	}
+	if _, ok := _c.mutation.IsPaid(); !ok {
+		v := leavecategory.DefaultIsPaid
+		_c.mutation.SetIsPaid(v)
+	}
 	if _, ok := _c.mutation.DefaultAnnualDays(); !ok {
 		v := leavecategory.DefaultDefaultAnnualDays
 		_c.mutation.SetDefaultAnnualDays(v)
@@ -224,6 +242,9 @@ func (_c *LeaveCategoryCreate) check() error {
 	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "LeaveCategory.is_active"`)}
+	}
+	if _, ok := _c.mutation.IsPaid(); !ok {
+		return &ValidationError{Name: "is_paid", err: errors.New(`ent: missing required field "LeaveCategory.is_paid"`)}
 	}
 	if _, ok := _c.mutation.DefaultAnnualDays(); !ok {
 		return &ValidationError{Name: "default_annual_days", err: errors.New(`ent: missing required field "LeaveCategory.default_annual_days"`)}
@@ -291,6 +312,10 @@ func (_c *LeaveCategoryCreate) createSpec() (*LeaveCategory, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(leavecategory.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
+	}
+	if value, ok := _c.mutation.IsPaid(); ok {
+		_spec.SetField(leavecategory.FieldIsPaid, field.TypeBool, value)
+		_node.IsPaid = value
 	}
 	if value, ok := _c.mutation.DefaultAnnualDays(); ok {
 		_spec.SetField(leavecategory.FieldDefaultAnnualDays, field.TypeOther, value)
@@ -415,6 +440,18 @@ func (u *LeaveCategoryUpsert) SetIsActive(v bool) *LeaveCategoryUpsert {
 // UpdateIsActive sets the "is_active" field to the value that was provided on create.
 func (u *LeaveCategoryUpsert) UpdateIsActive() *LeaveCategoryUpsert {
 	u.SetExcluded(leavecategory.FieldIsActive)
+	return u
+}
+
+// SetIsPaid sets the "is_paid" field.
+func (u *LeaveCategoryUpsert) SetIsPaid(v bool) *LeaveCategoryUpsert {
+	u.Set(leavecategory.FieldIsPaid, v)
+	return u
+}
+
+// UpdateIsPaid sets the "is_paid" field to the value that was provided on create.
+func (u *LeaveCategoryUpsert) UpdateIsPaid() *LeaveCategoryUpsert {
+	u.SetExcluded(leavecategory.FieldIsPaid)
 	return u
 }
 
@@ -577,6 +614,20 @@ func (u *LeaveCategoryUpsertOne) SetIsActive(v bool) *LeaveCategoryUpsertOne {
 func (u *LeaveCategoryUpsertOne) UpdateIsActive() *LeaveCategoryUpsertOne {
 	return u.Update(func(s *LeaveCategoryUpsert) {
 		s.UpdateIsActive()
+	})
+}
+
+// SetIsPaid sets the "is_paid" field.
+func (u *LeaveCategoryUpsertOne) SetIsPaid(v bool) *LeaveCategoryUpsertOne {
+	return u.Update(func(s *LeaveCategoryUpsert) {
+		s.SetIsPaid(v)
+	})
+}
+
+// UpdateIsPaid sets the "is_paid" field to the value that was provided on create.
+func (u *LeaveCategoryUpsertOne) UpdateIsPaid() *LeaveCategoryUpsertOne {
+	return u.Update(func(s *LeaveCategoryUpsert) {
+		s.UpdateIsPaid()
 	})
 }
 
@@ -914,6 +965,20 @@ func (u *LeaveCategoryUpsertBulk) SetIsActive(v bool) *LeaveCategoryUpsertBulk {
 func (u *LeaveCategoryUpsertBulk) UpdateIsActive() *LeaveCategoryUpsertBulk {
 	return u.Update(func(s *LeaveCategoryUpsert) {
 		s.UpdateIsActive()
+	})
+}
+
+// SetIsPaid sets the "is_paid" field.
+func (u *LeaveCategoryUpsertBulk) SetIsPaid(v bool) *LeaveCategoryUpsertBulk {
+	return u.Update(func(s *LeaveCategoryUpsert) {
+		s.SetIsPaid(v)
+	})
+}
+
+// UpdateIsPaid sets the "is_paid" field to the value that was provided on create.
+func (u *LeaveCategoryUpsertBulk) UpdateIsPaid() *LeaveCategoryUpsertBulk {
+	return u.Update(func(s *LeaveCategoryUpsert) {
+		s.UpdateIsPaid()
 	})
 }
 

@@ -248,11 +248,11 @@ func init() {
 	// appraisalquestion.DefaultOrder holds the default value on creation for the order field.
 	appraisalquestion.DefaultOrder = appraisalquestionDescOrder.Default.(int)
 	// appraisalquestionDescCreatedAt is the schema descriptor for created_at field.
-	appraisalquestionDescCreatedAt := appraisalquestionFields[7].Descriptor()
+	appraisalquestionDescCreatedAt := appraisalquestionFields[10].Descriptor()
 	// appraisalquestion.DefaultCreatedAt holds the default value on creation for the created_at field.
 	appraisalquestion.DefaultCreatedAt = appraisalquestionDescCreatedAt.Default.(func() time.Time)
 	// appraisalquestionDescUpdatedAt is the schema descriptor for updated_at field.
-	appraisalquestionDescUpdatedAt := appraisalquestionFields[8].Descriptor()
+	appraisalquestionDescUpdatedAt := appraisalquestionFields[11].Descriptor()
 	// appraisalquestion.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	appraisalquestion.DefaultUpdatedAt = appraisalquestionDescUpdatedAt.Default.(func() time.Time)
 	// appraisalquestion.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1507,24 +1507,28 @@ func init() {
 	leavecategoryDescIsActive := leavecategoryFields[4].Descriptor()
 	// leavecategory.DefaultIsActive holds the default value on creation for the is_active field.
 	leavecategory.DefaultIsActive = leavecategoryDescIsActive.Default.(bool)
+	// leavecategoryDescIsPaid is the schema descriptor for is_paid field.
+	leavecategoryDescIsPaid := leavecategoryFields[5].Descriptor()
+	// leavecategory.DefaultIsPaid holds the default value on creation for the is_paid field.
+	leavecategory.DefaultIsPaid = leavecategoryDescIsPaid.Default.(bool)
 	// leavecategoryDescDefaultAnnualDays is the schema descriptor for default_annual_days field.
-	leavecategoryDescDefaultAnnualDays := leavecategoryFields[5].Descriptor()
+	leavecategoryDescDefaultAnnualDays := leavecategoryFields[6].Descriptor()
 	// leavecategory.DefaultDefaultAnnualDays holds the default value on creation for the default_annual_days field.
 	leavecategory.DefaultDefaultAnnualDays = leavecategoryDescDefaultAnnualDays.Default.(decimal.Decimal)
 	// leavecategoryDescAllowCarryover is the schema descriptor for allow_carryover field.
-	leavecategoryDescAllowCarryover := leavecategoryFields[6].Descriptor()
+	leavecategoryDescAllowCarryover := leavecategoryFields[7].Descriptor()
 	// leavecategory.DefaultAllowCarryover holds the default value on creation for the allow_carryover field.
 	leavecategory.DefaultAllowCarryover = leavecategoryDescAllowCarryover.Default.(bool)
 	// leavecategoryDescMaxCarryoverDays is the schema descriptor for max_carryover_days field.
-	leavecategoryDescMaxCarryoverDays := leavecategoryFields[7].Descriptor()
+	leavecategoryDescMaxCarryoverDays := leavecategoryFields[8].Descriptor()
 	// leavecategory.DefaultMaxCarryoverDays holds the default value on creation for the max_carryover_days field.
 	leavecategory.DefaultMaxCarryoverDays = leavecategoryDescMaxCarryoverDays.Default.(decimal.Decimal)
 	// leavecategoryDescCreatedAt is the schema descriptor for created_at field.
-	leavecategoryDescCreatedAt := leavecategoryFields[8].Descriptor()
+	leavecategoryDescCreatedAt := leavecategoryFields[9].Descriptor()
 	// leavecategory.DefaultCreatedAt holds the default value on creation for the created_at field.
 	leavecategory.DefaultCreatedAt = leavecategoryDescCreatedAt.Default.(func() time.Time)
 	// leavecategoryDescUpdatedAt is the schema descriptor for updated_at field.
-	leavecategoryDescUpdatedAt := leavecategoryFields[9].Descriptor()
+	leavecategoryDescUpdatedAt := leavecategoryFields[10].Descriptor()
 	// leavecategory.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	leavecategory.DefaultUpdatedAt = leavecategoryDescUpdatedAt.Default.(func() time.Time)
 	// leavecategory.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

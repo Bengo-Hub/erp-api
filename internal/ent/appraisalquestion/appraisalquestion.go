@@ -27,6 +27,12 @@ const (
 	FieldIsRequired = "is_required"
 	// FieldOrder holds the string denoting the order field in the database.
 	FieldOrder = "order"
+	// FieldCategory holds the string denoting the category field in the database.
+	FieldCategory = "category"
+	// FieldWeight holds the string denoting the weight field in the database.
+	FieldWeight = "weight"
+	// FieldMaxScore holds the string denoting the max_score field in the database.
+	FieldMaxScore = "max_score"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -44,6 +50,9 @@ var Columns = []string{
 	FieldQuestionType,
 	FieldIsRequired,
 	FieldOrder,
+	FieldCategory,
+	FieldWeight,
+	FieldMaxScore,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -134,6 +143,21 @@ func ByIsRequired(opts ...sql.OrderTermOption) OrderOption {
 // ByOrder orders the results by the order field.
 func ByOrder(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOrder, opts...).ToFunc()
+}
+
+// ByCategory orders the results by the category field.
+func ByCategory(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCategory, opts...).ToFunc()
+}
+
+// ByWeight orders the results by the weight field.
+func ByWeight(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWeight, opts...).ToFunc()
+}
+
+// ByMaxScore orders the results by the max_score field.
+func ByMaxScore(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMaxScore, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

@@ -6,12 +6,14 @@ package leave
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavecategory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaveentitlement"
@@ -80,6 +82,7 @@ type CategoryInput struct {
 	Name              string
 	Description       string
 	IsActive          bool
+	IsPaid            bool
 	DefaultAnnualDays decimal.Decimal
 	AllowCarryover    bool
 	MaxCarryoverDays  decimal.Decimal
@@ -92,6 +95,7 @@ func (s *Service) CreateCategory(ctx context.Context, tenantID uuid.UUID, in Cat
 		SetName(in.Name).
 		SetDescription(in.Description).
 		SetIsActive(in.IsActive).
+		SetIsPaid(in.IsPaid).
 		SetDefaultAnnualDays(in.DefaultAnnualDays).
 		SetAllowCarryover(in.AllowCarryover).
 		SetMaxCarryoverDays(in.MaxCarryoverDays).
@@ -109,6 +113,7 @@ func (s *Service) UpdateCategory(ctx context.Context, tenantID, id uuid.UUID, in
 		SetName(in.Name).
 		SetDescription(in.Description).
 		SetIsActive(in.IsActive).
+		SetIsPaid(in.IsPaid).
 		SetDefaultAnnualDays(in.DefaultAnnualDays).
 		SetAllowCarryover(in.AllowCarryover).
 		SetMaxCarryoverDays(in.MaxCarryoverDays).
@@ -199,6 +204,64 @@ func (s *Service) ListBalances(ctx context.Context, tenantID uuid.UUID, employee
 		q = q.Where(leavebalance.Year(year))
 	}
 	return q.Order(ent.Desc(leavebalance.FieldYear)).All(ctx)
+}
+
+// BalanceView enriches a LeaveBalance with display names + the UI's field aliases
+// (entitled/used/remaining mirror days_entitled/days_taken/days_remaining) so the
+// frontend table renders real values instead of "—".
+type BalanceView struct {
+	*ent.LeaveBalance
+	EmployeeName  string `json:"employee_name"`
+	LeaveTypeName string `json:"leave_type_name"`
+	Entitled      string `json:"entitled"`
+	Used          string `json:"used"`
+	Remaining     string `json:"remaining"`
+}
+
+// ListBalancesEnriched returns balances joined to employee + leave-category names.
+func (s *Service) ListBalancesEnriched(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, year int) ([]BalanceView, error) {
+	rows, err := s.ListBalances(ctx, tenantID, employeeID, year)
+	if err != nil {
+		return nil, err
+	}
+	empIDs := make([]uuid.UUID, 0, len(rows))
+	catIDs := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		empIDs = append(empIDs, r.EmployeeID)
+		catIDs = append(catIDs, r.CategoryID)
+	}
+	empNames := map[uuid.UUID]string{}
+	if len(empIDs) > 0 {
+		emps, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.IDIn(empIDs...)).All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("leave: load employees: %w", err)
+		}
+		for _, e := range emps {
+			empNames[e.ID] = strings.TrimSpace(e.FirstName + " " + e.LastName)
+		}
+	}
+	catNames := map[uuid.UUID]string{}
+	if len(catIDs) > 0 {
+		cats, err := s.orm.LeaveCategory.Query().Where(leavecategory.IDIn(catIDs...)).All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("leave: load categories: %w", err)
+		}
+		for _, c := range cats {
+			catNames[c.ID] = c.Name
+		}
+	}
+	out := make([]BalanceView, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, BalanceView{
+			LeaveBalance:  r,
+			EmployeeName:  empNames[r.EmployeeID],
+			LeaveTypeName: catNames[r.CategoryID],
+			Entitled:      r.DaysEntitled.String(),
+			Used:          r.DaysTaken.String(),
+			Remaining:     r.DaysRemaining.String(),
+		})
+	}
+	return out, nil
 }
 
 // upsertBalanceTx creates/updates a balance row so days_entitled == entitled and

@@ -81,9 +81,13 @@ type categoryBody struct {
 	Name              string `json:"name"`
 	Description       string `json:"description"`
 	IsActive          *bool  `json:"is_active"`
+	IsPaid            *bool  `json:"is_paid"`
 	DefaultAnnualDays string `json:"default_annual_days"`
-	AllowCarryover    bool   `json:"allow_carryover"`
-	MaxCarryoverDays  string `json:"max_carryover_days"`
+	// max_days is the UI's name for the default yearly entitlement; accept either.
+	MaxDays          string `json:"max_days"`
+	AllowCarryover   bool   `json:"allow_carryover"`
+	CarryForward     *bool  `json:"carry_forward"`
+	MaxCarryoverDays string `json:"max_carryover_days"`
 }
 
 func (b categoryBody) toInput() (leave.CategoryInput, error) {
@@ -91,7 +95,12 @@ func (b categoryBody) toInput() (leave.CategoryInput, error) {
 		Name:           b.Name,
 		Description:    b.Description,
 		IsActive:       b.IsActive == nil || *b.IsActive,
-		AllowCarryover: b.AllowCarryover,
+		IsPaid:         b.IsPaid == nil || *b.IsPaid,
+		AllowCarryover: b.AllowCarryover || (b.CarryForward != nil && *b.CarryForward),
+	}
+	// Accept the UI alias `max_days` when `default_annual_days` is not supplied.
+	if b.DefaultAnnualDays == "" && b.MaxDays != "" {
+		b.DefaultAnnualDays = b.MaxDays
 	}
 	d, err := parseDecimalDefault(b.DefaultAnnualDays)
 	if err != nil {
@@ -247,7 +256,7 @@ func (h *LeaveHandler) ListBalances(w http.ResponseWriter, r *http.Request) {
 	}
 	empID := selfOrParamEmployeeID(r, scope)
 	year, _ := strconv.Atoi(r.URL.Query().Get("year"))
-	rows, err := h.svc.ListBalances(r.Context(), scope.TenantID, empID, year)
+	rows, err := h.svc.ListBalancesEnriched(r.Context(), scope.TenantID, empID, year)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list balances")
 		return

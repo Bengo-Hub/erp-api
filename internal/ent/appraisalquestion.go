@@ -30,6 +30,12 @@ type AppraisalQuestion struct {
 	IsRequired bool `json:"is_required,omitempty"`
 	// Order holds the value of the "order" field.
 	Order int `json:"order,omitempty"`
+	// Competency/KPI grouping, e.g. 'Quality', 'Productivity'
+	Category string `json:"category,omitempty"`
+	// Relative weight of this question in the template score
+	Weight float64 `json:"weight,omitempty"`
+	// Maximum score for a rating question (e.g. 5)
+	MaxScore int `json:"max_score,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -44,9 +50,11 @@ func (*AppraisalQuestion) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case appraisalquestion.FieldIsRequired:
 			values[i] = new(sql.NullBool)
-		case appraisalquestion.FieldOrder:
+		case appraisalquestion.FieldWeight:
+			values[i] = new(sql.NullFloat64)
+		case appraisalquestion.FieldOrder, appraisalquestion.FieldMaxScore:
 			values[i] = new(sql.NullInt64)
-		case appraisalquestion.FieldQuestionText, appraisalquestion.FieldQuestionType:
+		case appraisalquestion.FieldQuestionText, appraisalquestion.FieldQuestionType, appraisalquestion.FieldCategory:
 			values[i] = new(sql.NullString)
 		case appraisalquestion.FieldCreatedAt, appraisalquestion.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -108,6 +116,24 @@ func (_m *AppraisalQuestion) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field order", values[i])
 			} else if value.Valid {
 				_m.Order = int(value.Int64)
+			}
+		case appraisalquestion.FieldCategory:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field category", values[i])
+			} else if value.Valid {
+				_m.Category = value.String
+			}
+		case appraisalquestion.FieldWeight:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field weight", values[i])
+			} else if value.Valid {
+				_m.Weight = value.Float64
+			}
+		case appraisalquestion.FieldMaxScore:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field max_score", values[i])
+			} else if value.Valid {
+				_m.MaxScore = int(value.Int64)
 			}
 		case appraisalquestion.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -174,6 +200,15 @@ func (_m *AppraisalQuestion) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("order=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Order))
+	builder.WriteString(", ")
+	builder.WriteString("category=")
+	builder.WriteString(_m.Category)
+	builder.WriteString(", ")
+	builder.WriteString("weight=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Weight))
+	builder.WriteString(", ")
+	builder.WriteString("max_score=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MaxScore))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

@@ -27,6 +27,8 @@ type LeaveCategory struct {
 	Description string `json:"description,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
+	// IsPaid holds the value of the "is_paid" field.
+	IsPaid bool `json:"is_paid,omitempty"`
 	// DefaultAnnualDays holds the value of the "default_annual_days" field.
 	DefaultAnnualDays decimal.Decimal `json:"default_annual_days,omitempty"`
 	// AllowCarryover holds the value of the "allow_carryover" field.
@@ -47,7 +49,7 @@ func (*LeaveCategory) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case leavecategory.FieldDefaultAnnualDays, leavecategory.FieldMaxCarryoverDays:
 			values[i] = new(decimal.Decimal)
-		case leavecategory.FieldIsActive, leavecategory.FieldAllowCarryover:
+		case leavecategory.FieldIsActive, leavecategory.FieldIsPaid, leavecategory.FieldAllowCarryover:
 			values[i] = new(sql.NullBool)
 		case leavecategory.FieldName, leavecategory.FieldDescription:
 			values[i] = new(sql.NullString)
@@ -99,6 +101,12 @@ func (_m *LeaveCategory) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_active", values[i])
 			} else if value.Valid {
 				_m.IsActive = value.Bool
+			}
+		case leavecategory.FieldIsPaid:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_paid", values[i])
+			} else if value.Valid {
+				_m.IsPaid = value.Bool
 			}
 		case leavecategory.FieldDefaultAnnualDays:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
@@ -177,6 +185,9 @@ func (_m *LeaveCategory) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))
+	builder.WriteString(", ")
+	builder.WriteString("is_paid=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsPaid))
 	builder.WriteString(", ")
 	builder.WriteString("default_annual_days=")
 	builder.WriteString(fmt.Sprintf("%v", _m.DefaultAnnualDays))

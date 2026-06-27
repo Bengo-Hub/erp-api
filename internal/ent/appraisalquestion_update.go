@@ -120,6 +120,80 @@ func (_u *AppraisalQuestionUpdate) AddOrder(v int) *AppraisalQuestionUpdate {
 	return _u
 }
 
+// SetCategory sets the "category" field.
+func (_u *AppraisalQuestionUpdate) SetCategory(v string) *AppraisalQuestionUpdate {
+	_u.mutation.SetCategory(v)
+	return _u
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_u *AppraisalQuestionUpdate) SetNillableCategory(v *string) *AppraisalQuestionUpdate {
+	if v != nil {
+		_u.SetCategory(*v)
+	}
+	return _u
+}
+
+// ClearCategory clears the value of the "category" field.
+func (_u *AppraisalQuestionUpdate) ClearCategory() *AppraisalQuestionUpdate {
+	_u.mutation.ClearCategory()
+	return _u
+}
+
+// SetWeight sets the "weight" field.
+func (_u *AppraisalQuestionUpdate) SetWeight(v float64) *AppraisalQuestionUpdate {
+	_u.mutation.ResetWeight()
+	_u.mutation.SetWeight(v)
+	return _u
+}
+
+// SetNillableWeight sets the "weight" field if the given value is not nil.
+func (_u *AppraisalQuestionUpdate) SetNillableWeight(v *float64) *AppraisalQuestionUpdate {
+	if v != nil {
+		_u.SetWeight(*v)
+	}
+	return _u
+}
+
+// AddWeight adds value to the "weight" field.
+func (_u *AppraisalQuestionUpdate) AddWeight(v float64) *AppraisalQuestionUpdate {
+	_u.mutation.AddWeight(v)
+	return _u
+}
+
+// ClearWeight clears the value of the "weight" field.
+func (_u *AppraisalQuestionUpdate) ClearWeight() *AppraisalQuestionUpdate {
+	_u.mutation.ClearWeight()
+	return _u
+}
+
+// SetMaxScore sets the "max_score" field.
+func (_u *AppraisalQuestionUpdate) SetMaxScore(v int) *AppraisalQuestionUpdate {
+	_u.mutation.ResetMaxScore()
+	_u.mutation.SetMaxScore(v)
+	return _u
+}
+
+// SetNillableMaxScore sets the "max_score" field if the given value is not nil.
+func (_u *AppraisalQuestionUpdate) SetNillableMaxScore(v *int) *AppraisalQuestionUpdate {
+	if v != nil {
+		_u.SetMaxScore(*v)
+	}
+	return _u
+}
+
+// AddMaxScore adds value to the "max_score" field.
+func (_u *AppraisalQuestionUpdate) AddMaxScore(v int) *AppraisalQuestionUpdate {
+	_u.mutation.AddMaxScore(v)
+	return _u
+}
+
+// ClearMaxScore clears the value of the "max_score" field.
+func (_u *AppraisalQuestionUpdate) ClearMaxScore() *AppraisalQuestionUpdate {
+	_u.mutation.ClearMaxScore()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *AppraisalQuestionUpdate) SetUpdatedAt(v time.Time) *AppraisalQuestionUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -209,6 +283,30 @@ func (_u *AppraisalQuestionUpdate) sqlSave(ctx context.Context) (_node int, err 
 	}
 	if value, ok := _u.mutation.AddedOrder(); ok {
 		_spec.AddField(appraisalquestion.FieldOrder, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Category(); ok {
+		_spec.SetField(appraisalquestion.FieldCategory, field.TypeString, value)
+	}
+	if _u.mutation.CategoryCleared() {
+		_spec.ClearField(appraisalquestion.FieldCategory, field.TypeString)
+	}
+	if value, ok := _u.mutation.Weight(); ok {
+		_spec.SetField(appraisalquestion.FieldWeight, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedWeight(); ok {
+		_spec.AddField(appraisalquestion.FieldWeight, field.TypeFloat64, value)
+	}
+	if _u.mutation.WeightCleared() {
+		_spec.ClearField(appraisalquestion.FieldWeight, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.MaxScore(); ok {
+		_spec.SetField(appraisalquestion.FieldMaxScore, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedMaxScore(); ok {
+		_spec.AddField(appraisalquestion.FieldMaxScore, field.TypeInt, value)
+	}
+	if _u.mutation.MaxScoreCleared() {
+		_spec.ClearField(appraisalquestion.FieldMaxScore, field.TypeInt)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(appraisalquestion.FieldUpdatedAt, field.TypeTime, value)
@@ -321,6 +419,80 @@ func (_u *AppraisalQuestionUpdateOne) SetNillableOrder(v *int) *AppraisalQuestio
 // AddOrder adds value to the "order" field.
 func (_u *AppraisalQuestionUpdateOne) AddOrder(v int) *AppraisalQuestionUpdateOne {
 	_u.mutation.AddOrder(v)
+	return _u
+}
+
+// SetCategory sets the "category" field.
+func (_u *AppraisalQuestionUpdateOne) SetCategory(v string) *AppraisalQuestionUpdateOne {
+	_u.mutation.SetCategory(v)
+	return _u
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_u *AppraisalQuestionUpdateOne) SetNillableCategory(v *string) *AppraisalQuestionUpdateOne {
+	if v != nil {
+		_u.SetCategory(*v)
+	}
+	return _u
+}
+
+// ClearCategory clears the value of the "category" field.
+func (_u *AppraisalQuestionUpdateOne) ClearCategory() *AppraisalQuestionUpdateOne {
+	_u.mutation.ClearCategory()
+	return _u
+}
+
+// SetWeight sets the "weight" field.
+func (_u *AppraisalQuestionUpdateOne) SetWeight(v float64) *AppraisalQuestionUpdateOne {
+	_u.mutation.ResetWeight()
+	_u.mutation.SetWeight(v)
+	return _u
+}
+
+// SetNillableWeight sets the "weight" field if the given value is not nil.
+func (_u *AppraisalQuestionUpdateOne) SetNillableWeight(v *float64) *AppraisalQuestionUpdateOne {
+	if v != nil {
+		_u.SetWeight(*v)
+	}
+	return _u
+}
+
+// AddWeight adds value to the "weight" field.
+func (_u *AppraisalQuestionUpdateOne) AddWeight(v float64) *AppraisalQuestionUpdateOne {
+	_u.mutation.AddWeight(v)
+	return _u
+}
+
+// ClearWeight clears the value of the "weight" field.
+func (_u *AppraisalQuestionUpdateOne) ClearWeight() *AppraisalQuestionUpdateOne {
+	_u.mutation.ClearWeight()
+	return _u
+}
+
+// SetMaxScore sets the "max_score" field.
+func (_u *AppraisalQuestionUpdateOne) SetMaxScore(v int) *AppraisalQuestionUpdateOne {
+	_u.mutation.ResetMaxScore()
+	_u.mutation.SetMaxScore(v)
+	return _u
+}
+
+// SetNillableMaxScore sets the "max_score" field if the given value is not nil.
+func (_u *AppraisalQuestionUpdateOne) SetNillableMaxScore(v *int) *AppraisalQuestionUpdateOne {
+	if v != nil {
+		_u.SetMaxScore(*v)
+	}
+	return _u
+}
+
+// AddMaxScore adds value to the "max_score" field.
+func (_u *AppraisalQuestionUpdateOne) AddMaxScore(v int) *AppraisalQuestionUpdateOne {
+	_u.mutation.AddMaxScore(v)
+	return _u
+}
+
+// ClearMaxScore clears the value of the "max_score" field.
+func (_u *AppraisalQuestionUpdateOne) ClearMaxScore() *AppraisalQuestionUpdateOne {
+	_u.mutation.ClearMaxScore()
 	return _u
 }
 
@@ -443,6 +615,30 @@ func (_u *AppraisalQuestionUpdateOne) sqlSave(ctx context.Context) (_node *Appra
 	}
 	if value, ok := _u.mutation.AddedOrder(); ok {
 		_spec.AddField(appraisalquestion.FieldOrder, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Category(); ok {
+		_spec.SetField(appraisalquestion.FieldCategory, field.TypeString, value)
+	}
+	if _u.mutation.CategoryCleared() {
+		_spec.ClearField(appraisalquestion.FieldCategory, field.TypeString)
+	}
+	if value, ok := _u.mutation.Weight(); ok {
+		_spec.SetField(appraisalquestion.FieldWeight, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedWeight(); ok {
+		_spec.AddField(appraisalquestion.FieldWeight, field.TypeFloat64, value)
+	}
+	if _u.mutation.WeightCleared() {
+		_spec.ClearField(appraisalquestion.FieldWeight, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.MaxScore(); ok {
+		_spec.SetField(appraisalquestion.FieldMaxScore, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedMaxScore(); ok {
+		_spec.AddField(appraisalquestion.FieldMaxScore, field.TypeInt, value)
+	}
+	if _u.mutation.MaxScoreCleared() {
+		_spec.ClearField(appraisalquestion.FieldMaxScore, field.TypeInt)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(appraisalquestion.FieldUpdatedAt, field.TypeTime, value)

@@ -190,10 +190,13 @@ func (h *AppraisalsHandler) ListQuestions(w http.ResponseWriter, r *http.Request
 }
 
 type questionBody struct {
-	QuestionText string `json:"question_text"`
-	QuestionType string `json:"question_type"`
-	IsRequired   *bool  `json:"is_required"`
-	Order        int    `json:"order"`
+	QuestionText string   `json:"question_text"`
+	QuestionType string   `json:"question_type"`
+	IsRequired   *bool    `json:"is_required"`
+	Order        int      `json:"order"`
+	Category     string   `json:"category"`
+	Weight       *float64 `json:"weight"`
+	MaxScore     *int     `json:"max_score"`
 }
 
 func (h *AppraisalsHandler) AddQuestion(w http.ResponseWriter, r *http.Request) {
@@ -214,6 +217,7 @@ func (h *AppraisalsHandler) AddQuestion(w http.ResponseWriter, r *http.Request) 
 	row, err := h.svc.AddQuestion(r.Context(), scope.TenantID, appraisals.QuestionInput{
 		TemplateID: templateID, QuestionText: b.QuestionText, QuestionType: b.QuestionType,
 		IsRequired: b.IsRequired == nil || *b.IsRequired, Order: b.Order,
+		Category: b.Category, Weight: b.Weight, MaxScore: b.MaxScore,
 	})
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())

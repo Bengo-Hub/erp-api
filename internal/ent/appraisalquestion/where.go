@@ -80,6 +80,21 @@ func Order(v int) predicate.AppraisalQuestion {
 	return predicate.AppraisalQuestion(sql.FieldEQ(FieldOrder, v))
 }
 
+// Category applies equality check predicate on the "category" field. It's identical to CategoryEQ.
+func Category(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldEQ(FieldCategory, v))
+}
+
+// Weight applies equality check predicate on the "weight" field. It's identical to WeightEQ.
+func Weight(v float64) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldEQ(FieldWeight, v))
+}
+
+// MaxScore applies equality check predicate on the "max_score" field. It's identical to MaxScoreEQ.
+func MaxScore(v int) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldEQ(FieldMaxScore, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.AppraisalQuestion {
 	return predicate.AppraisalQuestion(sql.FieldEQ(FieldCreatedAt, v))
@@ -303,6 +318,181 @@ func OrderLT(v int) predicate.AppraisalQuestion {
 // OrderLTE applies the LTE predicate on the "order" field.
 func OrderLTE(v int) predicate.AppraisalQuestion {
 	return predicate.AppraisalQuestion(sql.FieldLTE(FieldOrder, v))
+}
+
+// CategoryEQ applies the EQ predicate on the "category" field.
+func CategoryEQ(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldEQ(FieldCategory, v))
+}
+
+// CategoryNEQ applies the NEQ predicate on the "category" field.
+func CategoryNEQ(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldNEQ(FieldCategory, v))
+}
+
+// CategoryIn applies the In predicate on the "category" field.
+func CategoryIn(vs ...string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldIn(FieldCategory, vs...))
+}
+
+// CategoryNotIn applies the NotIn predicate on the "category" field.
+func CategoryNotIn(vs ...string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldNotIn(FieldCategory, vs...))
+}
+
+// CategoryGT applies the GT predicate on the "category" field.
+func CategoryGT(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldGT(FieldCategory, v))
+}
+
+// CategoryGTE applies the GTE predicate on the "category" field.
+func CategoryGTE(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldGTE(FieldCategory, v))
+}
+
+// CategoryLT applies the LT predicate on the "category" field.
+func CategoryLT(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldLT(FieldCategory, v))
+}
+
+// CategoryLTE applies the LTE predicate on the "category" field.
+func CategoryLTE(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldLTE(FieldCategory, v))
+}
+
+// CategoryContains applies the Contains predicate on the "category" field.
+func CategoryContains(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldContains(FieldCategory, v))
+}
+
+// CategoryHasPrefix applies the HasPrefix predicate on the "category" field.
+func CategoryHasPrefix(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldHasPrefix(FieldCategory, v))
+}
+
+// CategoryHasSuffix applies the HasSuffix predicate on the "category" field.
+func CategoryHasSuffix(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldHasSuffix(FieldCategory, v))
+}
+
+// CategoryIsNil applies the IsNil predicate on the "category" field.
+func CategoryIsNil() predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldIsNull(FieldCategory))
+}
+
+// CategoryNotNil applies the NotNil predicate on the "category" field.
+func CategoryNotNil() predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldNotNull(FieldCategory))
+}
+
+// CategoryEqualFold applies the EqualFold predicate on the "category" field.
+func CategoryEqualFold(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldEqualFold(FieldCategory, v))
+}
+
+// CategoryContainsFold applies the ContainsFold predicate on the "category" field.
+func CategoryContainsFold(v string) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldContainsFold(FieldCategory, v))
+}
+
+// WeightEQ applies the EQ predicate on the "weight" field.
+func WeightEQ(v float64) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldEQ(FieldWeight, v))
+}
+
+// WeightNEQ applies the NEQ predicate on the "weight" field.
+func WeightNEQ(v float64) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldNEQ(FieldWeight, v))
+}
+
+// WeightIn applies the In predicate on the "weight" field.
+func WeightIn(vs ...float64) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldIn(FieldWeight, vs...))
+}
+
+// WeightNotIn applies the NotIn predicate on the "weight" field.
+func WeightNotIn(vs ...float64) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldNotIn(FieldWeight, vs...))
+}
+
+// WeightGT applies the GT predicate on the "weight" field.
+func WeightGT(v float64) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldGT(FieldWeight, v))
+}
+
+// WeightGTE applies the GTE predicate on the "weight" field.
+func WeightGTE(v float64) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldGTE(FieldWeight, v))
+}
+
+// WeightLT applies the LT predicate on the "weight" field.
+func WeightLT(v float64) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldLT(FieldWeight, v))
+}
+
+// WeightLTE applies the LTE predicate on the "weight" field.
+func WeightLTE(v float64) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldLTE(FieldWeight, v))
+}
+
+// WeightIsNil applies the IsNil predicate on the "weight" field.
+func WeightIsNil() predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldIsNull(FieldWeight))
+}
+
+// WeightNotNil applies the NotNil predicate on the "weight" field.
+func WeightNotNil() predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldNotNull(FieldWeight))
+}
+
+// MaxScoreEQ applies the EQ predicate on the "max_score" field.
+func MaxScoreEQ(v int) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldEQ(FieldMaxScore, v))
+}
+
+// MaxScoreNEQ applies the NEQ predicate on the "max_score" field.
+func MaxScoreNEQ(v int) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldNEQ(FieldMaxScore, v))
+}
+
+// MaxScoreIn applies the In predicate on the "max_score" field.
+func MaxScoreIn(vs ...int) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldIn(FieldMaxScore, vs...))
+}
+
+// MaxScoreNotIn applies the NotIn predicate on the "max_score" field.
+func MaxScoreNotIn(vs ...int) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldNotIn(FieldMaxScore, vs...))
+}
+
+// MaxScoreGT applies the GT predicate on the "max_score" field.
+func MaxScoreGT(v int) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldGT(FieldMaxScore, v))
+}
+
+// MaxScoreGTE applies the GTE predicate on the "max_score" field.
+func MaxScoreGTE(v int) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldGTE(FieldMaxScore, v))
+}
+
+// MaxScoreLT applies the LT predicate on the "max_score" field.
+func MaxScoreLT(v int) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldLT(FieldMaxScore, v))
+}
+
+// MaxScoreLTE applies the LTE predicate on the "max_score" field.
+func MaxScoreLTE(v int) predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldLTE(FieldMaxScore, v))
+}
+
+// MaxScoreIsNil applies the IsNil predicate on the "max_score" field.
+func MaxScoreIsNil() predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldIsNull(FieldMaxScore))
+}
+
+// MaxScoreNotNil applies the NotNil predicate on the "max_score" field.
+func MaxScoreNotNil() predicate.AppraisalQuestion {
+	return predicate.AppraisalQuestion(sql.FieldNotNull(FieldMaxScore))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

@@ -159,15 +159,28 @@ type QuestionInput struct {
 	QuestionType string
 	IsRequired   bool
 	Order        int
+	Category     string
+	Weight       *float64
+	MaxScore     *int
 }
 
 // AddQuestion appends a question to a template.
 func (s *Service) AddQuestion(ctx context.Context, tenantID uuid.UUID, in QuestionInput) (*ent.AppraisalQuestion, error) {
-	row, err := s.orm.AppraisalQuestion.Create().
+	c := s.orm.AppraisalQuestion.Create().
 		SetTenantID(tenantID).SetTemplateID(in.TemplateID).
 		SetQuestionText(in.QuestionText).
 		SetQuestionType(appraisalquestion.QuestionType(in.QuestionType)).
-		SetIsRequired(in.IsRequired).SetOrder(in.Order).Save(ctx)
+		SetIsRequired(in.IsRequired).SetOrder(in.Order)
+	if in.Category != "" {
+		c.SetCategory(in.Category)
+	}
+	if in.Weight != nil {
+		c.SetWeight(*in.Weight)
+	}
+	if in.MaxScore != nil {
+		c.SetMaxScore(*in.MaxScore)
+	}
+	row, err := c.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("appraisals: add question: %w", err)
 	}

@@ -92,6 +92,20 @@ func (_u *LeaveCategoryUpdate) SetNillableIsActive(v *bool) *LeaveCategoryUpdate
 	return _u
 }
 
+// SetIsPaid sets the "is_paid" field.
+func (_u *LeaveCategoryUpdate) SetIsPaid(v bool) *LeaveCategoryUpdate {
+	_u.mutation.SetIsPaid(v)
+	return _u
+}
+
+// SetNillableIsPaid sets the "is_paid" field if the given value is not nil.
+func (_u *LeaveCategoryUpdate) SetNillableIsPaid(v *bool) *LeaveCategoryUpdate {
+	if v != nil {
+		_u.SetIsPaid(*v)
+	}
+	return _u
+}
+
 // SetDefaultAnnualDays sets the "default_annual_days" field.
 func (_u *LeaveCategoryUpdate) SetDefaultAnnualDays(v decimal.Decimal) *LeaveCategoryUpdate {
 	_u.mutation.SetDefaultAnnualDays(v)
@@ -205,6 +219,9 @@ func (_u *LeaveCategoryUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(leavecategory.FieldIsActive, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.IsPaid(); ok {
+		_spec.SetField(leavecategory.FieldIsPaid, field.TypeBool, value)
+	}
 	if value, ok := _u.mutation.DefaultAnnualDays(); ok {
 		_spec.SetField(leavecategory.FieldDefaultAnnualDays, field.TypeOther, value)
 	}
@@ -295,6 +312,20 @@ func (_u *LeaveCategoryUpdateOne) SetIsActive(v bool) *LeaveCategoryUpdateOne {
 func (_u *LeaveCategoryUpdateOne) SetNillableIsActive(v *bool) *LeaveCategoryUpdateOne {
 	if v != nil {
 		_u.SetIsActive(*v)
+	}
+	return _u
+}
+
+// SetIsPaid sets the "is_paid" field.
+func (_u *LeaveCategoryUpdateOne) SetIsPaid(v bool) *LeaveCategoryUpdateOne {
+	_u.mutation.SetIsPaid(v)
+	return _u
+}
+
+// SetNillableIsPaid sets the "is_paid" field if the given value is not nil.
+func (_u *LeaveCategoryUpdateOne) SetNillableIsPaid(v *bool) *LeaveCategoryUpdateOne {
+	if v != nil {
+		_u.SetIsPaid(*v)
 	}
 	return _u
 }
@@ -441,6 +472,9 @@ func (_u *LeaveCategoryUpdateOne) sqlSave(ctx context.Context) (_node *LeaveCate
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(leavecategory.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.IsPaid(); ok {
+		_spec.SetField(leavecategory.FieldIsPaid, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.DefaultAnnualDays(); ok {
 		_spec.SetField(leavecategory.FieldDefaultAnnualDays, field.TypeOther, value)
