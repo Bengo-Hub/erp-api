@@ -29,6 +29,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/casualpayment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/consultantvoucher"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
@@ -721,6 +722,62 @@ func init() {
 	companysettingsDescID := companysettingsFields[0].Descriptor()
 	// companysettings.DefaultID holds the default value on creation for the id field.
 	companysettings.DefaultID = companysettingsDescID.Default.(func() uuid.UUID)
+	consultantvoucherFields := schema.ConsultantVoucher{}.Fields()
+	_ = consultantvoucherFields
+	// consultantvoucherDescGrossAmount is the schema descriptor for gross_amount field.
+	consultantvoucherDescGrossAmount := consultantvoucherFields[6].Descriptor()
+	// consultantvoucher.DefaultGrossAmount holds the default value on creation for the gross_amount field.
+	consultantvoucher.DefaultGrossAmount = consultantvoucherDescGrossAmount.Default.(decimal.Decimal)
+	// consultantvoucherDescDeductionsAmount is the schema descriptor for deductions_amount field.
+	consultantvoucherDescDeductionsAmount := consultantvoucherFields[7].Descriptor()
+	// consultantvoucher.DefaultDeductionsAmount holds the default value on creation for the deductions_amount field.
+	consultantvoucher.DefaultDeductionsAmount = consultantvoucherDescDeductionsAmount.Default.(decimal.Decimal)
+	// consultantvoucherDescWhtRate is the schema descriptor for wht_rate field.
+	consultantvoucherDescWhtRate := consultantvoucherFields[8].Descriptor()
+	// consultantvoucher.DefaultWhtRate holds the default value on creation for the wht_rate field.
+	consultantvoucher.DefaultWhtRate = consultantvoucherDescWhtRate.Default.(decimal.Decimal)
+	// consultantvoucherDescWhtAmount is the schema descriptor for wht_amount field.
+	consultantvoucherDescWhtAmount := consultantvoucherFields[9].Descriptor()
+	// consultantvoucher.DefaultWhtAmount holds the default value on creation for the wht_amount field.
+	consultantvoucher.DefaultWhtAmount = consultantvoucherDescWhtAmount.Default.(decimal.Decimal)
+	// consultantvoucherDescNetAmount is the schema descriptor for net_amount field.
+	consultantvoucherDescNetAmount := consultantvoucherFields[10].Descriptor()
+	// consultantvoucher.DefaultNetAmount holds the default value on creation for the net_amount field.
+	consultantvoucher.DefaultNetAmount = consultantvoucherDescNetAmount.Default.(decimal.Decimal)
+	// consultantvoucherDescIsResident is the schema descriptor for is_resident field.
+	consultantvoucherDescIsResident := consultantvoucherFields[11].Descriptor()
+	// consultantvoucher.DefaultIsResident holds the default value on creation for the is_resident field.
+	consultantvoucher.DefaultIsResident = consultantvoucherDescIsResident.Default.(bool)
+	// consultantvoucherDescCurrency is the schema descriptor for currency field.
+	consultantvoucherDescCurrency := consultantvoucherFields[12].Descriptor()
+	// consultantvoucher.DefaultCurrency holds the default value on creation for the currency field.
+	consultantvoucher.DefaultCurrency = consultantvoucherDescCurrency.Default.(string)
+	// consultantvoucherDescEmailStatus is the schema descriptor for email_status field.
+	consultantvoucherDescEmailStatus := consultantvoucherFields[16].Descriptor()
+	// consultantvoucher.DefaultEmailStatus holds the default value on creation for the email_status field.
+	consultantvoucher.DefaultEmailStatus = consultantvoucherDescEmailStatus.Default.(string)
+	// consultantvoucherDescPublished is the schema descriptor for published field.
+	consultantvoucherDescPublished := consultantvoucherFields[17].Descriptor()
+	// consultantvoucher.DefaultPublished holds the default value on creation for the published field.
+	consultantvoucher.DefaultPublished = consultantvoucherDescPublished.Default.(bool)
+	// consultantvoucherDescDeleteStatus is the schema descriptor for delete_status field.
+	consultantvoucherDescDeleteStatus := consultantvoucherFields[22].Descriptor()
+	// consultantvoucher.DefaultDeleteStatus holds the default value on creation for the delete_status field.
+	consultantvoucher.DefaultDeleteStatus = consultantvoucherDescDeleteStatus.Default.(bool)
+	// consultantvoucherDescCreatedAt is the schema descriptor for created_at field.
+	consultantvoucherDescCreatedAt := consultantvoucherFields[23].Descriptor()
+	// consultantvoucher.DefaultCreatedAt holds the default value on creation for the created_at field.
+	consultantvoucher.DefaultCreatedAt = consultantvoucherDescCreatedAt.Default.(func() time.Time)
+	// consultantvoucherDescUpdatedAt is the schema descriptor for updated_at field.
+	consultantvoucherDescUpdatedAt := consultantvoucherFields[24].Descriptor()
+	// consultantvoucher.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	consultantvoucher.DefaultUpdatedAt = consultantvoucherDescUpdatedAt.Default.(func() time.Time)
+	// consultantvoucher.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	consultantvoucher.UpdateDefaultUpdatedAt = consultantvoucherDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// consultantvoucherDescID is the schema descriptor for id field.
+	consultantvoucherDescID := consultantvoucherFields[0].Descriptor()
+	// consultantvoucher.DefaultID holds the default value on creation for the id field.
+	consultantvoucher.DefaultID = consultantvoucherDescID.Default.(func() uuid.UUID)
 	contactdetailsFields := schema.ContactDetails{}.Fields()
 	_ = contactdetailsFields
 	// contactdetailsDescCreatedAt is the schema descriptor for created_at field.

@@ -20,6 +20,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/reports"
 	platformauth "github.com/Bengo-Hub/erp-api/internal/platform/auth"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
+	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 )
 
 // DocumentsHandler serves authenticated document downloads (payslip PDFs). It owns the
@@ -32,6 +33,7 @@ type DocumentsHandler struct {
 	docs     *docs.DocumentService
 	seq      *docseq.Service
 	notify   *events.Notifications
+	treasury *treasury.Client
 }
 
 func NewDocumentsHandler(
@@ -59,9 +61,24 @@ func (h *DocumentsHandler) WithNotifications(n *events.Notifications) *Documents
 	return h
 }
 
+// WithTreasury wires the treasury payout S2S client so an approved consultant voucher's net can
+// be disbursed. Optional — nil leaves the voucher approved-but-unpaid (GL still posts via event).
+func (h *DocumentsHandler) WithTreasury(t *treasury.Client) *DocumentsHandler {
+	h.treasury = t
+	return h
+}
+
 func (h *DocumentsHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/hrm/payroll/{id}/pdf", h.PayslipPDF)
 	r.Post("/hrm/payroll/email-payslips", h.EmailPayslips)
+	// Consultant WHT payment vouchers (paid via treasury AP/payout, not PAYE).
+	r.Get("/hrm/payroll/consultant-vouchers", h.ListConsultantVouchers)
+	r.Post("/hrm/payroll/consultant-vouchers", h.CreateConsultantVoucher)
+	r.Get("/hrm/payroll/consultant-vouchers/{id}", h.GetConsultantVoucher)
+	r.Post("/hrm/payroll/consultant-vouchers/{id}/approve", h.ApproveConsultantVoucher)
+	r.Delete("/hrm/payroll/consultant-vouchers/{id}", h.DeleteConsultantVoucher)
+	r.Get("/hrm/payroll/consultant-vouchers/{id}/pdf", h.ConsultantVoucherPDF)
+	r.Post("/hrm/payroll/consultant-vouchers/email", h.EmailConsultantVouchers)
 }
 
 // PayslipPDF streams a tenant-branded payslip PDF. Gated on hrm.payroll.view PLUS a

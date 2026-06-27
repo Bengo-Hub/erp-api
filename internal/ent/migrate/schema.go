@@ -850,6 +850,57 @@ var (
 			},
 		},
 	}
+	// ConsultantVouchersColumns holds the columns for the "consultant_vouchers" table.
+	ConsultantVouchersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "doc_number", Type: field.TypeString, Nullable: true},
+		{Name: "title", Type: field.TypeString, Nullable: true},
+		{Name: "period", Type: field.TypeTime, Nullable: true},
+		{Name: "gross_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "deductions_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "wht_rate", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(10,4)"}},
+		{Name: "wht_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "net_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "is_resident", Type: field.TypeBool, Default: true},
+		{Name: "currency", Type: field.TypeString, Default: "KES"},
+		{Name: "project_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "cost_center_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"draft", "pending", "approved", "paid"}, Default: "draft"},
+		{Name: "email_status", Type: field.TypeString, Default: "Draft"},
+		{Name: "published", Type: field.TypeBool, Default: false},
+		{Name: "batch_ref", Type: field.TypeString, Nullable: true},
+		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "approver_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "approved_at", Type: field.TypeTime, Nullable: true},
+		{Name: "delete_status", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// ConsultantVouchersTable holds the schema information for the "consultant_vouchers" table.
+	ConsultantVouchersTable = &schema.Table{
+		Name:       "consultant_vouchers",
+		Columns:    ConsultantVouchersColumns,
+		PrimaryKey: []*schema.Column{ConsultantVouchersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "consultantvoucher_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{ConsultantVouchersColumns[1]},
+			},
+			{
+				Name:    "consultantvoucher_tenant_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{ConsultantVouchersColumns[1], ConsultantVouchersColumns[15]},
+			},
+			{
+				Name:    "consultantvoucher_tenant_id_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{ConsultantVouchersColumns[1], ConsultantVouchersColumns[2]},
+			},
+		},
+	}
 	// ContactDetailsColumns holds the columns for the "contact_details" table.
 	ContactDetailsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -3592,6 +3643,7 @@ var (
 		CasualPaymentsTable,
 		ClaimItemsTable,
 		CompanySettingsTable,
+		ConsultantVouchersTable,
 		ContactDetailsTable,
 		ContractsTable,
 		CustomUsersTable,

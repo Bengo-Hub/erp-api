@@ -265,7 +265,8 @@ func run() error {
 	docService := &docs.DocumentService{}
 	docSeq := sequence.New(sqlDB, orm)
 	documentsHandler := handlers.NewDocumentsHandler(log, orm, brandingClient, payrollSvc, docService, docSeq).
-		WithNotifications(events.NewNotifications(notifyPublisher))
+		WithNotifications(events.NewNotifications(notifyPublisher)).
+		WithTreasury(treasuryClient)
 	reportsHandler.SetDocuments(documentsHandler) // enable /reports/{type}/export
 
 	// Sprint 4: slim business config (company settings + document numbering).

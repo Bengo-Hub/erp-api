@@ -36,6 +36,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/casualpayment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/consultantvoucher"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
@@ -153,6 +154,7 @@ const (
 	TypeCasualPayment             = "CasualPayment"
 	TypeClaimItem                 = "ClaimItem"
 	TypeCompanySettings           = "CompanySettings"
+	TypeConsultantVoucher         = "ConsultantVoucher"
 	TypeContactDetails            = "ContactDetails"
 	TypeContract                  = "Contract"
 	TypeCustomUser                = "CustomUser"
@@ -23859,6 +23861,1754 @@ func (m *CompanySettingsMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *CompanySettingsMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown CompanySettings edge %s", name)
+}
+
+// ConsultantVoucherMutation represents an operation that mutates the ConsultantVoucher nodes in the graph.
+type ConsultantVoucherMutation struct {
+	config
+	op                Op
+	typ               string
+	id                *uuid.UUID
+	tenant_id         *uuid.UUID
+	employee_id       *uuid.UUID
+	doc_number        *string
+	title             *string
+	period            *time.Time
+	gross_amount      *decimal.Decimal
+	deductions_amount *decimal.Decimal
+	wht_rate          *decimal.Decimal
+	wht_amount        *decimal.Decimal
+	net_amount        *decimal.Decimal
+	is_resident       *bool
+	currency          *string
+	project_id        *uuid.UUID
+	cost_center_id    *uuid.UUID
+	status            *consultantvoucher.Status
+	email_status      *string
+	published         *bool
+	batch_ref         *string
+	created_by        *uuid.UUID
+	approver_id       *uuid.UUID
+	approved_at       *time.Time
+	delete_status     *bool
+	created_at        *time.Time
+	updated_at        *time.Time
+	clearedFields     map[string]struct{}
+	done              bool
+	oldValue          func(context.Context) (*ConsultantVoucher, error)
+	predicates        []predicate.ConsultantVoucher
+}
+
+var _ ent.Mutation = (*ConsultantVoucherMutation)(nil)
+
+// consultantvoucherOption allows management of the mutation configuration using functional options.
+type consultantvoucherOption func(*ConsultantVoucherMutation)
+
+// newConsultantVoucherMutation creates new mutation for the ConsultantVoucher entity.
+func newConsultantVoucherMutation(c config, op Op, opts ...consultantvoucherOption) *ConsultantVoucherMutation {
+	m := &ConsultantVoucherMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeConsultantVoucher,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withConsultantVoucherID sets the ID field of the mutation.
+func withConsultantVoucherID(id uuid.UUID) consultantvoucherOption {
+	return func(m *ConsultantVoucherMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ConsultantVoucher
+		)
+		m.oldValue = func(ctx context.Context) (*ConsultantVoucher, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ConsultantVoucher.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withConsultantVoucher sets the old ConsultantVoucher of the mutation.
+func withConsultantVoucher(node *ConsultantVoucher) consultantvoucherOption {
+	return func(m *ConsultantVoucherMutation) {
+		m.oldValue = func(context.Context) (*ConsultantVoucher, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ConsultantVoucherMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ConsultantVoucherMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ConsultantVoucher entities.
+func (m *ConsultantVoucherMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ConsultantVoucherMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ConsultantVoucherMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ConsultantVoucher.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *ConsultantVoucherMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *ConsultantVoucherMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *ConsultantVoucherMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetEmployeeID sets the "employee_id" field.
+func (m *ConsultantVoucherMutation) SetEmployeeID(u uuid.UUID) {
+	m.employee_id = &u
+}
+
+// EmployeeID returns the value of the "employee_id" field in the mutation.
+func (m *ConsultantVoucherMutation) EmployeeID() (r uuid.UUID, exists bool) {
+	v := m.employee_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployeeID returns the old "employee_id" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployeeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployeeID: %w", err)
+	}
+	return oldValue.EmployeeID, nil
+}
+
+// ResetEmployeeID resets all changes to the "employee_id" field.
+func (m *ConsultantVoucherMutation) ResetEmployeeID() {
+	m.employee_id = nil
+}
+
+// SetDocNumber sets the "doc_number" field.
+func (m *ConsultantVoucherMutation) SetDocNumber(s string) {
+	m.doc_number = &s
+}
+
+// DocNumber returns the value of the "doc_number" field in the mutation.
+func (m *ConsultantVoucherMutation) DocNumber() (r string, exists bool) {
+	v := m.doc_number
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDocNumber returns the old "doc_number" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldDocNumber(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDocNumber is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDocNumber requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDocNumber: %w", err)
+	}
+	return oldValue.DocNumber, nil
+}
+
+// ClearDocNumber clears the value of the "doc_number" field.
+func (m *ConsultantVoucherMutation) ClearDocNumber() {
+	m.doc_number = nil
+	m.clearedFields[consultantvoucher.FieldDocNumber] = struct{}{}
+}
+
+// DocNumberCleared returns if the "doc_number" field was cleared in this mutation.
+func (m *ConsultantVoucherMutation) DocNumberCleared() bool {
+	_, ok := m.clearedFields[consultantvoucher.FieldDocNumber]
+	return ok
+}
+
+// ResetDocNumber resets all changes to the "doc_number" field.
+func (m *ConsultantVoucherMutation) ResetDocNumber() {
+	m.doc_number = nil
+	delete(m.clearedFields, consultantvoucher.FieldDocNumber)
+}
+
+// SetTitle sets the "title" field.
+func (m *ConsultantVoucherMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *ConsultantVoucherMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ClearTitle clears the value of the "title" field.
+func (m *ConsultantVoucherMutation) ClearTitle() {
+	m.title = nil
+	m.clearedFields[consultantvoucher.FieldTitle] = struct{}{}
+}
+
+// TitleCleared returns if the "title" field was cleared in this mutation.
+func (m *ConsultantVoucherMutation) TitleCleared() bool {
+	_, ok := m.clearedFields[consultantvoucher.FieldTitle]
+	return ok
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *ConsultantVoucherMutation) ResetTitle() {
+	m.title = nil
+	delete(m.clearedFields, consultantvoucher.FieldTitle)
+}
+
+// SetPeriod sets the "period" field.
+func (m *ConsultantVoucherMutation) SetPeriod(t time.Time) {
+	m.period = &t
+}
+
+// Period returns the value of the "period" field in the mutation.
+func (m *ConsultantVoucherMutation) Period() (r time.Time, exists bool) {
+	v := m.period
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPeriod returns the old "period" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldPeriod(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPeriod is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPeriod requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPeriod: %w", err)
+	}
+	return oldValue.Period, nil
+}
+
+// ClearPeriod clears the value of the "period" field.
+func (m *ConsultantVoucherMutation) ClearPeriod() {
+	m.period = nil
+	m.clearedFields[consultantvoucher.FieldPeriod] = struct{}{}
+}
+
+// PeriodCleared returns if the "period" field was cleared in this mutation.
+func (m *ConsultantVoucherMutation) PeriodCleared() bool {
+	_, ok := m.clearedFields[consultantvoucher.FieldPeriod]
+	return ok
+}
+
+// ResetPeriod resets all changes to the "period" field.
+func (m *ConsultantVoucherMutation) ResetPeriod() {
+	m.period = nil
+	delete(m.clearedFields, consultantvoucher.FieldPeriod)
+}
+
+// SetGrossAmount sets the "gross_amount" field.
+func (m *ConsultantVoucherMutation) SetGrossAmount(d decimal.Decimal) {
+	m.gross_amount = &d
+}
+
+// GrossAmount returns the value of the "gross_amount" field in the mutation.
+func (m *ConsultantVoucherMutation) GrossAmount() (r decimal.Decimal, exists bool) {
+	v := m.gross_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGrossAmount returns the old "gross_amount" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldGrossAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGrossAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGrossAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGrossAmount: %w", err)
+	}
+	return oldValue.GrossAmount, nil
+}
+
+// ResetGrossAmount resets all changes to the "gross_amount" field.
+func (m *ConsultantVoucherMutation) ResetGrossAmount() {
+	m.gross_amount = nil
+}
+
+// SetDeductionsAmount sets the "deductions_amount" field.
+func (m *ConsultantVoucherMutation) SetDeductionsAmount(d decimal.Decimal) {
+	m.deductions_amount = &d
+}
+
+// DeductionsAmount returns the value of the "deductions_amount" field in the mutation.
+func (m *ConsultantVoucherMutation) DeductionsAmount() (r decimal.Decimal, exists bool) {
+	v := m.deductions_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeductionsAmount returns the old "deductions_amount" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldDeductionsAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeductionsAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeductionsAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeductionsAmount: %w", err)
+	}
+	return oldValue.DeductionsAmount, nil
+}
+
+// ResetDeductionsAmount resets all changes to the "deductions_amount" field.
+func (m *ConsultantVoucherMutation) ResetDeductionsAmount() {
+	m.deductions_amount = nil
+}
+
+// SetWhtRate sets the "wht_rate" field.
+func (m *ConsultantVoucherMutation) SetWhtRate(d decimal.Decimal) {
+	m.wht_rate = &d
+}
+
+// WhtRate returns the value of the "wht_rate" field in the mutation.
+func (m *ConsultantVoucherMutation) WhtRate() (r decimal.Decimal, exists bool) {
+	v := m.wht_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWhtRate returns the old "wht_rate" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldWhtRate(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWhtRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWhtRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWhtRate: %w", err)
+	}
+	return oldValue.WhtRate, nil
+}
+
+// ResetWhtRate resets all changes to the "wht_rate" field.
+func (m *ConsultantVoucherMutation) ResetWhtRate() {
+	m.wht_rate = nil
+}
+
+// SetWhtAmount sets the "wht_amount" field.
+func (m *ConsultantVoucherMutation) SetWhtAmount(d decimal.Decimal) {
+	m.wht_amount = &d
+}
+
+// WhtAmount returns the value of the "wht_amount" field in the mutation.
+func (m *ConsultantVoucherMutation) WhtAmount() (r decimal.Decimal, exists bool) {
+	v := m.wht_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWhtAmount returns the old "wht_amount" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldWhtAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWhtAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWhtAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWhtAmount: %w", err)
+	}
+	return oldValue.WhtAmount, nil
+}
+
+// ResetWhtAmount resets all changes to the "wht_amount" field.
+func (m *ConsultantVoucherMutation) ResetWhtAmount() {
+	m.wht_amount = nil
+}
+
+// SetNetAmount sets the "net_amount" field.
+func (m *ConsultantVoucherMutation) SetNetAmount(d decimal.Decimal) {
+	m.net_amount = &d
+}
+
+// NetAmount returns the value of the "net_amount" field in the mutation.
+func (m *ConsultantVoucherMutation) NetAmount() (r decimal.Decimal, exists bool) {
+	v := m.net_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNetAmount returns the old "net_amount" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldNetAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNetAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNetAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNetAmount: %w", err)
+	}
+	return oldValue.NetAmount, nil
+}
+
+// ResetNetAmount resets all changes to the "net_amount" field.
+func (m *ConsultantVoucherMutation) ResetNetAmount() {
+	m.net_amount = nil
+}
+
+// SetIsResident sets the "is_resident" field.
+func (m *ConsultantVoucherMutation) SetIsResident(b bool) {
+	m.is_resident = &b
+}
+
+// IsResident returns the value of the "is_resident" field in the mutation.
+func (m *ConsultantVoucherMutation) IsResident() (r bool, exists bool) {
+	v := m.is_resident
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsResident returns the old "is_resident" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldIsResident(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsResident is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsResident requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsResident: %w", err)
+	}
+	return oldValue.IsResident, nil
+}
+
+// ResetIsResident resets all changes to the "is_resident" field.
+func (m *ConsultantVoucherMutation) ResetIsResident() {
+	m.is_resident = nil
+}
+
+// SetCurrency sets the "currency" field.
+func (m *ConsultantVoucherMutation) SetCurrency(s string) {
+	m.currency = &s
+}
+
+// Currency returns the value of the "currency" field in the mutation.
+func (m *ConsultantVoucherMutation) Currency() (r string, exists bool) {
+	v := m.currency
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCurrency returns the old "currency" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldCurrency(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCurrency is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCurrency requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCurrency: %w", err)
+	}
+	return oldValue.Currency, nil
+}
+
+// ResetCurrency resets all changes to the "currency" field.
+func (m *ConsultantVoucherMutation) ResetCurrency() {
+	m.currency = nil
+}
+
+// SetProjectID sets the "project_id" field.
+func (m *ConsultantVoucherMutation) SetProjectID(u uuid.UUID) {
+	m.project_id = &u
+}
+
+// ProjectID returns the value of the "project_id" field in the mutation.
+func (m *ConsultantVoucherMutation) ProjectID() (r uuid.UUID, exists bool) {
+	v := m.project_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProjectID returns the old "project_id" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldProjectID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProjectID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProjectID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProjectID: %w", err)
+	}
+	return oldValue.ProjectID, nil
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (m *ConsultantVoucherMutation) ClearProjectID() {
+	m.project_id = nil
+	m.clearedFields[consultantvoucher.FieldProjectID] = struct{}{}
+}
+
+// ProjectIDCleared returns if the "project_id" field was cleared in this mutation.
+func (m *ConsultantVoucherMutation) ProjectIDCleared() bool {
+	_, ok := m.clearedFields[consultantvoucher.FieldProjectID]
+	return ok
+}
+
+// ResetProjectID resets all changes to the "project_id" field.
+func (m *ConsultantVoucherMutation) ResetProjectID() {
+	m.project_id = nil
+	delete(m.clearedFields, consultantvoucher.FieldProjectID)
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (m *ConsultantVoucherMutation) SetCostCenterID(u uuid.UUID) {
+	m.cost_center_id = &u
+}
+
+// CostCenterID returns the value of the "cost_center_id" field in the mutation.
+func (m *ConsultantVoucherMutation) CostCenterID() (r uuid.UUID, exists bool) {
+	v := m.cost_center_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostCenterID returns the old "cost_center_id" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldCostCenterID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostCenterID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostCenterID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostCenterID: %w", err)
+	}
+	return oldValue.CostCenterID, nil
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (m *ConsultantVoucherMutation) ClearCostCenterID() {
+	m.cost_center_id = nil
+	m.clearedFields[consultantvoucher.FieldCostCenterID] = struct{}{}
+}
+
+// CostCenterIDCleared returns if the "cost_center_id" field was cleared in this mutation.
+func (m *ConsultantVoucherMutation) CostCenterIDCleared() bool {
+	_, ok := m.clearedFields[consultantvoucher.FieldCostCenterID]
+	return ok
+}
+
+// ResetCostCenterID resets all changes to the "cost_center_id" field.
+func (m *ConsultantVoucherMutation) ResetCostCenterID() {
+	m.cost_center_id = nil
+	delete(m.clearedFields, consultantvoucher.FieldCostCenterID)
+}
+
+// SetStatus sets the "status" field.
+func (m *ConsultantVoucherMutation) SetStatus(c consultantvoucher.Status) {
+	m.status = &c
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *ConsultantVoucherMutation) Status() (r consultantvoucher.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldStatus(ctx context.Context) (v consultantvoucher.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *ConsultantVoucherMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetEmailStatus sets the "email_status" field.
+func (m *ConsultantVoucherMutation) SetEmailStatus(s string) {
+	m.email_status = &s
+}
+
+// EmailStatus returns the value of the "email_status" field in the mutation.
+func (m *ConsultantVoucherMutation) EmailStatus() (r string, exists bool) {
+	v := m.email_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmailStatus returns the old "email_status" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldEmailStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmailStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmailStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmailStatus: %w", err)
+	}
+	return oldValue.EmailStatus, nil
+}
+
+// ResetEmailStatus resets all changes to the "email_status" field.
+func (m *ConsultantVoucherMutation) ResetEmailStatus() {
+	m.email_status = nil
+}
+
+// SetPublished sets the "published" field.
+func (m *ConsultantVoucherMutation) SetPublished(b bool) {
+	m.published = &b
+}
+
+// Published returns the value of the "published" field in the mutation.
+func (m *ConsultantVoucherMutation) Published() (r bool, exists bool) {
+	v := m.published
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublished returns the old "published" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldPublished(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublished is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublished requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublished: %w", err)
+	}
+	return oldValue.Published, nil
+}
+
+// ResetPublished resets all changes to the "published" field.
+func (m *ConsultantVoucherMutation) ResetPublished() {
+	m.published = nil
+}
+
+// SetBatchRef sets the "batch_ref" field.
+func (m *ConsultantVoucherMutation) SetBatchRef(s string) {
+	m.batch_ref = &s
+}
+
+// BatchRef returns the value of the "batch_ref" field in the mutation.
+func (m *ConsultantVoucherMutation) BatchRef() (r string, exists bool) {
+	v := m.batch_ref
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBatchRef returns the old "batch_ref" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldBatchRef(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBatchRef is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBatchRef requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBatchRef: %w", err)
+	}
+	return oldValue.BatchRef, nil
+}
+
+// ClearBatchRef clears the value of the "batch_ref" field.
+func (m *ConsultantVoucherMutation) ClearBatchRef() {
+	m.batch_ref = nil
+	m.clearedFields[consultantvoucher.FieldBatchRef] = struct{}{}
+}
+
+// BatchRefCleared returns if the "batch_ref" field was cleared in this mutation.
+func (m *ConsultantVoucherMutation) BatchRefCleared() bool {
+	_, ok := m.clearedFields[consultantvoucher.FieldBatchRef]
+	return ok
+}
+
+// ResetBatchRef resets all changes to the "batch_ref" field.
+func (m *ConsultantVoucherMutation) ResetBatchRef() {
+	m.batch_ref = nil
+	delete(m.clearedFields, consultantvoucher.FieldBatchRef)
+}
+
+// SetCreatedBy sets the "created_by" field.
+func (m *ConsultantVoucherMutation) SetCreatedBy(u uuid.UUID) {
+	m.created_by = &u
+}
+
+// CreatedBy returns the value of the "created_by" field in the mutation.
+func (m *ConsultantVoucherMutation) CreatedBy() (r uuid.UUID, exists bool) {
+	v := m.created_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedBy returns the old "created_by" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldCreatedBy(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedBy: %w", err)
+	}
+	return oldValue.CreatedBy, nil
+}
+
+// ClearCreatedBy clears the value of the "created_by" field.
+func (m *ConsultantVoucherMutation) ClearCreatedBy() {
+	m.created_by = nil
+	m.clearedFields[consultantvoucher.FieldCreatedBy] = struct{}{}
+}
+
+// CreatedByCleared returns if the "created_by" field was cleared in this mutation.
+func (m *ConsultantVoucherMutation) CreatedByCleared() bool {
+	_, ok := m.clearedFields[consultantvoucher.FieldCreatedBy]
+	return ok
+}
+
+// ResetCreatedBy resets all changes to the "created_by" field.
+func (m *ConsultantVoucherMutation) ResetCreatedBy() {
+	m.created_by = nil
+	delete(m.clearedFields, consultantvoucher.FieldCreatedBy)
+}
+
+// SetApproverID sets the "approver_id" field.
+func (m *ConsultantVoucherMutation) SetApproverID(u uuid.UUID) {
+	m.approver_id = &u
+}
+
+// ApproverID returns the value of the "approver_id" field in the mutation.
+func (m *ConsultantVoucherMutation) ApproverID() (r uuid.UUID, exists bool) {
+	v := m.approver_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApproverID returns the old "approver_id" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldApproverID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApproverID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApproverID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApproverID: %w", err)
+	}
+	return oldValue.ApproverID, nil
+}
+
+// ClearApproverID clears the value of the "approver_id" field.
+func (m *ConsultantVoucherMutation) ClearApproverID() {
+	m.approver_id = nil
+	m.clearedFields[consultantvoucher.FieldApproverID] = struct{}{}
+}
+
+// ApproverIDCleared returns if the "approver_id" field was cleared in this mutation.
+func (m *ConsultantVoucherMutation) ApproverIDCleared() bool {
+	_, ok := m.clearedFields[consultantvoucher.FieldApproverID]
+	return ok
+}
+
+// ResetApproverID resets all changes to the "approver_id" field.
+func (m *ConsultantVoucherMutation) ResetApproverID() {
+	m.approver_id = nil
+	delete(m.clearedFields, consultantvoucher.FieldApproverID)
+}
+
+// SetApprovedAt sets the "approved_at" field.
+func (m *ConsultantVoucherMutation) SetApprovedAt(t time.Time) {
+	m.approved_at = &t
+}
+
+// ApprovedAt returns the value of the "approved_at" field in the mutation.
+func (m *ConsultantVoucherMutation) ApprovedAt() (r time.Time, exists bool) {
+	v := m.approved_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApprovedAt returns the old "approved_at" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldApprovedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApprovedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApprovedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApprovedAt: %w", err)
+	}
+	return oldValue.ApprovedAt, nil
+}
+
+// ClearApprovedAt clears the value of the "approved_at" field.
+func (m *ConsultantVoucherMutation) ClearApprovedAt() {
+	m.approved_at = nil
+	m.clearedFields[consultantvoucher.FieldApprovedAt] = struct{}{}
+}
+
+// ApprovedAtCleared returns if the "approved_at" field was cleared in this mutation.
+func (m *ConsultantVoucherMutation) ApprovedAtCleared() bool {
+	_, ok := m.clearedFields[consultantvoucher.FieldApprovedAt]
+	return ok
+}
+
+// ResetApprovedAt resets all changes to the "approved_at" field.
+func (m *ConsultantVoucherMutation) ResetApprovedAt() {
+	m.approved_at = nil
+	delete(m.clearedFields, consultantvoucher.FieldApprovedAt)
+}
+
+// SetDeleteStatus sets the "delete_status" field.
+func (m *ConsultantVoucherMutation) SetDeleteStatus(b bool) {
+	m.delete_status = &b
+}
+
+// DeleteStatus returns the value of the "delete_status" field in the mutation.
+func (m *ConsultantVoucherMutation) DeleteStatus() (r bool, exists bool) {
+	v := m.delete_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeleteStatus returns the old "delete_status" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldDeleteStatus(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeleteStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeleteStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeleteStatus: %w", err)
+	}
+	return oldValue.DeleteStatus, nil
+}
+
+// ResetDeleteStatus resets all changes to the "delete_status" field.
+func (m *ConsultantVoucherMutation) ResetDeleteStatus() {
+	m.delete_status = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ConsultantVoucherMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ConsultantVoucherMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ConsultantVoucherMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ConsultantVoucherMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ConsultantVoucherMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ConsultantVoucher entity.
+// If the ConsultantVoucher object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ConsultantVoucherMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ConsultantVoucherMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the ConsultantVoucherMutation builder.
+func (m *ConsultantVoucherMutation) Where(ps ...predicate.ConsultantVoucher) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ConsultantVoucherMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ConsultantVoucherMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ConsultantVoucher, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ConsultantVoucherMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ConsultantVoucherMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ConsultantVoucher).
+func (m *ConsultantVoucherMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ConsultantVoucherMutation) Fields() []string {
+	fields := make([]string, 0, 24)
+	if m.tenant_id != nil {
+		fields = append(fields, consultantvoucher.FieldTenantID)
+	}
+	if m.employee_id != nil {
+		fields = append(fields, consultantvoucher.FieldEmployeeID)
+	}
+	if m.doc_number != nil {
+		fields = append(fields, consultantvoucher.FieldDocNumber)
+	}
+	if m.title != nil {
+		fields = append(fields, consultantvoucher.FieldTitle)
+	}
+	if m.period != nil {
+		fields = append(fields, consultantvoucher.FieldPeriod)
+	}
+	if m.gross_amount != nil {
+		fields = append(fields, consultantvoucher.FieldGrossAmount)
+	}
+	if m.deductions_amount != nil {
+		fields = append(fields, consultantvoucher.FieldDeductionsAmount)
+	}
+	if m.wht_rate != nil {
+		fields = append(fields, consultantvoucher.FieldWhtRate)
+	}
+	if m.wht_amount != nil {
+		fields = append(fields, consultantvoucher.FieldWhtAmount)
+	}
+	if m.net_amount != nil {
+		fields = append(fields, consultantvoucher.FieldNetAmount)
+	}
+	if m.is_resident != nil {
+		fields = append(fields, consultantvoucher.FieldIsResident)
+	}
+	if m.currency != nil {
+		fields = append(fields, consultantvoucher.FieldCurrency)
+	}
+	if m.project_id != nil {
+		fields = append(fields, consultantvoucher.FieldProjectID)
+	}
+	if m.cost_center_id != nil {
+		fields = append(fields, consultantvoucher.FieldCostCenterID)
+	}
+	if m.status != nil {
+		fields = append(fields, consultantvoucher.FieldStatus)
+	}
+	if m.email_status != nil {
+		fields = append(fields, consultantvoucher.FieldEmailStatus)
+	}
+	if m.published != nil {
+		fields = append(fields, consultantvoucher.FieldPublished)
+	}
+	if m.batch_ref != nil {
+		fields = append(fields, consultantvoucher.FieldBatchRef)
+	}
+	if m.created_by != nil {
+		fields = append(fields, consultantvoucher.FieldCreatedBy)
+	}
+	if m.approver_id != nil {
+		fields = append(fields, consultantvoucher.FieldApproverID)
+	}
+	if m.approved_at != nil {
+		fields = append(fields, consultantvoucher.FieldApprovedAt)
+	}
+	if m.delete_status != nil {
+		fields = append(fields, consultantvoucher.FieldDeleteStatus)
+	}
+	if m.created_at != nil {
+		fields = append(fields, consultantvoucher.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, consultantvoucher.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ConsultantVoucherMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case consultantvoucher.FieldTenantID:
+		return m.TenantID()
+	case consultantvoucher.FieldEmployeeID:
+		return m.EmployeeID()
+	case consultantvoucher.FieldDocNumber:
+		return m.DocNumber()
+	case consultantvoucher.FieldTitle:
+		return m.Title()
+	case consultantvoucher.FieldPeriod:
+		return m.Period()
+	case consultantvoucher.FieldGrossAmount:
+		return m.GrossAmount()
+	case consultantvoucher.FieldDeductionsAmount:
+		return m.DeductionsAmount()
+	case consultantvoucher.FieldWhtRate:
+		return m.WhtRate()
+	case consultantvoucher.FieldWhtAmount:
+		return m.WhtAmount()
+	case consultantvoucher.FieldNetAmount:
+		return m.NetAmount()
+	case consultantvoucher.FieldIsResident:
+		return m.IsResident()
+	case consultantvoucher.FieldCurrency:
+		return m.Currency()
+	case consultantvoucher.FieldProjectID:
+		return m.ProjectID()
+	case consultantvoucher.FieldCostCenterID:
+		return m.CostCenterID()
+	case consultantvoucher.FieldStatus:
+		return m.Status()
+	case consultantvoucher.FieldEmailStatus:
+		return m.EmailStatus()
+	case consultantvoucher.FieldPublished:
+		return m.Published()
+	case consultantvoucher.FieldBatchRef:
+		return m.BatchRef()
+	case consultantvoucher.FieldCreatedBy:
+		return m.CreatedBy()
+	case consultantvoucher.FieldApproverID:
+		return m.ApproverID()
+	case consultantvoucher.FieldApprovedAt:
+		return m.ApprovedAt()
+	case consultantvoucher.FieldDeleteStatus:
+		return m.DeleteStatus()
+	case consultantvoucher.FieldCreatedAt:
+		return m.CreatedAt()
+	case consultantvoucher.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ConsultantVoucherMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case consultantvoucher.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case consultantvoucher.FieldEmployeeID:
+		return m.OldEmployeeID(ctx)
+	case consultantvoucher.FieldDocNumber:
+		return m.OldDocNumber(ctx)
+	case consultantvoucher.FieldTitle:
+		return m.OldTitle(ctx)
+	case consultantvoucher.FieldPeriod:
+		return m.OldPeriod(ctx)
+	case consultantvoucher.FieldGrossAmount:
+		return m.OldGrossAmount(ctx)
+	case consultantvoucher.FieldDeductionsAmount:
+		return m.OldDeductionsAmount(ctx)
+	case consultantvoucher.FieldWhtRate:
+		return m.OldWhtRate(ctx)
+	case consultantvoucher.FieldWhtAmount:
+		return m.OldWhtAmount(ctx)
+	case consultantvoucher.FieldNetAmount:
+		return m.OldNetAmount(ctx)
+	case consultantvoucher.FieldIsResident:
+		return m.OldIsResident(ctx)
+	case consultantvoucher.FieldCurrency:
+		return m.OldCurrency(ctx)
+	case consultantvoucher.FieldProjectID:
+		return m.OldProjectID(ctx)
+	case consultantvoucher.FieldCostCenterID:
+		return m.OldCostCenterID(ctx)
+	case consultantvoucher.FieldStatus:
+		return m.OldStatus(ctx)
+	case consultantvoucher.FieldEmailStatus:
+		return m.OldEmailStatus(ctx)
+	case consultantvoucher.FieldPublished:
+		return m.OldPublished(ctx)
+	case consultantvoucher.FieldBatchRef:
+		return m.OldBatchRef(ctx)
+	case consultantvoucher.FieldCreatedBy:
+		return m.OldCreatedBy(ctx)
+	case consultantvoucher.FieldApproverID:
+		return m.OldApproverID(ctx)
+	case consultantvoucher.FieldApprovedAt:
+		return m.OldApprovedAt(ctx)
+	case consultantvoucher.FieldDeleteStatus:
+		return m.OldDeleteStatus(ctx)
+	case consultantvoucher.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case consultantvoucher.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ConsultantVoucher field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ConsultantVoucherMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case consultantvoucher.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case consultantvoucher.FieldEmployeeID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployeeID(v)
+		return nil
+	case consultantvoucher.FieldDocNumber:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDocNumber(v)
+		return nil
+	case consultantvoucher.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
+	case consultantvoucher.FieldPeriod:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPeriod(v)
+		return nil
+	case consultantvoucher.FieldGrossAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGrossAmount(v)
+		return nil
+	case consultantvoucher.FieldDeductionsAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeductionsAmount(v)
+		return nil
+	case consultantvoucher.FieldWhtRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWhtRate(v)
+		return nil
+	case consultantvoucher.FieldWhtAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWhtAmount(v)
+		return nil
+	case consultantvoucher.FieldNetAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNetAmount(v)
+		return nil
+	case consultantvoucher.FieldIsResident:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsResident(v)
+		return nil
+	case consultantvoucher.FieldCurrency:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCurrency(v)
+		return nil
+	case consultantvoucher.FieldProjectID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProjectID(v)
+		return nil
+	case consultantvoucher.FieldCostCenterID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostCenterID(v)
+		return nil
+	case consultantvoucher.FieldStatus:
+		v, ok := value.(consultantvoucher.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case consultantvoucher.FieldEmailStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmailStatus(v)
+		return nil
+	case consultantvoucher.FieldPublished:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublished(v)
+		return nil
+	case consultantvoucher.FieldBatchRef:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBatchRef(v)
+		return nil
+	case consultantvoucher.FieldCreatedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedBy(v)
+		return nil
+	case consultantvoucher.FieldApproverID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApproverID(v)
+		return nil
+	case consultantvoucher.FieldApprovedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApprovedAt(v)
+		return nil
+	case consultantvoucher.FieldDeleteStatus:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeleteStatus(v)
+		return nil
+	case consultantvoucher.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case consultantvoucher.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ConsultantVoucher field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ConsultantVoucherMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ConsultantVoucherMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ConsultantVoucherMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ConsultantVoucher numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ConsultantVoucherMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(consultantvoucher.FieldDocNumber) {
+		fields = append(fields, consultantvoucher.FieldDocNumber)
+	}
+	if m.FieldCleared(consultantvoucher.FieldTitle) {
+		fields = append(fields, consultantvoucher.FieldTitle)
+	}
+	if m.FieldCleared(consultantvoucher.FieldPeriod) {
+		fields = append(fields, consultantvoucher.FieldPeriod)
+	}
+	if m.FieldCleared(consultantvoucher.FieldProjectID) {
+		fields = append(fields, consultantvoucher.FieldProjectID)
+	}
+	if m.FieldCleared(consultantvoucher.FieldCostCenterID) {
+		fields = append(fields, consultantvoucher.FieldCostCenterID)
+	}
+	if m.FieldCleared(consultantvoucher.FieldBatchRef) {
+		fields = append(fields, consultantvoucher.FieldBatchRef)
+	}
+	if m.FieldCleared(consultantvoucher.FieldCreatedBy) {
+		fields = append(fields, consultantvoucher.FieldCreatedBy)
+	}
+	if m.FieldCleared(consultantvoucher.FieldApproverID) {
+		fields = append(fields, consultantvoucher.FieldApproverID)
+	}
+	if m.FieldCleared(consultantvoucher.FieldApprovedAt) {
+		fields = append(fields, consultantvoucher.FieldApprovedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ConsultantVoucherMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ConsultantVoucherMutation) ClearField(name string) error {
+	switch name {
+	case consultantvoucher.FieldDocNumber:
+		m.ClearDocNumber()
+		return nil
+	case consultantvoucher.FieldTitle:
+		m.ClearTitle()
+		return nil
+	case consultantvoucher.FieldPeriod:
+		m.ClearPeriod()
+		return nil
+	case consultantvoucher.FieldProjectID:
+		m.ClearProjectID()
+		return nil
+	case consultantvoucher.FieldCostCenterID:
+		m.ClearCostCenterID()
+		return nil
+	case consultantvoucher.FieldBatchRef:
+		m.ClearBatchRef()
+		return nil
+	case consultantvoucher.FieldCreatedBy:
+		m.ClearCreatedBy()
+		return nil
+	case consultantvoucher.FieldApproverID:
+		m.ClearApproverID()
+		return nil
+	case consultantvoucher.FieldApprovedAt:
+		m.ClearApprovedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ConsultantVoucher nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ConsultantVoucherMutation) ResetField(name string) error {
+	switch name {
+	case consultantvoucher.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case consultantvoucher.FieldEmployeeID:
+		m.ResetEmployeeID()
+		return nil
+	case consultantvoucher.FieldDocNumber:
+		m.ResetDocNumber()
+		return nil
+	case consultantvoucher.FieldTitle:
+		m.ResetTitle()
+		return nil
+	case consultantvoucher.FieldPeriod:
+		m.ResetPeriod()
+		return nil
+	case consultantvoucher.FieldGrossAmount:
+		m.ResetGrossAmount()
+		return nil
+	case consultantvoucher.FieldDeductionsAmount:
+		m.ResetDeductionsAmount()
+		return nil
+	case consultantvoucher.FieldWhtRate:
+		m.ResetWhtRate()
+		return nil
+	case consultantvoucher.FieldWhtAmount:
+		m.ResetWhtAmount()
+		return nil
+	case consultantvoucher.FieldNetAmount:
+		m.ResetNetAmount()
+		return nil
+	case consultantvoucher.FieldIsResident:
+		m.ResetIsResident()
+		return nil
+	case consultantvoucher.FieldCurrency:
+		m.ResetCurrency()
+		return nil
+	case consultantvoucher.FieldProjectID:
+		m.ResetProjectID()
+		return nil
+	case consultantvoucher.FieldCostCenterID:
+		m.ResetCostCenterID()
+		return nil
+	case consultantvoucher.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case consultantvoucher.FieldEmailStatus:
+		m.ResetEmailStatus()
+		return nil
+	case consultantvoucher.FieldPublished:
+		m.ResetPublished()
+		return nil
+	case consultantvoucher.FieldBatchRef:
+		m.ResetBatchRef()
+		return nil
+	case consultantvoucher.FieldCreatedBy:
+		m.ResetCreatedBy()
+		return nil
+	case consultantvoucher.FieldApproverID:
+		m.ResetApproverID()
+		return nil
+	case consultantvoucher.FieldApprovedAt:
+		m.ResetApprovedAt()
+		return nil
+	case consultantvoucher.FieldDeleteStatus:
+		m.ResetDeleteStatus()
+		return nil
+	case consultantvoucher.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case consultantvoucher.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ConsultantVoucher field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ConsultantVoucherMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ConsultantVoucherMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ConsultantVoucherMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ConsultantVoucherMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ConsultantVoucherMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ConsultantVoucherMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ConsultantVoucherMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ConsultantVoucher unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ConsultantVoucherMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ConsultantVoucher edge %s", name)
 }
 
 // ContactDetailsMutation represents an operation that mutates the ContactDetails nodes in the graph.

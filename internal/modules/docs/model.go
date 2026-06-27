@@ -35,8 +35,9 @@ func (b *BankDetails) IsEmpty() bool {
 type DocType string
 
 const (
-	DocTypePayslip       DocType = "payslip"
-	DocTypePayrollReport DocType = "payroll_report"
+	DocTypePayslip        DocType = "payslip"
+	DocTypePayrollReport  DocType = "payroll_report"
+	DocTypePaymentVoucher DocType = "payment_voucher"
 )
 
 // DocumentLine is a single line item shared across document types (used by the

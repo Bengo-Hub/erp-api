@@ -36,6 +36,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/casualpayment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/claimitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/consultantvoucher"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
@@ -198,6 +199,7 @@ func checkColumn(t, c string) error {
 			casualpayment.Table:             casualpayment.ValidColumn,
 			claimitem.Table:                 claimitem.ValidColumn,
 			companysettings.Table:           companysettings.ValidColumn,
+			consultantvoucher.Table:         consultantvoucher.ValidColumn,
 			contactdetails.Table:            contactdetails.ValidColumn,
 			contract.Table:                  contract.ValidColumn,
 			customuser.Table:                customuser.ValidColumn,
