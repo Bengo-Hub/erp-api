@@ -231,6 +231,9 @@ var (
 		{Name: "question_type", Type: field.TypeEnum, Enums: []string{"text", "rating", "multiple_choice", "yes_no"}},
 		{Name: "is_required", Type: field.TypeBool, Default: true},
 		{Name: "order", Type: field.TypeInt, Default: 0},
+		{Name: "category", Type: field.TypeString, Nullable: true},
+		{Name: "weight", Type: field.TypeFloat64, Nullable: true},
+		{Name: "max_score", Type: field.TypeInt, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
@@ -1819,6 +1822,7 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "is_paid", Type: field.TypeBool, Default: true},
 		{Name: "default_annual_days", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(7,2)"}},
 		{Name: "allow_carryover", Type: field.TypeBool, Default: false},
 		{Name: "max_carryover_days", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(7,2)"}},

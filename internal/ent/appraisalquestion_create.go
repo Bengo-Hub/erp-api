@@ -76,6 +76,48 @@ func (_c *AppraisalQuestionCreate) SetNillableOrder(v *int) *AppraisalQuestionCr
 	return _c
 }
 
+// SetCategory sets the "category" field.
+func (_c *AppraisalQuestionCreate) SetCategory(v string) *AppraisalQuestionCreate {
+	_c.mutation.SetCategory(v)
+	return _c
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_c *AppraisalQuestionCreate) SetNillableCategory(v *string) *AppraisalQuestionCreate {
+	if v != nil {
+		_c.SetCategory(*v)
+	}
+	return _c
+}
+
+// SetWeight sets the "weight" field.
+func (_c *AppraisalQuestionCreate) SetWeight(v float64) *AppraisalQuestionCreate {
+	_c.mutation.SetWeight(v)
+	return _c
+}
+
+// SetNillableWeight sets the "weight" field if the given value is not nil.
+func (_c *AppraisalQuestionCreate) SetNillableWeight(v *float64) *AppraisalQuestionCreate {
+	if v != nil {
+		_c.SetWeight(*v)
+	}
+	return _c
+}
+
+// SetMaxScore sets the "max_score" field.
+func (_c *AppraisalQuestionCreate) SetMaxScore(v int) *AppraisalQuestionCreate {
+	_c.mutation.SetMaxScore(v)
+	return _c
+}
+
+// SetNillableMaxScore sets the "max_score" field if the given value is not nil.
+func (_c *AppraisalQuestionCreate) SetNillableMaxScore(v *int) *AppraisalQuestionCreate {
+	if v != nil {
+		_c.SetMaxScore(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *AppraisalQuestionCreate) SetCreatedAt(v time.Time) *AppraisalQuestionCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -266,6 +308,18 @@ func (_c *AppraisalQuestionCreate) createSpec() (*AppraisalQuestion, *sqlgraph.C
 		_spec.SetField(appraisalquestion.FieldOrder, field.TypeInt, value)
 		_node.Order = value
 	}
+	if value, ok := _c.mutation.Category(); ok {
+		_spec.SetField(appraisalquestion.FieldCategory, field.TypeString, value)
+		_node.Category = value
+	}
+	if value, ok := _c.mutation.Weight(); ok {
+		_spec.SetField(appraisalquestion.FieldWeight, field.TypeFloat64, value)
+		_node.Weight = value
+	}
+	if value, ok := _c.mutation.MaxScore(); ok {
+		_spec.SetField(appraisalquestion.FieldMaxScore, field.TypeInt, value)
+		_node.MaxScore = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(appraisalquestion.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -401,6 +455,72 @@ func (u *AppraisalQuestionUpsert) UpdateOrder() *AppraisalQuestionUpsert {
 // AddOrder adds v to the "order" field.
 func (u *AppraisalQuestionUpsert) AddOrder(v int) *AppraisalQuestionUpsert {
 	u.Add(appraisalquestion.FieldOrder, v)
+	return u
+}
+
+// SetCategory sets the "category" field.
+func (u *AppraisalQuestionUpsert) SetCategory(v string) *AppraisalQuestionUpsert {
+	u.Set(appraisalquestion.FieldCategory, v)
+	return u
+}
+
+// UpdateCategory sets the "category" field to the value that was provided on create.
+func (u *AppraisalQuestionUpsert) UpdateCategory() *AppraisalQuestionUpsert {
+	u.SetExcluded(appraisalquestion.FieldCategory)
+	return u
+}
+
+// ClearCategory clears the value of the "category" field.
+func (u *AppraisalQuestionUpsert) ClearCategory() *AppraisalQuestionUpsert {
+	u.SetNull(appraisalquestion.FieldCategory)
+	return u
+}
+
+// SetWeight sets the "weight" field.
+func (u *AppraisalQuestionUpsert) SetWeight(v float64) *AppraisalQuestionUpsert {
+	u.Set(appraisalquestion.FieldWeight, v)
+	return u
+}
+
+// UpdateWeight sets the "weight" field to the value that was provided on create.
+func (u *AppraisalQuestionUpsert) UpdateWeight() *AppraisalQuestionUpsert {
+	u.SetExcluded(appraisalquestion.FieldWeight)
+	return u
+}
+
+// AddWeight adds v to the "weight" field.
+func (u *AppraisalQuestionUpsert) AddWeight(v float64) *AppraisalQuestionUpsert {
+	u.Add(appraisalquestion.FieldWeight, v)
+	return u
+}
+
+// ClearWeight clears the value of the "weight" field.
+func (u *AppraisalQuestionUpsert) ClearWeight() *AppraisalQuestionUpsert {
+	u.SetNull(appraisalquestion.FieldWeight)
+	return u
+}
+
+// SetMaxScore sets the "max_score" field.
+func (u *AppraisalQuestionUpsert) SetMaxScore(v int) *AppraisalQuestionUpsert {
+	u.Set(appraisalquestion.FieldMaxScore, v)
+	return u
+}
+
+// UpdateMaxScore sets the "max_score" field to the value that was provided on create.
+func (u *AppraisalQuestionUpsert) UpdateMaxScore() *AppraisalQuestionUpsert {
+	u.SetExcluded(appraisalquestion.FieldMaxScore)
+	return u
+}
+
+// AddMaxScore adds v to the "max_score" field.
+func (u *AppraisalQuestionUpsert) AddMaxScore(v int) *AppraisalQuestionUpsert {
+	u.Add(appraisalquestion.FieldMaxScore, v)
+	return u
+}
+
+// ClearMaxScore clears the value of the "max_score" field.
+func (u *AppraisalQuestionUpsert) ClearMaxScore() *AppraisalQuestionUpsert {
+	u.SetNull(appraisalquestion.FieldMaxScore)
 	return u
 }
 
@@ -555,6 +675,83 @@ func (u *AppraisalQuestionUpsertOne) AddOrder(v int) *AppraisalQuestionUpsertOne
 func (u *AppraisalQuestionUpsertOne) UpdateOrder() *AppraisalQuestionUpsertOne {
 	return u.Update(func(s *AppraisalQuestionUpsert) {
 		s.UpdateOrder()
+	})
+}
+
+// SetCategory sets the "category" field.
+func (u *AppraisalQuestionUpsertOne) SetCategory(v string) *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.SetCategory(v)
+	})
+}
+
+// UpdateCategory sets the "category" field to the value that was provided on create.
+func (u *AppraisalQuestionUpsertOne) UpdateCategory() *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.UpdateCategory()
+	})
+}
+
+// ClearCategory clears the value of the "category" field.
+func (u *AppraisalQuestionUpsertOne) ClearCategory() *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.ClearCategory()
+	})
+}
+
+// SetWeight sets the "weight" field.
+func (u *AppraisalQuestionUpsertOne) SetWeight(v float64) *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.SetWeight(v)
+	})
+}
+
+// AddWeight adds v to the "weight" field.
+func (u *AppraisalQuestionUpsertOne) AddWeight(v float64) *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.AddWeight(v)
+	})
+}
+
+// UpdateWeight sets the "weight" field to the value that was provided on create.
+func (u *AppraisalQuestionUpsertOne) UpdateWeight() *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.UpdateWeight()
+	})
+}
+
+// ClearWeight clears the value of the "weight" field.
+func (u *AppraisalQuestionUpsertOne) ClearWeight() *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.ClearWeight()
+	})
+}
+
+// SetMaxScore sets the "max_score" field.
+func (u *AppraisalQuestionUpsertOne) SetMaxScore(v int) *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.SetMaxScore(v)
+	})
+}
+
+// AddMaxScore adds v to the "max_score" field.
+func (u *AppraisalQuestionUpsertOne) AddMaxScore(v int) *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.AddMaxScore(v)
+	})
+}
+
+// UpdateMaxScore sets the "max_score" field to the value that was provided on create.
+func (u *AppraisalQuestionUpsertOne) UpdateMaxScore() *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.UpdateMaxScore()
+	})
+}
+
+// ClearMaxScore clears the value of the "max_score" field.
+func (u *AppraisalQuestionUpsertOne) ClearMaxScore() *AppraisalQuestionUpsertOne {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.ClearMaxScore()
 	})
 }
 
@@ -878,6 +1075,83 @@ func (u *AppraisalQuestionUpsertBulk) AddOrder(v int) *AppraisalQuestionUpsertBu
 func (u *AppraisalQuestionUpsertBulk) UpdateOrder() *AppraisalQuestionUpsertBulk {
 	return u.Update(func(s *AppraisalQuestionUpsert) {
 		s.UpdateOrder()
+	})
+}
+
+// SetCategory sets the "category" field.
+func (u *AppraisalQuestionUpsertBulk) SetCategory(v string) *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.SetCategory(v)
+	})
+}
+
+// UpdateCategory sets the "category" field to the value that was provided on create.
+func (u *AppraisalQuestionUpsertBulk) UpdateCategory() *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.UpdateCategory()
+	})
+}
+
+// ClearCategory clears the value of the "category" field.
+func (u *AppraisalQuestionUpsertBulk) ClearCategory() *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.ClearCategory()
+	})
+}
+
+// SetWeight sets the "weight" field.
+func (u *AppraisalQuestionUpsertBulk) SetWeight(v float64) *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.SetWeight(v)
+	})
+}
+
+// AddWeight adds v to the "weight" field.
+func (u *AppraisalQuestionUpsertBulk) AddWeight(v float64) *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.AddWeight(v)
+	})
+}
+
+// UpdateWeight sets the "weight" field to the value that was provided on create.
+func (u *AppraisalQuestionUpsertBulk) UpdateWeight() *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.UpdateWeight()
+	})
+}
+
+// ClearWeight clears the value of the "weight" field.
+func (u *AppraisalQuestionUpsertBulk) ClearWeight() *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.ClearWeight()
+	})
+}
+
+// SetMaxScore sets the "max_score" field.
+func (u *AppraisalQuestionUpsertBulk) SetMaxScore(v int) *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.SetMaxScore(v)
+	})
+}
+
+// AddMaxScore adds v to the "max_score" field.
+func (u *AppraisalQuestionUpsertBulk) AddMaxScore(v int) *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.AddMaxScore(v)
+	})
+}
+
+// UpdateMaxScore sets the "max_score" field to the value that was provided on create.
+func (u *AppraisalQuestionUpsertBulk) UpdateMaxScore() *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.UpdateMaxScore()
+	})
+}
+
+// ClearMaxScore clears the value of the "max_score" field.
+func (u *AppraisalQuestionUpsertBulk) ClearMaxScore() *AppraisalQuestionUpsertBulk {
+	return u.Update(func(s *AppraisalQuestionUpsert) {
+		s.ClearMaxScore()
 	})
 }
 

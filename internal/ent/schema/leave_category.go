@@ -22,6 +22,9 @@ func (LeaveCategory) Fields() []ent.Field {
 		field.String("name"),
 		field.String("description").Optional(),
 		field.Bool("is_active").Default(true),
+		// is_paid: whether leave of this category is paid (drives the UI Paid/Unpaid column
+		// and payroll treatment). Bool DEFAULT is emitted in DDL → safe on populated tables.
+		field.Bool("is_paid").Default(true),
 		// default_annual_days: default yearly entitlement for this category.
 		daysField("default_annual_days"),
 		field.Bool("allow_carryover").Default(false),

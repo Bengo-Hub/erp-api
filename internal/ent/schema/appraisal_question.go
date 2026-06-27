@@ -23,6 +23,11 @@ func (AppraisalQuestion) Fields() []ent.Field {
 		field.Enum("question_type").Values("text", "rating", "multiple_choice", "yes_no"),
 		field.Bool("is_required").Default(true),
 		field.Int("order").Default(0),
+		// Scoring metadata surfaced by the UI questions table (Category / Weight / Max).
+		// All Optional → nullable columns → safe additive migration on populated tables.
+		field.String("category").Optional().Comment("Competency/KPI grouping, e.g. 'Quality', 'Productivity'"),
+		field.Float("weight").Optional().Comment("Relative weight of this question in the template score"),
+		field.Int("max_score").Optional().Comment("Maximum score for a rating question (e.g. 5)"),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

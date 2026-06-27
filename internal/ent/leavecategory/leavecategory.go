@@ -23,6 +23,8 @@ const (
 	FieldDescription = "description"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
+	// FieldIsPaid holds the string denoting the is_paid field in the database.
+	FieldIsPaid = "is_paid"
 	// FieldDefaultAnnualDays holds the string denoting the default_annual_days field in the database.
 	FieldDefaultAnnualDays = "default_annual_days"
 	// FieldAllowCarryover holds the string denoting the allow_carryover field in the database.
@@ -44,6 +46,7 @@ var Columns = []string{
 	FieldName,
 	FieldDescription,
 	FieldIsActive,
+	FieldIsPaid,
 	FieldDefaultAnnualDays,
 	FieldAllowCarryover,
 	FieldMaxCarryoverDays,
@@ -64,6 +67,8 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
+	// DefaultIsPaid holds the default value on creation for the "is_paid" field.
+	DefaultIsPaid bool
 	// DefaultDefaultAnnualDays holds the default value on creation for the "default_annual_days" field.
 	DefaultDefaultAnnualDays decimal.Decimal
 	// DefaultAllowCarryover holds the default value on creation for the "allow_carryover" field.
@@ -106,6 +111,11 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 // ByIsActive orders the results by the is_active field.
 func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsActive, opts...).ToFunc()
+}
+
+// ByIsPaid orders the results by the is_paid field.
+func ByIsPaid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsPaid, opts...).ToFunc()
 }
 
 // ByDefaultAnnualDays orders the results by the default_annual_days field.

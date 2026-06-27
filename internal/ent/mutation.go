@@ -5770,6 +5770,11 @@ type AppraisalQuestionMutation struct {
 	is_required   *bool
 	_order        *int
 	add_order     *int
+	category      *string
+	weight        *float64
+	addweight     *float64
+	max_score     *int
+	addmax_score  *int
 	created_at    *time.Time
 	updated_at    *time.Time
 	clearedFields map[string]struct{}
@@ -6118,6 +6123,195 @@ func (m *AppraisalQuestionMutation) ResetOrder() {
 	m.add_order = nil
 }
 
+// SetCategory sets the "category" field.
+func (m *AppraisalQuestionMutation) SetCategory(s string) {
+	m.category = &s
+}
+
+// Category returns the value of the "category" field in the mutation.
+func (m *AppraisalQuestionMutation) Category() (r string, exists bool) {
+	v := m.category
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCategory returns the old "category" field's value of the AppraisalQuestion entity.
+// If the AppraisalQuestion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppraisalQuestionMutation) OldCategory(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCategory is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCategory requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCategory: %w", err)
+	}
+	return oldValue.Category, nil
+}
+
+// ClearCategory clears the value of the "category" field.
+func (m *AppraisalQuestionMutation) ClearCategory() {
+	m.category = nil
+	m.clearedFields[appraisalquestion.FieldCategory] = struct{}{}
+}
+
+// CategoryCleared returns if the "category" field was cleared in this mutation.
+func (m *AppraisalQuestionMutation) CategoryCleared() bool {
+	_, ok := m.clearedFields[appraisalquestion.FieldCategory]
+	return ok
+}
+
+// ResetCategory resets all changes to the "category" field.
+func (m *AppraisalQuestionMutation) ResetCategory() {
+	m.category = nil
+	delete(m.clearedFields, appraisalquestion.FieldCategory)
+}
+
+// SetWeight sets the "weight" field.
+func (m *AppraisalQuestionMutation) SetWeight(f float64) {
+	m.weight = &f
+	m.addweight = nil
+}
+
+// Weight returns the value of the "weight" field in the mutation.
+func (m *AppraisalQuestionMutation) Weight() (r float64, exists bool) {
+	v := m.weight
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWeight returns the old "weight" field's value of the AppraisalQuestion entity.
+// If the AppraisalQuestion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppraisalQuestionMutation) OldWeight(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWeight is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWeight requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWeight: %w", err)
+	}
+	return oldValue.Weight, nil
+}
+
+// AddWeight adds f to the "weight" field.
+func (m *AppraisalQuestionMutation) AddWeight(f float64) {
+	if m.addweight != nil {
+		*m.addweight += f
+	} else {
+		m.addweight = &f
+	}
+}
+
+// AddedWeight returns the value that was added to the "weight" field in this mutation.
+func (m *AppraisalQuestionMutation) AddedWeight() (r float64, exists bool) {
+	v := m.addweight
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearWeight clears the value of the "weight" field.
+func (m *AppraisalQuestionMutation) ClearWeight() {
+	m.weight = nil
+	m.addweight = nil
+	m.clearedFields[appraisalquestion.FieldWeight] = struct{}{}
+}
+
+// WeightCleared returns if the "weight" field was cleared in this mutation.
+func (m *AppraisalQuestionMutation) WeightCleared() bool {
+	_, ok := m.clearedFields[appraisalquestion.FieldWeight]
+	return ok
+}
+
+// ResetWeight resets all changes to the "weight" field.
+func (m *AppraisalQuestionMutation) ResetWeight() {
+	m.weight = nil
+	m.addweight = nil
+	delete(m.clearedFields, appraisalquestion.FieldWeight)
+}
+
+// SetMaxScore sets the "max_score" field.
+func (m *AppraisalQuestionMutation) SetMaxScore(i int) {
+	m.max_score = &i
+	m.addmax_score = nil
+}
+
+// MaxScore returns the value of the "max_score" field in the mutation.
+func (m *AppraisalQuestionMutation) MaxScore() (r int, exists bool) {
+	v := m.max_score
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxScore returns the old "max_score" field's value of the AppraisalQuestion entity.
+// If the AppraisalQuestion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppraisalQuestionMutation) OldMaxScore(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaxScore is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaxScore requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxScore: %w", err)
+	}
+	return oldValue.MaxScore, nil
+}
+
+// AddMaxScore adds i to the "max_score" field.
+func (m *AppraisalQuestionMutation) AddMaxScore(i int) {
+	if m.addmax_score != nil {
+		*m.addmax_score += i
+	} else {
+		m.addmax_score = &i
+	}
+}
+
+// AddedMaxScore returns the value that was added to the "max_score" field in this mutation.
+func (m *AppraisalQuestionMutation) AddedMaxScore() (r int, exists bool) {
+	v := m.addmax_score
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearMaxScore clears the value of the "max_score" field.
+func (m *AppraisalQuestionMutation) ClearMaxScore() {
+	m.max_score = nil
+	m.addmax_score = nil
+	m.clearedFields[appraisalquestion.FieldMaxScore] = struct{}{}
+}
+
+// MaxScoreCleared returns if the "max_score" field was cleared in this mutation.
+func (m *AppraisalQuestionMutation) MaxScoreCleared() bool {
+	_, ok := m.clearedFields[appraisalquestion.FieldMaxScore]
+	return ok
+}
+
+// ResetMaxScore resets all changes to the "max_score" field.
+func (m *AppraisalQuestionMutation) ResetMaxScore() {
+	m.max_score = nil
+	m.addmax_score = nil
+	delete(m.clearedFields, appraisalquestion.FieldMaxScore)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *AppraisalQuestionMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -6224,7 +6418,7 @@ func (m *AppraisalQuestionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AppraisalQuestionMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 11)
 	if m.tenant_id != nil {
 		fields = append(fields, appraisalquestion.FieldTenantID)
 	}
@@ -6242,6 +6436,15 @@ func (m *AppraisalQuestionMutation) Fields() []string {
 	}
 	if m._order != nil {
 		fields = append(fields, appraisalquestion.FieldOrder)
+	}
+	if m.category != nil {
+		fields = append(fields, appraisalquestion.FieldCategory)
+	}
+	if m.weight != nil {
+		fields = append(fields, appraisalquestion.FieldWeight)
+	}
+	if m.max_score != nil {
+		fields = append(fields, appraisalquestion.FieldMaxScore)
 	}
 	if m.created_at != nil {
 		fields = append(fields, appraisalquestion.FieldCreatedAt)
@@ -6269,6 +6472,12 @@ func (m *AppraisalQuestionMutation) Field(name string) (ent.Value, bool) {
 		return m.IsRequired()
 	case appraisalquestion.FieldOrder:
 		return m.Order()
+	case appraisalquestion.FieldCategory:
+		return m.Category()
+	case appraisalquestion.FieldWeight:
+		return m.Weight()
+	case appraisalquestion.FieldMaxScore:
+		return m.MaxScore()
 	case appraisalquestion.FieldCreatedAt:
 		return m.CreatedAt()
 	case appraisalquestion.FieldUpdatedAt:
@@ -6294,6 +6503,12 @@ func (m *AppraisalQuestionMutation) OldField(ctx context.Context, name string) (
 		return m.OldIsRequired(ctx)
 	case appraisalquestion.FieldOrder:
 		return m.OldOrder(ctx)
+	case appraisalquestion.FieldCategory:
+		return m.OldCategory(ctx)
+	case appraisalquestion.FieldWeight:
+		return m.OldWeight(ctx)
+	case appraisalquestion.FieldMaxScore:
+		return m.OldMaxScore(ctx)
 	case appraisalquestion.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case appraisalquestion.FieldUpdatedAt:
@@ -6349,6 +6564,27 @@ func (m *AppraisalQuestionMutation) SetField(name string, value ent.Value) error
 		}
 		m.SetOrder(v)
 		return nil
+	case appraisalquestion.FieldCategory:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCategory(v)
+		return nil
+	case appraisalquestion.FieldWeight:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWeight(v)
+		return nil
+	case appraisalquestion.FieldMaxScore:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxScore(v)
+		return nil
 	case appraisalquestion.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -6374,6 +6610,12 @@ func (m *AppraisalQuestionMutation) AddedFields() []string {
 	if m.add_order != nil {
 		fields = append(fields, appraisalquestion.FieldOrder)
 	}
+	if m.addweight != nil {
+		fields = append(fields, appraisalquestion.FieldWeight)
+	}
+	if m.addmax_score != nil {
+		fields = append(fields, appraisalquestion.FieldMaxScore)
+	}
 	return fields
 }
 
@@ -6384,6 +6626,10 @@ func (m *AppraisalQuestionMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case appraisalquestion.FieldOrder:
 		return m.AddedOrder()
+	case appraisalquestion.FieldWeight:
+		return m.AddedWeight()
+	case appraisalquestion.FieldMaxScore:
+		return m.AddedMaxScore()
 	}
 	return nil, false
 }
@@ -6400,6 +6646,20 @@ func (m *AppraisalQuestionMutation) AddField(name string, value ent.Value) error
 		}
 		m.AddOrder(v)
 		return nil
+	case appraisalquestion.FieldWeight:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWeight(v)
+		return nil
+	case appraisalquestion.FieldMaxScore:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMaxScore(v)
+		return nil
 	}
 	return fmt.Errorf("unknown AppraisalQuestion numeric field %s", name)
 }
@@ -6407,7 +6667,17 @@ func (m *AppraisalQuestionMutation) AddField(name string, value ent.Value) error
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *AppraisalQuestionMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(appraisalquestion.FieldCategory) {
+		fields = append(fields, appraisalquestion.FieldCategory)
+	}
+	if m.FieldCleared(appraisalquestion.FieldWeight) {
+		fields = append(fields, appraisalquestion.FieldWeight)
+	}
+	if m.FieldCleared(appraisalquestion.FieldMaxScore) {
+		fields = append(fields, appraisalquestion.FieldMaxScore)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -6420,6 +6690,17 @@ func (m *AppraisalQuestionMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *AppraisalQuestionMutation) ClearField(name string) error {
+	switch name {
+	case appraisalquestion.FieldCategory:
+		m.ClearCategory()
+		return nil
+	case appraisalquestion.FieldWeight:
+		m.ClearWeight()
+		return nil
+	case appraisalquestion.FieldMaxScore:
+		m.ClearMaxScore()
+		return nil
+	}
 	return fmt.Errorf("unknown AppraisalQuestion nullable field %s", name)
 }
 
@@ -6444,6 +6725,15 @@ func (m *AppraisalQuestionMutation) ResetField(name string) error {
 		return nil
 	case appraisalquestion.FieldOrder:
 		m.ResetOrder()
+		return nil
+	case appraisalquestion.FieldCategory:
+		m.ResetCategory()
+		return nil
+	case appraisalquestion.FieldWeight:
+		m.ResetWeight()
+		return nil
+	case appraisalquestion.FieldMaxScore:
+		m.ResetMaxScore()
 		return nil
 	case appraisalquestion.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -51002,6 +51292,7 @@ type LeaveCategoryMutation struct {
 	name                *string
 	description         *string
 	is_active           *bool
+	is_paid             *bool
 	default_annual_days *decimal.Decimal
 	allow_carryover     *bool
 	max_carryover_days  *decimal.Decimal
@@ -51274,6 +51565,42 @@ func (m *LeaveCategoryMutation) ResetIsActive() {
 	m.is_active = nil
 }
 
+// SetIsPaid sets the "is_paid" field.
+func (m *LeaveCategoryMutation) SetIsPaid(b bool) {
+	m.is_paid = &b
+}
+
+// IsPaid returns the value of the "is_paid" field in the mutation.
+func (m *LeaveCategoryMutation) IsPaid() (r bool, exists bool) {
+	v := m.is_paid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsPaid returns the old "is_paid" field's value of the LeaveCategory entity.
+// If the LeaveCategory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveCategoryMutation) OldIsPaid(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsPaid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsPaid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsPaid: %w", err)
+	}
+	return oldValue.IsPaid, nil
+}
+
+// ResetIsPaid resets all changes to the "is_paid" field.
+func (m *LeaveCategoryMutation) ResetIsPaid() {
+	m.is_paid = nil
+}
+
 // SetDefaultAnnualDays sets the "default_annual_days" field.
 func (m *LeaveCategoryMutation) SetDefaultAnnualDays(d decimal.Decimal) {
 	m.default_annual_days = &d
@@ -51488,7 +51815,7 @@ func (m *LeaveCategoryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LeaveCategoryMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.tenant_id != nil {
 		fields = append(fields, leavecategory.FieldTenantID)
 	}
@@ -51500,6 +51827,9 @@ func (m *LeaveCategoryMutation) Fields() []string {
 	}
 	if m.is_active != nil {
 		fields = append(fields, leavecategory.FieldIsActive)
+	}
+	if m.is_paid != nil {
+		fields = append(fields, leavecategory.FieldIsPaid)
 	}
 	if m.default_annual_days != nil {
 		fields = append(fields, leavecategory.FieldDefaultAnnualDays)
@@ -51532,6 +51862,8 @@ func (m *LeaveCategoryMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case leavecategory.FieldIsActive:
 		return m.IsActive()
+	case leavecategory.FieldIsPaid:
+		return m.IsPaid()
 	case leavecategory.FieldDefaultAnnualDays:
 		return m.DefaultAnnualDays()
 	case leavecategory.FieldAllowCarryover:
@@ -51559,6 +51891,8 @@ func (m *LeaveCategoryMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldDescription(ctx)
 	case leavecategory.FieldIsActive:
 		return m.OldIsActive(ctx)
+	case leavecategory.FieldIsPaid:
+		return m.OldIsPaid(ctx)
 	case leavecategory.FieldDefaultAnnualDays:
 		return m.OldDefaultAnnualDays(ctx)
 	case leavecategory.FieldAllowCarryover:
@@ -51605,6 +51939,13 @@ func (m *LeaveCategoryMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsActive(v)
+		return nil
+	case leavecategory.FieldIsPaid:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsPaid(v)
 		return nil
 	case leavecategory.FieldDefaultAnnualDays:
 		v, ok := value.(decimal.Decimal)
@@ -51710,6 +52051,9 @@ func (m *LeaveCategoryMutation) ResetField(name string) error {
 		return nil
 	case leavecategory.FieldIsActive:
 		m.ResetIsActive()
+		return nil
+	case leavecategory.FieldIsPaid:
+		m.ResetIsPaid()
 		return nil
 	case leavecategory.FieldDefaultAnnualDays:
 		m.ResetDefaultAnnualDays()

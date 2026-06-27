@@ -76,6 +76,11 @@ func IsActive(v bool) predicate.LeaveCategory {
 	return predicate.LeaveCategory(sql.FieldEQ(FieldIsActive, v))
 }
 
+// IsPaid applies equality check predicate on the "is_paid" field. It's identical to IsPaidEQ.
+func IsPaid(v bool) predicate.LeaveCategory {
+	return predicate.LeaveCategory(sql.FieldEQ(FieldIsPaid, v))
+}
+
 // DefaultAnnualDays applies equality check predicate on the "default_annual_days" field. It's identical to DefaultAnnualDaysEQ.
 func DefaultAnnualDays(v decimal.Decimal) predicate.LeaveCategory {
 	return predicate.LeaveCategory(sql.FieldEQ(FieldDefaultAnnualDays, v))
@@ -289,6 +294,16 @@ func IsActiveEQ(v bool) predicate.LeaveCategory {
 // IsActiveNEQ applies the NEQ predicate on the "is_active" field.
 func IsActiveNEQ(v bool) predicate.LeaveCategory {
 	return predicate.LeaveCategory(sql.FieldNEQ(FieldIsActive, v))
+}
+
+// IsPaidEQ applies the EQ predicate on the "is_paid" field.
+func IsPaidEQ(v bool) predicate.LeaveCategory {
+	return predicate.LeaveCategory(sql.FieldEQ(FieldIsPaid, v))
+}
+
+// IsPaidNEQ applies the NEQ predicate on the "is_paid" field.
+func IsPaidNEQ(v bool) predicate.LeaveCategory {
+	return predicate.LeaveCategory(sql.FieldNEQ(FieldIsPaid, v))
 }
 
 // DefaultAnnualDaysEQ applies the EQ predicate on the "default_annual_days" field.
