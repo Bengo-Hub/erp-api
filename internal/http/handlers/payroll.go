@@ -14,6 +14,8 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll"
+	"github.com/Bengo-Hub/erp-api/internal/platform/lookups"
+	"github.com/Bengo-Hub/erp-api/internal/platform/media"
 )
 
 // Payroll RBAC permission codes.
@@ -31,11 +33,20 @@ type PayrollHandler struct {
 	log       *zap.Logger
 	svc       *payroll.Service
 	disburser *payroll.Disburser
+	media     *media.Store
+	lookups   *lookups.Client
 }
 
 func NewPayrollHandler(log *zap.Logger, svc *payroll.Service, disburser *payroll.Disburser) *PayrollHandler {
 	return &PayrollHandler{log: log.Named("hrm.payroll"), svc: svc, disburser: disburser}
 }
+
+// WithMedia wires the media store so claim attachments can be uploaded. Optional.
+func (h *PayrollHandler) WithMedia(m *media.Store) *PayrollHandler { h.media = m; return h }
+
+// WithLookups wires the cross-service cost-allocation lookup client (projects/cost-centers).
+// Optional — when nil the lookup endpoints fall back to ERP-derived distinct values.
+func (h *PayrollHandler) WithLookups(l *lookups.Client) *PayrollHandler { h.lookups = l; return h }
 
 func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/hrm/payroll", func(pr chi.Router) {
@@ -52,16 +63,24 @@ func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 		pr.Get("/task_status", h.TaskStatus)
 		pr.Post("/email-payslips", h.EmailPayslips)
 
+		// Cost-allocation lookups (S2S proxy to projects-service + treasury, JWT-forwarded).
+		pr.Get("/lookups/projects", h.LookupProjects)
+		pr.Get("/lookups/cost-centers", h.LookupCostCenters)
+
 		// Advances.
 		pr.Get("/advances", h.ListAdvances)
 		pr.Post("/advances", h.CreateAdvance)
 		pr.Put("/advances/{id}", h.UpdateAdvance)
+		pr.Post("/advances/{id}/approve", h.ApproveAdvance)
+		pr.Post("/advances/{id}/disapprove", h.DisapproveAdvance)
 		pr.Delete("/advances/{id}", h.DeleteAdvance)
 
 		// Loss & damages.
 		pr.Get("/losses-damages", h.ListLossDamages)
 		pr.Post("/losses-damages", h.CreateLossDamage)
 		pr.Put("/losses-damages/{id}", h.UpdateLossDamage)
+		pr.Post("/losses-damages/{id}/approve", h.ApproveLossDamage)
+		pr.Post("/losses-damages/{id}/disapprove", h.DisapproveLossDamage)
 		pr.Delete("/losses-damages/{id}", h.DeleteLossDamage)
 
 		// Claims.
@@ -71,6 +90,14 @@ func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 		pr.Put("/claims/{id}", h.UpdateClaim)
 		pr.Post("/claims/{id}/approve", h.ApproveClaim)
 		pr.Delete("/claims/{id}", h.DeleteClaim)
+		// Attachment upload (media store) + conditional line tables.
+		pr.Post("/claims/{id}/attachment", h.UploadClaimAttachment)
+		pr.Get("/claims/{id}/items", h.ListClaimItems)
+		pr.Post("/claims/{id}/items", h.CreateClaimItem)
+		pr.Delete("/claims/{id}/items/{itemId}", h.DeleteClaimItem)
+		pr.Get("/claims/{id}/mileage-routes", h.ListMileageRoutes)
+		pr.Post("/claims/{id}/mileage-routes", h.CreateMileageRoute)
+		pr.Delete("/claims/{id}/mileage-routes/{routeId}", h.DeleteMileageRoute)
 
 		// Casual / subcontracted labour register.
 		pr.Get("/casual-labor", h.ListCasualLabor)
@@ -530,17 +557,18 @@ func (h *PayrollHandler) disburse(w http.ResponseWriter, r *http.Request, scope 
 // ---- Advances / loss-damages / claims ----
 
 type recoverableBody struct {
-	Employee    string `json:"employee"`
-	EmployeeID  string `json:"employee_id"`
-	Amount      string `json:"amount"`
-	Description string `json:"description"`
-	Reason      string `json:"reason"`
-	Date        string `json:"date"`
-	IsActive    *bool  `json:"is_active"`
+	Employee         string `json:"employee"`
+	EmployeeID       string `json:"employee_id"`
+	Amount           string `json:"amount"`
+	Description      string `json:"description"`
+	Reason           string `json:"reason"`
+	Date             string `json:"date"`
+	IsActive         *bool  `json:"is_active"`
+	NoOfInstallments int    `json:"no_of_installments"`
 }
 
 func (b recoverableBody) toInput() (payroll.RecoverableInput, error) {
-	in := payroll.RecoverableInput{IsActive: b.IsActive == nil || *b.IsActive}
+	in := payroll.RecoverableInput{IsActive: b.IsActive == nil || *b.IsActive, NoOfInstallments: b.NoOfInstallments}
 	empStr := b.EmployeeID
 	if empStr == "" {
 		empStr = b.Employee
@@ -573,16 +601,33 @@ func (b recoverableBody) toInput() (payroll.RecoverableInput, error) {
 
 var errBadAmount = contractError{"invalid amount (must be a decimal string)"}
 
+// recoverableStatus maps the approved/is_active flag pair to a tab status string.
+func recoverableStatus(approved, isActive bool) string {
+	switch {
+	case approved && isActive:
+		return "scheduled"
+	case approved:
+		return "approved"
+	case isActive:
+		return "pending"
+	default:
+		return "disapproved"
+	}
+}
+
 func advanceView(a *ent.Advance, name string) map[string]any {
 	v := map[string]any{
-		"id":            a.ID,
-		"employee":      a.EmployeeID,
-		"employee_id":   a.EmployeeID,
-		"employee_name": name,
-		"amount":        a.AmountIssued.StringFixed(2),
-		"amount_repaid": a.AmountRepaid.StringFixed(2),
-		"is_active":     a.IsActive,
-		"created_at":    a.CreatedAt.Format(time.RFC3339),
+		"id":              a.ID,
+		"employee":        a.EmployeeID,
+		"employee_id":     a.EmployeeID,
+		"employee_name":   name,
+		"amount":          a.AmountIssued.StringFixed(2),
+		"amount_repaid":   a.AmountRepaid.StringFixed(2),
+		"approved":        a.Approved,
+		"is_active":       a.IsActive,
+		"status":          recoverableStatus(a.Approved, a.IsActive),
+		"repay_option_id": a.RepayOptionID,
+		"created_at":      a.CreatedAt.Format(time.RFC3339),
 	}
 	if a.IssueDate != nil {
 		v["date"] = a.IssueDate.Format("2006-01-02")
@@ -596,8 +641,9 @@ func (h *PayrollHandler) ListAdvances(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	empID := optionalUUIDParam(r, "employee_id")
+	status := r.URL.Query().Get("status")
 	p := pagination.Parse(r)
-	rows, total, err := h.svc.ListAdvances(r.Context(), scope.TenantID, empID, p.Limit, p.Offset)
+	rows, total, err := h.svc.ListAdvances(r.Context(), scope.TenantID, empID, status, p.Limit, p.Offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list advances")
 		return
@@ -674,14 +720,17 @@ func (h *PayrollHandler) DeleteAdvance(w http.ResponseWriter, r *http.Request) {
 
 func lossDamageView(l *ent.LossAndDamage, name string) map[string]any {
 	v := map[string]any{
-		"id":            l.ID,
-		"employee":      l.EmployeeID,
-		"employee_id":   l.EmployeeID,
-		"employee_name": name,
-		"amount":        l.DamageAmount.StringFixed(2),
-		"amount_repaid": l.AmountRepaid.StringFixed(2),
-		"is_active":     l.IsActive,
-		"created_at":    l.CreatedAt.Format(time.RFC3339),
+		"id":              l.ID,
+		"employee":        l.EmployeeID,
+		"employee_id":     l.EmployeeID,
+		"employee_name":   name,
+		"amount":          l.DamageAmount.StringFixed(2),
+		"amount_repaid":   l.AmountRepaid.StringFixed(2),
+		"approved":        l.Approved,
+		"is_active":       l.IsActive,
+		"status":          recoverableStatus(l.Approved, l.IsActive),
+		"repay_option_id": l.RepayOptionID,
+		"created_at":      l.CreatedAt.Format(time.RFC3339),
 	}
 	if l.Description != nil {
 		v["description"] = *l.Description
@@ -698,8 +747,9 @@ func (h *PayrollHandler) ListLossDamages(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	empID := optionalUUIDParam(r, "employee_id")
+	status := r.URL.Query().Get("status")
 	p := pagination.Parse(r)
-	rows, total, err := h.svc.ListLossDamages(r.Context(), scope.TenantID, empID, p.Limit, p.Offset)
+	rows, total, err := h.svc.ListLossDamages(r.Context(), scope.TenantID, empID, status, p.Limit, p.Offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list loss-damages")
 		return
@@ -870,6 +920,9 @@ func claimView(c *ent.ExpenseClaim, name string) map[string]any {
 	if c.ApplicationDate != nil {
 		v["date"] = c.ApplicationDate.Format("2006-01-02")
 	}
+	if c.AttachmentURL != nil {
+		v["attachment_url"] = *c.AttachmentURL
+	}
 	return v
 }
 
@@ -939,6 +992,7 @@ type casualLaborBody struct {
 	TaskDescription     string `json:"task_description"`
 	Amount              string `json:"amount"`
 	PaymentMethod       string `json:"payment_method"`
+	ImprestAdvanceID    string `json:"imprest_advance_id"`
 }
 
 func (b casualLaborBody) toInput() payroll.CasualLaborInput {
@@ -960,6 +1014,9 @@ func (b casualLaborBody) toInput() payroll.CasualLaborInput {
 	if id, err := uuid.Parse(b.CostCenterID); err == nil {
 		in.CostCenterID = &id
 	}
+	if id, err := uuid.Parse(b.ImprestAdvanceID); err == nil {
+		in.ImprestAdvanceID = &id
+	}
 	return in
 }
 
@@ -978,6 +1035,9 @@ func casualLaborView(c *ent.CasualLaborRecord) map[string]any {
 	}
 	if c.CostCenterID != nil {
 		v["cost_center_id"] = c.CostCenterID
+	}
+	if c.ImprestAdvanceID != nil {
+		v["imprest_advance_id"] = c.ImprestAdvanceID
 	}
 	return v
 }

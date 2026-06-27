@@ -55,6 +55,37 @@ func (s *Store) SaveResume(tenantID, candidateID uuid.UUID, originalName string,
 	return rel, nil
 }
 
+// claimAttachmentExt is the expense-claim receipt allow-list (documents + images).
+var claimAttachmentExt = map[string]bool{
+	".pdf": true, ".doc": true, ".docx": true, ".odt": true,
+	".png": true, ".jpg": true, ".jpeg": true, ".webp": true, ".gif": true,
+}
+
+// SaveClaimAttachment writes an expense-claim receipt/attachment under the per-tenant media
+// path and returns its relative path. The filename keeps its extension but is namespaced by
+// claim id; a short random suffix avoids overwrites when several receipts are uploaded.
+func (s *Store) SaveClaimAttachment(tenantID, claimID uuid.UUID, originalName string, r io.Reader) (string, error) {
+	ext := strings.ToLower(filepath.Ext(originalName))
+	if !claimAttachmentExt[ext] {
+		return "", fmt.Errorf("media: unsupported attachment type %q (allowed: pdf, doc, docx, odt, png, jpg, jpeg, webp, gif)", ext)
+	}
+	name := claimID.String() + "_" + uuid.New().String()[:8] + ext
+	rel := filepath.ToSlash(filepath.Join(tenantID.String(), "payroll", "claims", name))
+	abs := filepath.Join(s.root, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
+		return "", fmt.Errorf("media: mkdir: %w", err)
+	}
+	f, err := os.Create(abs)
+	if err != nil {
+		return "", fmt.Errorf("media: create file: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+	if _, err := io.Copy(f, r); err != nil {
+		return "", fmt.Errorf("media: write file: %w", err)
+	}
+	return rel, nil
+}
+
 // URL resolves a stored relative path to a public URL when MEDIA_URL_BASE is set.
 func (s *Store) URL(rel string) string {
 	if rel == "" || s.urlBase == "" {

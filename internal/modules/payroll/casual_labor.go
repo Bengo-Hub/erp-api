@@ -98,6 +98,18 @@ func (s *Service) UpdateCasualLabor(ctx context.Context, tenantID, id uuid.UUID,
 	if in.CostCenterID != nil {
 		u = u.SetCostCenterID(*in.CostCenterID)
 	}
+	if in.EngagedByEmployeeID != nil {
+		u = u.SetEngagedByEmployeeID(*in.EngagedByEmployeeID)
+	}
+	if in.ImprestAdvanceID != nil {
+		u = u.SetImprestAdvanceID(*in.ImprestAdvanceID)
+	}
+	if in.WorkerIDNumber != "" {
+		u = u.SetWorkerIDNumber(in.WorkerIDNumber)
+	}
+	if in.WorkerPhone != "" {
+		u = u.SetWorkerPhone(in.WorkerPhone)
+	}
 	return u.Save(ctx)
 }
 

@@ -96,6 +96,12 @@ type RecoverableInput struct {
 	Description string
 	IssueDate   *time.Time
 	IsActive    bool
+	// NoOfInstallments drives the RepayOption installment plan (installment_amount = amount/n).
+	// 0 or 1 means a single lump-sum recovery (no plan created).
+	NoOfInstallments int
+	// RepayOptionID is the existing plan id on update (so editing the installment count reuses
+	// the row instead of orphaning it). Nil on create.
+	RepayOptionID *uuid.UUID
 }
 
 // GetEmployee returns a tenant-scoped employee (identity fields for payslip docs / the
@@ -116,10 +122,22 @@ func (s *Service) employeeBelongs(ctx context.Context, tenantID, employeeID uuid
 	return nil
 }
 
-func (s *Service) ListAdvances(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, limit, offset int) ([]*ent.Advance, int, error) {
+func (s *Service) ListAdvances(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, status string, limit, offset int) ([]*ent.Advance, int, error) {
 	q := s.orm.Advance.Query().Where(advance.TenantID(tenantID))
 	if employeeID != nil {
 		q = q.Where(advance.EmployeeID(*employeeID))
+	}
+	switch status {
+	case "scheduled":
+		q = q.Where(advance.Approved(true), advance.IsActive(true))
+	case "approved":
+		q = q.Where(advance.Approved(true))
+	case "pending":
+		q = q.Where(advance.Approved(false), advance.IsActive(true))
+	case "disapproved":
+		q = q.Where(advance.Approved(false), advance.IsActive(false))
+	case "nulled":
+		q = q.Where(advance.IsActive(false))
 	}
 	total, err := q.Clone().Count(ctx)
 	if err != nil {
@@ -139,11 +157,16 @@ func (s *Service) CreateAdvance(ctx context.Context, tenantID uuid.UUID, in Reco
 	if err := s.employeeBelongs(ctx, tenantID, in.EmployeeID); err != nil {
 		return nil, err
 	}
+	repayID, err := s.ensureRepayOption(ctx, tenantID, nil, in.Amount, in.NoOfInstallments)
+	if err != nil {
+		return nil, err
+	}
 	b := s.orm.Advance.Create().
 		SetTenantID(tenantID).
 		SetEmployeeID(in.EmployeeID).
 		SetAmountIssued(in.Amount).
-		SetIsActive(in.IsActive)
+		SetIsActive(in.IsActive).
+		SetNillableRepayOptionID(repayID)
 	if in.IssueDate != nil {
 		b = b.SetIssueDate(*in.IssueDate)
 	}
@@ -155,12 +178,37 @@ func (s *Service) UpdateAdvance(ctx context.Context, tenantID, id uuid.UUID, in 
 	if err != nil {
 		return nil, err
 	}
-	u := existing.Update().SetIsActive(in.IsActive)
+	amount := in.Amount
+	if amount.IsZero() {
+		amount = existing.AmountIssued
+	}
+	repayID, err := s.ensureRepayOption(ctx, tenantID, existing.RepayOptionID, amount, in.NoOfInstallments)
+	if err != nil {
+		return nil, err
+	}
+	u := existing.Update().SetIsActive(in.IsActive).SetNillableRepayOptionID(repayID)
 	if !in.Amount.IsZero() {
 		u = u.SetAmountIssued(in.Amount)
 	}
 	if in.IssueDate != nil {
 		u = u.SetIssueDate(*in.IssueDate)
+	}
+	return u.Save(ctx)
+}
+
+// SetAdvanceApproval flips the approved + is_active flags driving the status tabs:
+//
+//	approve    -> approved=true,  is_active=true  (Scheduled for recovery)
+//	disapprove -> approved=false, is_active=false (Disapproved)
+//	null       -> approved=false, is_active=false (Nulled / withdrawn)
+func (s *Service) SetAdvanceApproval(ctx context.Context, tenantID, id uuid.UUID, approverID uuid.UUID, approve bool) (*ent.Advance, error) {
+	existing, err := s.orm.Advance.Query().Where(advance.ID(id), advance.TenantID(tenantID)).Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	u := existing.Update().SetApproved(approve).SetIsActive(approve)
+	if approve {
+		u = u.SetNillableApproverID(&approverID)
 	}
 	return u.Save(ctx)
 }
@@ -178,10 +226,22 @@ func (s *Service) DeleteAdvance(ctx context.Context, tenantID, id uuid.UUID) err
 
 // ---- Loss & damages ----
 
-func (s *Service) ListLossDamages(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, limit, offset int) ([]*ent.LossAndDamage, int, error) {
+func (s *Service) ListLossDamages(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, status string, limit, offset int) ([]*ent.LossAndDamage, int, error) {
 	q := s.orm.LossAndDamage.Query().Where(lossanddamage.TenantID(tenantID))
 	if employeeID != nil {
 		q = q.Where(lossanddamage.EmployeeID(*employeeID))
+	}
+	switch status {
+	case "scheduled":
+		q = q.Where(lossanddamage.Approved(true), lossanddamage.IsActive(true))
+	case "approved":
+		q = q.Where(lossanddamage.Approved(true))
+	case "pending":
+		q = q.Where(lossanddamage.Approved(false), lossanddamage.IsActive(true))
+	case "disapproved":
+		q = q.Where(lossanddamage.Approved(false), lossanddamage.IsActive(false))
+	case "nulled":
+		q = q.Where(lossanddamage.IsActive(false))
 	}
 	total, err := q.Clone().Count(ctx)
 	if err != nil {
@@ -201,11 +261,16 @@ func (s *Service) CreateLossDamage(ctx context.Context, tenantID uuid.UUID, in R
 	if err := s.employeeBelongs(ctx, tenantID, in.EmployeeID); err != nil {
 		return nil, err
 	}
+	repayID, err := s.ensureRepayOption(ctx, tenantID, nil, in.Amount, in.NoOfInstallments)
+	if err != nil {
+		return nil, err
+	}
 	b := s.orm.LossAndDamage.Create().
 		SetTenantID(tenantID).
 		SetEmployeeID(in.EmployeeID).
 		SetDamageAmount(in.Amount).
-		SetIsActive(in.IsActive)
+		SetIsActive(in.IsActive).
+		SetNillableRepayOptionID(repayID)
 	if in.Description != "" {
 		b = b.SetDescription(in.Description)
 	}
@@ -220,7 +285,15 @@ func (s *Service) UpdateLossDamage(ctx context.Context, tenantID, id uuid.UUID, 
 	if err != nil {
 		return nil, err
 	}
-	u := existing.Update().SetIsActive(in.IsActive)
+	amount := in.Amount
+	if amount.IsZero() {
+		amount = existing.DamageAmount
+	}
+	repayID, err := s.ensureRepayOption(ctx, tenantID, existing.RepayOptionID, amount, in.NoOfInstallments)
+	if err != nil {
+		return nil, err
+	}
+	u := existing.Update().SetIsActive(in.IsActive).SetNillableRepayOptionID(repayID)
 	if !in.Amount.IsZero() {
 		u = u.SetDamageAmount(in.Amount)
 	}
@@ -229,6 +302,19 @@ func (s *Service) UpdateLossDamage(ctx context.Context, tenantID, id uuid.UUID, 
 	}
 	if in.IssueDate != nil {
 		u = u.SetIssueDate(*in.IssueDate)
+	}
+	return u.Save(ctx)
+}
+
+// SetLossDamageApproval mirrors SetAdvanceApproval for the loss/damage status tabs.
+func (s *Service) SetLossDamageApproval(ctx context.Context, tenantID, id uuid.UUID, approverID uuid.UUID, approve bool) (*ent.LossAndDamage, error) {
+	existing, err := s.orm.LossAndDamage.Query().Where(lossanddamage.ID(id), lossanddamage.TenantID(tenantID)).Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	u := existing.Update().SetApproved(approve).SetIsActive(approve)
+	if approve {
+		u = u.SetNillableApproverID(&approverID)
 	}
 	return u.Save(ctx)
 }
