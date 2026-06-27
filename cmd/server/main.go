@@ -236,7 +236,7 @@ func run() error {
 	payrollHandler := handlers.NewPayrollHandler(log, payrollSvc, payrollDisburser).
 		WithMedia(mediaStore).WithLookups(lookupsClient)
 	payrollSettingsHandler := handlers.NewPayrollSettingsHandler(log, payrollSettingsSvc, orm)
-	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher))
+	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher)).WithSystemTenant(systemTenant)
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
 	recruitmentSvc := recruitment.NewService(orm).WithNotifier(events.NewNotifications(notifyPublisher))

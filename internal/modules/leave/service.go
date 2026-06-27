@@ -25,6 +25,9 @@ type Service struct {
 	orm       *ent.Client
 	notify    Notifier
 	approvals Approver
+	// systemTenant owns the GLOBAL shared leave types; a tenant with none of its own inherits
+	// them (feedback_shared_core_reference_data). uuid.Nil = no fallback.
+	systemTenant uuid.UUID
 }
 
 // Notifier publishes leave-decision notifications to the outbox (erp.notification.requested).
@@ -49,12 +52,26 @@ func NewService(orm *ent.Client, notify Notifier) *Service {
 // SetApprovals wires the approval engine into the leave module (called at startup).
 func (s *Service) SetApprovals(a Approver) { s.approvals = a }
 
+// WithSystemTenant sets the global-leave-types fallback tenant (chainable, startup wiring).
+func (s *Service) WithSystemTenant(id uuid.UUID) *Service { s.systemTenant = id; return s }
+
 // ---- Categories ----
 
-// ListCategories returns tenant-scoped leave categories.
+// ListCategories returns the tenant's leave categories, or the GLOBAL shared set (system tenant)
+// when the tenant has defined none of its own — so every tenant gets sensible leave types out of
+// the box while remaining free to override with their own.
 func (s *Service) ListCategories(ctx context.Context, tenantID uuid.UUID) ([]*ent.LeaveCategory, error) {
-	return s.orm.LeaveCategory.Query().
+	own, err := s.orm.LeaveCategory.Query().
 		Where(leavecategory.TenantID(tenantID)).
+		Order(ent.Asc(leavecategory.FieldName)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(own) > 0 || s.systemTenant == uuid.Nil || s.systemTenant == tenantID {
+		return own, nil
+	}
+	return s.orm.LeaveCategory.Query().
+		Where(leavecategory.TenantID(s.systemTenant)).
 		Order(ent.Asc(leavecategory.FieldName)).All(ctx)
 }
 

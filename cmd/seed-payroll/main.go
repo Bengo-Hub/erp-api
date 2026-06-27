@@ -122,6 +122,13 @@ func seed(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
 		return err
 	}
 	log.Printf("  seeded default KRA reliefs")
+
+	// Global shared leave types under the system tenant; tenants inherit these unless they
+	// define their own (leave.Service.ListCategories falls back to the system tenant).
+	if err := defaults.NewService(client).EnsureLeaveCategories(ctx, tenantID); err != nil {
+		return err
+	}
+	log.Printf("  seeded global leave types")
 	return nil
 }
 
