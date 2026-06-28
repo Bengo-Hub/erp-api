@@ -20,6 +20,14 @@ type PayslipInput struct {
 	Currency       string // empty → "KES"
 	Status         string // payslip status badge (optional)
 	Bank           *docs.BankDetails
+	// Personal info (statutory + payment identity).
+	NationalID  string
+	ShifNumber  string
+	NssfNumber  string
+	PaymentMode string
+	Department  string
+	Region      string
+	CreatedDate string
 }
 
 // PayslipToDocument converts the shared payslip breakdown + employee identity + tenant
@@ -69,6 +77,14 @@ func PayslipToDocument(in PayslipInput, b payroll.PayslipBreakdown, ti TenantInf
 		PeriodLabel:    in.PeriodLabel,
 		PaymentDate:    in.PaymentDate,
 		Status:         in.Status,
+
+		EmployeeNationalID:  in.NationalID,
+		EmployeeShif:        in.ShifNumber,
+		EmployeeNssf:        in.NssfNumber,
+		EmployeePaymentMode: in.PaymentMode,
+		EmployeeDepartment:  in.Department,
+		EmployeeRegion:      in.Region,
+		CreatedDate:         in.CreatedDate,
 
 		BankDetails: bank,
 

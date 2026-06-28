@@ -17,6 +17,19 @@ type Report struct {
 	Columns []string         `json:"columns"`
 	Rows    []map[string]any `json:"rows"`
 	Totals  map[string]any   `json:"totals"`
+	// ColumnDefs (optional) drives a backend-defined dynamic table: header label + type per key.
+	// When present the frontend renders these columns (with horizontal scroll + Edit-Columns)
+	// instead of its static config; empty = the report uses the static config columns.
+	ColumnDefs []ColumnDef `json:"column_defs,omitempty"`
+}
+
+// ColumnDef describes one backend-driven report column.
+type ColumnDef struct {
+	Key     string `json:"key"`
+	Header  string `json:"header"`
+	Money   bool   `json:"money,omitempty"`
+	Numeric bool   `json:"numeric,omitempty"`
+	Sticky  bool   `json:"sticky,omitempty"` // pin to the left (staff no / name)
 }
 
 // PeriodMeta echoes the resolved window back to the caller.

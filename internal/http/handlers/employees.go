@@ -43,7 +43,8 @@ func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/hrm/employees", func(er chi.Router) {
 		er.Get("/", h.List)
 		er.Post("/", h.Create)
-		er.Post("/import", h.Import) // bulk CSV import (handler in employees_import.go)
+		er.Post("/renumber", h.Renumber) // re-issue SLUG/YYYY/### staff numbers to all employees
+		er.Post("/import", h.Import)      // bulk CSV import (handler in employees_import.go)
 		er.Get("/{id}", h.Get)
 		er.Put("/{id}", h.Update)
 		er.Patch("/{id}", h.Update)
@@ -81,6 +82,20 @@ func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 	})
 	// Education / employment-history / disciplinary sub-records (employee_records.go).
 	h.registerRecordRoutes(r)
+}
+
+// Renumber re-issues SLUG/YYYY/### staff numbers to all of the tenant's employees (admin action).
+func (h *EmployeesHandler) Renumber(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permEmployeeManage) {
+		return
+	}
+	n, err := h.svc.RenumberEmployees(r.Context(), scope.TenantID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "renumber_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "renumbered": n})
 }
 
 type updateEmployeeBody struct {

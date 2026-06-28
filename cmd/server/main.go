@@ -264,6 +264,9 @@ func run() error {
 	// docs module: branded PDF/CSV/XLSX via fpdf/excelize + atomic doc-number sequences.
 	docService := &docs.DocumentService{}
 	docSeq := sequence.New(sqlDB, orm)
+	// Auto-issue meaningful staff numbers (SLUG/YYYY/###) for new + JIT-provisioned employees.
+	employeesSvc.WithSequence(docSeq)
+	authUserEmployeesSvc.WithSequence(docSeq)
 	documentsHandler := handlers.NewDocumentsHandler(log, orm, brandingClient, payrollSvc, docService, docSeq).
 		WithNotifications(events.NewNotifications(notifyPublisher)).
 		WithTreasury(treasuryClient)

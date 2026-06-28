@@ -183,6 +183,14 @@ func (h *DocumentsHandler) payslipInput(ctx context.Context, tenantID uuid.UUID,
 	if emp != nil {
 		in.EmployeeEmail = emp.Email
 		in.EmployeeKraPin = emp.PinNo
+		in.NationalID = emp.NationalID
+		if emp.ShifOrNhifNumber != nil {
+			in.ShifNumber = *emp.ShifOrNhifNumber
+		}
+		in.NssfNumber = emp.NssfNo
+	}
+	if ps.CreatedAt.Year() > 1 {
+		in.CreatedDate = ps.CreatedAt.Format("02/01/06")
 	}
 	if ps.PaymentPeriod != nil {
 		in.PeriodLabel = ps.PaymentPeriod.Format("January 2006")
@@ -206,6 +214,9 @@ func (h *DocumentsHandler) payslipInput(ctx context.Context, tenantID uuid.UUID,
 			AccountName:   ba.AccountName,
 			AccountNumber: ba.AccountNumber,
 		}
+		in.PaymentMode = "Bank Transfer"
+	} else {
+		in.PaymentMode = "Cash"
 	}
 	return in
 }
