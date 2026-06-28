@@ -12,7 +12,10 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
+	"github.com/Bengo-Hub/erp-api/internal/ent/department"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
+	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
+	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/modules/docs"
 	"github.com/Bengo-Hub/erp-api/internal/modules/docs/adapters"
 	docseq "github.com/Bengo-Hub/erp-api/internal/modules/docs/sequence"
@@ -191,6 +194,20 @@ func (h *DocumentsHandler) payslipInput(ctx context.Context, tenantID uuid.UUID,
 	}
 	if ps.CreatedAt.Year() > 1 {
 		in.CreatedDate = ps.CreatedAt.Format("02/01/06")
+	}
+	// Department / Region (PERSONAL INFO strip) from hr_details.
+	if hr, err := h.orm.HRDetails.Query().
+		Where(hrdetails.TenantID(tenantID), hrdetails.EmployeeID(ps.EmployeeID)).First(ctx); err == nil && hr != nil {
+		if hr.DepartmentID != nil {
+			if dep, derr := h.orm.Department.Query().Where(department.ID(*hr.DepartmentID)).First(ctx); derr == nil && dep != nil {
+				in.Department = dep.Title
+			}
+		}
+		if hr.RegionID != nil {
+			if reg, rerr := h.orm.Region.Query().Where(region.ID(*hr.RegionID)).First(ctx); rerr == nil && reg != nil {
+				in.Region = reg.Name
+			}
+		}
 	}
 	if ps.PaymentPeriod != nil {
 		in.PeriodLabel = ps.PaymentPeriod.Format("January 2006")
