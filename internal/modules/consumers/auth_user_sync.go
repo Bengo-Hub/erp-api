@@ -70,7 +70,7 @@ func (c *AuthUserSyncConsumer) Start(ctx context.Context, nc *nats.Conn) error {
 	for _, s := range specs {
 		s := s
 		consumerName := s.durable
-		sharedevents.SubscribeWithRebind(c.log, js, s.subject, func(msg *nats.Msg) {
+		sharedevents.SubscribeQueueWithRebind(c.log, js, authStream, s.subject, s.durable, func(msg *nats.Msg) {
 			evt, err := sharedevents.FromJSON(msg.Data)
 			if err != nil {
 				c.log.Error("auth-user-sync: bad event", zap.String("subject", s.subject), zap.Error(err))
