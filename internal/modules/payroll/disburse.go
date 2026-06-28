@@ -95,7 +95,11 @@ func (d *Disburser) Disburse(ctx context.Context, p DisburseParams) (DisburseRes
 	}()
 
 	txPub := events.NewPublisher(tx.Client(), "erp")
-	if err := txPub.Publish(ctx, p.TenantID, batchRef, "payroll.processed", payload); err != nil {
+	// aggregate_id MUST be a UUID — the shared-events poller scans it into uuid.UUID and a
+	// non-UUID value (e.g. the batch_ref string) jams the WHOLE poller. Derive a stable UUID
+	// from the batch ref; batch_ref itself stays in the payload.
+	aggID := uuid.NewSHA1(p.TenantID, []byte(batchRef)).String()
+	if err := txPub.Publish(ctx, p.TenantID, aggID, "payroll.processed", payload); err != nil {
 		return DisburseResult{}, fmt.Errorf("disburse: publish: %w", err)
 	}
 	ids := make([]uuid.UUID, len(slips))
@@ -194,7 +198,8 @@ func (d *Disburser) Reverse(ctx context.Context, p DisburseParams) (DisburseResu
 		}
 	}()
 	txPub := events.NewPublisher(tx.Client(), "erp")
-	if err := txPub.Publish(ctx, p.TenantID, batchRef, "payroll.reversed", payload); err != nil {
+	aggID := uuid.NewSHA1(p.TenantID, []byte(batchRef)).String() // UUID aggregate_id (poller requires it)
+	if err := txPub.Publish(ctx, p.TenantID, aggID, "payroll.reversed", payload); err != nil {
 		return DisburseResult{}, fmt.Errorf("reverse: publish: %w", err)
 	}
 	ids := make([]uuid.UUID, len(slips))
