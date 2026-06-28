@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ const (
 	DocTypePayslip        = "payslip"
 	DocTypePayrollReport  = "payroll_report"
 	DocTypePaymentVoucher = "payment_voucher"
+	DocTypeEmployeeNumber = "employee_number"
 )
 
 // Default sequence configs seeded per tenant on first use.
@@ -26,6 +28,8 @@ var defaults = map[string]Config{
 	DocTypePayslip:        {Prefix: "PAY", Separator: "-", DateFormat: "YYMMDD", Padding: 6, ResetFreq: "never"},
 	DocTypePayrollReport:  {Prefix: "RPT", Separator: "-", DateFormat: "YYMMDD", Padding: 6, ResetFreq: "never"},
 	DocTypePaymentVoucher: {Prefix: "VOC", Separator: "-", DateFormat: "YYMMDD", Padding: 6, ResetFreq: "never"},
+	// Staff number — prefix defaults to the tenant slug (set on first use), e.g. MSS/2026/001.
+	DocTypeEmployeeNumber: {Prefix: "EMP", Separator: "/", DateFormat: "YYYY", Padding: 3, ResetFreq: "yearly"},
 }
 
 // Config holds the formatting settings for a document sequence.
@@ -66,6 +70,27 @@ func (s *Service) GenerateNumber(ctx context.Context, tenantID uuid.UUID, docTyp
 		lastErr = err
 	}
 	return "", fmt.Errorf("sequence generate after 3 attempts: %w", lastErr)
+}
+
+// GenerateEmployeeNumber returns the next staff number from the per-tenant employee_number
+// sequence, defaulting the prefix to the (sanitised, upper-cased) tenant slug on first use so it
+// reads e.g. MSS/2026/001. A prefix the tenant has customised in settings is preserved.
+func (s *Service) GenerateEmployeeNumber(ctx context.Context, tenantID uuid.UUID, slug string) (string, error) {
+	cfg, err := s.getOrCreateConfig(ctx, tenantID, DocTypeEmployeeNumber)
+	if err != nil {
+		return "", err
+	}
+	want := strings.ToUpper(strings.NewReplacer("-", "", "_", "", " ", "").Replace(slug))
+	// Only adopt the slug when the prefix is still the seeded placeholder (don't override a custom one).
+	if want != "" && (cfg.Prefix == "" || cfg.Prefix == "EMP") && cfg.Prefix != want {
+		if uerr := s.UpdateConfig(ctx, tenantID, DocTypeEmployeeNumber, Config{
+			Prefix: want, Separator: cfg.Separator, DateFormat: cfg.DateFormat,
+			Padding: cfg.Padding, ResetFreq: cfg.ResetFreq,
+		}); uerr != nil {
+			return "", uerr
+		}
+	}
+	return s.GenerateNumber(ctx, tenantID, DocTypeEmployeeNumber)
 }
 
 // PreviewNextNumber returns the next formatted number WITHOUT incrementing the counter.
@@ -317,6 +342,8 @@ func formatNumber(cfg Config, val int64, now time.Time) string {
 
 func formatDate(format string, t time.Time) string {
 	switch format {
+	case "YYYY":
+		return t.Format("2006")
 	case "YYYYMMDD":
 		return t.Format("20060102")
 	case "YYMMDD":

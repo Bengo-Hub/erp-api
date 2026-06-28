@@ -11,6 +11,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
@@ -25,13 +26,45 @@ func blankOrNull(col string) func(*entsql.Selector) {
 	}
 }
 
+// StaffNumberer issues a tenant-scoped staff number (SLUG/YYYY/### from the document-sequence
+// service). Kept as a minimal interface so employees doesn't import the docs/sequence package.
+type StaffNumberer interface {
+	GenerateEmployeeNumber(ctx context.Context, tenantID uuid.UUID, slug string) (string, error)
+}
+
 // Service holds employee CRUD + derived-field recomputation. Every query is filtered by
 // tenant_id; callers pass the tenant from the request scope (gaps §2 isolation).
 type Service struct {
 	orm *ent.Client
+	seq StaffNumberer // optional; when set, blank staff numbers are auto-issued as SLUG/YYYY/###
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
+
+// WithSequence wires the staff-number generator so new employees get a meaningful number.
+func (s *Service) WithSequence(seq StaffNumberer) *Service {
+	s.seq = seq
+	return s
+}
+
+// tenantSlug resolves the tenant's slug (used as the staff-number prefix). Blank on lookup failure.
+func (s *Service) tenantSlug(ctx context.Context, tenantID uuid.UUID) string {
+	if at, err := s.orm.AuthTenant.Query().Where(authtenant.ID(tenantID)).Only(ctx); err == nil {
+		return at.Slug
+	}
+	return ""
+}
+
+// nextStaffNumber returns a generated staff number, or "" when no generator is wired.
+func (s *Service) nextStaffNumber(ctx context.Context, tenantID uuid.UUID) string {
+	if s.seq == nil {
+		return ""
+	}
+	if n, err := s.seq.GenerateEmployeeNumber(ctx, tenantID, s.tenantSlug(ctx, tenantID)); err == nil {
+		return n
+	}
+	return ""
+}
 
 // hoursPerMonth / daysPerMonth are the divisors for derived rate recomputation
 // (recompute on write — never trust stored values; data-migration §4).
@@ -104,6 +137,10 @@ var ErrNameRequired = fmt.Errorf("first_name and last_name are required")
 func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, in CreateInput) (*ent.Employee, error) {
 	if strings.TrimSpace(in.FirstName) == "" || strings.TrimSpace(in.LastName) == "" {
 		return nil, ErrNameRequired
+	}
+	// Auto-issue a meaningful staff number (SLUG/YYYY/###) when the caller didn't supply one.
+	if strings.TrimSpace(in.EmployeeNumber) == "" {
+		in.EmployeeNumber = s.nextStaffNumber(ctx, tenantID)
 	}
 	b := s.orm.Employee.Create().
 		SetTenantID(tenantID).
@@ -267,6 +304,34 @@ func splitName(full string) (first, last string) {
 		return strings.TrimSpace(full[:i]), strings.TrimSpace(full[i+1:])
 	}
 	return full, ""
+}
+
+// RenumberEmployees re-issues clean staff numbers (SLUG/YYYY/###) to every active employee in the
+// tenant, in creation order. Cosmetic + safe — payslips/contracts reference the employee UUID, not
+// the number. Returns the count updated.
+func (s *Service) RenumberEmployees(ctx context.Context, tenantID uuid.UUID) (int, error) {
+	if s.seq == nil {
+		return 0, fmt.Errorf("employees: staff-number generator not configured")
+	}
+	emps, err := s.orm.Employee.Query().
+		Where(employee.TenantID(tenantID), employee.Deleted(false)).
+		Order(ent.Asc(employee.FieldCreatedAt)).All(ctx)
+	if err != nil {
+		return 0, err
+	}
+	slug := s.tenantSlug(ctx, tenantID)
+	n := 0
+	for _, e := range emps {
+		num, gerr := s.seq.GenerateEmployeeNumber(ctx, tenantID, slug)
+		if gerr != nil {
+			return n, gerr
+		}
+		if _, uerr := e.Update().SetEmployeeNumber(num).Save(ctx); uerr != nil {
+			return n, uerr
+		}
+		n++
+	}
+	return n, nil
 }
 
 // employeeNumberFromEmail derives a stable employee number from the email local-part, falling

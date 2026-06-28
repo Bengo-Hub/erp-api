@@ -135,6 +135,14 @@ type Document struct {
 	EmployeeTitle   string
 	PeriodLabel     string // e.g. "April 2026"
 	PaymentDate     string // formatted disbursement date (optional)
+	// Personal-info strip (rendered under the breakdown when present).
+	EmployeeNationalID  string
+	EmployeeShif        string // SHIF / NHIF number
+	EmployeeNssf        string
+	EmployeePaymentMode string // e.g. "Bank Transfer", "Mobile Money", "Cash"
+	EmployeeDepartment  string
+	EmployeeRegion      string
+	CreatedDate         string // payslip created/issued date
 
 	// Two-column earnings vs deductions breakdown.
 	Earnings   []AmountRow

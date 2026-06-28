@@ -44,7 +44,58 @@ func (p *painter) drawPayslipBody(d *Document, top float64) float64 {
 	p.pdf.RoundedRect(leftX, wY, contentW, bandH, 1.2, "1234", "F")
 	p.text(leftX+4, wY+2.6, "Net Pay in Words:", "B", 8, p.pal.muted)
 	p.multiCell(leftX+labelW+2, wY+2.0, availW, lineH, words, "B", 8, p.pal.navy)
-	return wY + bandH
+
+	return p.drawPersonalInfo(d, wY+bandH+5.0)
+}
+
+// drawPersonalInfo renders the wingubox-style "PERSONAL INFO" strip under the breakdown: payment
+// mode + bank, statutory numbers (ID / PIN / SHIF / NSSF), department/region and the created date.
+// Only non-empty pairs are shown; the block is skipped entirely when there is nothing to render.
+func (p *painter) drawPersonalInfo(d *Document, top float64) float64 {
+	type kv struct{ k, v string }
+	pairs := []kv{{"Payment Mode", d.EmployeePaymentMode}}
+	if d.BankDetails != nil {
+		pairs = append(pairs, kv{"Bank Name", d.BankDetails.BankName}, kv{"Bank Acc", d.BankDetails.AccountNumber})
+	}
+	pairs = append(pairs,
+		kv{"ID", d.EmployeeNationalID}, kv{"PIN", d.CustomerTaxPin},
+		kv{"SHIF", d.EmployeeShif}, kv{"NSSF", d.EmployeeNssf},
+		kv{"Department", d.EmployeeDepartment}, kv{"Region", d.EmployeeRegion},
+	)
+	shown := make([]kv, 0, len(pairs))
+	for _, pr := range pairs {
+		if pr.v != "" {
+			shown = append(shown, pr)
+		}
+	}
+	if len(shown) == 0 {
+		return top
+	}
+
+	const cols = 2
+	colW := contentW / cols
+	rowH := 5.2
+	rows := (len(shown) + cols - 1) / cols
+	headH := 6.0
+	boxH := headH + float64(rows)*rowH + 2.0
+
+	p.setFill(p.pal.navy)
+	p.pdf.Rect(leftX, top, contentW, headH, "F")
+	p.text(leftX+3, top+2.2, "PERSONAL INFO", "B", 8, p.pal.white)
+	p.setFill(p.pal.lightBlue)
+	p.pdf.Rect(leftX, top+headH, contentW, float64(rows)*rowH+2.0, "F")
+
+	for i, pr := range shown {
+		cx := leftX + float64(i%cols)*colW + 3
+		ry := top + headH + float64(i/cols)*rowH + 3.0
+		p.text(cx, ry, pr.k+":", "B", 7.5, p.pal.muted)
+		p.text(cx+26, ry, pr.v, "", 8, p.pal.navy)
+	}
+	if d.CreatedDate != "" {
+		p.text(leftX, top+boxH+2.5, "Created: "+d.CreatedDate, "", 7, p.pal.grey)
+		boxH += 4.0
+	}
+	return top + boxH
 }
 
 // drawAmountColumn renders one labelled card (earnings or deductions) with a header
