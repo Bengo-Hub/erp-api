@@ -323,7 +323,7 @@ func (h *DocumentsHandler) EmailConsultantVouchers(w http.ResponseWriter, r *htt
 				Filename: v.DocNumber + ".pdf", ContentType: mime, ContentB64: base64.StdEncoding.EncodeToString(pdf),
 			}},
 		}
-		if err := h.notify.RequestEmail(r.Context(), scope.TenantID, "consultant-voucher-"+v.ID.String(), req); err != nil {
+		if err := h.notify.RequestEmail(r.Context(), scope.TenantID, v.ID.String(), req); err != nil {
 			skipped++
 			continue
 		}

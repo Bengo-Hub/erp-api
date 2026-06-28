@@ -1,6 +1,10 @@
 package docs
 
-import "github.com/go-pdf/fpdf"
+import (
+	"strings"
+
+	"github.com/go-pdf/fpdf"
+)
 
 // Page geometry (A4 portrait, mm).
 const (
@@ -21,7 +25,35 @@ type painter struct {
 }
 
 func newPainter(pdf *fpdf.Fpdf, pal palette) *painter {
-	return &painter{pdf: pdf, tr: pdf.UnicodeTranslatorFromDescriptor(""), pal: pal}
+	base := pdf.UnicodeTranslatorFromDescriptor("") // UTF-8 → cp1252 (core fonts are 256-glyph)
+	// Defensive wrapper: fpdf core fonts only have a 256-entry width table, so ANY rune that the
+	// cp1252 translator leaves above 0xFF (e.g. U+FFFD from invalid UTF-8, or an un-mapped symbol)
+	// makes SplitText/MultiCell panic with "index out of range". Strip those to '?' so no document
+	// (payslip, voucher, muster-roll, …) can ever crash the renderer on a stray character.
+	tr := func(s string) string {
+		out := base(s)
+		safe := false
+		for _, r := range out {
+			if r > 0xFF {
+				safe = true
+				break
+			}
+		}
+		if !safe {
+			return out
+		}
+		var b strings.Builder
+		b.Grow(len(out))
+		for _, r := range out {
+			if r > 0xFF {
+				b.WriteByte('?')
+			} else {
+				b.WriteRune(r)
+			}
+		}
+		return b.String()
+	}
+	return &painter{pdf: pdf, tr: tr, pal: pal}
 }
 
 func (p *painter) setFill(c rgb) { p.pdf.SetFillColor(c.r, c.g, c.b) }

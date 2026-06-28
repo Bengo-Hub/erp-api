@@ -133,5 +133,6 @@ func (h *DocumentsHandler) emailOnePayslip(ctx context.Context, tenantID uuid.UU
 		}},
 		DeliverAt: deliverAt,
 	}
-	return h.notify.RequestEmail(ctx, tenantID, "payroll-"+period.Format("2006-01"), req)
+	// aggregate_id MUST be a UUID (the shared-events poller scans it into uuid.UUID); use the payslip id.
+	return h.notify.RequestEmail(ctx, tenantID, ps.ID.String(), req)
 }
