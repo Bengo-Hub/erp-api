@@ -23,6 +23,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
+	"github.com/Bengo-Hub/erp-api/internal/ent/staffpurchasededuction"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
@@ -103,6 +104,11 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 			// Muster Roll, Payroll Summary and P9. Failure must not abort the run.
 			if lerr := s.writePayslipLines(ctx, p.TenantID, id, in.GrossPay, res, items); lerr != nil {
 				return nil, fmt.Errorf("payroll: payslip lines %s: %w", emp.ID, lerr)
+			}
+			// Freeze this period's per-recoverable recoveries so disburse can write them back
+			// to each loan/advance/loss-damage/staff-purchase exactly once (gaps §2.7).
+			if rerr := s.writeRecoveryLines(ctx, p.TenantID, id, emp.ID, items.Recoveries); rerr != nil {
+				return nil, fmt.Errorf("payroll: recovery lines %s: %w", emp.ID, rerr)
 			}
 		}
 		out = append(out, line)
@@ -259,6 +265,7 @@ func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.
 		in.Loans = append(in.Loans, payrollengine.Recoverable{Installment: l.MonthlyInstallment, Outstanding: outstanding})
 		if rec := recovered(l.MonthlyInstallment, outstanding); rec.IsPositive() {
 			items.Loans = append(items.Loans, LabeledAmount{Label: "Loan", Amount: rec})
+			items.Recoveries = append(items.Recoveries, RecoveryAlloc{Type: "loan", ID: l.ID, Amount: rec})
 		}
 	}
 
@@ -282,6 +289,7 @@ func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.
 		if p.RecoverAdvances {
 			if rec := recovered(install, outstanding); rec.IsPositive() {
 				items.Advances = append(items.Advances, LabeledAmount{Label: "Salary Advance", Amount: rec})
+				items.Recoveries = append(items.Recoveries, RecoveryAlloc{Type: "advance", ID: a.ID, Amount: rec})
 			}
 		}
 	}
@@ -305,6 +313,26 @@ func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.
 		in.LossDamages = append(in.LossDamages, payrollengine.Recoverable{Installment: install, Outstanding: outstanding})
 		if rec := recovered(install, outstanding); rec.IsPositive() {
 			items.LossDamages = append(items.LossDamages, LabeledAmount{Label: "Loss & Damage", Amount: rec})
+			items.Recoveries = append(items.Recoveries, RecoveryAlloc{Type: "loss_damage", ID: ld.ID, Amount: rec})
+		}
+	}
+
+	// Staff purchases (POS credit/layaway funded from salary) — recovered like other recoverables.
+	staffPurchases, err := s.orm.StaffPurchaseDeduction.Query().
+		Where(
+			staffpurchasededuction.TenantID(p.TenantID),
+			staffpurchasededuction.EmployeeID(emp.ID),
+			staffpurchasededuction.IsActive(true),
+		).All(ctx)
+	if err != nil {
+		return in, items, err
+	}
+	for _, sp := range staffPurchases {
+		outstanding := sp.Principal.Sub(sp.AmountRecovered)
+		in.StaffPurchases = append(in.StaffPurchases, payrollengine.Recoverable{Installment: sp.InstallmentAmount, Outstanding: outstanding})
+		if rec := recovered(sp.InstallmentAmount, outstanding); rec.IsPositive() {
+			items.StaffPurchases = append(items.StaffPurchases, LabeledAmount{Label: "Staff Purchase", Amount: rec})
+			items.Recoveries = append(items.Recoveries, RecoveryAlloc{Type: "staff_purchase", ID: sp.ID, Amount: rec})
 		}
 	}
 

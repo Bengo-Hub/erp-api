@@ -65,7 +65,7 @@ func buildPayrollEvent(slips []*ent.Payslip, empByID map[uuid.UUID]*ent.Employee
 		}
 
 		lines = append(lines, map[string]any{
-			"employee_id": recipientID,
+			"employee_id":  recipientID,
 			"employee_ref": empRef,
 			"gross":        s.GrossPay.StringFixed(2),
 			"net_pay":      s.NetPay.StringFixed(2),

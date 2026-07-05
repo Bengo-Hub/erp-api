@@ -52,7 +52,10 @@ type EmployeeInput struct {
 	Loans             []Recoverable
 	Advances          []Recoverable
 	LossDamages       []Recoverable
-	NonCashBenefits   decimal.Decimal // sum of effective non-cash benefit amounts
+	// StaffPurchases are POS-origin staff credit/layaway balances funded from salary — recovered
+	// in the after-PAYE phase like loans/advances. Filtered/effective-dated by the caller.
+	StaffPurchases  []Recoverable
+	NonCashBenefits decimal.Decimal // sum of effective non-cash benefit amounts
 }
 
 // Recoverable is an installment-based deduction (loan/advance/loss-damage). The engine
@@ -110,10 +113,11 @@ const (
 	CompNHIF        = "nhif"
 	CompHousingLevy = "housing_levy"
 	CompPAYE        = "paye"
-	CompLoans       = "loans"
-	CompAdvances    = "advances"
-	CompLossDamages = "loss_damages"
-	CompNonCash     = "non_cash_benefits"
+	CompLoans         = "loans"
+	CompAdvances      = "advances"
+	CompLossDamages   = "loss_damages"
+	CompStaffPurchase = "staff_purchase"
+	CompNonCash       = "non_cash_benefits"
 )
 
 // DefaultDeductionOrder mirrors dynamic_deduction_engine._get_default_deduction_order.
@@ -121,7 +125,7 @@ func DefaultDeductionOrder() []Phase {
 	return []Phase{
 		{Name: PhaseBeforeTax, Components: []string{CompNSSF, CompSHIF, CompHousingLevy}},
 		{Name: PhaseAfterTax, Components: []string{CompPAYE}},
-		{Name: PhaseAfterPAYE, Components: []string{CompLoans, CompAdvances, CompLossDamages}},
+		{Name: PhaseAfterPAYE, Components: []string{CompLoans, CompAdvances, CompLossDamages, CompStaffPurchase}},
 		{Name: PhaseFinal, Components: []string{CompNonCash}},
 	}
 }

@@ -92,6 +92,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
+	"github.com/Bengo-Hub/erp-api/internal/ent/recoveryline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/reviewmetric"
@@ -103,6 +104,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftroster"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrosterslot"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrotation"
+	"github.com/Bengo-Hub/erp-api/internal/ent/staffpurchasededuction"
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
 	"github.com/Bengo-Hub/erp-api/internal/ent/task"
 	"github.com/Bengo-Hub/erp-api/internal/ent/taskcomment"
@@ -209,6 +211,7 @@ const (
 	TypePerformanceReview         = "PerformanceReview"
 	TypePermission                = "Permission"
 	TypePublicHoliday             = "PublicHoliday"
+	TypeRecoveryLine              = "RecoveryLine"
 	TypeRegion                    = "Region"
 	TypeRepayOption               = "RepayOption"
 	TypeReviewMetric              = "ReviewMetric"
@@ -219,6 +222,7 @@ const (
 	TypeShiftRoster               = "ShiftRoster"
 	TypeShiftRosterSlot           = "ShiftRosterSlot"
 	TypeShiftRotation             = "ShiftRotation"
+	TypeStaffPurchaseDeduction    = "StaffPurchaseDeduction"
 	TypeStaffShiftOverride        = "StaffShiftOverride"
 	TypeTask                      = "Task"
 	TypeTaskComment               = "TaskComment"
@@ -78164,6 +78168,792 @@ func (m *PublicHolidayMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown PublicHoliday edge %s", name)
 }
 
+// RecoveryLineMutation represents an operation that mutates the RecoveryLine nodes in the graph.
+type RecoveryLineMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *uuid.UUID
+	tenant_id        *uuid.UUID
+	payslip_id       *uuid.UUID
+	employee_id      *uuid.UUID
+	recoverable_type *recoveryline.RecoverableType
+	recoverable_id   *uuid.UUID
+	amount           *decimal.Decimal
+	batch_ref        *string
+	applied          *bool
+	created_at       *time.Time
+	clearedFields    map[string]struct{}
+	done             bool
+	oldValue         func(context.Context) (*RecoveryLine, error)
+	predicates       []predicate.RecoveryLine
+}
+
+var _ ent.Mutation = (*RecoveryLineMutation)(nil)
+
+// recoverylineOption allows management of the mutation configuration using functional options.
+type recoverylineOption func(*RecoveryLineMutation)
+
+// newRecoveryLineMutation creates new mutation for the RecoveryLine entity.
+func newRecoveryLineMutation(c config, op Op, opts ...recoverylineOption) *RecoveryLineMutation {
+	m := &RecoveryLineMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeRecoveryLine,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withRecoveryLineID sets the ID field of the mutation.
+func withRecoveryLineID(id uuid.UUID) recoverylineOption {
+	return func(m *RecoveryLineMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *RecoveryLine
+		)
+		m.oldValue = func(ctx context.Context) (*RecoveryLine, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().RecoveryLine.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withRecoveryLine sets the old RecoveryLine of the mutation.
+func withRecoveryLine(node *RecoveryLine) recoverylineOption {
+	return func(m *RecoveryLineMutation) {
+		m.oldValue = func(context.Context) (*RecoveryLine, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m RecoveryLineMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m RecoveryLineMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of RecoveryLine entities.
+func (m *RecoveryLineMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *RecoveryLineMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *RecoveryLineMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().RecoveryLine.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *RecoveryLineMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *RecoveryLineMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the RecoveryLine entity.
+// If the RecoveryLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RecoveryLineMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *RecoveryLineMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetPayslipID sets the "payslip_id" field.
+func (m *RecoveryLineMutation) SetPayslipID(u uuid.UUID) {
+	m.payslip_id = &u
+}
+
+// PayslipID returns the value of the "payslip_id" field in the mutation.
+func (m *RecoveryLineMutation) PayslipID() (r uuid.UUID, exists bool) {
+	v := m.payslip_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayslipID returns the old "payslip_id" field's value of the RecoveryLine entity.
+// If the RecoveryLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RecoveryLineMutation) OldPayslipID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayslipID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayslipID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayslipID: %w", err)
+	}
+	return oldValue.PayslipID, nil
+}
+
+// ResetPayslipID resets all changes to the "payslip_id" field.
+func (m *RecoveryLineMutation) ResetPayslipID() {
+	m.payslip_id = nil
+}
+
+// SetEmployeeID sets the "employee_id" field.
+func (m *RecoveryLineMutation) SetEmployeeID(u uuid.UUID) {
+	m.employee_id = &u
+}
+
+// EmployeeID returns the value of the "employee_id" field in the mutation.
+func (m *RecoveryLineMutation) EmployeeID() (r uuid.UUID, exists bool) {
+	v := m.employee_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployeeID returns the old "employee_id" field's value of the RecoveryLine entity.
+// If the RecoveryLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RecoveryLineMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployeeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployeeID: %w", err)
+	}
+	return oldValue.EmployeeID, nil
+}
+
+// ResetEmployeeID resets all changes to the "employee_id" field.
+func (m *RecoveryLineMutation) ResetEmployeeID() {
+	m.employee_id = nil
+}
+
+// SetRecoverableType sets the "recoverable_type" field.
+func (m *RecoveryLineMutation) SetRecoverableType(rt recoveryline.RecoverableType) {
+	m.recoverable_type = &rt
+}
+
+// RecoverableType returns the value of the "recoverable_type" field in the mutation.
+func (m *RecoveryLineMutation) RecoverableType() (r recoveryline.RecoverableType, exists bool) {
+	v := m.recoverable_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRecoverableType returns the old "recoverable_type" field's value of the RecoveryLine entity.
+// If the RecoveryLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RecoveryLineMutation) OldRecoverableType(ctx context.Context) (v recoveryline.RecoverableType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRecoverableType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRecoverableType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRecoverableType: %w", err)
+	}
+	return oldValue.RecoverableType, nil
+}
+
+// ResetRecoverableType resets all changes to the "recoverable_type" field.
+func (m *RecoveryLineMutation) ResetRecoverableType() {
+	m.recoverable_type = nil
+}
+
+// SetRecoverableID sets the "recoverable_id" field.
+func (m *RecoveryLineMutation) SetRecoverableID(u uuid.UUID) {
+	m.recoverable_id = &u
+}
+
+// RecoverableID returns the value of the "recoverable_id" field in the mutation.
+func (m *RecoveryLineMutation) RecoverableID() (r uuid.UUID, exists bool) {
+	v := m.recoverable_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRecoverableID returns the old "recoverable_id" field's value of the RecoveryLine entity.
+// If the RecoveryLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RecoveryLineMutation) OldRecoverableID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRecoverableID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRecoverableID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRecoverableID: %w", err)
+	}
+	return oldValue.RecoverableID, nil
+}
+
+// ResetRecoverableID resets all changes to the "recoverable_id" field.
+func (m *RecoveryLineMutation) ResetRecoverableID() {
+	m.recoverable_id = nil
+}
+
+// SetAmount sets the "amount" field.
+func (m *RecoveryLineMutation) SetAmount(d decimal.Decimal) {
+	m.amount = &d
+}
+
+// Amount returns the value of the "amount" field in the mutation.
+func (m *RecoveryLineMutation) Amount() (r decimal.Decimal, exists bool) {
+	v := m.amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmount returns the old "amount" field's value of the RecoveryLine entity.
+// If the RecoveryLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RecoveryLineMutation) OldAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmount: %w", err)
+	}
+	return oldValue.Amount, nil
+}
+
+// ResetAmount resets all changes to the "amount" field.
+func (m *RecoveryLineMutation) ResetAmount() {
+	m.amount = nil
+}
+
+// SetBatchRef sets the "batch_ref" field.
+func (m *RecoveryLineMutation) SetBatchRef(s string) {
+	m.batch_ref = &s
+}
+
+// BatchRef returns the value of the "batch_ref" field in the mutation.
+func (m *RecoveryLineMutation) BatchRef() (r string, exists bool) {
+	v := m.batch_ref
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBatchRef returns the old "batch_ref" field's value of the RecoveryLine entity.
+// If the RecoveryLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RecoveryLineMutation) OldBatchRef(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBatchRef is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBatchRef requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBatchRef: %w", err)
+	}
+	return oldValue.BatchRef, nil
+}
+
+// ClearBatchRef clears the value of the "batch_ref" field.
+func (m *RecoveryLineMutation) ClearBatchRef() {
+	m.batch_ref = nil
+	m.clearedFields[recoveryline.FieldBatchRef] = struct{}{}
+}
+
+// BatchRefCleared returns if the "batch_ref" field was cleared in this mutation.
+func (m *RecoveryLineMutation) BatchRefCleared() bool {
+	_, ok := m.clearedFields[recoveryline.FieldBatchRef]
+	return ok
+}
+
+// ResetBatchRef resets all changes to the "batch_ref" field.
+func (m *RecoveryLineMutation) ResetBatchRef() {
+	m.batch_ref = nil
+	delete(m.clearedFields, recoveryline.FieldBatchRef)
+}
+
+// SetApplied sets the "applied" field.
+func (m *RecoveryLineMutation) SetApplied(b bool) {
+	m.applied = &b
+}
+
+// Applied returns the value of the "applied" field in the mutation.
+func (m *RecoveryLineMutation) Applied() (r bool, exists bool) {
+	v := m.applied
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApplied returns the old "applied" field's value of the RecoveryLine entity.
+// If the RecoveryLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RecoveryLineMutation) OldApplied(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApplied is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApplied requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApplied: %w", err)
+	}
+	return oldValue.Applied, nil
+}
+
+// ResetApplied resets all changes to the "applied" field.
+func (m *RecoveryLineMutation) ResetApplied() {
+	m.applied = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *RecoveryLineMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *RecoveryLineMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the RecoveryLine entity.
+// If the RecoveryLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RecoveryLineMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *RecoveryLineMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// Where appends a list predicates to the RecoveryLineMutation builder.
+func (m *RecoveryLineMutation) Where(ps ...predicate.RecoveryLine) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the RecoveryLineMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *RecoveryLineMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.RecoveryLine, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *RecoveryLineMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *RecoveryLineMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (RecoveryLine).
+func (m *RecoveryLineMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *RecoveryLineMutation) Fields() []string {
+	fields := make([]string, 0, 9)
+	if m.tenant_id != nil {
+		fields = append(fields, recoveryline.FieldTenantID)
+	}
+	if m.payslip_id != nil {
+		fields = append(fields, recoveryline.FieldPayslipID)
+	}
+	if m.employee_id != nil {
+		fields = append(fields, recoveryline.FieldEmployeeID)
+	}
+	if m.recoverable_type != nil {
+		fields = append(fields, recoveryline.FieldRecoverableType)
+	}
+	if m.recoverable_id != nil {
+		fields = append(fields, recoveryline.FieldRecoverableID)
+	}
+	if m.amount != nil {
+		fields = append(fields, recoveryline.FieldAmount)
+	}
+	if m.batch_ref != nil {
+		fields = append(fields, recoveryline.FieldBatchRef)
+	}
+	if m.applied != nil {
+		fields = append(fields, recoveryline.FieldApplied)
+	}
+	if m.created_at != nil {
+		fields = append(fields, recoveryline.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *RecoveryLineMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case recoveryline.FieldTenantID:
+		return m.TenantID()
+	case recoveryline.FieldPayslipID:
+		return m.PayslipID()
+	case recoveryline.FieldEmployeeID:
+		return m.EmployeeID()
+	case recoveryline.FieldRecoverableType:
+		return m.RecoverableType()
+	case recoveryline.FieldRecoverableID:
+		return m.RecoverableID()
+	case recoveryline.FieldAmount:
+		return m.Amount()
+	case recoveryline.FieldBatchRef:
+		return m.BatchRef()
+	case recoveryline.FieldApplied:
+		return m.Applied()
+	case recoveryline.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *RecoveryLineMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case recoveryline.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case recoveryline.FieldPayslipID:
+		return m.OldPayslipID(ctx)
+	case recoveryline.FieldEmployeeID:
+		return m.OldEmployeeID(ctx)
+	case recoveryline.FieldRecoverableType:
+		return m.OldRecoverableType(ctx)
+	case recoveryline.FieldRecoverableID:
+		return m.OldRecoverableID(ctx)
+	case recoveryline.FieldAmount:
+		return m.OldAmount(ctx)
+	case recoveryline.FieldBatchRef:
+		return m.OldBatchRef(ctx)
+	case recoveryline.FieldApplied:
+		return m.OldApplied(ctx)
+	case recoveryline.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown RecoveryLine field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *RecoveryLineMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case recoveryline.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case recoveryline.FieldPayslipID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayslipID(v)
+		return nil
+	case recoveryline.FieldEmployeeID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployeeID(v)
+		return nil
+	case recoveryline.FieldRecoverableType:
+		v, ok := value.(recoveryline.RecoverableType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRecoverableType(v)
+		return nil
+	case recoveryline.FieldRecoverableID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRecoverableID(v)
+		return nil
+	case recoveryline.FieldAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmount(v)
+		return nil
+	case recoveryline.FieldBatchRef:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBatchRef(v)
+		return nil
+	case recoveryline.FieldApplied:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApplied(v)
+		return nil
+	case recoveryline.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown RecoveryLine field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *RecoveryLineMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *RecoveryLineMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *RecoveryLineMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown RecoveryLine numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *RecoveryLineMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(recoveryline.FieldBatchRef) {
+		fields = append(fields, recoveryline.FieldBatchRef)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *RecoveryLineMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *RecoveryLineMutation) ClearField(name string) error {
+	switch name {
+	case recoveryline.FieldBatchRef:
+		m.ClearBatchRef()
+		return nil
+	}
+	return fmt.Errorf("unknown RecoveryLine nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *RecoveryLineMutation) ResetField(name string) error {
+	switch name {
+	case recoveryline.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case recoveryline.FieldPayslipID:
+		m.ResetPayslipID()
+		return nil
+	case recoveryline.FieldEmployeeID:
+		m.ResetEmployeeID()
+		return nil
+	case recoveryline.FieldRecoverableType:
+		m.ResetRecoverableType()
+		return nil
+	case recoveryline.FieldRecoverableID:
+		m.ResetRecoverableID()
+		return nil
+	case recoveryline.FieldAmount:
+		m.ResetAmount()
+		return nil
+	case recoveryline.FieldBatchRef:
+		m.ResetBatchRef()
+		return nil
+	case recoveryline.FieldApplied:
+		m.ResetApplied()
+		return nil
+	case recoveryline.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown RecoveryLine field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *RecoveryLineMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *RecoveryLineMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *RecoveryLineMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *RecoveryLineMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *RecoveryLineMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *RecoveryLineMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *RecoveryLineMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown RecoveryLine unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *RecoveryLineMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown RecoveryLine edge %s", name)
+}
+
 // RegionMutation represents an operation that mutates the Region nodes in the graph.
 type RegionMutation struct {
 	config
@@ -86159,6 +86949,1137 @@ func (m *ShiftRotationMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ShiftRotationMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ShiftRotation edge %s", name)
+}
+
+// StaffPurchaseDeductionMutation represents an operation that mutates the StaffPurchaseDeduction nodes in the graph.
+type StaffPurchaseDeductionMutation struct {
+	config
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	tenant_id             *uuid.UUID
+	employee_id           *uuid.UUID
+	origin                *staffpurchasededuction.Origin
+	pos_reference         *string
+	source_key            *string
+	principal             *decimal.Decimal
+	amount_recovered      *decimal.Decimal
+	installment_amount    *decimal.Decimal
+	installments_total    *int
+	addinstallments_total *int
+	status                *staffpurchasededuction.Status
+	is_active             *bool
+	last_settled_batch    *string
+	created_at            *time.Time
+	updated_at            *time.Time
+	clearedFields         map[string]struct{}
+	done                  bool
+	oldValue              func(context.Context) (*StaffPurchaseDeduction, error)
+	predicates            []predicate.StaffPurchaseDeduction
+}
+
+var _ ent.Mutation = (*StaffPurchaseDeductionMutation)(nil)
+
+// staffpurchasedeductionOption allows management of the mutation configuration using functional options.
+type staffpurchasedeductionOption func(*StaffPurchaseDeductionMutation)
+
+// newStaffPurchaseDeductionMutation creates new mutation for the StaffPurchaseDeduction entity.
+func newStaffPurchaseDeductionMutation(c config, op Op, opts ...staffpurchasedeductionOption) *StaffPurchaseDeductionMutation {
+	m := &StaffPurchaseDeductionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeStaffPurchaseDeduction,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withStaffPurchaseDeductionID sets the ID field of the mutation.
+func withStaffPurchaseDeductionID(id uuid.UUID) staffpurchasedeductionOption {
+	return func(m *StaffPurchaseDeductionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *StaffPurchaseDeduction
+		)
+		m.oldValue = func(ctx context.Context) (*StaffPurchaseDeduction, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().StaffPurchaseDeduction.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withStaffPurchaseDeduction sets the old StaffPurchaseDeduction of the mutation.
+func withStaffPurchaseDeduction(node *StaffPurchaseDeduction) staffpurchasedeductionOption {
+	return func(m *StaffPurchaseDeductionMutation) {
+		m.oldValue = func(context.Context) (*StaffPurchaseDeduction, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m StaffPurchaseDeductionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m StaffPurchaseDeductionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of StaffPurchaseDeduction entities.
+func (m *StaffPurchaseDeductionMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *StaffPurchaseDeductionMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *StaffPurchaseDeductionMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().StaffPurchaseDeduction.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *StaffPurchaseDeductionMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *StaffPurchaseDeductionMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetEmployeeID sets the "employee_id" field.
+func (m *StaffPurchaseDeductionMutation) SetEmployeeID(u uuid.UUID) {
+	m.employee_id = &u
+}
+
+// EmployeeID returns the value of the "employee_id" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) EmployeeID() (r uuid.UUID, exists bool) {
+	v := m.employee_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployeeID returns the old "employee_id" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployeeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployeeID: %w", err)
+	}
+	return oldValue.EmployeeID, nil
+}
+
+// ResetEmployeeID resets all changes to the "employee_id" field.
+func (m *StaffPurchaseDeductionMutation) ResetEmployeeID() {
+	m.employee_id = nil
+}
+
+// SetOrigin sets the "origin" field.
+func (m *StaffPurchaseDeductionMutation) SetOrigin(s staffpurchasededuction.Origin) {
+	m.origin = &s
+}
+
+// Origin returns the value of the "origin" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) Origin() (r staffpurchasededuction.Origin, exists bool) {
+	v := m.origin
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrigin returns the old "origin" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldOrigin(ctx context.Context) (v staffpurchasededuction.Origin, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrigin is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrigin requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrigin: %w", err)
+	}
+	return oldValue.Origin, nil
+}
+
+// ResetOrigin resets all changes to the "origin" field.
+func (m *StaffPurchaseDeductionMutation) ResetOrigin() {
+	m.origin = nil
+}
+
+// SetPosReference sets the "pos_reference" field.
+func (m *StaffPurchaseDeductionMutation) SetPosReference(s string) {
+	m.pos_reference = &s
+}
+
+// PosReference returns the value of the "pos_reference" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) PosReference() (r string, exists bool) {
+	v := m.pos_reference
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPosReference returns the old "pos_reference" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldPosReference(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPosReference is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPosReference requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPosReference: %w", err)
+	}
+	return oldValue.PosReference, nil
+}
+
+// ClearPosReference clears the value of the "pos_reference" field.
+func (m *StaffPurchaseDeductionMutation) ClearPosReference() {
+	m.pos_reference = nil
+	m.clearedFields[staffpurchasededuction.FieldPosReference] = struct{}{}
+}
+
+// PosReferenceCleared returns if the "pos_reference" field was cleared in this mutation.
+func (m *StaffPurchaseDeductionMutation) PosReferenceCleared() bool {
+	_, ok := m.clearedFields[staffpurchasededuction.FieldPosReference]
+	return ok
+}
+
+// ResetPosReference resets all changes to the "pos_reference" field.
+func (m *StaffPurchaseDeductionMutation) ResetPosReference() {
+	m.pos_reference = nil
+	delete(m.clearedFields, staffpurchasededuction.FieldPosReference)
+}
+
+// SetSourceKey sets the "source_key" field.
+func (m *StaffPurchaseDeductionMutation) SetSourceKey(s string) {
+	m.source_key = &s
+}
+
+// SourceKey returns the value of the "source_key" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) SourceKey() (r string, exists bool) {
+	v := m.source_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourceKey returns the old "source_key" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldSourceKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourceKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourceKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourceKey: %w", err)
+	}
+	return oldValue.SourceKey, nil
+}
+
+// ResetSourceKey resets all changes to the "source_key" field.
+func (m *StaffPurchaseDeductionMutation) ResetSourceKey() {
+	m.source_key = nil
+}
+
+// SetPrincipal sets the "principal" field.
+func (m *StaffPurchaseDeductionMutation) SetPrincipal(d decimal.Decimal) {
+	m.principal = &d
+}
+
+// Principal returns the value of the "principal" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) Principal() (r decimal.Decimal, exists bool) {
+	v := m.principal
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrincipal returns the old "principal" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldPrincipal(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrincipal is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrincipal requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrincipal: %w", err)
+	}
+	return oldValue.Principal, nil
+}
+
+// ResetPrincipal resets all changes to the "principal" field.
+func (m *StaffPurchaseDeductionMutation) ResetPrincipal() {
+	m.principal = nil
+}
+
+// SetAmountRecovered sets the "amount_recovered" field.
+func (m *StaffPurchaseDeductionMutation) SetAmountRecovered(d decimal.Decimal) {
+	m.amount_recovered = &d
+}
+
+// AmountRecovered returns the value of the "amount_recovered" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) AmountRecovered() (r decimal.Decimal, exists bool) {
+	v := m.amount_recovered
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmountRecovered returns the old "amount_recovered" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldAmountRecovered(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmountRecovered is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmountRecovered requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmountRecovered: %w", err)
+	}
+	return oldValue.AmountRecovered, nil
+}
+
+// ResetAmountRecovered resets all changes to the "amount_recovered" field.
+func (m *StaffPurchaseDeductionMutation) ResetAmountRecovered() {
+	m.amount_recovered = nil
+}
+
+// SetInstallmentAmount sets the "installment_amount" field.
+func (m *StaffPurchaseDeductionMutation) SetInstallmentAmount(d decimal.Decimal) {
+	m.installment_amount = &d
+}
+
+// InstallmentAmount returns the value of the "installment_amount" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) InstallmentAmount() (r decimal.Decimal, exists bool) {
+	v := m.installment_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInstallmentAmount returns the old "installment_amount" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldInstallmentAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInstallmentAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInstallmentAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInstallmentAmount: %w", err)
+	}
+	return oldValue.InstallmentAmount, nil
+}
+
+// ResetInstallmentAmount resets all changes to the "installment_amount" field.
+func (m *StaffPurchaseDeductionMutation) ResetInstallmentAmount() {
+	m.installment_amount = nil
+}
+
+// SetInstallmentsTotal sets the "installments_total" field.
+func (m *StaffPurchaseDeductionMutation) SetInstallmentsTotal(i int) {
+	m.installments_total = &i
+	m.addinstallments_total = nil
+}
+
+// InstallmentsTotal returns the value of the "installments_total" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) InstallmentsTotal() (r int, exists bool) {
+	v := m.installments_total
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInstallmentsTotal returns the old "installments_total" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldInstallmentsTotal(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInstallmentsTotal is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInstallmentsTotal requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInstallmentsTotal: %w", err)
+	}
+	return oldValue.InstallmentsTotal, nil
+}
+
+// AddInstallmentsTotal adds i to the "installments_total" field.
+func (m *StaffPurchaseDeductionMutation) AddInstallmentsTotal(i int) {
+	if m.addinstallments_total != nil {
+		*m.addinstallments_total += i
+	} else {
+		m.addinstallments_total = &i
+	}
+}
+
+// AddedInstallmentsTotal returns the value that was added to the "installments_total" field in this mutation.
+func (m *StaffPurchaseDeductionMutation) AddedInstallmentsTotal() (r int, exists bool) {
+	v := m.addinstallments_total
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearInstallmentsTotal clears the value of the "installments_total" field.
+func (m *StaffPurchaseDeductionMutation) ClearInstallmentsTotal() {
+	m.installments_total = nil
+	m.addinstallments_total = nil
+	m.clearedFields[staffpurchasededuction.FieldInstallmentsTotal] = struct{}{}
+}
+
+// InstallmentsTotalCleared returns if the "installments_total" field was cleared in this mutation.
+func (m *StaffPurchaseDeductionMutation) InstallmentsTotalCleared() bool {
+	_, ok := m.clearedFields[staffpurchasededuction.FieldInstallmentsTotal]
+	return ok
+}
+
+// ResetInstallmentsTotal resets all changes to the "installments_total" field.
+func (m *StaffPurchaseDeductionMutation) ResetInstallmentsTotal() {
+	m.installments_total = nil
+	m.addinstallments_total = nil
+	delete(m.clearedFields, staffpurchasededuction.FieldInstallmentsTotal)
+}
+
+// SetStatus sets the "status" field.
+func (m *StaffPurchaseDeductionMutation) SetStatus(s staffpurchasededuction.Status) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) Status() (r staffpurchasededuction.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldStatus(ctx context.Context) (v staffpurchasededuction.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *StaffPurchaseDeductionMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetIsActive sets the "is_active" field.
+func (m *StaffPurchaseDeductionMutation) SetIsActive(b bool) {
+	m.is_active = &b
+}
+
+// IsActive returns the value of the "is_active" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) IsActive() (r bool, exists bool) {
+	v := m.is_active
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsActive returns the old "is_active" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldIsActive(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsActive is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsActive requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsActive: %w", err)
+	}
+	return oldValue.IsActive, nil
+}
+
+// ResetIsActive resets all changes to the "is_active" field.
+func (m *StaffPurchaseDeductionMutation) ResetIsActive() {
+	m.is_active = nil
+}
+
+// SetLastSettledBatch sets the "last_settled_batch" field.
+func (m *StaffPurchaseDeductionMutation) SetLastSettledBatch(s string) {
+	m.last_settled_batch = &s
+}
+
+// LastSettledBatch returns the value of the "last_settled_batch" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) LastSettledBatch() (r string, exists bool) {
+	v := m.last_settled_batch
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastSettledBatch returns the old "last_settled_batch" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldLastSettledBatch(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastSettledBatch is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastSettledBatch requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastSettledBatch: %w", err)
+	}
+	return oldValue.LastSettledBatch, nil
+}
+
+// ClearLastSettledBatch clears the value of the "last_settled_batch" field.
+func (m *StaffPurchaseDeductionMutation) ClearLastSettledBatch() {
+	m.last_settled_batch = nil
+	m.clearedFields[staffpurchasededuction.FieldLastSettledBatch] = struct{}{}
+}
+
+// LastSettledBatchCleared returns if the "last_settled_batch" field was cleared in this mutation.
+func (m *StaffPurchaseDeductionMutation) LastSettledBatchCleared() bool {
+	_, ok := m.clearedFields[staffpurchasededuction.FieldLastSettledBatch]
+	return ok
+}
+
+// ResetLastSettledBatch resets all changes to the "last_settled_batch" field.
+func (m *StaffPurchaseDeductionMutation) ResetLastSettledBatch() {
+	m.last_settled_batch = nil
+	delete(m.clearedFields, staffpurchasededuction.FieldLastSettledBatch)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *StaffPurchaseDeductionMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *StaffPurchaseDeductionMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *StaffPurchaseDeductionMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *StaffPurchaseDeductionMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the StaffPurchaseDeduction entity.
+// If the StaffPurchaseDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StaffPurchaseDeductionMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *StaffPurchaseDeductionMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the StaffPurchaseDeductionMutation builder.
+func (m *StaffPurchaseDeductionMutation) Where(ps ...predicate.StaffPurchaseDeduction) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the StaffPurchaseDeductionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *StaffPurchaseDeductionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.StaffPurchaseDeduction, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *StaffPurchaseDeductionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *StaffPurchaseDeductionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (StaffPurchaseDeduction).
+func (m *StaffPurchaseDeductionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *StaffPurchaseDeductionMutation) Fields() []string {
+	fields := make([]string, 0, 14)
+	if m.tenant_id != nil {
+		fields = append(fields, staffpurchasededuction.FieldTenantID)
+	}
+	if m.employee_id != nil {
+		fields = append(fields, staffpurchasededuction.FieldEmployeeID)
+	}
+	if m.origin != nil {
+		fields = append(fields, staffpurchasededuction.FieldOrigin)
+	}
+	if m.pos_reference != nil {
+		fields = append(fields, staffpurchasededuction.FieldPosReference)
+	}
+	if m.source_key != nil {
+		fields = append(fields, staffpurchasededuction.FieldSourceKey)
+	}
+	if m.principal != nil {
+		fields = append(fields, staffpurchasededuction.FieldPrincipal)
+	}
+	if m.amount_recovered != nil {
+		fields = append(fields, staffpurchasededuction.FieldAmountRecovered)
+	}
+	if m.installment_amount != nil {
+		fields = append(fields, staffpurchasededuction.FieldInstallmentAmount)
+	}
+	if m.installments_total != nil {
+		fields = append(fields, staffpurchasededuction.FieldInstallmentsTotal)
+	}
+	if m.status != nil {
+		fields = append(fields, staffpurchasededuction.FieldStatus)
+	}
+	if m.is_active != nil {
+		fields = append(fields, staffpurchasededuction.FieldIsActive)
+	}
+	if m.last_settled_batch != nil {
+		fields = append(fields, staffpurchasededuction.FieldLastSettledBatch)
+	}
+	if m.created_at != nil {
+		fields = append(fields, staffpurchasededuction.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, staffpurchasededuction.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *StaffPurchaseDeductionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case staffpurchasededuction.FieldTenantID:
+		return m.TenantID()
+	case staffpurchasededuction.FieldEmployeeID:
+		return m.EmployeeID()
+	case staffpurchasededuction.FieldOrigin:
+		return m.Origin()
+	case staffpurchasededuction.FieldPosReference:
+		return m.PosReference()
+	case staffpurchasededuction.FieldSourceKey:
+		return m.SourceKey()
+	case staffpurchasededuction.FieldPrincipal:
+		return m.Principal()
+	case staffpurchasededuction.FieldAmountRecovered:
+		return m.AmountRecovered()
+	case staffpurchasededuction.FieldInstallmentAmount:
+		return m.InstallmentAmount()
+	case staffpurchasededuction.FieldInstallmentsTotal:
+		return m.InstallmentsTotal()
+	case staffpurchasededuction.FieldStatus:
+		return m.Status()
+	case staffpurchasededuction.FieldIsActive:
+		return m.IsActive()
+	case staffpurchasededuction.FieldLastSettledBatch:
+		return m.LastSettledBatch()
+	case staffpurchasededuction.FieldCreatedAt:
+		return m.CreatedAt()
+	case staffpurchasededuction.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *StaffPurchaseDeductionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case staffpurchasededuction.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case staffpurchasededuction.FieldEmployeeID:
+		return m.OldEmployeeID(ctx)
+	case staffpurchasededuction.FieldOrigin:
+		return m.OldOrigin(ctx)
+	case staffpurchasededuction.FieldPosReference:
+		return m.OldPosReference(ctx)
+	case staffpurchasededuction.FieldSourceKey:
+		return m.OldSourceKey(ctx)
+	case staffpurchasededuction.FieldPrincipal:
+		return m.OldPrincipal(ctx)
+	case staffpurchasededuction.FieldAmountRecovered:
+		return m.OldAmountRecovered(ctx)
+	case staffpurchasededuction.FieldInstallmentAmount:
+		return m.OldInstallmentAmount(ctx)
+	case staffpurchasededuction.FieldInstallmentsTotal:
+		return m.OldInstallmentsTotal(ctx)
+	case staffpurchasededuction.FieldStatus:
+		return m.OldStatus(ctx)
+	case staffpurchasededuction.FieldIsActive:
+		return m.OldIsActive(ctx)
+	case staffpurchasededuction.FieldLastSettledBatch:
+		return m.OldLastSettledBatch(ctx)
+	case staffpurchasededuction.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case staffpurchasededuction.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown StaffPurchaseDeduction field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *StaffPurchaseDeductionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case staffpurchasededuction.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case staffpurchasededuction.FieldEmployeeID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployeeID(v)
+		return nil
+	case staffpurchasededuction.FieldOrigin:
+		v, ok := value.(staffpurchasededuction.Origin)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrigin(v)
+		return nil
+	case staffpurchasededuction.FieldPosReference:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPosReference(v)
+		return nil
+	case staffpurchasededuction.FieldSourceKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourceKey(v)
+		return nil
+	case staffpurchasededuction.FieldPrincipal:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrincipal(v)
+		return nil
+	case staffpurchasededuction.FieldAmountRecovered:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmountRecovered(v)
+		return nil
+	case staffpurchasededuction.FieldInstallmentAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInstallmentAmount(v)
+		return nil
+	case staffpurchasededuction.FieldInstallmentsTotal:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInstallmentsTotal(v)
+		return nil
+	case staffpurchasededuction.FieldStatus:
+		v, ok := value.(staffpurchasededuction.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case staffpurchasededuction.FieldIsActive:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsActive(v)
+		return nil
+	case staffpurchasededuction.FieldLastSettledBatch:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastSettledBatch(v)
+		return nil
+	case staffpurchasededuction.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case staffpurchasededuction.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown StaffPurchaseDeduction field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *StaffPurchaseDeductionMutation) AddedFields() []string {
+	var fields []string
+	if m.addinstallments_total != nil {
+		fields = append(fields, staffpurchasededuction.FieldInstallmentsTotal)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *StaffPurchaseDeductionMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case staffpurchasededuction.FieldInstallmentsTotal:
+		return m.AddedInstallmentsTotal()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *StaffPurchaseDeductionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case staffpurchasededuction.FieldInstallmentsTotal:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddInstallmentsTotal(v)
+		return nil
+	}
+	return fmt.Errorf("unknown StaffPurchaseDeduction numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *StaffPurchaseDeductionMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(staffpurchasededuction.FieldPosReference) {
+		fields = append(fields, staffpurchasededuction.FieldPosReference)
+	}
+	if m.FieldCleared(staffpurchasededuction.FieldInstallmentsTotal) {
+		fields = append(fields, staffpurchasededuction.FieldInstallmentsTotal)
+	}
+	if m.FieldCleared(staffpurchasededuction.FieldLastSettledBatch) {
+		fields = append(fields, staffpurchasededuction.FieldLastSettledBatch)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *StaffPurchaseDeductionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *StaffPurchaseDeductionMutation) ClearField(name string) error {
+	switch name {
+	case staffpurchasededuction.FieldPosReference:
+		m.ClearPosReference()
+		return nil
+	case staffpurchasededuction.FieldInstallmentsTotal:
+		m.ClearInstallmentsTotal()
+		return nil
+	case staffpurchasededuction.FieldLastSettledBatch:
+		m.ClearLastSettledBatch()
+		return nil
+	}
+	return fmt.Errorf("unknown StaffPurchaseDeduction nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *StaffPurchaseDeductionMutation) ResetField(name string) error {
+	switch name {
+	case staffpurchasededuction.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case staffpurchasededuction.FieldEmployeeID:
+		m.ResetEmployeeID()
+		return nil
+	case staffpurchasededuction.FieldOrigin:
+		m.ResetOrigin()
+		return nil
+	case staffpurchasededuction.FieldPosReference:
+		m.ResetPosReference()
+		return nil
+	case staffpurchasededuction.FieldSourceKey:
+		m.ResetSourceKey()
+		return nil
+	case staffpurchasededuction.FieldPrincipal:
+		m.ResetPrincipal()
+		return nil
+	case staffpurchasededuction.FieldAmountRecovered:
+		m.ResetAmountRecovered()
+		return nil
+	case staffpurchasededuction.FieldInstallmentAmount:
+		m.ResetInstallmentAmount()
+		return nil
+	case staffpurchasededuction.FieldInstallmentsTotal:
+		m.ResetInstallmentsTotal()
+		return nil
+	case staffpurchasededuction.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case staffpurchasededuction.FieldIsActive:
+		m.ResetIsActive()
+		return nil
+	case staffpurchasededuction.FieldLastSettledBatch:
+		m.ResetLastSettledBatch()
+		return nil
+	case staffpurchasededuction.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case staffpurchasededuction.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown StaffPurchaseDeduction field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *StaffPurchaseDeductionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *StaffPurchaseDeductionMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *StaffPurchaseDeductionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *StaffPurchaseDeductionMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *StaffPurchaseDeductionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *StaffPurchaseDeductionMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *StaffPurchaseDeductionMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown StaffPurchaseDeduction unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *StaffPurchaseDeductionMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown StaffPurchaseDeduction edge %s", name)
 }
 
 // StaffShiftOverrideMutation represents an operation that mutates the StaffShiftOverride nodes in the graph.

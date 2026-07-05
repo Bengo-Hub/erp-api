@@ -1,4 +1,4 @@
-h1:oLQggsaW7SHc0RKzcMir4JPogQwd558ymz4gef/MCs4=
+h1:UxDxzw/Y2s2gorAjMy19R2LyN2lmUNrSo8/HR6X/0UI=
 20260614111624_initial_schema.sql h1:tduj8h0RdEm+lMEI2bb30y3PuaaHSJmw5kPoJ1kC5jk=
 20260614165124_leave_schema.sql h1:nMX5BEZkndFmBfl63yvqIKFsnuuMwtZ90snrBefIfrE=
 20260614170337_attendance_schema.sql h1:z7tsaY/igRA6rGJJoBcVLgeuNS6Y8d8wR5vwdeQboAw=
@@ -24,3 +24,4 @@ h1:oLQggsaW7SHc0RKzcMir4JPogQwd558ymz4gef/MCs4=
 20260628000000_goal_employee_optional.sql h1:hoRqQhbnx72W6AW/V7ev7dOKr4Iozf5SmodFEZYr74I=
 20260628010000_unify_casual_payments.sql h1:MiBVDg7VQaMd+05qYLOdWiYWPSId49zH+NBSh5m+/lc=
 20260628020000_add_consultant_vouchers.sql h1:xT3SSEfnE7IAnNQcVHqOAhGlf6KGTo0MzhNuODH8beg=
+20260705000000_add_staff_purchase_recovery.sql h1:IA9ivZnonZE+mGUVSgymyoFZzyl8ueNeKA+9YJoc48s=

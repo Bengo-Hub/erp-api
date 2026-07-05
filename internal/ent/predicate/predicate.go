@@ -243,6 +243,9 @@ type Permission func(*sql.Selector)
 // PublicHoliday is the predicate function for publicholiday builders.
 type PublicHoliday func(*sql.Selector)
 
+// RecoveryLine is the predicate function for recoveryline builders.
+type RecoveryLine func(*sql.Selector)
+
 // Region is the predicate function for region builders.
 type Region func(*sql.Selector)
 
@@ -272,6 +275,9 @@ type ShiftRosterSlot func(*sql.Selector)
 
 // ShiftRotation is the predicate function for shiftrotation builders.
 type ShiftRotation func(*sql.Selector)
+
+// StaffPurchaseDeduction is the predicate function for staffpurchasededuction builders.
+type StaffPurchaseDeduction func(*sql.Selector)
 
 // StaffShiftOverride is the predicate function for staffshiftoverride builders.
 type StaffShiftOverride func(*sql.Selector)

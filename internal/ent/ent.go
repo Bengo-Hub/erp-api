@@ -91,6 +91,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
+	"github.com/Bengo-Hub/erp-api/internal/ent/recoveryline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/reviewmetric"
@@ -101,6 +102,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftroster"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrosterslot"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrotation"
+	"github.com/Bengo-Hub/erp-api/internal/ent/staffpurchasededuction"
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
 	"github.com/Bengo-Hub/erp-api/internal/ent/task"
 	"github.com/Bengo-Hub/erp-api/internal/ent/taskcomment"
@@ -254,6 +256,7 @@ func checkColumn(t, c string) error {
 			performancereview.Table:         performancereview.ValidColumn,
 			permission.Table:                permission.ValidColumn,
 			publicholiday.Table:             publicholiday.ValidColumn,
+			recoveryline.Table:              recoveryline.ValidColumn,
 			region.Table:                    region.ValidColumn,
 			repayoption.Table:               repayoption.ValidColumn,
 			reviewmetric.Table:              reviewmetric.ValidColumn,
@@ -264,6 +267,7 @@ func checkColumn(t, c string) error {
 			shiftroster.Table:               shiftroster.ValidColumn,
 			shiftrosterslot.Table:           shiftrosterslot.ValidColumn,
 			shiftrotation.Table:             shiftrotation.ValidColumn,
+			staffpurchasededuction.Table:    staffpurchasededuction.ValidColumn,
 			staffshiftoverride.Table:        staffshiftoverride.ValidColumn,
 			task.Table:                      task.ValidColumn,
 			taskcomment.Table:               taskcomment.ValidColumn,

@@ -8,6 +8,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipline"
+	"github.com/Bengo-Hub/erp-api/internal/ent/recoveryline"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 )
 
@@ -22,13 +23,26 @@ type LabeledAmount struct {
 	NonCash     bool
 }
 
+// RecoveryAlloc is the frozen recovery of one recoverable in a run: which recoverable
+// (type + id) and how much was recovered this period. Persisted as a RecoveryLine so disburse
+// can write the amount back to the recoverable exactly once (gaps §2.7 write-back).
+type RecoveryAlloc struct {
+	Type   string // loan | advance | loss_damage | staff_purchase
+	ID     uuid.UUID
+	Amount decimal.Decimal
+}
+
 // EmployeeItemized is the labelled per-employee config the engine consumes as aggregates but
 // the payslip persists as individual lines.
 type EmployeeItemized struct {
-	Benefits    []LabeledAmount
-	Loans       []LabeledAmount
-	Advances    []LabeledAmount
-	LossDamages []LabeledAmount
+	Benefits       []LabeledAmount
+	Loans          []LabeledAmount
+	Advances       []LabeledAmount
+	LossDamages    []LabeledAmount
+	StaffPurchases []LabeledAmount
+	// Recoveries is the per-recoverable recovered amount for this period (all types), used to
+	// persist RecoveryLine snapshots for the disburse-time write-back.
+	Recoveries []RecoveryAlloc
 }
 
 // payslip_line sections (mirror schema).
@@ -121,6 +135,9 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 	for _, d := range items.LossDamages {
 		add(secAfterPaye, "loss_damage", d.Label, d.Amount, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseAfterPAYE, d.ComponentID)
 	}
+	for _, sp := range items.StaffPurchases {
+		add(secAfterPaye, "staff_purchase", sp.Label, sp.Amount, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseAfterPAYE, sp.ComponentID)
+	}
 
 	// Employer contributions (not deducted from net; for muster roll / GL / P9).
 	if res.NSSFEmployer.IsPositive() {
@@ -131,4 +148,39 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 		return nil
 	}
 	return s.orm.PayslipLine.CreateBulk(builders...).Exec(ctx)
+}
+
+// writeRecoveryLines freezes this run's per-recoverable recoveries as RecoveryLine snapshots for the
+// payslip. It replaces only UNAPPLIED lines (a re-run before disburse re-snapshots), never touching
+// lines already applied to a disbursed batch. The disburse step reads these and writes the amounts
+// back to each recoverable exactly once.
+func (s *Service) writeRecoveryLines(ctx context.Context, tenantID, payslipID, employeeID uuid.UUID, recs []RecoveryAlloc) error {
+	if _, err := s.orm.RecoveryLine.Delete().
+		Where(
+			recoveryline.TenantID(tenantID),
+			recoveryline.PayslipID(payslipID),
+			recoveryline.Applied(false),
+		).Exec(ctx); err != nil {
+		return err
+	}
+	if len(recs) == 0 {
+		return nil
+	}
+	builders := make([]*ent.RecoveryLineCreate, 0, len(recs))
+	for _, r := range recs {
+		if r.ID == uuid.Nil || !r.Amount.IsPositive() {
+			continue
+		}
+		builders = append(builders, s.orm.RecoveryLine.Create().
+			SetTenantID(tenantID).
+			SetPayslipID(payslipID).
+			SetEmployeeID(employeeID).
+			SetRecoverableType(recoveryline.RecoverableType(r.Type)).
+			SetRecoverableID(r.ID).
+			SetAmount(r.Amount))
+	}
+	if len(builders) == 0 {
+		return nil
+	}
+	return s.orm.RecoveryLine.CreateBulk(builders...).Exec(ctx)
 }
