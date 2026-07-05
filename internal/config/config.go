@@ -164,6 +164,9 @@ type ServicesConfig struct {
 	// lookup (projectsapi per reference_production_service_hosts). The list endpoint is
 	// GET /api/v1/{tenant}/projects (JWT-gated; erp-api forwards the caller's bearer token).
 	ProjectsURL string `envconfig:"PROJECTS_SERVICE_URL" default:"https://projectsapi.codevertexitsolutions.com"`
+	// SubscriptionsURL is the subscriptions-api base URL (pricingapi per reference hosts) for the
+	// per-feature entitlement check that gates premium features (e.g. staff_fund_from_salary).
+	SubscriptionsURL string `envconfig:"SUBSCRIPTIONS_SERVICE_URL" default:"https://pricingapi.codevertexitsolutions.com"`
 }
 
 type MediaConfig struct {

@@ -95,6 +95,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
+	"github.com/Bengo-Hub/erp-api/internal/ent/recoveryline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/reviewmetric"
@@ -105,6 +106,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftroster"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrosterslot"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrotation"
+	"github.com/Bengo-Hub/erp-api/internal/ent/staffpurchasededuction"
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
 	"github.com/Bengo-Hub/erp-api/internal/ent/task"
 	"github.com/Bengo-Hub/erp-api/internal/ent/taskcomment"
@@ -284,6 +286,8 @@ type Client struct {
 	Permission *PermissionClient
 	// PublicHoliday is the client for interacting with the PublicHoliday builders.
 	PublicHoliday *PublicHolidayClient
+	// RecoveryLine is the client for interacting with the RecoveryLine builders.
+	RecoveryLine *RecoveryLineClient
 	// Region is the client for interacting with the Region builders.
 	Region *RegionClient
 	// RepayOption is the client for interacting with the RepayOption builders.
@@ -304,6 +308,8 @@ type Client struct {
 	ShiftRosterSlot *ShiftRosterSlotClient
 	// ShiftRotation is the client for interacting with the ShiftRotation builders.
 	ShiftRotation *ShiftRotationClient
+	// StaffPurchaseDeduction is the client for interacting with the StaffPurchaseDeduction builders.
+	StaffPurchaseDeduction *StaffPurchaseDeductionClient
 	// StaffShiftOverride is the client for interacting with the StaffShiftOverride builders.
 	StaffShiftOverride *StaffShiftOverrideClient
 	// Task is the client for interacting with the Task builders.
@@ -422,6 +428,7 @@ func (c *Client) init() {
 	c.PerformanceReview = NewPerformanceReviewClient(c.config)
 	c.Permission = NewPermissionClient(c.config)
 	c.PublicHoliday = NewPublicHolidayClient(c.config)
+	c.RecoveryLine = NewRecoveryLineClient(c.config)
 	c.Region = NewRegionClient(c.config)
 	c.RepayOption = NewRepayOptionClient(c.config)
 	c.ReviewMetric = NewReviewMetricClient(c.config)
@@ -432,6 +439,7 @@ func (c *Client) init() {
 	c.ShiftRoster = NewShiftRosterClient(c.config)
 	c.ShiftRosterSlot = NewShiftRosterSlotClient(c.config)
 	c.ShiftRotation = NewShiftRotationClient(c.config)
+	c.StaffPurchaseDeduction = NewStaffPurchaseDeductionClient(c.config)
 	c.StaffShiftOverride = NewStaffShiftOverrideClient(c.config)
 	c.Task = NewTaskClient(c.config)
 	c.TaskComment = NewTaskCommentClient(c.config)
@@ -617,6 +625,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PerformanceReview:         NewPerformanceReviewClient(cfg),
 		Permission:                NewPermissionClient(cfg),
 		PublicHoliday:             NewPublicHolidayClient(cfg),
+		RecoveryLine:              NewRecoveryLineClient(cfg),
 		Region:                    NewRegionClient(cfg),
 		RepayOption:               NewRepayOptionClient(cfg),
 		ReviewMetric:              NewReviewMetricClient(cfg),
@@ -627,6 +636,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ShiftRoster:               NewShiftRosterClient(cfg),
 		ShiftRosterSlot:           NewShiftRosterSlotClient(cfg),
 		ShiftRotation:             NewShiftRotationClient(cfg),
+		StaffPurchaseDeduction:    NewStaffPurchaseDeductionClient(cfg),
 		StaffShiftOverride:        NewStaffShiftOverrideClient(cfg),
 		Task:                      NewTaskClient(cfg),
 		TaskComment:               NewTaskCommentClient(cfg),
@@ -739,6 +749,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PerformanceReview:         NewPerformanceReviewClient(cfg),
 		Permission:                NewPermissionClient(cfg),
 		PublicHoliday:             NewPublicHolidayClient(cfg),
+		RecoveryLine:              NewRecoveryLineClient(cfg),
 		Region:                    NewRegionClient(cfg),
 		RepayOption:               NewRepayOptionClient(cfg),
 		ReviewMetric:              NewReviewMetricClient(cfg),
@@ -749,6 +760,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ShiftRoster:               NewShiftRosterClient(cfg),
 		ShiftRosterSlot:           NewShiftRosterSlotClient(cfg),
 		ShiftRotation:             NewShiftRotationClient(cfg),
+		StaffPurchaseDeduction:    NewStaffPurchaseDeductionClient(cfg),
 		StaffShiftOverride:        NewStaffShiftOverrideClient(cfg),
 		Task:                      NewTaskClient(cfg),
 		TaskComment:               NewTaskCommentClient(cfg),
@@ -811,12 +823,13 @@ func (c *Client) Use(hooks ...Hook) {
 		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
 		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
 		c.PerformanceMetric, c.PerformanceReview, c.Permission, c.PublicHoliday,
-		c.Region, c.RepayOption, c.ReviewMetric, c.Role, c.RolePermission,
-		c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster, c.ShiftRosterSlot,
-		c.ShiftRotation, c.StaffShiftOverride, c.Task, c.TaskComment, c.TaskLog,
-		c.Timesheet, c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment,
-		c.TrainingEvaluation, c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift,
-		c.WorkShiftSchedule, c.WorkersUnion,
+		c.RecoveryLine, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
+		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
+		c.ShiftRosterSlot, c.ShiftRotation, c.StaffPurchaseDeduction,
+		c.StaffShiftOverride, c.Task, c.TaskComment, c.TaskLog, c.Timesheet,
+		c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
+		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
+		c.WorkersUnion,
 	} {
 		n.Use(hooks...)
 	}
@@ -845,12 +858,13 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
 		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
 		c.PerformanceMetric, c.PerformanceReview, c.Permission, c.PublicHoliday,
-		c.Region, c.RepayOption, c.ReviewMetric, c.Role, c.RolePermission,
-		c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster, c.ShiftRosterSlot,
-		c.ShiftRotation, c.StaffShiftOverride, c.Task, c.TaskComment, c.TaskLog,
-		c.Timesheet, c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment,
-		c.TrainingEvaluation, c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift,
-		c.WorkShiftSchedule, c.WorkersUnion,
+		c.RecoveryLine, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
+		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
+		c.ShiftRosterSlot, c.ShiftRotation, c.StaffPurchaseDeduction,
+		c.StaffShiftOverride, c.Task, c.TaskComment, c.TaskLog, c.Timesheet,
+		c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
+		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
+		c.WorkersUnion,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -1017,6 +1031,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Permission.mutate(ctx, m)
 	case *PublicHolidayMutation:
 		return c.PublicHoliday.mutate(ctx, m)
+	case *RecoveryLineMutation:
+		return c.RecoveryLine.mutate(ctx, m)
 	case *RegionMutation:
 		return c.Region.mutate(ctx, m)
 	case *RepayOptionMutation:
@@ -1037,6 +1053,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ShiftRosterSlot.mutate(ctx, m)
 	case *ShiftRotationMutation:
 		return c.ShiftRotation.mutate(ctx, m)
+	case *StaffPurchaseDeductionMutation:
+		return c.StaffPurchaseDeduction.mutate(ctx, m)
 	case *StaffShiftOverrideMutation:
 		return c.StaffShiftOverride.mutate(ctx, m)
 	case *TaskMutation:
@@ -11721,6 +11739,139 @@ func (c *PublicHolidayClient) mutate(ctx context.Context, m *PublicHolidayMutati
 	}
 }
 
+// RecoveryLineClient is a client for the RecoveryLine schema.
+type RecoveryLineClient struct {
+	config
+}
+
+// NewRecoveryLineClient returns a client for the RecoveryLine from the given config.
+func NewRecoveryLineClient(c config) *RecoveryLineClient {
+	return &RecoveryLineClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `recoveryline.Hooks(f(g(h())))`.
+func (c *RecoveryLineClient) Use(hooks ...Hook) {
+	c.hooks.RecoveryLine = append(c.hooks.RecoveryLine, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `recoveryline.Intercept(f(g(h())))`.
+func (c *RecoveryLineClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RecoveryLine = append(c.inters.RecoveryLine, interceptors...)
+}
+
+// Create returns a builder for creating a RecoveryLine entity.
+func (c *RecoveryLineClient) Create() *RecoveryLineCreate {
+	mutation := newRecoveryLineMutation(c.config, OpCreate)
+	return &RecoveryLineCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RecoveryLine entities.
+func (c *RecoveryLineClient) CreateBulk(builders ...*RecoveryLineCreate) *RecoveryLineCreateBulk {
+	return &RecoveryLineCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RecoveryLineClient) MapCreateBulk(slice any, setFunc func(*RecoveryLineCreate, int)) *RecoveryLineCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RecoveryLineCreateBulk{err: fmt.Errorf("calling to RecoveryLineClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RecoveryLineCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RecoveryLineCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RecoveryLine.
+func (c *RecoveryLineClient) Update() *RecoveryLineUpdate {
+	mutation := newRecoveryLineMutation(c.config, OpUpdate)
+	return &RecoveryLineUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RecoveryLineClient) UpdateOne(_m *RecoveryLine) *RecoveryLineUpdateOne {
+	mutation := newRecoveryLineMutation(c.config, OpUpdateOne, withRecoveryLine(_m))
+	return &RecoveryLineUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RecoveryLineClient) UpdateOneID(id uuid.UUID) *RecoveryLineUpdateOne {
+	mutation := newRecoveryLineMutation(c.config, OpUpdateOne, withRecoveryLineID(id))
+	return &RecoveryLineUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RecoveryLine.
+func (c *RecoveryLineClient) Delete() *RecoveryLineDelete {
+	mutation := newRecoveryLineMutation(c.config, OpDelete)
+	return &RecoveryLineDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RecoveryLineClient) DeleteOne(_m *RecoveryLine) *RecoveryLineDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RecoveryLineClient) DeleteOneID(id uuid.UUID) *RecoveryLineDeleteOne {
+	builder := c.Delete().Where(recoveryline.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RecoveryLineDeleteOne{builder}
+}
+
+// Query returns a query builder for RecoveryLine.
+func (c *RecoveryLineClient) Query() *RecoveryLineQuery {
+	return &RecoveryLineQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRecoveryLine},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RecoveryLine entity by its id.
+func (c *RecoveryLineClient) Get(ctx context.Context, id uuid.UUID) (*RecoveryLine, error) {
+	return c.Query().Where(recoveryline.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RecoveryLineClient) GetX(ctx context.Context, id uuid.UUID) *RecoveryLine {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RecoveryLineClient) Hooks() []Hook {
+	return c.hooks.RecoveryLine
+}
+
+// Interceptors returns the client interceptors.
+func (c *RecoveryLineClient) Interceptors() []Interceptor {
+	return c.inters.RecoveryLine
+}
+
+func (c *RecoveryLineClient) mutate(ctx context.Context, m *RecoveryLineMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RecoveryLineCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RecoveryLineUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RecoveryLineUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RecoveryLineDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RecoveryLine mutation op: %q", m.Op())
+	}
+}
+
 // RegionClient is a client for the Region schema.
 type RegionClient struct {
 	config
@@ -13128,6 +13279,139 @@ func (c *ShiftRotationClient) mutate(ctx context.Context, m *ShiftRotationMutati
 		return (&ShiftRotationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ShiftRotation mutation op: %q", m.Op())
+	}
+}
+
+// StaffPurchaseDeductionClient is a client for the StaffPurchaseDeduction schema.
+type StaffPurchaseDeductionClient struct {
+	config
+}
+
+// NewStaffPurchaseDeductionClient returns a client for the StaffPurchaseDeduction from the given config.
+func NewStaffPurchaseDeductionClient(c config) *StaffPurchaseDeductionClient {
+	return &StaffPurchaseDeductionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `staffpurchasededuction.Hooks(f(g(h())))`.
+func (c *StaffPurchaseDeductionClient) Use(hooks ...Hook) {
+	c.hooks.StaffPurchaseDeduction = append(c.hooks.StaffPurchaseDeduction, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `staffpurchasededuction.Intercept(f(g(h())))`.
+func (c *StaffPurchaseDeductionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.StaffPurchaseDeduction = append(c.inters.StaffPurchaseDeduction, interceptors...)
+}
+
+// Create returns a builder for creating a StaffPurchaseDeduction entity.
+func (c *StaffPurchaseDeductionClient) Create() *StaffPurchaseDeductionCreate {
+	mutation := newStaffPurchaseDeductionMutation(c.config, OpCreate)
+	return &StaffPurchaseDeductionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of StaffPurchaseDeduction entities.
+func (c *StaffPurchaseDeductionClient) CreateBulk(builders ...*StaffPurchaseDeductionCreate) *StaffPurchaseDeductionCreateBulk {
+	return &StaffPurchaseDeductionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *StaffPurchaseDeductionClient) MapCreateBulk(slice any, setFunc func(*StaffPurchaseDeductionCreate, int)) *StaffPurchaseDeductionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &StaffPurchaseDeductionCreateBulk{err: fmt.Errorf("calling to StaffPurchaseDeductionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*StaffPurchaseDeductionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &StaffPurchaseDeductionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for StaffPurchaseDeduction.
+func (c *StaffPurchaseDeductionClient) Update() *StaffPurchaseDeductionUpdate {
+	mutation := newStaffPurchaseDeductionMutation(c.config, OpUpdate)
+	return &StaffPurchaseDeductionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *StaffPurchaseDeductionClient) UpdateOne(_m *StaffPurchaseDeduction) *StaffPurchaseDeductionUpdateOne {
+	mutation := newStaffPurchaseDeductionMutation(c.config, OpUpdateOne, withStaffPurchaseDeduction(_m))
+	return &StaffPurchaseDeductionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *StaffPurchaseDeductionClient) UpdateOneID(id uuid.UUID) *StaffPurchaseDeductionUpdateOne {
+	mutation := newStaffPurchaseDeductionMutation(c.config, OpUpdateOne, withStaffPurchaseDeductionID(id))
+	return &StaffPurchaseDeductionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for StaffPurchaseDeduction.
+func (c *StaffPurchaseDeductionClient) Delete() *StaffPurchaseDeductionDelete {
+	mutation := newStaffPurchaseDeductionMutation(c.config, OpDelete)
+	return &StaffPurchaseDeductionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *StaffPurchaseDeductionClient) DeleteOne(_m *StaffPurchaseDeduction) *StaffPurchaseDeductionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *StaffPurchaseDeductionClient) DeleteOneID(id uuid.UUID) *StaffPurchaseDeductionDeleteOne {
+	builder := c.Delete().Where(staffpurchasededuction.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &StaffPurchaseDeductionDeleteOne{builder}
+}
+
+// Query returns a query builder for StaffPurchaseDeduction.
+func (c *StaffPurchaseDeductionClient) Query() *StaffPurchaseDeductionQuery {
+	return &StaffPurchaseDeductionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeStaffPurchaseDeduction},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a StaffPurchaseDeduction entity by its id.
+func (c *StaffPurchaseDeductionClient) Get(ctx context.Context, id uuid.UUID) (*StaffPurchaseDeduction, error) {
+	return c.Query().Where(staffpurchasededuction.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *StaffPurchaseDeductionClient) GetX(ctx context.Context, id uuid.UUID) *StaffPurchaseDeduction {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *StaffPurchaseDeductionClient) Hooks() []Hook {
+	return c.hooks.StaffPurchaseDeduction
+}
+
+// Interceptors returns the client interceptors.
+func (c *StaffPurchaseDeductionClient) Interceptors() []Interceptor {
+	return c.inters.StaffPurchaseDeduction
+}
+
+func (c *StaffPurchaseDeductionClient) mutate(ctx context.Context, m *StaffPurchaseDeductionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&StaffPurchaseDeductionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&StaffPurchaseDeductionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&StaffPurchaseDeductionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&StaffPurchaseDeductionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown StaffPurchaseDeduction mutation op: %q", m.Op())
 	}
 }
 
@@ -15108,11 +15392,12 @@ type (
 		MileageRoute, NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
 		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
 		PayslipAudit, PayslipLine, PerformanceMetric, PerformanceReview, Permission,
-		PublicHoliday, Region, RepayOption, ReviewMetric, Role, RolePermission,
-		SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
-		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
-		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
-		WithHoldingTax, WorkShift, WorkShiftSchedule, WorkersUnion []ent.Hook
+		PublicHoliday, RecoveryLine, Region, RepayOption, ReviewMetric, Role,
+		RolePermission, SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot,
+		ShiftRotation, StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment,
+		TaskLog, Timesheet, TimesheetEntry, TrainingCourse, TrainingEnrollment,
+		TrainingEvaluation, UserRoleAssignment, WithHoldingTax, WorkShift,
+		WorkShiftSchedule, WorkersUnion []ent.Hook
 	}
 	inters struct {
 		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
@@ -15131,10 +15416,11 @@ type (
 		MileageRoute, NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
 		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
 		PayslipAudit, PayslipLine, PerformanceMetric, PerformanceReview, Permission,
-		PublicHoliday, Region, RepayOption, ReviewMetric, Role, RolePermission,
-		SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
-		StaffShiftOverride, Task, TaskComment, TaskLog, Timesheet, TimesheetEntry,
-		TrainingCourse, TrainingEnrollment, TrainingEvaluation, UserRoleAssignment,
-		WithHoldingTax, WorkShift, WorkShiftSchedule, WorkersUnion []ent.Interceptor
+		PublicHoliday, RecoveryLine, Region, RepayOption, ReviewMetric, Role,
+		RolePermission, SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot,
+		ShiftRotation, StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment,
+		TaskLog, Timesheet, TimesheetEntry, TrainingCourse, TrainingEnrollment,
+		TrainingEvaluation, UserRoleAssignment, WithHoldingTax, WorkShift,
+		WorkShiftSchedule, WorkersUnion []ent.Interceptor
 	}
 )

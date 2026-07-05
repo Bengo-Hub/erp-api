@@ -111,6 +111,10 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 				}
 			case CompLossDamages:
 				addPhase(&res, phase.Name, sumRecoverables(in.LossDamages))
+			case CompStaffPurchase:
+				// POS-origin staff purchases (goods taken on credit/layaway, funded from salary),
+				// recovered like any other installment recoverable.
+				addPhase(&res, phase.Name, sumRecoverables(in.StaffPurchases))
 			case CompNonCash:
 				// When NonCashAsTaxable, the benefit is in-kind: it is taxed via the taxable
 				// add-back in applyPAYE and must NOT be deducted from cash net pay. Legacy mode

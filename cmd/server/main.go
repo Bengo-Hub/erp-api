@@ -56,6 +56,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/rbac"
 	"github.com/Bengo-Hub/erp-api/internal/modules/recruitment"
 	"github.com/Bengo-Hub/erp-api/internal/modules/reports"
+	"github.com/Bengo-Hub/erp-api/internal/modules/staffpurchase"
 	"github.com/Bengo-Hub/erp-api/internal/modules/tasks"
 	"github.com/Bengo-Hub/erp-api/internal/modules/training"
 	platformauth "github.com/Bengo-Hub/erp-api/internal/platform/auth"
@@ -64,6 +65,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
 	"github.com/Bengo-Hub/erp-api/internal/platform/lookups"
 	"github.com/Bengo-Hub/erp-api/internal/platform/media"
+	subs "github.com/Bengo-Hub/erp-api/internal/platform/subscriptions"
 	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 	"github.com/Bengo-Hub/erp-api/internal/services/usersync"
 	"github.com/Bengo-Hub/erp-api/internal/shared/logger"
@@ -229,6 +231,10 @@ func run() error {
 	treasuryClient := treasury.NewClient(cfg.Services.TreasuryURL, cfg.Auth.APIKey, log)
 	employeesHandler.WithTreasury(treasuryClient) // enables /hrm/banks/* verify proxy
 	payrollDisburser := payroll.NewDisburser(orm, notifyPublisher, treasuryClient, log)
+	// POS↔ERP staff-credit: premium-gated recoverable created S2S by pos-api (staff_fund_from_salary).
+	subsGate := subs.NewClient(cfg.Services.SubscriptionsURL, cfg.Auth.APIKey, log)
+	staffPurchaseSvc := staffpurchase.NewService(orm, employeesSvc, subsGate, notifyPublisher, log)
+	staffPurchaseHandler := handlers.NewStaffPurchaseHandler(log, staffPurchaseSvc)
 	mediaStore := media.NewStore(cfg.Media.Root, cfg.Media.URLBase)
 	// Cost-allocation lookups: proxy projects-service + treasury cost-centers (JWT-forwarded);
 	// falls back to ERP-derived distinct ids when an upstream is unconfigured/unavailable.
@@ -348,6 +354,7 @@ func run() error {
 			orgSettingsHandler.RegisterRoutes(priv)
 			contractsHandler.RegisterRoutes(priv)
 			payrollSettingsHandler.RegisterRoutes(priv)
+			staffPurchaseHandler.RegisterRoutes(priv) // POS↔ERP staff-credit (S2S + reconcile)
 			leaveHandler.RegisterRoutes(priv)
 			attendanceHandler.RegisterRoutes(priv)
 			recruitmentHandler.RegisterRoutes(priv)

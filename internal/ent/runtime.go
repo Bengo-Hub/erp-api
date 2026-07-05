@@ -84,6 +84,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
+	"github.com/Bengo-Hub/erp-api/internal/ent/recoveryline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/reviewmetric"
@@ -94,6 +95,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftroster"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrosterslot"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrotation"
+	"github.com/Bengo-Hub/erp-api/internal/ent/staffpurchasededuction"
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffshiftoverride"
 	"github.com/Bengo-Hub/erp-api/internal/ent/task"
 	"github.com/Bengo-Hub/erp-api/internal/ent/taskcomment"
@@ -2304,6 +2306,24 @@ func init() {
 	publicholidayDescID := publicholidayFields[0].Descriptor()
 	// publicholiday.DefaultID holds the default value on creation for the id field.
 	publicholiday.DefaultID = publicholidayDescID.Default.(func() uuid.UUID)
+	recoverylineFields := schema.RecoveryLine{}.Fields()
+	_ = recoverylineFields
+	// recoverylineDescAmount is the schema descriptor for amount field.
+	recoverylineDescAmount := recoverylineFields[6].Descriptor()
+	// recoveryline.DefaultAmount holds the default value on creation for the amount field.
+	recoveryline.DefaultAmount = recoverylineDescAmount.Default.(decimal.Decimal)
+	// recoverylineDescApplied is the schema descriptor for applied field.
+	recoverylineDescApplied := recoverylineFields[8].Descriptor()
+	// recoveryline.DefaultApplied holds the default value on creation for the applied field.
+	recoveryline.DefaultApplied = recoverylineDescApplied.Default.(bool)
+	// recoverylineDescCreatedAt is the schema descriptor for created_at field.
+	recoverylineDescCreatedAt := recoverylineFields[9].Descriptor()
+	// recoveryline.DefaultCreatedAt holds the default value on creation for the created_at field.
+	recoveryline.DefaultCreatedAt = recoverylineDescCreatedAt.Default.(func() time.Time)
+	// recoverylineDescID is the schema descriptor for id field.
+	recoverylineDescID := recoverylineFields[0].Descriptor()
+	// recoveryline.DefaultID holds the default value on creation for the id field.
+	recoveryline.DefaultID = recoverylineDescID.Default.(func() uuid.UUID)
 	regionFields := schema.Region{}.Fields()
 	_ = regionFields
 	// regionDescName is the schema descriptor for name field.
@@ -2524,6 +2544,42 @@ func init() {
 	shiftrotationDescID := shiftrotationFields[0].Descriptor()
 	// shiftrotation.DefaultID holds the default value on creation for the id field.
 	shiftrotation.DefaultID = shiftrotationDescID.Default.(func() uuid.UUID)
+	staffpurchasedeductionFields := schema.StaffPurchaseDeduction{}.Fields()
+	_ = staffpurchasedeductionFields
+	// staffpurchasedeductionDescSourceKey is the schema descriptor for source_key field.
+	staffpurchasedeductionDescSourceKey := staffpurchasedeductionFields[5].Descriptor()
+	// staffpurchasededuction.SourceKeyValidator is a validator for the "source_key" field. It is called by the builders before save.
+	staffpurchasededuction.SourceKeyValidator = staffpurchasedeductionDescSourceKey.Validators[0].(func(string) error)
+	// staffpurchasedeductionDescPrincipal is the schema descriptor for principal field.
+	staffpurchasedeductionDescPrincipal := staffpurchasedeductionFields[6].Descriptor()
+	// staffpurchasededuction.DefaultPrincipal holds the default value on creation for the principal field.
+	staffpurchasededuction.DefaultPrincipal = staffpurchasedeductionDescPrincipal.Default.(decimal.Decimal)
+	// staffpurchasedeductionDescAmountRecovered is the schema descriptor for amount_recovered field.
+	staffpurchasedeductionDescAmountRecovered := staffpurchasedeductionFields[7].Descriptor()
+	// staffpurchasededuction.DefaultAmountRecovered holds the default value on creation for the amount_recovered field.
+	staffpurchasededuction.DefaultAmountRecovered = staffpurchasedeductionDescAmountRecovered.Default.(decimal.Decimal)
+	// staffpurchasedeductionDescInstallmentAmount is the schema descriptor for installment_amount field.
+	staffpurchasedeductionDescInstallmentAmount := staffpurchasedeductionFields[8].Descriptor()
+	// staffpurchasededuction.DefaultInstallmentAmount holds the default value on creation for the installment_amount field.
+	staffpurchasededuction.DefaultInstallmentAmount = staffpurchasedeductionDescInstallmentAmount.Default.(decimal.Decimal)
+	// staffpurchasedeductionDescIsActive is the schema descriptor for is_active field.
+	staffpurchasedeductionDescIsActive := staffpurchasedeductionFields[11].Descriptor()
+	// staffpurchasededuction.DefaultIsActive holds the default value on creation for the is_active field.
+	staffpurchasededuction.DefaultIsActive = staffpurchasedeductionDescIsActive.Default.(bool)
+	// staffpurchasedeductionDescCreatedAt is the schema descriptor for created_at field.
+	staffpurchasedeductionDescCreatedAt := staffpurchasedeductionFields[13].Descriptor()
+	// staffpurchasededuction.DefaultCreatedAt holds the default value on creation for the created_at field.
+	staffpurchasededuction.DefaultCreatedAt = staffpurchasedeductionDescCreatedAt.Default.(func() time.Time)
+	// staffpurchasedeductionDescUpdatedAt is the schema descriptor for updated_at field.
+	staffpurchasedeductionDescUpdatedAt := staffpurchasedeductionFields[14].Descriptor()
+	// staffpurchasededuction.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	staffpurchasededuction.DefaultUpdatedAt = staffpurchasedeductionDescUpdatedAt.Default.(func() time.Time)
+	// staffpurchasededuction.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	staffpurchasededuction.UpdateDefaultUpdatedAt = staffpurchasedeductionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// staffpurchasedeductionDescID is the schema descriptor for id field.
+	staffpurchasedeductionDescID := staffpurchasedeductionFields[0].Descriptor()
+	// staffpurchasededuction.DefaultID holds the default value on creation for the id field.
+	staffpurchasededuction.DefaultID = staffpurchasedeductionDescID.Default.(func() uuid.UUID)
 	staffshiftoverrideFields := schema.StaffShiftOverride{}.Fields()
 	_ = staffshiftoverrideFields
 	// staffshiftoverrideDescCreatedAt is the schema descriptor for created_at field.

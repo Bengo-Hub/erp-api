@@ -957,6 +957,18 @@ func (f PublicHolidayFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Valu
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PublicHolidayMutation", m)
 }
 
+// The RecoveryLineFunc type is an adapter to allow the use of ordinary
+// function as RecoveryLine mutator.
+type RecoveryLineFunc func(context.Context, *ent.RecoveryLineMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RecoveryLineFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RecoveryLineMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RecoveryLineMutation", m)
+}
+
 // The RegionFunc type is an adapter to allow the use of ordinary
 // function as Region mutator.
 type RegionFunc func(context.Context, *ent.RegionMutation) (ent.Value, error)
@@ -1075,6 +1087,18 @@ func (f ShiftRotationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Valu
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ShiftRotationMutation", m)
+}
+
+// The StaffPurchaseDeductionFunc type is an adapter to allow the use of ordinary
+// function as StaffPurchaseDeduction mutator.
+type StaffPurchaseDeductionFunc func(context.Context, *ent.StaffPurchaseDeductionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f StaffPurchaseDeductionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.StaffPurchaseDeductionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.StaffPurchaseDeductionMutation", m)
 }
 
 // The StaffShiftOverrideFunc type is an adapter to allow the use of ordinary

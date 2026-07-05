@@ -170,6 +170,8 @@ type Tx struct {
 	Permission *PermissionClient
 	// PublicHoliday is the client for interacting with the PublicHoliday builders.
 	PublicHoliday *PublicHolidayClient
+	// RecoveryLine is the client for interacting with the RecoveryLine builders.
+	RecoveryLine *RecoveryLineClient
 	// Region is the client for interacting with the Region builders.
 	Region *RegionClient
 	// RepayOption is the client for interacting with the RepayOption builders.
@@ -190,6 +192,8 @@ type Tx struct {
 	ShiftRosterSlot *ShiftRosterSlotClient
 	// ShiftRotation is the client for interacting with the ShiftRotation builders.
 	ShiftRotation *ShiftRotationClient
+	// StaffPurchaseDeduction is the client for interacting with the StaffPurchaseDeduction builders.
+	StaffPurchaseDeduction *StaffPurchaseDeductionClient
 	// StaffShiftOverride is the client for interacting with the StaffShiftOverride builders.
 	StaffShiftOverride *StaffShiftOverrideClient
 	// Task is the client for interacting with the Task builders.
@@ -428,6 +432,7 @@ func (tx *Tx) init() {
 	tx.PerformanceReview = NewPerformanceReviewClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
 	tx.PublicHoliday = NewPublicHolidayClient(tx.config)
+	tx.RecoveryLine = NewRecoveryLineClient(tx.config)
 	tx.Region = NewRegionClient(tx.config)
 	tx.RepayOption = NewRepayOptionClient(tx.config)
 	tx.ReviewMetric = NewReviewMetricClient(tx.config)
@@ -438,6 +443,7 @@ func (tx *Tx) init() {
 	tx.ShiftRoster = NewShiftRosterClient(tx.config)
 	tx.ShiftRosterSlot = NewShiftRosterSlotClient(tx.config)
 	tx.ShiftRotation = NewShiftRotationClient(tx.config)
+	tx.StaffPurchaseDeduction = NewStaffPurchaseDeductionClient(tx.config)
 	tx.StaffShiftOverride = NewStaffShiftOverrideClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
 	tx.TaskComment = NewTaskCommentClient(tx.config)

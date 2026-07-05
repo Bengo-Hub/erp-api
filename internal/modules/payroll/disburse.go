@@ -121,6 +121,30 @@ func (d *Disburser) Disburse(ctx context.Context, p DisburseParams) (DisburseRes
 		Save(ctx); err != nil {
 		return DisburseResult{}, fmt.Errorf("disburse: idem write: %w", err)
 	}
+	// Persist repayment write-back for every recoverable this batch recovered (loans/advances/
+	// loss-damages/staff-purchases), atomically with the GL event + batch tag (gaps §2.7). For
+	// staff purchases, publish erp.staff_purchase.recovered in the SAME tx so POS pays down the
+	// linked layaway/credit balance.
+	settlements, err := applyRecoveries(ctx, tx, p.TenantID, ids, batchRef)
+	if err != nil {
+		return DisburseResult{}, fmt.Errorf("disburse: apply recoveries: %w", err)
+	}
+	for _, st := range settlements {
+		if err := txPub.Publish(ctx, p.TenantID, st.PurchaseID.String(), "staff_purchase.recovered", map[string]any{
+			"staff_purchase_id":      st.PurchaseID.String(),
+			"source_key":             st.SourceKey,
+			"origin":                 st.Origin,
+			"pos_reference":          st.POSReference,
+			"amount_recovered":       st.AmountRecovered.StringFixed(2),
+			"amount_recovered_total": st.AmountRecoveredTotal.StringFixed(2),
+			"outstanding":            st.Outstanding.StringFixed(2),
+			"settled":                st.Settled,
+			"batch_ref":              batchRef,
+			"period":                 p.Period.Format("2006-01-02"),
+		}); err != nil {
+			return DisburseResult{}, fmt.Errorf("disburse: publish staff_purchase.recovered: %w", err)
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		return DisburseResult{}, fmt.Errorf("disburse: commit: %w", err)
 	}
@@ -217,6 +241,27 @@ func (d *Disburser) Reverse(ctx context.Context, p DisburseParams) (DisburseResu
 		SetKey(idemKey).SetScope("payroll.reverse").SetTenantID(p.TenantID).SetStatus("processed").
 		Save(ctx); err != nil {
 		return DisburseResult{}, fmt.Errorf("reverse: idem write: %w", err)
+	}
+	// Undo the batch's recoverable write-back and re-open any staff-purchase balances in POS.
+	reversals, err := reverseRecoveries(ctx, tx, p.TenantID, ids, batchRef)
+	if err != nil {
+		return DisburseResult{}, fmt.Errorf("reverse: undo recoveries: %w", err)
+	}
+	for _, st := range reversals {
+		if err := txPub.Publish(ctx, p.TenantID, st.PurchaseID.String(), "staff_purchase.recovery_reversed", map[string]any{
+			"staff_purchase_id":      st.PurchaseID.String(),
+			"source_key":             st.SourceKey,
+			"origin":                 st.Origin,
+			"pos_reference":          st.POSReference,
+			"amount_recovered":       st.AmountRecovered.StringFixed(2), // negative delta
+			"amount_recovered_total": st.AmountRecoveredTotal.StringFixed(2),
+			"outstanding":            st.Outstanding.StringFixed(2),
+			"settled":                false,
+			"batch_ref":              batchRef,
+			"period":                 p.Period.Format("2006-01-02"),
+		}); err != nil {
+			return DisburseResult{}, fmt.Errorf("reverse: publish staff_purchase.recovery_reversed: %w", err)
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return DisburseResult{}, fmt.Errorf("reverse: commit: %w", err)

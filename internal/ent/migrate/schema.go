@@ -2791,6 +2791,47 @@ var (
 			},
 		},
 	}
+	// RecoveryLinesColumns holds the columns for the "recovery_lines" table.
+	RecoveryLinesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "payslip_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "recoverable_type", Type: field.TypeEnum, Enums: []string{"loan", "advance", "loss_damage", "staff_purchase"}},
+		{Name: "recoverable_id", Type: field.TypeUUID},
+		{Name: "amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "batch_ref", Type: field.TypeString, Nullable: true},
+		{Name: "applied", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// RecoveryLinesTable holds the schema information for the "recovery_lines" table.
+	RecoveryLinesTable = &schema.Table{
+		Name:       "recovery_lines",
+		Columns:    RecoveryLinesColumns,
+		PrimaryKey: []*schema.Column{RecoveryLinesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "recoveryline_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{RecoveryLinesColumns[1]},
+			},
+			{
+				Name:    "recoveryline_payslip_id",
+				Unique:  false,
+				Columns: []*schema.Column{RecoveryLinesColumns[2]},
+			},
+			{
+				Name:    "recoveryline_tenant_id_applied",
+				Unique:  false,
+				Columns: []*schema.Column{RecoveryLinesColumns[1], RecoveryLinesColumns[8]},
+			},
+			{
+				Name:    "recoveryline_payslip_id_recoverable_type_recoverable_id",
+				Unique:  true,
+				Columns: []*schema.Column{RecoveryLinesColumns[2], RecoveryLinesColumns[4], RecoveryLinesColumns[5]},
+			},
+		},
+	}
 	// RegionsColumns holds the columns for the "regions" table.
 	RegionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -3121,6 +3162,47 @@ var (
 				Name:    "shiftrotation_tenant_id_is_active",
 				Unique:  false,
 				Columns: []*schema.Column{ShiftRotationsColumns[1], ShiftRotationsColumns[11]},
+			},
+		},
+	}
+	// StaffPurchaseDeductionsColumns holds the columns for the "staff_purchase_deductions" table.
+	StaffPurchaseDeductionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "origin", Type: field.TypeEnum, Enums: []string{"layaway", "credit_sale"}},
+		{Name: "pos_reference", Type: field.TypeString, Nullable: true},
+		{Name: "source_key", Type: field.TypeString},
+		{Name: "principal", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "amount_recovered", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "installment_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "installments_total", Type: field.TypeInt, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "settled", "cancelled"}, Default: "active"},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "last_settled_batch", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// StaffPurchaseDeductionsTable holds the schema information for the "staff_purchase_deductions" table.
+	StaffPurchaseDeductionsTable = &schema.Table{
+		Name:       "staff_purchase_deductions",
+		Columns:    StaffPurchaseDeductionsColumns,
+		PrimaryKey: []*schema.Column{StaffPurchaseDeductionsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "staffpurchasededuction_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{StaffPurchaseDeductionsColumns[1]},
+			},
+			{
+				Name:    "staffpurchasededuction_employee_id_is_active",
+				Unique:  false,
+				Columns: []*schema.Column{StaffPurchaseDeductionsColumns[2], StaffPurchaseDeductionsColumns[11]},
+			},
+			{
+				Name:    "staffpurchasededuction_tenant_id_source_key",
+				Unique:  true,
+				Columns: []*schema.Column{StaffPurchaseDeductionsColumns[1], StaffPurchaseDeductionsColumns[5]},
 			},
 		},
 	}
@@ -3698,6 +3780,7 @@ var (
 		PerformanceReviewsTable,
 		PermissionsTable,
 		PublicHolidaysTable,
+		RecoveryLinesTable,
 		RegionsTable,
 		RepayOptionsTable,
 		ReviewMetricsTable,
@@ -3708,6 +3791,7 @@ var (
 		ShiftRostersTable,
 		ShiftRosterSlotsTable,
 		ShiftRotationsTable,
+		StaffPurchaseDeductionsTable,
 		StaffShiftOverridesTable,
 		TasksTable,
 		TaskCommentsTable,
