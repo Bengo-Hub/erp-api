@@ -48,6 +48,27 @@ func KRADefaults() Config {
 			EmployeePercentage: mustDec("1"),
 			EmployerPercentage: mustDec("1"),
 		},
+		// NITA industrial training levy: flat KES 50/employee/month, employer-only.
+		// Never affects employee deductions or net pay (golden master unchanged).
+		NITA: &FormulaRates{
+			Bands:              []Band{{From: mustDec("0"), To: Inf, Amount: mustDec("50")}},
+			EmployerPercentage: mustDec("1"),
+		},
 		RecoverAdvances: true,
+	}
+}
+
+// NSSFYear4 returns the NSSF Act 2013 Third Schedule YEAR 4 rate set, effective 1 Feb 2026:
+// Tier I up to KES 9,000 and Tier II 9,001–108,000, 6% employee matched 100% by the employer
+// (max KES 6,480 per side). Seeded by cmd/seed-payroll as the current NSSF formula; the
+// KRADefaults NSSF above stays on the earlier limits because it is the golden-master oracle.
+func NSSFYear4() *FormulaRates {
+	return &FormulaRates{
+		Bands: []Band{
+			{From: mustDec("0"), To: mustDec("9000"), Rate: mustDec("0.06")},
+			{From: mustDec("9000"), To: mustDec("108000"), Rate: mustDec("0.06")},
+		},
+		EmployeePercentage: mustDec("1"),
+		EmployerPercentage: mustDec("1"),
 	}
 }

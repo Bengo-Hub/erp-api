@@ -143,6 +143,9 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 	if res.NSSFEmployer.IsPositive() {
 		add(secEmployer, "nssf_employer", "N.S.S.F. Employer", decimal.Zero, decimal.Zero, res.NSSFEmployer, false, false, "", nil)
 	}
+	if res.NITAEmployer.IsPositive() {
+		add(secEmployer, "nita", "NITA Levy", decimal.Zero, decimal.Zero, res.NITAEmployer, false, false, "", nil)
+	}
 
 	if len(builders) == 0 {
 		return nil

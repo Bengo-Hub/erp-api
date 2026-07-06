@@ -79,6 +79,15 @@ type Config struct {
 	SHIF        *FormulaRates // SHIF (set when SHIF is effective)
 	NHIF        *FormulaRates // legacy NHIF (set when NHIF is effective)
 	HousingLevy *FormulaRates // housing levy (required)
+	// NITA is the industrial training levy (employer-only, flat per employee per month —
+	// KES 50). Optional: nil when the tenant has no NITA formula configured. Never affects
+	// employee deductions or net pay; surfaces as an employer contribution only.
+	NITA *FormulaRates
+	// Disabled marks components (Comp* codes) a tenant has DELIBERATELY switched off via
+	// statutory settings — the engine skips them silently. This is distinct from a missing
+	// formula on an ENABLED component, which still fails loud (ErrFormulaNotConfigured,
+	// gaps §2.2). A nil map means everything is enabled (zero-value Config unchanged).
+	Disabled map[string]bool
 	// DeductionOrder drives phasing. Empty => DefaultDeductionOrder().
 	DeductionOrder []Phase
 	// RecoverAdvances gates salary-advance recovery for this run.
@@ -113,6 +122,9 @@ const (
 	CompNHIF        = "nhif"
 	CompHousingLevy = "housing_levy"
 	CompPAYE        = "paye"
+	// CompNITA is computed outside the phase loop (employer-only); the constant exists for
+	// Config.Disabled keying and payslip-line coding, not for DeductionOrder membership.
+	CompNITA = "nita"
 	CompLoans         = "loans"
 	CompAdvances      = "advances"
 	CompLossDamages   = "loss_damages"

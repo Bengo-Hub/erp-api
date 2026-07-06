@@ -29,6 +29,16 @@ func (GeneralHRSettings) Fields() []ent.Field {
 		moneyField("round_off_amount"),
 		field.Bool("allow_backwards_payroll").Default(false),
 
+		// Statutory deduction toggles — a deliberate per-tenant opt-out (e.g. non-Kenya tenant,
+		// owner-only business with no payroll obligations). Default ON: disabling any of these
+		// for a normal Kenyan employer is non-compliant. The payroll engine skips disabled
+		// components silently; enabled-but-unconfigured formulas still fail loud (gaps §2.2).
+		field.Bool("paye_enabled").Default(true),
+		field.Bool("nssf_enabled").Default(true),
+		field.Bool("shif_enabled").Default(true).Comment("Health: disables both SHIF and legacy NHIF"),
+		field.Bool("housing_levy_enabled").Default(true),
+		field.Bool("nita_enabled").Default(true),
+
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

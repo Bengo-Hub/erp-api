@@ -8,6 +8,8 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
+	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payslipline"
 )
 
 // nitaPerEmployee is the default monthly NITA Industrial Training Levy per employee (KES).
@@ -111,8 +113,23 @@ func (s *Service) HousingLevy(ctx context.Context, tenantID uuid.UUID, f Filter)
 	return rep, nil
 }
 
-// NITA is the Industrial Training Levy return: a flat per-employee monthly levy.
+// NITA is the Industrial Training Levy return: a flat per-employee monthly levy
+// (employer-only). The levy is read from each payslip's itemised "nita" employer line
+// (formula-driven); legacy payslips processed before that line existed fall back to the
+// default KES 50. Tenants that disabled NITA in statutory settings get an empty return.
 func (s *Service) NITA(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
+	rep := &Report{
+		Report:  "nita",
+		Period:  periodMeta(f),
+		Columns: []string{"employee", "levy"},
+		Rows:    []map[string]any{},
+	}
+	if enabled, err := s.nitaEnabled(ctx, tenantID); err != nil {
+		return nil, err
+	} else if !enabled {
+		rep.Totals = map[string]any{"count": 0, "levy": money(d())}
+		return rep, nil
+	}
 	slips, err := s.fetchPayslips(ctx, tenantID, f)
 	if err != nil {
 		return nil, err
@@ -121,22 +138,62 @@ func (s *Service) NITA(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	if err != nil {
 		return nil, err
 	}
-	rep := &Report{
-		Report:  "nita",
-		Period:  periodMeta(f),
-		Columns: []string{"employee", "levy"},
-		Rows:    []map[string]any{},
+	levies, err := s.nitaLineAmounts(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
 	}
 	total := d()
 	for _, p := range slips {
+		levy := nitaPerEmployee
+		if v, ok := levies[p.ID]; ok {
+			levy = v
+		}
 		rep.Rows = append(rep.Rows, map[string]any{
 			"employee": empName(emps[p.EmployeeID]),
-			"levy":     money(nitaPerEmployee),
+			"levy":     money(levy),
 		})
-		total = total.Add(nitaPerEmployee)
+		total = total.Add(levy)
 	}
 	rep.Totals = map[string]any{"count": len(slips), "levy": money(total)}
 	return rep, nil
+}
+
+// nitaEnabled reads the tenant's NITA toggle (missing settings row = enabled).
+func (s *Service) nitaEnabled(ctx context.Context, tenantID uuid.UUID) (bool, error) {
+	g, err := s.orm.GeneralHRSettings.Query().
+		Where(generalhrsettings.TenantID(tenantID)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return g.NitaEnabled, nil
+}
+
+// nitaLineAmounts maps payslip ID → itemised NITA employer amount for the given slips.
+func (s *Service) nitaLineAmounts(ctx context.Context, tenantID uuid.UUID, slips []*ent.Payslip) (map[uuid.UUID]decimal.Decimal, error) {
+	if len(slips) == 0 {
+		return nil, nil
+	}
+	ids := make([]uuid.UUID, 0, len(slips))
+	for _, p := range slips {
+		ids = append(ids, p.ID)
+	}
+	lines, err := s.orm.PayslipLine.Query().
+		Where(
+			payslipline.TenantID(tenantID),
+			payslipline.PayslipIDIn(ids...),
+			payslipline.Code("nita"),
+		).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uuid.UUID]decimal.Decimal, len(lines))
+	for _, l := range lines {
+		out[l.PayslipID] = l.EmployerAmount
+	}
+	return out, nil
 }
 
 // WithholdingTax is the WHT return: per-employee PAYE withheld (the ERP withholds PAYE on

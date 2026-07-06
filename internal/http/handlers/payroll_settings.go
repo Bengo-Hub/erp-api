@@ -716,6 +716,11 @@ func generalHRView(g *ent.GeneralHRSettings) map[string]any {
 		"round_off_currency":        g.RoundOffCurrency,
 		"round_off_amount":          g.RoundOffAmount.StringFixed(2),
 		"allow_backwards_payroll":   g.AllowBackwardsPayroll,
+		"paye_enabled":              g.PayeEnabled,
+		"nssf_enabled":              g.NssfEnabled,
+		"shif_enabled":              g.ShifEnabled,
+		"housing_levy_enabled":      g.HousingLevyEnabled,
+		"nita_enabled":              g.NitaEnabled,
 		"updated_at":                g.UpdatedAt.Format(time.RFC3339),
 	}
 }
@@ -728,8 +733,16 @@ func (h *PayrollSettingsHandler) GetGeneralHR(w http.ResponseWriter, r *http.Req
 	g, err := h.orm.GeneralHRSettings.Query().
 		Where(generalhrsettings.TenantID(scope.TenantID)).Only(r.Context())
 	if ent.IsNotFound(err) {
-		// Return an empty list-shape (UI resolves a singleton from the envelope).
-		writeJSON(w, http.StatusOK, map[string]any{"data": []any{}})
+		// No row yet — return the effective defaults (statutory toggles ON) so the UI renders
+		// the true behaviour instead of an empty envelope (which read as "everything off").
+		// No id: the first save creates the row.
+		writeJSON(w, http.StatusOK, map[string]any{
+			"paye_enabled":         true,
+			"nssf_enabled":         true,
+			"shif_enabled":         true,
+			"housing_levy_enabled": true,
+			"nita_enabled":         true,
+		})
 		return
 	}
 	if err != nil {
@@ -747,6 +760,11 @@ type generalHRBody struct {
 	OvertimeNormalDays    string `json:"overtime_normal_days"`
 	OvertimeNonWorking    string `json:"overtime_non_working_days"`
 	OvertimeHolidays      string `json:"overtime_holidays"`
+	PayeEnabled           *bool  `json:"paye_enabled"`
+	NssfEnabled           *bool  `json:"nssf_enabled"`
+	ShifEnabled           *bool  `json:"shif_enabled"`
+	HousingLevyEnabled    *bool  `json:"housing_levy_enabled"`
+	NitaEnabled           *bool  `json:"nita_enabled"`
 }
 
 func (h *PayrollSettingsHandler) UpsertGeneralHR(w http.ResponseWriter, r *http.Request) {
@@ -783,6 +801,21 @@ func (h *PayrollSettingsHandler) UpsertGeneralHR(w http.ResponseWriter, r *http.
 		}
 		if b.AllowBackwardsPayroll != nil {
 			c = c.SetAllowBackwardsPayroll(*b.AllowBackwardsPayroll)
+		}
+		if b.PayeEnabled != nil {
+			c = c.SetPayeEnabled(*b.PayeEnabled)
+		}
+		if b.NssfEnabled != nil {
+			c = c.SetNssfEnabled(*b.NssfEnabled)
+		}
+		if b.ShifEnabled != nil {
+			c = c.SetShifEnabled(*b.ShifEnabled)
+		}
+		if b.HousingLevyEnabled != nil {
+			c = c.SetHousingLevyEnabled(*b.HousingLevyEnabled)
+		}
+		if b.NitaEnabled != nil {
+			c = c.SetNitaEnabled(*b.NitaEnabled)
 		}
 		row, cerr := c.Save(r.Context())
 		if cerr != nil {
@@ -825,6 +858,21 @@ func (h *PayrollSettingsHandler) UpsertGeneralHR(w http.ResponseWriter, r *http.
 	}
 	if b.AllowBackwardsPayroll != nil {
 		u = u.SetAllowBackwardsPayroll(*b.AllowBackwardsPayroll)
+	}
+	if b.PayeEnabled != nil {
+		u = u.SetPayeEnabled(*b.PayeEnabled)
+	}
+	if b.NssfEnabled != nil {
+		u = u.SetNssfEnabled(*b.NssfEnabled)
+	}
+	if b.ShifEnabled != nil {
+		u = u.SetShifEnabled(*b.ShifEnabled)
+	}
+	if b.HousingLevyEnabled != nil {
+		u = u.SetHousingLevyEnabled(*b.HousingLevyEnabled)
+	}
+	if b.NitaEnabled != nil {
+		u = u.SetNitaEnabled(*b.NitaEnabled)
 	}
 	row, err := u.Save(r.Context())
 	if err != nil {

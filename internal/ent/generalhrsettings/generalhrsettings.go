@@ -31,6 +31,16 @@ const (
 	FieldRoundOffAmount = "round_off_amount"
 	// FieldAllowBackwardsPayroll holds the string denoting the allow_backwards_payroll field in the database.
 	FieldAllowBackwardsPayroll = "allow_backwards_payroll"
+	// FieldPayeEnabled holds the string denoting the paye_enabled field in the database.
+	FieldPayeEnabled = "paye_enabled"
+	// FieldNssfEnabled holds the string denoting the nssf_enabled field in the database.
+	FieldNssfEnabled = "nssf_enabled"
+	// FieldShifEnabled holds the string denoting the shif_enabled field in the database.
+	FieldShifEnabled = "shif_enabled"
+	// FieldHousingLevyEnabled holds the string denoting the housing_levy_enabled field in the database.
+	FieldHousingLevyEnabled = "housing_levy_enabled"
+	// FieldNitaEnabled holds the string denoting the nita_enabled field in the database.
+	FieldNitaEnabled = "nita_enabled"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -50,6 +60,11 @@ var Columns = []string{
 	FieldRoundOffCurrency,
 	FieldRoundOffAmount,
 	FieldAllowBackwardsPayroll,
+	FieldPayeEnabled,
+	FieldNssfEnabled,
+	FieldShifEnabled,
+	FieldHousingLevyEnabled,
+	FieldNitaEnabled,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -79,6 +94,16 @@ var (
 	DefaultRoundOffAmount decimal.Decimal
 	// DefaultAllowBackwardsPayroll holds the default value on creation for the "allow_backwards_payroll" field.
 	DefaultAllowBackwardsPayroll bool
+	// DefaultPayeEnabled holds the default value on creation for the "paye_enabled" field.
+	DefaultPayeEnabled bool
+	// DefaultNssfEnabled holds the default value on creation for the "nssf_enabled" field.
+	DefaultNssfEnabled bool
+	// DefaultShifEnabled holds the default value on creation for the "shif_enabled" field.
+	DefaultShifEnabled bool
+	// DefaultHousingLevyEnabled holds the default value on creation for the "housing_levy_enabled" field.
+	DefaultHousingLevyEnabled bool
+	// DefaultNitaEnabled holds the default value on creation for the "nita_enabled" field.
+	DefaultNitaEnabled bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -135,6 +160,31 @@ func ByRoundOffAmount(opts ...sql.OrderTermOption) OrderOption {
 // ByAllowBackwardsPayroll orders the results by the allow_backwards_payroll field.
 func ByAllowBackwardsPayroll(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAllowBackwardsPayroll, opts...).ToFunc()
+}
+
+// ByPayeEnabled orders the results by the paye_enabled field.
+func ByPayeEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayeEnabled, opts...).ToFunc()
+}
+
+// ByNssfEnabled orders the results by the nssf_enabled field.
+func ByNssfEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNssfEnabled, opts...).ToFunc()
+}
+
+// ByShifEnabled orders the results by the shif_enabled field.
+func ByShifEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldShifEnabled, opts...).ToFunc()
+}
+
+// ByHousingLevyEnabled orders the results by the housing_levy_enabled field.
+func ByHousingLevyEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHousingLevyEnabled, opts...).ToFunc()
+}
+
+// ByNitaEnabled orders the results by the nita_enabled field.
+func ByNitaEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNitaEnabled, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

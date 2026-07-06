@@ -19,6 +19,9 @@ type PayslipResult struct {
 	NSSFEmployeeTier1 decimal.Decimal
 	NSSFEmployeeTier2 decimal.Decimal
 	NSSFEmployer      decimal.Decimal
+	// NITAEmployer is the employer-only industrial training levy (flat per employee/month).
+	// It never enters deductions or net pay.
+	NITAEmployer decimal.Decimal
 
 	DeductionsBeforeTax decimal.Decimal
 	DeductionsAfterTax  decimal.Decimal
@@ -38,7 +41,7 @@ type PayslipResult struct {
 //	after_paye (loans/advances/loss-damages, capped at outstanding)
 //	final      (non-cash benefits)
 func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
-	if cfg.Income == nil {
+	if cfg.Income == nil && !cfg.Disabled[CompPAYE] {
 		return PayslipResult{}, fmt.Errorf("%w: income/PAYE", ErrFormulaNotConfigured)
 	}
 	order := cfg.DeductionOrder
@@ -55,6 +58,11 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 
 	for _, phase := range order {
 		for _, comp := range phase.Components {
+			// Deliberate tenant opt-out: skip silently. PAYE is the exception — applyPAYE must
+			// still run to set TaxablePay/GrossPayAfterTax (it charges no tax when disabled).
+			if cfg.Disabled[comp] && comp != CompPAYE {
+				continue
+			}
 			switch comp {
 			case CompNSSF:
 				n, err := CalculateNSSF(cfg.NSSF, gross)
@@ -129,6 +137,16 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 		}
 	}
 
+	// NITA (employer-only levy) is computed OUTSIDE the phase loop: stored per-tenant
+	// deduction orders predate it, and it never touches employee deductions or net pay.
+	if cfg.NITA != nil && !cfg.Disabled[CompNITA] {
+		nita, err := CalculateNITA(cfg.NITA)
+		if err != nil {
+			return PayslipResult{}, err
+		}
+		res.NITAEmployer = nita
+	}
+
 	_ = nssf
 	totalDeductions := res.DeductionsBeforeTax.
 		Add(res.DeductionsAfterTax).
@@ -163,8 +181,9 @@ func applyPAYE(res *PayslipResult, cfg Config, in EmployeeInput) error {
 	}
 	res.TaxablePay = taxable
 
-	// "none" => no PAYE; "" defaults to primary (legacy default behaviour).
-	if in.TaxCategory == "none" {
+	// "none" => no PAYE; "" defaults to primary (legacy default behaviour). A tenant-level
+	// PAYE opt-out behaves exactly like "none": taxable pay is still reported, no tax charged.
+	if in.TaxCategory == "none" || cfg.Disabled[CompPAYE] {
 		res.GrossPayAfterTax = taxable
 		return nil
 	}

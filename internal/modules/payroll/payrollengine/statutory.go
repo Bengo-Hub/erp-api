@@ -146,6 +146,18 @@ func CalculateNHIF(rates *FormulaRates, salary decimal.Decimal) (ContributionRes
 	return res, nil
 }
 
+// CalculateNITA computes the industrial training levy: a flat per-employee monthly amount
+// (KES 50), employer-only. The first band's flat Amount is the levy; the employer split
+// defaults to 100% when unset (there is no employee side by law).
+func CalculateNITA(rates *FormulaRates) (decimal.Decimal, error) {
+	if rates == nil || len(rates.Bands) == 0 {
+		return decimal.Zero, fmt.Errorf("%w: NITA", ErrFormulaNotConfigured)
+	}
+	amount := sortedBands(rates.Bands)[0].Amount
+	erPct := percentageOrDefault(rates.EmployerPercentage, decimal.NewFromInt(1))
+	return round2(amount.Mul(erPct)), nil
+}
+
 // percentContribution applies banded percentage rates and returns the employee/employer
 // split (relief 0 — SHIF/Housing reliefs are repealed).
 func percentContribution(rates *FormulaRates, salary decimal.Decimal) ContributionResult {

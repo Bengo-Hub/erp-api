@@ -155,6 +155,153 @@ func TestTaxableAllowances_IncreaseGrossAndPAYE(t *testing.T) {
 	}
 }
 
+// TestDisabled_NSSF: a deliberate tenant opt-out (Disabled) skips the component silently even
+// with no rates configured — distinct from the fail-loud missing-formula path.
+func TestDisabled_NSSF(t *testing.T) {
+	cfg := kra2025Config()
+	cfg.NSSF = nil
+	cfg.Disabled = map[string]bool{CompNSSF: true}
+	res, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatalf("compute: %v", err)
+	}
+	if !res.NSSFEmployeeTier1.IsZero() || !res.NSSFEmployeeTier2.IsZero() || !res.NSSFEmployer.IsZero() {
+		t.Errorf("NSSF should be zero when disabled: t1=%s t2=%s er=%s", res.NSSFEmployeeTier1, res.NSSFEmployeeTier2, res.NSSFEmployer)
+	}
+	// before-tax now only SHIF (2750) + housing (1500) = 4250; taxable = 95750.
+	if !res.DeductionsBeforeTax.Equal(d("4250")) {
+		t.Errorf("before_tax: got %s want 4250", res.DeductionsBeforeTax)
+	}
+	if !res.TaxablePay.Equal(d("95750")) {
+		t.Errorf("taxable: got %s want 95750", res.TaxablePay)
+	}
+}
+
+// TestDisabled_PAYE: disabling PAYE behaves like tax category "none" — taxable pay is still
+// reported, no tax charged, and a missing income table is tolerated.
+func TestDisabled_PAYE(t *testing.T) {
+	cfg := kra2025Config()
+	cfg.Income = nil
+	cfg.IncomeSecondary = nil
+	cfg.Disabled = map[string]bool{CompPAYE: true}
+	res, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatalf("compute: %v", err)
+	}
+	if !res.PAYE.IsZero() || !res.PersonalRelief.IsZero() {
+		t.Errorf("PAYE/relief should be zero when disabled: paye=%s relief=%s", res.PAYE, res.PersonalRelief)
+	}
+	if !res.TaxablePay.Equal(d("91430")) {
+		t.Errorf("taxable: got %s want 91430", res.TaxablePay)
+	}
+	if !res.GrossPayAfterTax.Equal(res.TaxablePay) {
+		t.Errorf("gross after tax %s should equal taxable %s", res.GrossPayAfterTax, res.TaxablePay)
+	}
+	// net = gross - before-tax statutory only (8570)
+	if !res.NetPay.Equal(d("91430")) {
+		t.Errorf("net: got %s want 91430", res.NetPay)
+	}
+}
+
+// TestDisabled_SHIF: disabling health covers both SHIF and legacy NHIF with neither configured.
+func TestDisabled_SHIF(t *testing.T) {
+	cfg := kra2025Config()
+	cfg.SHIF = nil
+	cfg.NHIF = nil
+	cfg.Disabled = map[string]bool{CompSHIF: true, CompNHIF: true}
+	res, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatalf("compute: %v", err)
+	}
+	if !res.SHIFOrNHIF.IsZero() {
+		t.Errorf("SHIF should be zero when disabled, got %s", res.SHIFOrNHIF)
+	}
+	// before-tax = NSSF 4320 + housing 1500 = 5820
+	if !res.DeductionsBeforeTax.Equal(d("5820")) {
+		t.Errorf("before_tax: got %s want 5820", res.DeductionsBeforeTax)
+	}
+}
+
+// TestDisabled_Housing: housing levy opt-out with no rates configured.
+func TestDisabled_Housing(t *testing.T) {
+	cfg := kra2025Config()
+	cfg.HousingLevy = nil
+	cfg.Disabled = map[string]bool{CompHousingLevy: true}
+	res, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatalf("compute: %v", err)
+	}
+	if !res.HousingLevy.IsZero() {
+		t.Errorf("housing should be zero when disabled, got %s", res.HousingLevy)
+	}
+}
+
+// TestDisabled_All: with every statutory component off, net pay equals gross (no recoverables).
+func TestDisabled_All(t *testing.T) {
+	cfg := Config{
+		Disabled: map[string]bool{
+			CompPAYE: true, CompNSSF: true, CompSHIF: true, CompNHIF: true,
+			CompHousingLevy: true, CompNITA: true,
+		},
+	}
+	res, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatalf("compute: %v", err)
+	}
+	if !res.NetPay.Equal(d("100000")) {
+		t.Errorf("net: got %s want 100000 (gross, everything disabled)", res.NetPay)
+	}
+	if !res.NITAEmployer.IsZero() {
+		t.Errorf("NITA should be zero when disabled, got %s", res.NITAEmployer)
+	}
+}
+
+// TestNITA_EmployerOnly: the NITA levy is charged to the employer and never touches
+// employee deductions or net pay.
+func TestNITA_EmployerOnly(t *testing.T) {
+	withNita := kra2025Config()
+	without := kra2025Config()
+	without.NITA = nil
+
+	in := EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"}
+	a, err := Compute(withNita, in)
+	if err != nil {
+		t.Fatalf("with NITA: %v", err)
+	}
+	b, err := Compute(without, in)
+	if err != nil {
+		t.Fatalf("without NITA: %v", err)
+	}
+	if !a.NITAEmployer.Equal(d("50")) {
+		t.Errorf("NITA employer: got %s want 50", a.NITAEmployer)
+	}
+	if !b.NITAEmployer.IsZero() {
+		t.Errorf("NITA should be zero when unconfigured, got %s", b.NITAEmployer)
+	}
+	if !a.NetPay.Equal(b.NetPay) {
+		t.Errorf("NITA must not change net pay: %s vs %s", a.NetPay, b.NetPay)
+	}
+}
+
+// TestNSSFYear4_Limits verifies the Year-4 rate set seeded by cmd/seed-payroll (effective
+// Feb 2026): tiers 9,000/108,000 @6%, max 540 + 5,940 = 6,480 per side.
+func TestNSSFYear4_Limits(t *testing.T) {
+	rates := NSSFYear4()
+	res, err := CalculateNSSF(rates, d("120000")) // above the UEL -> capped
+	if err != nil {
+		t.Fatalf("nssf: %v", err)
+	}
+	if !res.Tier1Employee.Equal(d("540")) {
+		t.Errorf("tier1: got %s want 540", res.Tier1Employee)
+	}
+	if !res.Tier2Employee.Equal(d("5940")) {
+		t.Errorf("tier2: got %s want 5940", res.Tier2Employee)
+	}
+	if !res.TotalEmployer.Equal(d("6480")) {
+		t.Errorf("employer: got %s want 6480", res.TotalEmployer)
+	}
+}
+
 // TestNonCashAsTaxable verifies the corrected non-cash treatment: excess over the monthly
 // exemption is taxed (added to taxable pay) and NOT deducted from net pay; the legacy default
 // keeps deducting it from net, untaxed.

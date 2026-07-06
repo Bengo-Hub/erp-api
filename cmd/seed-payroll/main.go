@@ -32,6 +32,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/config"
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
 	"github.com/Bengo-Hub/erp-api/internal/modules/defaults"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 )
@@ -90,13 +91,18 @@ func main() {
 
 func seed(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
 	def := payrollengine.KRADefaults()
-	// Effective dates use the public KRA commencement dates for each levy.
+	// Effective dates use the public KRA commencement dates for each levy. NSSF is handled
+	// separately (ensureNSSFYear4): its phased Third-Schedule limits need an upgrade path.
 	formulas := []statutoryFormula{
 		{"income", "primary", "P.A.Y.E. (Finance Act 2023)", "Finance Act 2023", def.Income, date(2023, 7, 1), true},
 		{"income", "secondary", "P.A.Y.E. — Secondary Employment", "Finance Act 2023", def.IncomeSecondary, date(2023, 7, 1), false},
-		{"deduction", "social_security_fund", "N.S.S.F.", "NSSF Act 2013", def.NSSF, date(2024, 2, 1), false},
 		{"deduction", "shif", "S.H.I.F.", "SHIF Act 2023", def.SHIF, date(2024, 10, 1), false},
 		{"deduction", "housing_levy", "Affordable Housing Levy", "Affordable Housing Act 2024", def.HousingLevy, date(2024, 3, 1), false},
+		{"deduction", "nita", "NITA Industrial Training Levy", "Industrial Training (Training Levy) Order, 2007", def.NITA, date(2007, 6, 1), false},
+	}
+
+	if err := ensureNSSFYear4(ctx, client, tenantID); err != nil {
+		return err
 	}
 
 	for _, f := range formulas {
@@ -136,6 +142,64 @@ func seed(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
 		return err
 	}
 	log.Printf("  seeded global appraisal template")
+	return nil
+}
+
+// nssfYear4UEL is the Year-4 Tier II upper earnings limit — the marker distinguishing an
+// up-to-date NSSF formula from an earlier phase.
+var nssfYear4UEL = decimal.NewFromInt(108000)
+
+// ensureNSSFYear4 brings the system tenant's NSSF formula to the Act 2013 Third Schedule
+// YEAR 4 limits (effective 1 Feb 2026: tiers 9,000 / 108,000, max 6,480/side). An existing
+// current formula on earlier limits is retired (is_current=false, effective_to 2026-01-31)
+// and the Year-4 row seeded as current — the partial unique index allows only one current
+// row per (tenant, type, category). Idempotent: a current row already at the Year-4 UEL is
+// left untouched.
+func ensureNSSFYear4(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
+	current, err := client.PayrollFormula.Query().
+		Where(
+			payrollformula.TenantID(tenantID),
+			payrollformula.TypeEQ("deduction"),
+			payrollformula.CategoryEQ("social_security_fund"),
+			payrollformula.IsCurrent(true),
+		).
+		First(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return err
+	}
+	if current != nil {
+		items, err := client.PayrollFormulaItem.Query().
+			Where(payrollformulaitem.TenantID(tenantID), payrollformulaitem.FormulaID(current.ID)).
+			All(ctx)
+		if err != nil {
+			return err
+		}
+		for _, it := range items {
+			if it.AmountTo.GreaterThanOrEqual(nssfYear4UEL) {
+				log.Printf("  skip deduction/social_security_fund (already on Year 4 limits)")
+				return nil
+			}
+		}
+		// Retire the earlier-phase row; Year 4 commences 2026-02-01.
+		if _, err := current.Update().
+			SetIsCurrent(false).
+			SetEffectiveTo(date(2026, 1, 31)).
+			Save(ctx); err != nil {
+			return err
+		}
+		log.Printf("  retired earlier NSSF limits (effective_to 2026-01-31)")
+	}
+	if err := seedFormula(ctx, client, tenantID, statutoryFormula{
+		ftype:         "deduction",
+		category:      "social_security_fund",
+		title:         "N.S.S.F. (Year 4)",
+		regSource:     "NSSF Act 2013 — Third Schedule, Year 4",
+		rates:         payrollengine.NSSFYear4(),
+		effectiveFrom: date(2026, 2, 1),
+	}); err != nil {
+		return err
+	}
+	log.Printf("  seeded deduction/social_security_fund Year 4 (tiers 9,000/108,000)")
 	return nil
 }
 
