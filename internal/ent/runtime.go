@@ -1382,12 +1382,32 @@ func init() {
 	generalhrsettingsDescAllowBackwardsPayroll := generalhrsettingsFields[8].Descriptor()
 	// generalhrsettings.DefaultAllowBackwardsPayroll holds the default value on creation for the allow_backwards_payroll field.
 	generalhrsettings.DefaultAllowBackwardsPayroll = generalhrsettingsDescAllowBackwardsPayroll.Default.(bool)
+	// generalhrsettingsDescPayeEnabled is the schema descriptor for paye_enabled field.
+	generalhrsettingsDescPayeEnabled := generalhrsettingsFields[9].Descriptor()
+	// generalhrsettings.DefaultPayeEnabled holds the default value on creation for the paye_enabled field.
+	generalhrsettings.DefaultPayeEnabled = generalhrsettingsDescPayeEnabled.Default.(bool)
+	// generalhrsettingsDescNssfEnabled is the schema descriptor for nssf_enabled field.
+	generalhrsettingsDescNssfEnabled := generalhrsettingsFields[10].Descriptor()
+	// generalhrsettings.DefaultNssfEnabled holds the default value on creation for the nssf_enabled field.
+	generalhrsettings.DefaultNssfEnabled = generalhrsettingsDescNssfEnabled.Default.(bool)
+	// generalhrsettingsDescShifEnabled is the schema descriptor for shif_enabled field.
+	generalhrsettingsDescShifEnabled := generalhrsettingsFields[11].Descriptor()
+	// generalhrsettings.DefaultShifEnabled holds the default value on creation for the shif_enabled field.
+	generalhrsettings.DefaultShifEnabled = generalhrsettingsDescShifEnabled.Default.(bool)
+	// generalhrsettingsDescHousingLevyEnabled is the schema descriptor for housing_levy_enabled field.
+	generalhrsettingsDescHousingLevyEnabled := generalhrsettingsFields[12].Descriptor()
+	// generalhrsettings.DefaultHousingLevyEnabled holds the default value on creation for the housing_levy_enabled field.
+	generalhrsettings.DefaultHousingLevyEnabled = generalhrsettingsDescHousingLevyEnabled.Default.(bool)
+	// generalhrsettingsDescNitaEnabled is the schema descriptor for nita_enabled field.
+	generalhrsettingsDescNitaEnabled := generalhrsettingsFields[13].Descriptor()
+	// generalhrsettings.DefaultNitaEnabled holds the default value on creation for the nita_enabled field.
+	generalhrsettings.DefaultNitaEnabled = generalhrsettingsDescNitaEnabled.Default.(bool)
 	// generalhrsettingsDescCreatedAt is the schema descriptor for created_at field.
-	generalhrsettingsDescCreatedAt := generalhrsettingsFields[9].Descriptor()
+	generalhrsettingsDescCreatedAt := generalhrsettingsFields[14].Descriptor()
 	// generalhrsettings.DefaultCreatedAt holds the default value on creation for the created_at field.
 	generalhrsettings.DefaultCreatedAt = generalhrsettingsDescCreatedAt.Default.(func() time.Time)
 	// generalhrsettingsDescUpdatedAt is the schema descriptor for updated_at field.
-	generalhrsettingsDescUpdatedAt := generalhrsettingsFields[10].Descriptor()
+	generalhrsettingsDescUpdatedAt := generalhrsettingsFields[15].Descriptor()
 	// generalhrsettings.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	generalhrsettings.DefaultUpdatedAt = generalhrsettingsDescUpdatedAt.Default.(func() time.Time)
 	// generalhrsettings.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

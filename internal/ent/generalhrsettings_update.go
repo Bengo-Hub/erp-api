@@ -142,6 +142,76 @@ func (_u *GeneralHRSettingsUpdate) SetNillableAllowBackwardsPayroll(v *bool) *Ge
 	return _u
 }
 
+// SetPayeEnabled sets the "paye_enabled" field.
+func (_u *GeneralHRSettingsUpdate) SetPayeEnabled(v bool) *GeneralHRSettingsUpdate {
+	_u.mutation.SetPayeEnabled(v)
+	return _u
+}
+
+// SetNillablePayeEnabled sets the "paye_enabled" field if the given value is not nil.
+func (_u *GeneralHRSettingsUpdate) SetNillablePayeEnabled(v *bool) *GeneralHRSettingsUpdate {
+	if v != nil {
+		_u.SetPayeEnabled(*v)
+	}
+	return _u
+}
+
+// SetNssfEnabled sets the "nssf_enabled" field.
+func (_u *GeneralHRSettingsUpdate) SetNssfEnabled(v bool) *GeneralHRSettingsUpdate {
+	_u.mutation.SetNssfEnabled(v)
+	return _u
+}
+
+// SetNillableNssfEnabled sets the "nssf_enabled" field if the given value is not nil.
+func (_u *GeneralHRSettingsUpdate) SetNillableNssfEnabled(v *bool) *GeneralHRSettingsUpdate {
+	if v != nil {
+		_u.SetNssfEnabled(*v)
+	}
+	return _u
+}
+
+// SetShifEnabled sets the "shif_enabled" field.
+func (_u *GeneralHRSettingsUpdate) SetShifEnabled(v bool) *GeneralHRSettingsUpdate {
+	_u.mutation.SetShifEnabled(v)
+	return _u
+}
+
+// SetNillableShifEnabled sets the "shif_enabled" field if the given value is not nil.
+func (_u *GeneralHRSettingsUpdate) SetNillableShifEnabled(v *bool) *GeneralHRSettingsUpdate {
+	if v != nil {
+		_u.SetShifEnabled(*v)
+	}
+	return _u
+}
+
+// SetHousingLevyEnabled sets the "housing_levy_enabled" field.
+func (_u *GeneralHRSettingsUpdate) SetHousingLevyEnabled(v bool) *GeneralHRSettingsUpdate {
+	_u.mutation.SetHousingLevyEnabled(v)
+	return _u
+}
+
+// SetNillableHousingLevyEnabled sets the "housing_levy_enabled" field if the given value is not nil.
+func (_u *GeneralHRSettingsUpdate) SetNillableHousingLevyEnabled(v *bool) *GeneralHRSettingsUpdate {
+	if v != nil {
+		_u.SetHousingLevyEnabled(*v)
+	}
+	return _u
+}
+
+// SetNitaEnabled sets the "nita_enabled" field.
+func (_u *GeneralHRSettingsUpdate) SetNitaEnabled(v bool) *GeneralHRSettingsUpdate {
+	_u.mutation.SetNitaEnabled(v)
+	return _u
+}
+
+// SetNillableNitaEnabled sets the "nita_enabled" field if the given value is not nil.
+func (_u *GeneralHRSettingsUpdate) SetNillableNitaEnabled(v *bool) *GeneralHRSettingsUpdate {
+	if v != nil {
+		_u.SetNitaEnabled(*v)
+	}
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *GeneralHRSettingsUpdate) SetUpdatedAt(v time.Time) *GeneralHRSettingsUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -221,6 +291,21 @@ func (_u *GeneralHRSettingsUpdate) sqlSave(ctx context.Context) (_node int, err 
 	}
 	if value, ok := _u.mutation.AllowBackwardsPayroll(); ok {
 		_spec.SetField(generalhrsettings.FieldAllowBackwardsPayroll, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.PayeEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldPayeEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.NssfEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldNssfEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ShifEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldShifEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.HousingLevyEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldHousingLevyEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.NitaEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldNitaEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(generalhrsettings.FieldUpdatedAt, field.TypeTime, value)
@@ -357,6 +442,76 @@ func (_u *GeneralHRSettingsUpdateOne) SetNillableAllowBackwardsPayroll(v *bool) 
 	return _u
 }
 
+// SetPayeEnabled sets the "paye_enabled" field.
+func (_u *GeneralHRSettingsUpdateOne) SetPayeEnabled(v bool) *GeneralHRSettingsUpdateOne {
+	_u.mutation.SetPayeEnabled(v)
+	return _u
+}
+
+// SetNillablePayeEnabled sets the "paye_enabled" field if the given value is not nil.
+func (_u *GeneralHRSettingsUpdateOne) SetNillablePayeEnabled(v *bool) *GeneralHRSettingsUpdateOne {
+	if v != nil {
+		_u.SetPayeEnabled(*v)
+	}
+	return _u
+}
+
+// SetNssfEnabled sets the "nssf_enabled" field.
+func (_u *GeneralHRSettingsUpdateOne) SetNssfEnabled(v bool) *GeneralHRSettingsUpdateOne {
+	_u.mutation.SetNssfEnabled(v)
+	return _u
+}
+
+// SetNillableNssfEnabled sets the "nssf_enabled" field if the given value is not nil.
+func (_u *GeneralHRSettingsUpdateOne) SetNillableNssfEnabled(v *bool) *GeneralHRSettingsUpdateOne {
+	if v != nil {
+		_u.SetNssfEnabled(*v)
+	}
+	return _u
+}
+
+// SetShifEnabled sets the "shif_enabled" field.
+func (_u *GeneralHRSettingsUpdateOne) SetShifEnabled(v bool) *GeneralHRSettingsUpdateOne {
+	_u.mutation.SetShifEnabled(v)
+	return _u
+}
+
+// SetNillableShifEnabled sets the "shif_enabled" field if the given value is not nil.
+func (_u *GeneralHRSettingsUpdateOne) SetNillableShifEnabled(v *bool) *GeneralHRSettingsUpdateOne {
+	if v != nil {
+		_u.SetShifEnabled(*v)
+	}
+	return _u
+}
+
+// SetHousingLevyEnabled sets the "housing_levy_enabled" field.
+func (_u *GeneralHRSettingsUpdateOne) SetHousingLevyEnabled(v bool) *GeneralHRSettingsUpdateOne {
+	_u.mutation.SetHousingLevyEnabled(v)
+	return _u
+}
+
+// SetNillableHousingLevyEnabled sets the "housing_levy_enabled" field if the given value is not nil.
+func (_u *GeneralHRSettingsUpdateOne) SetNillableHousingLevyEnabled(v *bool) *GeneralHRSettingsUpdateOne {
+	if v != nil {
+		_u.SetHousingLevyEnabled(*v)
+	}
+	return _u
+}
+
+// SetNitaEnabled sets the "nita_enabled" field.
+func (_u *GeneralHRSettingsUpdateOne) SetNitaEnabled(v bool) *GeneralHRSettingsUpdateOne {
+	_u.mutation.SetNitaEnabled(v)
+	return _u
+}
+
+// SetNillableNitaEnabled sets the "nita_enabled" field if the given value is not nil.
+func (_u *GeneralHRSettingsUpdateOne) SetNillableNitaEnabled(v *bool) *GeneralHRSettingsUpdateOne {
+	if v != nil {
+		_u.SetNitaEnabled(*v)
+	}
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *GeneralHRSettingsUpdateOne) SetUpdatedAt(v time.Time) *GeneralHRSettingsUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -466,6 +621,21 @@ func (_u *GeneralHRSettingsUpdateOne) sqlSave(ctx context.Context) (_node *Gener
 	}
 	if value, ok := _u.mutation.AllowBackwardsPayroll(); ok {
 		_spec.SetField(generalhrsettings.FieldAllowBackwardsPayroll, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.PayeEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldPayeEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.NssfEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldNssfEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ShifEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldShifEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.HousingLevyEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldHousingLevyEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.NitaEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldNitaEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(generalhrsettings.FieldUpdatedAt, field.TypeTime, value)

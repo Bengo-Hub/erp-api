@@ -96,6 +96,31 @@ func AllowBackwardsPayroll(v bool) predicate.GeneralHRSettings {
 	return predicate.GeneralHRSettings(sql.FieldEQ(FieldAllowBackwardsPayroll, v))
 }
 
+// PayeEnabled applies equality check predicate on the "paye_enabled" field. It's identical to PayeEnabledEQ.
+func PayeEnabled(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldEQ(FieldPayeEnabled, v))
+}
+
+// NssfEnabled applies equality check predicate on the "nssf_enabled" field. It's identical to NssfEnabledEQ.
+func NssfEnabled(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldEQ(FieldNssfEnabled, v))
+}
+
+// ShifEnabled applies equality check predicate on the "shif_enabled" field. It's identical to ShifEnabledEQ.
+func ShifEnabled(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldEQ(FieldShifEnabled, v))
+}
+
+// HousingLevyEnabled applies equality check predicate on the "housing_levy_enabled" field. It's identical to HousingLevyEnabledEQ.
+func HousingLevyEnabled(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldEQ(FieldHousingLevyEnabled, v))
+}
+
+// NitaEnabled applies equality check predicate on the "nita_enabled" field. It's identical to NitaEnabledEQ.
+func NitaEnabled(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldEQ(FieldNitaEnabled, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.GeneralHRSettings {
 	return predicate.GeneralHRSettings(sql.FieldEQ(FieldCreatedAt, v))
@@ -444,6 +469,56 @@ func AllowBackwardsPayrollEQ(v bool) predicate.GeneralHRSettings {
 // AllowBackwardsPayrollNEQ applies the NEQ predicate on the "allow_backwards_payroll" field.
 func AllowBackwardsPayrollNEQ(v bool) predicate.GeneralHRSettings {
 	return predicate.GeneralHRSettings(sql.FieldNEQ(FieldAllowBackwardsPayroll, v))
+}
+
+// PayeEnabledEQ applies the EQ predicate on the "paye_enabled" field.
+func PayeEnabledEQ(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldEQ(FieldPayeEnabled, v))
+}
+
+// PayeEnabledNEQ applies the NEQ predicate on the "paye_enabled" field.
+func PayeEnabledNEQ(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldNEQ(FieldPayeEnabled, v))
+}
+
+// NssfEnabledEQ applies the EQ predicate on the "nssf_enabled" field.
+func NssfEnabledEQ(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldEQ(FieldNssfEnabled, v))
+}
+
+// NssfEnabledNEQ applies the NEQ predicate on the "nssf_enabled" field.
+func NssfEnabledNEQ(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldNEQ(FieldNssfEnabled, v))
+}
+
+// ShifEnabledEQ applies the EQ predicate on the "shif_enabled" field.
+func ShifEnabledEQ(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldEQ(FieldShifEnabled, v))
+}
+
+// ShifEnabledNEQ applies the NEQ predicate on the "shif_enabled" field.
+func ShifEnabledNEQ(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldNEQ(FieldShifEnabled, v))
+}
+
+// HousingLevyEnabledEQ applies the EQ predicate on the "housing_levy_enabled" field.
+func HousingLevyEnabledEQ(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldEQ(FieldHousingLevyEnabled, v))
+}
+
+// HousingLevyEnabledNEQ applies the NEQ predicate on the "housing_levy_enabled" field.
+func HousingLevyEnabledNEQ(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldNEQ(FieldHousingLevyEnabled, v))
+}
+
+// NitaEnabledEQ applies the EQ predicate on the "nita_enabled" field.
+func NitaEnabledEQ(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldEQ(FieldNitaEnabled, v))
+}
+
+// NitaEnabledNEQ applies the NEQ predicate on the "nita_enabled" field.
+func NitaEnabledNEQ(v bool) predicate.GeneralHRSettings {
+	return predicate.GeneralHRSettings(sql.FieldNEQ(FieldNitaEnabled, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

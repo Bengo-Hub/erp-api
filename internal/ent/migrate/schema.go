@@ -1613,6 +1613,11 @@ var (
 		{Name: "round_off_currency", Type: field.TypeString, Default: "KES"},
 		{Name: "round_off_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
 		{Name: "allow_backwards_payroll", Type: field.TypeBool, Default: false},
+		{Name: "paye_enabled", Type: field.TypeBool, Default: true},
+		{Name: "nssf_enabled", Type: field.TypeBool, Default: true},
+		{Name: "shif_enabled", Type: field.TypeBool, Default: true},
+		{Name: "housing_levy_enabled", Type: field.TypeBool, Default: true},
+		{Name: "nita_enabled", Type: field.TypeBool, Default: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}

@@ -129,6 +129,76 @@ func (_c *GeneralHRSettingsCreate) SetNillableAllowBackwardsPayroll(v *bool) *Ge
 	return _c
 }
 
+// SetPayeEnabled sets the "paye_enabled" field.
+func (_c *GeneralHRSettingsCreate) SetPayeEnabled(v bool) *GeneralHRSettingsCreate {
+	_c.mutation.SetPayeEnabled(v)
+	return _c
+}
+
+// SetNillablePayeEnabled sets the "paye_enabled" field if the given value is not nil.
+func (_c *GeneralHRSettingsCreate) SetNillablePayeEnabled(v *bool) *GeneralHRSettingsCreate {
+	if v != nil {
+		_c.SetPayeEnabled(*v)
+	}
+	return _c
+}
+
+// SetNssfEnabled sets the "nssf_enabled" field.
+func (_c *GeneralHRSettingsCreate) SetNssfEnabled(v bool) *GeneralHRSettingsCreate {
+	_c.mutation.SetNssfEnabled(v)
+	return _c
+}
+
+// SetNillableNssfEnabled sets the "nssf_enabled" field if the given value is not nil.
+func (_c *GeneralHRSettingsCreate) SetNillableNssfEnabled(v *bool) *GeneralHRSettingsCreate {
+	if v != nil {
+		_c.SetNssfEnabled(*v)
+	}
+	return _c
+}
+
+// SetShifEnabled sets the "shif_enabled" field.
+func (_c *GeneralHRSettingsCreate) SetShifEnabled(v bool) *GeneralHRSettingsCreate {
+	_c.mutation.SetShifEnabled(v)
+	return _c
+}
+
+// SetNillableShifEnabled sets the "shif_enabled" field if the given value is not nil.
+func (_c *GeneralHRSettingsCreate) SetNillableShifEnabled(v *bool) *GeneralHRSettingsCreate {
+	if v != nil {
+		_c.SetShifEnabled(*v)
+	}
+	return _c
+}
+
+// SetHousingLevyEnabled sets the "housing_levy_enabled" field.
+func (_c *GeneralHRSettingsCreate) SetHousingLevyEnabled(v bool) *GeneralHRSettingsCreate {
+	_c.mutation.SetHousingLevyEnabled(v)
+	return _c
+}
+
+// SetNillableHousingLevyEnabled sets the "housing_levy_enabled" field if the given value is not nil.
+func (_c *GeneralHRSettingsCreate) SetNillableHousingLevyEnabled(v *bool) *GeneralHRSettingsCreate {
+	if v != nil {
+		_c.SetHousingLevyEnabled(*v)
+	}
+	return _c
+}
+
+// SetNitaEnabled sets the "nita_enabled" field.
+func (_c *GeneralHRSettingsCreate) SetNitaEnabled(v bool) *GeneralHRSettingsCreate {
+	_c.mutation.SetNitaEnabled(v)
+	return _c
+}
+
+// SetNillableNitaEnabled sets the "nita_enabled" field if the given value is not nil.
+func (_c *GeneralHRSettingsCreate) SetNillableNitaEnabled(v *bool) *GeneralHRSettingsCreate {
+	if v != nil {
+		_c.SetNitaEnabled(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *GeneralHRSettingsCreate) SetCreatedAt(v time.Time) *GeneralHRSettingsCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -234,6 +304,26 @@ func (_c *GeneralHRSettingsCreate) defaults() {
 		v := generalhrsettings.DefaultAllowBackwardsPayroll
 		_c.mutation.SetAllowBackwardsPayroll(v)
 	}
+	if _, ok := _c.mutation.PayeEnabled(); !ok {
+		v := generalhrsettings.DefaultPayeEnabled
+		_c.mutation.SetPayeEnabled(v)
+	}
+	if _, ok := _c.mutation.NssfEnabled(); !ok {
+		v := generalhrsettings.DefaultNssfEnabled
+		_c.mutation.SetNssfEnabled(v)
+	}
+	if _, ok := _c.mutation.ShifEnabled(); !ok {
+		v := generalhrsettings.DefaultShifEnabled
+		_c.mutation.SetShifEnabled(v)
+	}
+	if _, ok := _c.mutation.HousingLevyEnabled(); !ok {
+		v := generalhrsettings.DefaultHousingLevyEnabled
+		_c.mutation.SetHousingLevyEnabled(v)
+	}
+	if _, ok := _c.mutation.NitaEnabled(); !ok {
+		v := generalhrsettings.DefaultNitaEnabled
+		_c.mutation.SetNitaEnabled(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := generalhrsettings.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -273,6 +363,21 @@ func (_c *GeneralHRSettingsCreate) check() error {
 	}
 	if _, ok := _c.mutation.AllowBackwardsPayroll(); !ok {
 		return &ValidationError{Name: "allow_backwards_payroll", err: errors.New(`ent: missing required field "GeneralHRSettings.allow_backwards_payroll"`)}
+	}
+	if _, ok := _c.mutation.PayeEnabled(); !ok {
+		return &ValidationError{Name: "paye_enabled", err: errors.New(`ent: missing required field "GeneralHRSettings.paye_enabled"`)}
+	}
+	if _, ok := _c.mutation.NssfEnabled(); !ok {
+		return &ValidationError{Name: "nssf_enabled", err: errors.New(`ent: missing required field "GeneralHRSettings.nssf_enabled"`)}
+	}
+	if _, ok := _c.mutation.ShifEnabled(); !ok {
+		return &ValidationError{Name: "shif_enabled", err: errors.New(`ent: missing required field "GeneralHRSettings.shif_enabled"`)}
+	}
+	if _, ok := _c.mutation.HousingLevyEnabled(); !ok {
+		return &ValidationError{Name: "housing_levy_enabled", err: errors.New(`ent: missing required field "GeneralHRSettings.housing_levy_enabled"`)}
+	}
+	if _, ok := _c.mutation.NitaEnabled(); !ok {
+		return &ValidationError{Name: "nita_enabled", err: errors.New(`ent: missing required field "GeneralHRSettings.nita_enabled"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "GeneralHRSettings.created_at"`)}
@@ -347,6 +452,26 @@ func (_c *GeneralHRSettingsCreate) createSpec() (*GeneralHRSettings, *sqlgraph.C
 	if value, ok := _c.mutation.AllowBackwardsPayroll(); ok {
 		_spec.SetField(generalhrsettings.FieldAllowBackwardsPayroll, field.TypeBool, value)
 		_node.AllowBackwardsPayroll = value
+	}
+	if value, ok := _c.mutation.PayeEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldPayeEnabled, field.TypeBool, value)
+		_node.PayeEnabled = value
+	}
+	if value, ok := _c.mutation.NssfEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldNssfEnabled, field.TypeBool, value)
+		_node.NssfEnabled = value
+	}
+	if value, ok := _c.mutation.ShifEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldShifEnabled, field.TypeBool, value)
+		_node.ShifEnabled = value
+	}
+	if value, ok := _c.mutation.HousingLevyEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldHousingLevyEnabled, field.TypeBool, value)
+		_node.HousingLevyEnabled = value
+	}
+	if value, ok := _c.mutation.NitaEnabled(); ok {
+		_spec.SetField(generalhrsettings.FieldNitaEnabled, field.TypeBool, value)
+		_node.NitaEnabled = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(generalhrsettings.FieldCreatedAt, field.TypeTime, value)
@@ -501,6 +626,66 @@ func (u *GeneralHRSettingsUpsert) SetAllowBackwardsPayroll(v bool) *GeneralHRSet
 // UpdateAllowBackwardsPayroll sets the "allow_backwards_payroll" field to the value that was provided on create.
 func (u *GeneralHRSettingsUpsert) UpdateAllowBackwardsPayroll() *GeneralHRSettingsUpsert {
 	u.SetExcluded(generalhrsettings.FieldAllowBackwardsPayroll)
+	return u
+}
+
+// SetPayeEnabled sets the "paye_enabled" field.
+func (u *GeneralHRSettingsUpsert) SetPayeEnabled(v bool) *GeneralHRSettingsUpsert {
+	u.Set(generalhrsettings.FieldPayeEnabled, v)
+	return u
+}
+
+// UpdatePayeEnabled sets the "paye_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsert) UpdatePayeEnabled() *GeneralHRSettingsUpsert {
+	u.SetExcluded(generalhrsettings.FieldPayeEnabled)
+	return u
+}
+
+// SetNssfEnabled sets the "nssf_enabled" field.
+func (u *GeneralHRSettingsUpsert) SetNssfEnabled(v bool) *GeneralHRSettingsUpsert {
+	u.Set(generalhrsettings.FieldNssfEnabled, v)
+	return u
+}
+
+// UpdateNssfEnabled sets the "nssf_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsert) UpdateNssfEnabled() *GeneralHRSettingsUpsert {
+	u.SetExcluded(generalhrsettings.FieldNssfEnabled)
+	return u
+}
+
+// SetShifEnabled sets the "shif_enabled" field.
+func (u *GeneralHRSettingsUpsert) SetShifEnabled(v bool) *GeneralHRSettingsUpsert {
+	u.Set(generalhrsettings.FieldShifEnabled, v)
+	return u
+}
+
+// UpdateShifEnabled sets the "shif_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsert) UpdateShifEnabled() *GeneralHRSettingsUpsert {
+	u.SetExcluded(generalhrsettings.FieldShifEnabled)
+	return u
+}
+
+// SetHousingLevyEnabled sets the "housing_levy_enabled" field.
+func (u *GeneralHRSettingsUpsert) SetHousingLevyEnabled(v bool) *GeneralHRSettingsUpsert {
+	u.Set(generalhrsettings.FieldHousingLevyEnabled, v)
+	return u
+}
+
+// UpdateHousingLevyEnabled sets the "housing_levy_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsert) UpdateHousingLevyEnabled() *GeneralHRSettingsUpsert {
+	u.SetExcluded(generalhrsettings.FieldHousingLevyEnabled)
+	return u
+}
+
+// SetNitaEnabled sets the "nita_enabled" field.
+func (u *GeneralHRSettingsUpsert) SetNitaEnabled(v bool) *GeneralHRSettingsUpsert {
+	u.Set(generalhrsettings.FieldNitaEnabled, v)
+	return u
+}
+
+// UpdateNitaEnabled sets the "nita_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsert) UpdateNitaEnabled() *GeneralHRSettingsUpsert {
+	u.SetExcluded(generalhrsettings.FieldNitaEnabled)
 	return u
 }
 
@@ -676,6 +861,76 @@ func (u *GeneralHRSettingsUpsertOne) SetAllowBackwardsPayroll(v bool) *GeneralHR
 func (u *GeneralHRSettingsUpsertOne) UpdateAllowBackwardsPayroll() *GeneralHRSettingsUpsertOne {
 	return u.Update(func(s *GeneralHRSettingsUpsert) {
 		s.UpdateAllowBackwardsPayroll()
+	})
+}
+
+// SetPayeEnabled sets the "paye_enabled" field.
+func (u *GeneralHRSettingsUpsertOne) SetPayeEnabled(v bool) *GeneralHRSettingsUpsertOne {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.SetPayeEnabled(v)
+	})
+}
+
+// UpdatePayeEnabled sets the "paye_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsertOne) UpdatePayeEnabled() *GeneralHRSettingsUpsertOne {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.UpdatePayeEnabled()
+	})
+}
+
+// SetNssfEnabled sets the "nssf_enabled" field.
+func (u *GeneralHRSettingsUpsertOne) SetNssfEnabled(v bool) *GeneralHRSettingsUpsertOne {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.SetNssfEnabled(v)
+	})
+}
+
+// UpdateNssfEnabled sets the "nssf_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsertOne) UpdateNssfEnabled() *GeneralHRSettingsUpsertOne {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.UpdateNssfEnabled()
+	})
+}
+
+// SetShifEnabled sets the "shif_enabled" field.
+func (u *GeneralHRSettingsUpsertOne) SetShifEnabled(v bool) *GeneralHRSettingsUpsertOne {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.SetShifEnabled(v)
+	})
+}
+
+// UpdateShifEnabled sets the "shif_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsertOne) UpdateShifEnabled() *GeneralHRSettingsUpsertOne {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.UpdateShifEnabled()
+	})
+}
+
+// SetHousingLevyEnabled sets the "housing_levy_enabled" field.
+func (u *GeneralHRSettingsUpsertOne) SetHousingLevyEnabled(v bool) *GeneralHRSettingsUpsertOne {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.SetHousingLevyEnabled(v)
+	})
+}
+
+// UpdateHousingLevyEnabled sets the "housing_levy_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsertOne) UpdateHousingLevyEnabled() *GeneralHRSettingsUpsertOne {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.UpdateHousingLevyEnabled()
+	})
+}
+
+// SetNitaEnabled sets the "nita_enabled" field.
+func (u *GeneralHRSettingsUpsertOne) SetNitaEnabled(v bool) *GeneralHRSettingsUpsertOne {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.SetNitaEnabled(v)
+	})
+}
+
+// UpdateNitaEnabled sets the "nita_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsertOne) UpdateNitaEnabled() *GeneralHRSettingsUpsertOne {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.UpdateNitaEnabled()
 	})
 }
 
@@ -1020,6 +1275,76 @@ func (u *GeneralHRSettingsUpsertBulk) SetAllowBackwardsPayroll(v bool) *GeneralH
 func (u *GeneralHRSettingsUpsertBulk) UpdateAllowBackwardsPayroll() *GeneralHRSettingsUpsertBulk {
 	return u.Update(func(s *GeneralHRSettingsUpsert) {
 		s.UpdateAllowBackwardsPayroll()
+	})
+}
+
+// SetPayeEnabled sets the "paye_enabled" field.
+func (u *GeneralHRSettingsUpsertBulk) SetPayeEnabled(v bool) *GeneralHRSettingsUpsertBulk {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.SetPayeEnabled(v)
+	})
+}
+
+// UpdatePayeEnabled sets the "paye_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsertBulk) UpdatePayeEnabled() *GeneralHRSettingsUpsertBulk {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.UpdatePayeEnabled()
+	})
+}
+
+// SetNssfEnabled sets the "nssf_enabled" field.
+func (u *GeneralHRSettingsUpsertBulk) SetNssfEnabled(v bool) *GeneralHRSettingsUpsertBulk {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.SetNssfEnabled(v)
+	})
+}
+
+// UpdateNssfEnabled sets the "nssf_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsertBulk) UpdateNssfEnabled() *GeneralHRSettingsUpsertBulk {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.UpdateNssfEnabled()
+	})
+}
+
+// SetShifEnabled sets the "shif_enabled" field.
+func (u *GeneralHRSettingsUpsertBulk) SetShifEnabled(v bool) *GeneralHRSettingsUpsertBulk {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.SetShifEnabled(v)
+	})
+}
+
+// UpdateShifEnabled sets the "shif_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsertBulk) UpdateShifEnabled() *GeneralHRSettingsUpsertBulk {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.UpdateShifEnabled()
+	})
+}
+
+// SetHousingLevyEnabled sets the "housing_levy_enabled" field.
+func (u *GeneralHRSettingsUpsertBulk) SetHousingLevyEnabled(v bool) *GeneralHRSettingsUpsertBulk {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.SetHousingLevyEnabled(v)
+	})
+}
+
+// UpdateHousingLevyEnabled sets the "housing_levy_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsertBulk) UpdateHousingLevyEnabled() *GeneralHRSettingsUpsertBulk {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.UpdateHousingLevyEnabled()
+	})
+}
+
+// SetNitaEnabled sets the "nita_enabled" field.
+func (u *GeneralHRSettingsUpsertBulk) SetNitaEnabled(v bool) *GeneralHRSettingsUpsertBulk {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.SetNitaEnabled(v)
+	})
+}
+
+// UpdateNitaEnabled sets the "nita_enabled" field to the value that was provided on create.
+func (u *GeneralHRSettingsUpsertBulk) UpdateNitaEnabled() *GeneralHRSettingsUpsertBulk {
+	return u.Update(func(s *GeneralHRSettingsUpsert) {
+		s.UpdateNitaEnabled()
 	})
 }
 

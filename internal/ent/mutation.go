@@ -45823,6 +45823,11 @@ type GeneralHRSettingsMutation struct {
 	round_off_currency        *string
 	round_off_amount          *decimal.Decimal
 	allow_backwards_payroll   *bool
+	paye_enabled              *bool
+	nssf_enabled              *bool
+	shif_enabled              *bool
+	housing_levy_enabled      *bool
+	nita_enabled              *bool
 	created_at                *time.Time
 	updated_at                *time.Time
 	clearedFields             map[string]struct{}
@@ -46223,6 +46228,186 @@ func (m *GeneralHRSettingsMutation) ResetAllowBackwardsPayroll() {
 	m.allow_backwards_payroll = nil
 }
 
+// SetPayeEnabled sets the "paye_enabled" field.
+func (m *GeneralHRSettingsMutation) SetPayeEnabled(b bool) {
+	m.paye_enabled = &b
+}
+
+// PayeEnabled returns the value of the "paye_enabled" field in the mutation.
+func (m *GeneralHRSettingsMutation) PayeEnabled() (r bool, exists bool) {
+	v := m.paye_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayeEnabled returns the old "paye_enabled" field's value of the GeneralHRSettings entity.
+// If the GeneralHRSettings object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeneralHRSettingsMutation) OldPayeEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayeEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayeEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayeEnabled: %w", err)
+	}
+	return oldValue.PayeEnabled, nil
+}
+
+// ResetPayeEnabled resets all changes to the "paye_enabled" field.
+func (m *GeneralHRSettingsMutation) ResetPayeEnabled() {
+	m.paye_enabled = nil
+}
+
+// SetNssfEnabled sets the "nssf_enabled" field.
+func (m *GeneralHRSettingsMutation) SetNssfEnabled(b bool) {
+	m.nssf_enabled = &b
+}
+
+// NssfEnabled returns the value of the "nssf_enabled" field in the mutation.
+func (m *GeneralHRSettingsMutation) NssfEnabled() (r bool, exists bool) {
+	v := m.nssf_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNssfEnabled returns the old "nssf_enabled" field's value of the GeneralHRSettings entity.
+// If the GeneralHRSettings object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeneralHRSettingsMutation) OldNssfEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNssfEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNssfEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNssfEnabled: %w", err)
+	}
+	return oldValue.NssfEnabled, nil
+}
+
+// ResetNssfEnabled resets all changes to the "nssf_enabled" field.
+func (m *GeneralHRSettingsMutation) ResetNssfEnabled() {
+	m.nssf_enabled = nil
+}
+
+// SetShifEnabled sets the "shif_enabled" field.
+func (m *GeneralHRSettingsMutation) SetShifEnabled(b bool) {
+	m.shif_enabled = &b
+}
+
+// ShifEnabled returns the value of the "shif_enabled" field in the mutation.
+func (m *GeneralHRSettingsMutation) ShifEnabled() (r bool, exists bool) {
+	v := m.shif_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldShifEnabled returns the old "shif_enabled" field's value of the GeneralHRSettings entity.
+// If the GeneralHRSettings object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeneralHRSettingsMutation) OldShifEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldShifEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldShifEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldShifEnabled: %w", err)
+	}
+	return oldValue.ShifEnabled, nil
+}
+
+// ResetShifEnabled resets all changes to the "shif_enabled" field.
+func (m *GeneralHRSettingsMutation) ResetShifEnabled() {
+	m.shif_enabled = nil
+}
+
+// SetHousingLevyEnabled sets the "housing_levy_enabled" field.
+func (m *GeneralHRSettingsMutation) SetHousingLevyEnabled(b bool) {
+	m.housing_levy_enabled = &b
+}
+
+// HousingLevyEnabled returns the value of the "housing_levy_enabled" field in the mutation.
+func (m *GeneralHRSettingsMutation) HousingLevyEnabled() (r bool, exists bool) {
+	v := m.housing_levy_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHousingLevyEnabled returns the old "housing_levy_enabled" field's value of the GeneralHRSettings entity.
+// If the GeneralHRSettings object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeneralHRSettingsMutation) OldHousingLevyEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHousingLevyEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHousingLevyEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHousingLevyEnabled: %w", err)
+	}
+	return oldValue.HousingLevyEnabled, nil
+}
+
+// ResetHousingLevyEnabled resets all changes to the "housing_levy_enabled" field.
+func (m *GeneralHRSettingsMutation) ResetHousingLevyEnabled() {
+	m.housing_levy_enabled = nil
+}
+
+// SetNitaEnabled sets the "nita_enabled" field.
+func (m *GeneralHRSettingsMutation) SetNitaEnabled(b bool) {
+	m.nita_enabled = &b
+}
+
+// NitaEnabled returns the value of the "nita_enabled" field in the mutation.
+func (m *GeneralHRSettingsMutation) NitaEnabled() (r bool, exists bool) {
+	v := m.nita_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNitaEnabled returns the old "nita_enabled" field's value of the GeneralHRSettings entity.
+// If the GeneralHRSettings object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeneralHRSettingsMutation) OldNitaEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNitaEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNitaEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNitaEnabled: %w", err)
+	}
+	return oldValue.NitaEnabled, nil
+}
+
+// ResetNitaEnabled resets all changes to the "nita_enabled" field.
+func (m *GeneralHRSettingsMutation) ResetNitaEnabled() {
+	m.nita_enabled = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *GeneralHRSettingsMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -46329,7 +46514,7 @@ func (m *GeneralHRSettingsMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GeneralHRSettingsMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 15)
 	if m.tenant_id != nil {
 		fields = append(fields, generalhrsettings.FieldTenantID)
 	}
@@ -46353,6 +46538,21 @@ func (m *GeneralHRSettingsMutation) Fields() []string {
 	}
 	if m.allow_backwards_payroll != nil {
 		fields = append(fields, generalhrsettings.FieldAllowBackwardsPayroll)
+	}
+	if m.paye_enabled != nil {
+		fields = append(fields, generalhrsettings.FieldPayeEnabled)
+	}
+	if m.nssf_enabled != nil {
+		fields = append(fields, generalhrsettings.FieldNssfEnabled)
+	}
+	if m.shif_enabled != nil {
+		fields = append(fields, generalhrsettings.FieldShifEnabled)
+	}
+	if m.housing_levy_enabled != nil {
+		fields = append(fields, generalhrsettings.FieldHousingLevyEnabled)
+	}
+	if m.nita_enabled != nil {
+		fields = append(fields, generalhrsettings.FieldNitaEnabled)
 	}
 	if m.created_at != nil {
 		fields = append(fields, generalhrsettings.FieldCreatedAt)
@@ -46384,6 +46584,16 @@ func (m *GeneralHRSettingsMutation) Field(name string) (ent.Value, bool) {
 		return m.RoundOffAmount()
 	case generalhrsettings.FieldAllowBackwardsPayroll:
 		return m.AllowBackwardsPayroll()
+	case generalhrsettings.FieldPayeEnabled:
+		return m.PayeEnabled()
+	case generalhrsettings.FieldNssfEnabled:
+		return m.NssfEnabled()
+	case generalhrsettings.FieldShifEnabled:
+		return m.ShifEnabled()
+	case generalhrsettings.FieldHousingLevyEnabled:
+		return m.HousingLevyEnabled()
+	case generalhrsettings.FieldNitaEnabled:
+		return m.NitaEnabled()
 	case generalhrsettings.FieldCreatedAt:
 		return m.CreatedAt()
 	case generalhrsettings.FieldUpdatedAt:
@@ -46413,6 +46623,16 @@ func (m *GeneralHRSettingsMutation) OldField(ctx context.Context, name string) (
 		return m.OldRoundOffAmount(ctx)
 	case generalhrsettings.FieldAllowBackwardsPayroll:
 		return m.OldAllowBackwardsPayroll(ctx)
+	case generalhrsettings.FieldPayeEnabled:
+		return m.OldPayeEnabled(ctx)
+	case generalhrsettings.FieldNssfEnabled:
+		return m.OldNssfEnabled(ctx)
+	case generalhrsettings.FieldShifEnabled:
+		return m.OldShifEnabled(ctx)
+	case generalhrsettings.FieldHousingLevyEnabled:
+		return m.OldHousingLevyEnabled(ctx)
+	case generalhrsettings.FieldNitaEnabled:
+		return m.OldNitaEnabled(ctx)
 	case generalhrsettings.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case generalhrsettings.FieldUpdatedAt:
@@ -46481,6 +46701,41 @@ func (m *GeneralHRSettingsMutation) SetField(name string, value ent.Value) error
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAllowBackwardsPayroll(v)
+		return nil
+	case generalhrsettings.FieldPayeEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayeEnabled(v)
+		return nil
+	case generalhrsettings.FieldNssfEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNssfEnabled(v)
+		return nil
+	case generalhrsettings.FieldShifEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetShifEnabled(v)
+		return nil
+	case generalhrsettings.FieldHousingLevyEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHousingLevyEnabled(v)
+		return nil
+	case generalhrsettings.FieldNitaEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNitaEnabled(v)
 		return nil
 	case generalhrsettings.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -46568,6 +46823,21 @@ func (m *GeneralHRSettingsMutation) ResetField(name string) error {
 		return nil
 	case generalhrsettings.FieldAllowBackwardsPayroll:
 		m.ResetAllowBackwardsPayroll()
+		return nil
+	case generalhrsettings.FieldPayeEnabled:
+		m.ResetPayeEnabled()
+		return nil
+	case generalhrsettings.FieldNssfEnabled:
+		m.ResetNssfEnabled()
+		return nil
+	case generalhrsettings.FieldShifEnabled:
+		m.ResetShifEnabled()
+		return nil
+	case generalhrsettings.FieldHousingLevyEnabled:
+		m.ResetHousingLevyEnabled()
+		return nil
+	case generalhrsettings.FieldNitaEnabled:
+		m.ResetNitaEnabled()
 		return nil
 	case generalhrsettings.FieldCreatedAt:
 		m.ResetCreatedAt()

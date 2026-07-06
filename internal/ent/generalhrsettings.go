@@ -35,6 +35,16 @@ type GeneralHRSettings struct {
 	RoundOffAmount decimal.Decimal `json:"round_off_amount,omitempty"`
 	// AllowBackwardsPayroll holds the value of the "allow_backwards_payroll" field.
 	AllowBackwardsPayroll bool `json:"allow_backwards_payroll,omitempty"`
+	// PayeEnabled holds the value of the "paye_enabled" field.
+	PayeEnabled bool `json:"paye_enabled,omitempty"`
+	// NssfEnabled holds the value of the "nssf_enabled" field.
+	NssfEnabled bool `json:"nssf_enabled,omitempty"`
+	// Health: disables both SHIF and legacy NHIF
+	ShifEnabled bool `json:"shif_enabled,omitempty"`
+	// HousingLevyEnabled holds the value of the "housing_levy_enabled" field.
+	HousingLevyEnabled bool `json:"housing_levy_enabled,omitempty"`
+	// NitaEnabled holds the value of the "nita_enabled" field.
+	NitaEnabled bool `json:"nita_enabled,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -49,7 +59,7 @@ func (*GeneralHRSettings) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case generalhrsettings.FieldOvertimeNormalDays, generalhrsettings.FieldOvertimeNonWorkingDays, generalhrsettings.FieldOvertimeHolidays, generalhrsettings.FieldRoundOffAmount:
 			values[i] = new(decimal.Decimal)
-		case generalhrsettings.FieldAllowBackwardsPayroll:
+		case generalhrsettings.FieldAllowBackwardsPayroll, generalhrsettings.FieldPayeEnabled, generalhrsettings.FieldNssfEnabled, generalhrsettings.FieldShifEnabled, generalhrsettings.FieldHousingLevyEnabled, generalhrsettings.FieldNitaEnabled:
 			values[i] = new(sql.NullBool)
 		case generalhrsettings.FieldPartialMonths, generalhrsettings.FieldRoundOffCurrency:
 			values[i] = new(sql.NullString)
@@ -126,6 +136,36 @@ func (_m *GeneralHRSettings) assignValues(columns []string, values []any) error 
 			} else if value.Valid {
 				_m.AllowBackwardsPayroll = value.Bool
 			}
+		case generalhrsettings.FieldPayeEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field paye_enabled", values[i])
+			} else if value.Valid {
+				_m.PayeEnabled = value.Bool
+			}
+		case generalhrsettings.FieldNssfEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field nssf_enabled", values[i])
+			} else if value.Valid {
+				_m.NssfEnabled = value.Bool
+			}
+		case generalhrsettings.FieldShifEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field shif_enabled", values[i])
+			} else if value.Valid {
+				_m.ShifEnabled = value.Bool
+			}
+		case generalhrsettings.FieldHousingLevyEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field housing_levy_enabled", values[i])
+			} else if value.Valid {
+				_m.HousingLevyEnabled = value.Bool
+			}
+		case generalhrsettings.FieldNitaEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field nita_enabled", values[i])
+			} else if value.Valid {
+				_m.NitaEnabled = value.Bool
+			}
 		case generalhrsettings.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -197,6 +237,21 @@ func (_m *GeneralHRSettings) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("allow_backwards_payroll=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AllowBackwardsPayroll))
+	builder.WriteString(", ")
+	builder.WriteString("paye_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PayeEnabled))
+	builder.WriteString(", ")
+	builder.WriteString("nssf_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.NssfEnabled))
+	builder.WriteString(", ")
+	builder.WriteString("shif_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ShifEnabled))
+	builder.WriteString(", ")
+	builder.WriteString("housing_levy_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.HousingLevyEnabled))
+	builder.WriteString(", ")
+	builder.WriteString("nita_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.NitaEnabled))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
