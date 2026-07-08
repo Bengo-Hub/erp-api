@@ -14,7 +14,7 @@
    Twilio, Firebase, OpenAI, scikit/scipy, Celery, Channels/Daphne, jazzmin, …), per-request
    "ensure config exists" middlewares, and synchronous DRF viewsets. Go gives an order-of-magnitude
    smaller image, lower latency, and goroutine concurrency for the outbox/consumers.
-2. **Shared-library reuse.** Every other BengoBox service is Go and reuses
+2. **Shared-library reuse.** Every other Codevertex service is Go and reuses
    `shared-auth-client`, `httpware`, `shared-events`, `cache`, `shared-service-client`,
    Ent + Atlas. The Django ERP reimplements all of these by hand (`integrations/service_client.py`,
    `integrations/events.py`, `authmanagement/sso.py`) — duplicate, drifting, and untested against the

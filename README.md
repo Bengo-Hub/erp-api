@@ -141,7 +141,7 @@ For quick local development without Kubernetes:
 
 ```powershell
 # Windows
-cd d:\Projects\BengoBox\BengoERP\iac
+cd d:\Projects\Codevertex\BengoERP\iac
 docker-compose up -d
 
 # Linux/macOS
@@ -160,7 +160,7 @@ For testing with full Kubernetes orchestration locally:
 
 ```powershell
 # Windows
-cd d:\Projects\BengoBox\BengoERP\iac
+cd d:\Projects\Codevertex\BengoERP\iac
 .\deploy-local.ps1
 
 # Linux/macOS
