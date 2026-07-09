@@ -24,6 +24,11 @@ func TestMapGlobalRolesToERP(t *testing.T) {
 		{"multiple non-hrm roles dedupe to one staff", []string{"rider", "driver", "waiter"}, []string{"staff"}},
 		{"non-hrm role case-insensitive", []string{"Cashier"}, []string{"staff"}},
 		{"mixed hrm + non-hrm keeps both", []string{"hr_manager", "cashier"}, []string{"hr_manager", "staff"}},
+		{"erp_admin maps to erp_admin via admin substring", []string{"erp_admin"}, []string{"erp_admin"}},
+		{"isp_admin maps to erp_admin via admin substring", []string{"isp_admin"}, []string{"erp_admin"}},
+		{"library_admin maps to erp_admin via admin substring", []string{"library_admin"}, []string{"erp_admin"}},
+		{"hypothetical inventory_admin maps to erp_admin", []string{"inventory_admin"}, []string{"erp_admin"}},
+		{"admin-substring role dedupes with literal admin", []string{"admin", "isp_admin"}, []string{"erp_admin"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
