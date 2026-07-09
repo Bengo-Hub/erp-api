@@ -100,7 +100,12 @@ var roleGrants = map[string][]string{
 	// Platform/admin
 	"erp_admin": {"*"},
 	"ceo":       bundle(hrmViewAll, hrmManageAll, execOversight, []string{"approvals.manage"}),
-	"cto":       bundle([]string{"hrm.employee.view", "reports.view", "business.view", "tasks.view", "tasks.manage", "approvals.view", "rbac.view", "rbac.manage", "backups.view", "backups.manage"}),
+	// CTO = C-level executive + de-facto system/ICT administrator. Gets full read oversight
+	// across HRM (incl. payroll.view — so Payroll › Casual Labor loads), approvals decide/manage,
+	// tasks, reports, business + fx management, PLUS service RBAC and tenant backup administration.
+	// Payroll process/disburse stay with finance/payroll (segregation of duties); use erp_admin for
+	// unrestricted access.
+	"cto": bundle(hrmViewAll, execOversight, []string{"approvals.manage", "rbac.view", "rbac.manage", "backups.view", "backups.manage"}),
 	// ICT
 	"ict_manager": bundle([]string{"hrm.employee.view", "reports.view", "business.view", "business.manage", "tasks.view", "tasks.manage", "approvals.view", "rbac.view", "rbac.manage", "backups.view", "backups.manage"}),
 	"ict_officer": bundle([]string{"hrm.employee.view", "reports.view", "tasks.view", "tasks.manage", "backups.view", "rbac.view"}),
@@ -118,6 +123,12 @@ var roleGrants = map[string][]string{
 	"sales_manager":       bundle([]string{"hrm.employee.view", "business.view", "reports.view", "tasks.view", "tasks.manage", "approvals.view"}),
 	// Admin support
 	"secretary": bundle([]string{"hrm.employee.view", "hrm.leave.view", "hrm.attendance.view", "hrm.recruitment.view", "hrm.training.view", "tasks.view", "tasks.manage", "reports.view", "approvals.view"}),
+	// Default fallback for any tenant member whose global/SSO role has no HRM relevance
+	// (POS/logistics/hospitality roles: cashier, rider, waiter, stylist, technician, a
+	// generic "manager", ...; see MapGlobalRolesToERP). Grants only Employee Self-Service:
+	// view own profile, apply for + view own leave, view own attendance, view own payslips.
+	// No management/approval/admin permissions.
+	"staff": bundle([]string{"hrm.employee.view", "hrm.leave.view", "hrm.leave.manage", "hrm.attendance.view", "hrm.payroll.view", "tasks.view"}),
 }
 
 func main() {

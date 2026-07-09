@@ -47,27 +47,60 @@ func EnsureServiceUser(svc *rbac.Service, syncer *usersync.TenantSyncer, log *za
 	}
 }
 
+// erpKnownRoles are the SSO global role names that map 1:1 onto an erp system role
+// (mirrors the roleGrants keys in cmd/seed/main.go — kept as a literal set here since
+// cmd/seed is package main and can't be imported). Anything NOT in this set is a role
+// from another domain entirely (POS/logistics/hospitality/etc. — cashier, rider, driver,
+// waiter, stylist, technician, generic "manager", ...) with no HRM relevance, so it falls
+// back to "staff": every tenant employee, regardless of their business-specific role in
+// other services, still gets basic ESS access in ERP (own payslips, leave, attendance).
+var erpKnownRoles = map[string]bool{
+	"erp_admin":           true,
+	"ceo":                 true,
+	"cto":                 true,
+	"ict_manager":         true,
+	"ict_officer":         true,
+	"hr_manager":          true,
+	"hr_assistant":        true,
+	"hr_viewer":           true,
+	"payroll_manager":     true,
+	"finance_manager":     true,
+	"operations_manager":  true,
+	"procurement_manager": true,
+	"sales_manager":       true,
+	"secretary":           true,
+	"staff":               true,
+}
+
 // MapGlobalRolesToERP maps SSO global role names to erp service-role codes. The platform
 // all-access roles (superuser/admin and the legacy Django "superusers" group) are mapped to
-// erp_admin; every other name passes through unchanged. resolveRole skips names that have no
-// matching erp Role, so passing through extra Django group names (finance_manager, etc.) is
-// harmless and future-proof — defining the matching erp Role later activates the mapping.
+// erp_admin; names that match a known erp role (erpKnownRoles) pass through unchanged;
+// every other name (a role scoped to a different service — POS, logistics, hospitality,
+// etc. — with no HRM relevance) defaults to "staff" so that user still gets ESS access
+// (own payslips/leave/attendance) instead of zero erp permissions.
 func MapGlobalRolesToERP(globalRoles []string) []string {
 	out := make([]string, 0, len(globalRoles)+1)
 	addedAdmin := false
+	addedStaff := false
 	for _, role := range globalRoles {
 		code := strings.TrimSpace(role)
 		if code == "" {
 			continue
 		}
-		switch strings.ToLower(code) {
-		case "superuser", "admin", "superusers":
+		lower := strings.ToLower(code)
+		switch {
+		case lower == "superuser" || lower == "admin" || lower == "superusers":
 			if !addedAdmin {
 				out = append(out, "erp_admin")
 				addedAdmin = true
 			}
+		case erpKnownRoles[lower]:
+			out = append(out, lower)
 		default:
-			out = append(out, code)
+			if !addedStaff {
+				out = append(out, "staff")
+				addedStaff = true
+			}
 		}
 	}
 	return out
