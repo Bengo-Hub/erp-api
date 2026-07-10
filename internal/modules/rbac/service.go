@@ -44,11 +44,24 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, tenantID uuid.UUID, e
 		Only(ctx)
 	switch {
 	case ent.IsNotFound(err):
-		u, err = s.orm.CustomUser.Create().
+		create := s.orm.CustomUser.Create().
 			SetTenantID(tenantID).
 			SetExternalID(externalID).
-			SetEmail(email).
-			Save(ctx)
+			SetEmail(email)
+		// Pin the primary key to the external_id (JWT sub) itself, NOT ent's random
+		// UUID default. scope.UserID (reqctx.go, = claims.UserID() = the JWT sub) is
+		// used platform-wide as the canonical actor id — RBAC's UserRoleAssignment.UserID,
+		// tasks/approvals/leave/appraisals "created_by"/"approved_by", etc. all key off it.
+		// Letting CustomUser.ID default to a fresh random UUID silently detached the local
+		// RBAC assignment (keyed on that random id) from every lookup keyed on scope.UserID,
+		// so requirePermission's rbacService fallback never found the role it had just
+		// granted — a full-tenant, every-non-superuser 403 that no amount of role/permission
+		// seeding could fix. (Found via prod audit 2026-07-10: 65/65 CustomUser rows had
+		// id != external_id.)
+		if extUUID, perr := uuid.Parse(externalID); perr == nil {
+			create = create.SetID(extUUID)
+		}
+		u, err = create.Save(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("rbac: create user: %w", err)
 		}
