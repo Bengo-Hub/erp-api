@@ -2126,64 +2126,80 @@ func init() {
 	payslipDescGrossPayAfterTax := payslipFields[13].Descriptor()
 	// payslip.DefaultGrossPayAfterTax holds the default value on creation for the gross_pay_after_tax field.
 	payslip.DefaultGrossPayAfterTax = payslipDescGrossPayAfterTax.Default.(decimal.Decimal)
+	// payslipDescInsuranceRelief is the schema descriptor for insurance_relief field.
+	payslipDescInsuranceRelief := payslipFields[14].Descriptor()
+	// payslip.DefaultInsuranceRelief holds the default value on creation for the insurance_relief field.
+	payslip.DefaultInsuranceRelief = payslipDescInsuranceRelief.Default.(decimal.Decimal)
+	// payslipDescPensionDeduction is the schema descriptor for pension_deduction field.
+	payslipDescPensionDeduction := payslipFields[15].Descriptor()
+	// payslip.DefaultPensionDeduction holds the default value on creation for the pension_deduction field.
+	payslip.DefaultPensionDeduction = payslipDescPensionDeduction.Default.(decimal.Decimal)
+	// payslipDescMortgageDeduction is the schema descriptor for mortgage_deduction field.
+	payslipDescMortgageDeduction := payslipFields[16].Descriptor()
+	// payslip.DefaultMortgageDeduction holds the default value on creation for the mortgage_deduction field.
+	payslip.DefaultMortgageDeduction = payslipDescMortgageDeduction.Default.(decimal.Decimal)
+	// payslipDescDisabilityExemption is the schema descriptor for disability_exemption field.
+	payslipDescDisabilityExemption := payslipFields[17].Descriptor()
+	// payslip.DefaultDisabilityExemption holds the default value on creation for the disability_exemption field.
+	payslip.DefaultDisabilityExemption = payslipDescDisabilityExemption.Default.(decimal.Decimal)
 	// payslipDescShifOrNhifContribution is the schema descriptor for shif_or_nhif_contribution field.
-	payslipDescShifOrNhifContribution := payslipFields[14].Descriptor()
+	payslipDescShifOrNhifContribution := payslipFields[18].Descriptor()
 	// payslip.DefaultShifOrNhifContribution holds the default value on creation for the shif_or_nhif_contribution field.
 	payslip.DefaultShifOrNhifContribution = payslipDescShifOrNhifContribution.Default.(decimal.Decimal)
 	// payslipDescHousingLevy is the schema descriptor for housing_levy field.
-	payslipDescHousingLevy := payslipFields[15].Descriptor()
+	payslipDescHousingLevy := payslipFields[19].Descriptor()
 	// payslip.DefaultHousingLevy holds the default value on creation for the housing_levy field.
 	payslip.DefaultHousingLevy = payslipDescHousingLevy.Default.(decimal.Decimal)
 	// payslipDescNssfEmployeeTier1 is the schema descriptor for nssf_employee_tier_1 field.
-	payslipDescNssfEmployeeTier1 := payslipFields[16].Descriptor()
+	payslipDescNssfEmployeeTier1 := payslipFields[20].Descriptor()
 	// payslip.DefaultNssfEmployeeTier1 holds the default value on creation for the nssf_employee_tier_1 field.
 	payslip.DefaultNssfEmployeeTier1 = payslipDescNssfEmployeeTier1.Default.(decimal.Decimal)
 	// payslipDescNssfEmployeeTier2 is the schema descriptor for nssf_employee_tier_2 field.
-	payslipDescNssfEmployeeTier2 := payslipFields[17].Descriptor()
+	payslipDescNssfEmployeeTier2 := payslipFields[21].Descriptor()
 	// payslip.DefaultNssfEmployeeTier2 holds the default value on creation for the nssf_employee_tier_2 field.
 	payslip.DefaultNssfEmployeeTier2 = payslipDescNssfEmployeeTier2.Default.(decimal.Decimal)
 	// payslipDescNssfEmployerContribution is the schema descriptor for nssf_employer_contribution field.
-	payslipDescNssfEmployerContribution := payslipFields[18].Descriptor()
+	payslipDescNssfEmployerContribution := payslipFields[22].Descriptor()
 	// payslip.DefaultNssfEmployerContribution holds the default value on creation for the nssf_employer_contribution field.
 	payslip.DefaultNssfEmployerContribution = payslipDescNssfEmployerContribution.Default.(decimal.Decimal)
 	// payslipDescDeductionsBeforeTax is the schema descriptor for deductions_before_tax field.
-	payslipDescDeductionsBeforeTax := payslipFields[19].Descriptor()
+	payslipDescDeductionsBeforeTax := payslipFields[23].Descriptor()
 	// payslip.DefaultDeductionsBeforeTax holds the default value on creation for the deductions_before_tax field.
 	payslip.DefaultDeductionsBeforeTax = payslipDescDeductionsBeforeTax.Default.(decimal.Decimal)
 	// payslipDescDeductionsAfterTax is the schema descriptor for deductions_after_tax field.
-	payslipDescDeductionsAfterTax := payslipFields[20].Descriptor()
+	payslipDescDeductionsAfterTax := payslipFields[24].Descriptor()
 	// payslip.DefaultDeductionsAfterTax holds the default value on creation for the deductions_after_tax field.
 	payslip.DefaultDeductionsAfterTax = payslipDescDeductionsAfterTax.Default.(decimal.Decimal)
 	// payslipDescDeductionsAfterPaye is the schema descriptor for deductions_after_paye field.
-	payslipDescDeductionsAfterPaye := payslipFields[21].Descriptor()
+	payslipDescDeductionsAfterPaye := payslipFields[25].Descriptor()
 	// payslip.DefaultDeductionsAfterPaye holds the default value on creation for the deductions_after_paye field.
 	payslip.DefaultDeductionsAfterPaye = payslipDescDeductionsAfterPaye.Default.(decimal.Decimal)
 	// payslipDescDeductionsFinal is the schema descriptor for deductions_final field.
-	payslipDescDeductionsFinal := payslipFields[22].Descriptor()
+	payslipDescDeductionsFinal := payslipFields[26].Descriptor()
 	// payslip.DefaultDeductionsFinal holds the default value on creation for the deductions_final field.
 	payslip.DefaultDeductionsFinal = payslipDescDeductionsFinal.Default.(decimal.Decimal)
 	// payslipDescPayrollStatus is the schema descriptor for payroll_status field.
-	payslipDescPayrollStatus := payslipFields[26].Descriptor()
+	payslipDescPayrollStatus := payslipFields[30].Descriptor()
 	// payslip.DefaultPayrollStatus holds the default value on creation for the payroll_status field.
 	payslip.DefaultPayrollStatus = payslipDescPayrollStatus.Default.(string)
 	// payslipDescApprovalStatus is the schema descriptor for approval_status field.
-	payslipDescApprovalStatus := payslipFields[27].Descriptor()
+	payslipDescApprovalStatus := payslipFields[31].Descriptor()
 	// payslip.DefaultApprovalStatus holds the default value on creation for the approval_status field.
 	payslip.DefaultApprovalStatus = payslipDescApprovalStatus.Default.(string)
 	// payslipDescPublished is the schema descriptor for published field.
-	payslipDescPublished := payslipFields[28].Descriptor()
+	payslipDescPublished := payslipFields[32].Descriptor()
 	// payslip.DefaultPublished holds the default value on creation for the published field.
 	payslip.DefaultPublished = payslipDescPublished.Default.(bool)
 	// payslipDescDeleteStatus is the schema descriptor for delete_status field.
-	payslipDescDeleteStatus := payslipFields[32].Descriptor()
+	payslipDescDeleteStatus := payslipFields[36].Descriptor()
 	// payslip.DefaultDeleteStatus holds the default value on creation for the delete_status field.
 	payslip.DefaultDeleteStatus = payslipDescDeleteStatus.Default.(bool)
 	// payslipDescCreatedAt is the schema descriptor for created_at field.
-	payslipDescCreatedAt := payslipFields[33].Descriptor()
+	payslipDescCreatedAt := payslipFields[37].Descriptor()
 	// payslip.DefaultCreatedAt holds the default value on creation for the created_at field.
 	payslip.DefaultCreatedAt = payslipDescCreatedAt.Default.(func() time.Time)
 	// payslipDescUpdatedAt is the schema descriptor for updated_at field.
-	payslipDescUpdatedAt := payslipFields[34].Descriptor()
+	payslipDescUpdatedAt := payslipFields[38].Descriptor()
 	// payslip.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	payslip.DefaultUpdatedAt = payslipDescUpdatedAt.Default.(func() time.Time)
 	// payslip.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

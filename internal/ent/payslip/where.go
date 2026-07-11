@@ -121,6 +121,26 @@ func GrossPayAfterTax(v decimal.Decimal) predicate.Payslip {
 	return predicate.Payslip(sql.FieldEQ(FieldGrossPayAfterTax, v))
 }
 
+// InsuranceRelief applies equality check predicate on the "insurance_relief" field. It's identical to InsuranceReliefEQ.
+func InsuranceRelief(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldEQ(FieldInsuranceRelief, v))
+}
+
+// PensionDeduction applies equality check predicate on the "pension_deduction" field. It's identical to PensionDeductionEQ.
+func PensionDeduction(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldEQ(FieldPensionDeduction, v))
+}
+
+// MortgageDeduction applies equality check predicate on the "mortgage_deduction" field. It's identical to MortgageDeductionEQ.
+func MortgageDeduction(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldEQ(FieldMortgageDeduction, v))
+}
+
+// DisabilityExemption applies equality check predicate on the "disability_exemption" field. It's identical to DisabilityExemptionEQ.
+func DisabilityExemption(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldEQ(FieldDisabilityExemption, v))
+}
+
 // ShifOrNhifContribution applies equality check predicate on the "shif_or_nhif_contribution" field. It's identical to ShifOrNhifContributionEQ.
 func ShifOrNhifContribution(v decimal.Decimal) predicate.Payslip {
 	return predicate.Payslip(sql.FieldEQ(FieldShifOrNhifContribution, v))
@@ -774,6 +794,166 @@ func GrossPayAfterTaxLT(v decimal.Decimal) predicate.Payslip {
 // GrossPayAfterTaxLTE applies the LTE predicate on the "gross_pay_after_tax" field.
 func GrossPayAfterTaxLTE(v decimal.Decimal) predicate.Payslip {
 	return predicate.Payslip(sql.FieldLTE(FieldGrossPayAfterTax, v))
+}
+
+// InsuranceReliefEQ applies the EQ predicate on the "insurance_relief" field.
+func InsuranceReliefEQ(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldEQ(FieldInsuranceRelief, v))
+}
+
+// InsuranceReliefNEQ applies the NEQ predicate on the "insurance_relief" field.
+func InsuranceReliefNEQ(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldNEQ(FieldInsuranceRelief, v))
+}
+
+// InsuranceReliefIn applies the In predicate on the "insurance_relief" field.
+func InsuranceReliefIn(vs ...decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldIn(FieldInsuranceRelief, vs...))
+}
+
+// InsuranceReliefNotIn applies the NotIn predicate on the "insurance_relief" field.
+func InsuranceReliefNotIn(vs ...decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldNotIn(FieldInsuranceRelief, vs...))
+}
+
+// InsuranceReliefGT applies the GT predicate on the "insurance_relief" field.
+func InsuranceReliefGT(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldGT(FieldInsuranceRelief, v))
+}
+
+// InsuranceReliefGTE applies the GTE predicate on the "insurance_relief" field.
+func InsuranceReliefGTE(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldGTE(FieldInsuranceRelief, v))
+}
+
+// InsuranceReliefLT applies the LT predicate on the "insurance_relief" field.
+func InsuranceReliefLT(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldLT(FieldInsuranceRelief, v))
+}
+
+// InsuranceReliefLTE applies the LTE predicate on the "insurance_relief" field.
+func InsuranceReliefLTE(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldLTE(FieldInsuranceRelief, v))
+}
+
+// PensionDeductionEQ applies the EQ predicate on the "pension_deduction" field.
+func PensionDeductionEQ(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldEQ(FieldPensionDeduction, v))
+}
+
+// PensionDeductionNEQ applies the NEQ predicate on the "pension_deduction" field.
+func PensionDeductionNEQ(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldNEQ(FieldPensionDeduction, v))
+}
+
+// PensionDeductionIn applies the In predicate on the "pension_deduction" field.
+func PensionDeductionIn(vs ...decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldIn(FieldPensionDeduction, vs...))
+}
+
+// PensionDeductionNotIn applies the NotIn predicate on the "pension_deduction" field.
+func PensionDeductionNotIn(vs ...decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldNotIn(FieldPensionDeduction, vs...))
+}
+
+// PensionDeductionGT applies the GT predicate on the "pension_deduction" field.
+func PensionDeductionGT(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldGT(FieldPensionDeduction, v))
+}
+
+// PensionDeductionGTE applies the GTE predicate on the "pension_deduction" field.
+func PensionDeductionGTE(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldGTE(FieldPensionDeduction, v))
+}
+
+// PensionDeductionLT applies the LT predicate on the "pension_deduction" field.
+func PensionDeductionLT(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldLT(FieldPensionDeduction, v))
+}
+
+// PensionDeductionLTE applies the LTE predicate on the "pension_deduction" field.
+func PensionDeductionLTE(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldLTE(FieldPensionDeduction, v))
+}
+
+// MortgageDeductionEQ applies the EQ predicate on the "mortgage_deduction" field.
+func MortgageDeductionEQ(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldEQ(FieldMortgageDeduction, v))
+}
+
+// MortgageDeductionNEQ applies the NEQ predicate on the "mortgage_deduction" field.
+func MortgageDeductionNEQ(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldNEQ(FieldMortgageDeduction, v))
+}
+
+// MortgageDeductionIn applies the In predicate on the "mortgage_deduction" field.
+func MortgageDeductionIn(vs ...decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldIn(FieldMortgageDeduction, vs...))
+}
+
+// MortgageDeductionNotIn applies the NotIn predicate on the "mortgage_deduction" field.
+func MortgageDeductionNotIn(vs ...decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldNotIn(FieldMortgageDeduction, vs...))
+}
+
+// MortgageDeductionGT applies the GT predicate on the "mortgage_deduction" field.
+func MortgageDeductionGT(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldGT(FieldMortgageDeduction, v))
+}
+
+// MortgageDeductionGTE applies the GTE predicate on the "mortgage_deduction" field.
+func MortgageDeductionGTE(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldGTE(FieldMortgageDeduction, v))
+}
+
+// MortgageDeductionLT applies the LT predicate on the "mortgage_deduction" field.
+func MortgageDeductionLT(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldLT(FieldMortgageDeduction, v))
+}
+
+// MortgageDeductionLTE applies the LTE predicate on the "mortgage_deduction" field.
+func MortgageDeductionLTE(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldLTE(FieldMortgageDeduction, v))
+}
+
+// DisabilityExemptionEQ applies the EQ predicate on the "disability_exemption" field.
+func DisabilityExemptionEQ(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldEQ(FieldDisabilityExemption, v))
+}
+
+// DisabilityExemptionNEQ applies the NEQ predicate on the "disability_exemption" field.
+func DisabilityExemptionNEQ(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldNEQ(FieldDisabilityExemption, v))
+}
+
+// DisabilityExemptionIn applies the In predicate on the "disability_exemption" field.
+func DisabilityExemptionIn(vs ...decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldIn(FieldDisabilityExemption, vs...))
+}
+
+// DisabilityExemptionNotIn applies the NotIn predicate on the "disability_exemption" field.
+func DisabilityExemptionNotIn(vs ...decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldNotIn(FieldDisabilityExemption, vs...))
+}
+
+// DisabilityExemptionGT applies the GT predicate on the "disability_exemption" field.
+func DisabilityExemptionGT(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldGT(FieldDisabilityExemption, v))
+}
+
+// DisabilityExemptionGTE applies the GTE predicate on the "disability_exemption" field.
+func DisabilityExemptionGTE(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldGTE(FieldDisabilityExemption, v))
+}
+
+// DisabilityExemptionLT applies the LT predicate on the "disability_exemption" field.
+func DisabilityExemptionLT(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldLT(FieldDisabilityExemption, v))
+}
+
+// DisabilityExemptionLTE applies the LTE predicate on the "disability_exemption" field.
+func DisabilityExemptionLTE(v decimal.Decimal) predicate.Payslip {
+	return predicate.Payslip(sql.FieldLTE(FieldDisabilityExemption, v))
 }
 
 // ShifOrNhifContributionEQ applies the EQ predicate on the "shif_or_nhif_contribution" field.

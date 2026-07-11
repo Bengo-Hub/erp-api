@@ -2522,6 +2522,10 @@ var (
 		{Name: "tax_relief", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
 		{Name: "reliefs", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
 		{Name: "gross_pay_after_tax", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "insurance_relief", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "pension_deduction", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "mortgage_deduction", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "disability_exemption", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
 		{Name: "shif_or_nhif_contribution", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
 		{Name: "housing_levy", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
 		{Name: "nssf_employee_tier_1", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
@@ -2558,12 +2562,12 @@ var (
 			{
 				Name:    "payslip_tenant_id_payment_period",
 				Unique:  false,
-				Columns: []*schema.Column{PayslipsColumns[1], PayslipsColumns[23]},
+				Columns: []*schema.Column{PayslipsColumns[1], PayslipsColumns[27]},
 			},
 			{
 				Name:    "payslip_tenant_id_outlet_id_payment_period",
 				Unique:  false,
-				Columns: []*schema.Column{PayslipsColumns[1], PayslipsColumns[2], PayslipsColumns[23]},
+				Columns: []*schema.Column{PayslipsColumns[1], PayslipsColumns[2], PayslipsColumns[27]},
 			},
 			{
 				Name:    "payslip_employee_id",
@@ -2573,7 +2577,7 @@ var (
 			{
 				Name:    "payslip_batch_ref",
 				Unique:  false,
-				Columns: []*schema.Column{PayslipsColumns[29]},
+				Columns: []*schema.Column{PayslipsColumns[33]},
 			},
 		},
 	}

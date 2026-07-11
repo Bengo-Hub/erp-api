@@ -230,6 +230,62 @@ func (_u *PayslipUpdate) SetNillableGrossPayAfterTax(v *decimal.Decimal) *Paysli
 	return _u
 }
 
+// SetInsuranceRelief sets the "insurance_relief" field.
+func (_u *PayslipUpdate) SetInsuranceRelief(v decimal.Decimal) *PayslipUpdate {
+	_u.mutation.SetInsuranceRelief(v)
+	return _u
+}
+
+// SetNillableInsuranceRelief sets the "insurance_relief" field if the given value is not nil.
+func (_u *PayslipUpdate) SetNillableInsuranceRelief(v *decimal.Decimal) *PayslipUpdate {
+	if v != nil {
+		_u.SetInsuranceRelief(*v)
+	}
+	return _u
+}
+
+// SetPensionDeduction sets the "pension_deduction" field.
+func (_u *PayslipUpdate) SetPensionDeduction(v decimal.Decimal) *PayslipUpdate {
+	_u.mutation.SetPensionDeduction(v)
+	return _u
+}
+
+// SetNillablePensionDeduction sets the "pension_deduction" field if the given value is not nil.
+func (_u *PayslipUpdate) SetNillablePensionDeduction(v *decimal.Decimal) *PayslipUpdate {
+	if v != nil {
+		_u.SetPensionDeduction(*v)
+	}
+	return _u
+}
+
+// SetMortgageDeduction sets the "mortgage_deduction" field.
+func (_u *PayslipUpdate) SetMortgageDeduction(v decimal.Decimal) *PayslipUpdate {
+	_u.mutation.SetMortgageDeduction(v)
+	return _u
+}
+
+// SetNillableMortgageDeduction sets the "mortgage_deduction" field if the given value is not nil.
+func (_u *PayslipUpdate) SetNillableMortgageDeduction(v *decimal.Decimal) *PayslipUpdate {
+	if v != nil {
+		_u.SetMortgageDeduction(*v)
+	}
+	return _u
+}
+
+// SetDisabilityExemption sets the "disability_exemption" field.
+func (_u *PayslipUpdate) SetDisabilityExemption(v decimal.Decimal) *PayslipUpdate {
+	_u.mutation.SetDisabilityExemption(v)
+	return _u
+}
+
+// SetNillableDisabilityExemption sets the "disability_exemption" field if the given value is not nil.
+func (_u *PayslipUpdate) SetNillableDisabilityExemption(v *decimal.Decimal) *PayslipUpdate {
+	if v != nil {
+		_u.SetDisabilityExemption(*v)
+	}
+	return _u
+}
+
 // SetShifOrNhifContribution sets the "shif_or_nhif_contribution" field.
 func (_u *PayslipUpdate) SetShifOrNhifContribution(v decimal.Decimal) *PayslipUpdate {
 	_u.mutation.SetShifOrNhifContribution(v)
@@ -636,6 +692,18 @@ func (_u *PayslipUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.GrossPayAfterTax(); ok {
 		_spec.SetField(payslip.FieldGrossPayAfterTax, field.TypeOther, value)
 	}
+	if value, ok := _u.mutation.InsuranceRelief(); ok {
+		_spec.SetField(payslip.FieldInsuranceRelief, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.PensionDeduction(); ok {
+		_spec.SetField(payslip.FieldPensionDeduction, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.MortgageDeduction(); ok {
+		_spec.SetField(payslip.FieldMortgageDeduction, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.DisabilityExemption(); ok {
+		_spec.SetField(payslip.FieldDisabilityExemption, field.TypeOther, value)
+	}
 	if value, ok := _u.mutation.ShifOrNhifContribution(); ok {
 		_spec.SetField(payslip.FieldShifOrNhifContribution, field.TypeOther, value)
 	}
@@ -930,6 +998,62 @@ func (_u *PayslipUpdateOne) SetGrossPayAfterTax(v decimal.Decimal) *PayslipUpdat
 func (_u *PayslipUpdateOne) SetNillableGrossPayAfterTax(v *decimal.Decimal) *PayslipUpdateOne {
 	if v != nil {
 		_u.SetGrossPayAfterTax(*v)
+	}
+	return _u
+}
+
+// SetInsuranceRelief sets the "insurance_relief" field.
+func (_u *PayslipUpdateOne) SetInsuranceRelief(v decimal.Decimal) *PayslipUpdateOne {
+	_u.mutation.SetInsuranceRelief(v)
+	return _u
+}
+
+// SetNillableInsuranceRelief sets the "insurance_relief" field if the given value is not nil.
+func (_u *PayslipUpdateOne) SetNillableInsuranceRelief(v *decimal.Decimal) *PayslipUpdateOne {
+	if v != nil {
+		_u.SetInsuranceRelief(*v)
+	}
+	return _u
+}
+
+// SetPensionDeduction sets the "pension_deduction" field.
+func (_u *PayslipUpdateOne) SetPensionDeduction(v decimal.Decimal) *PayslipUpdateOne {
+	_u.mutation.SetPensionDeduction(v)
+	return _u
+}
+
+// SetNillablePensionDeduction sets the "pension_deduction" field if the given value is not nil.
+func (_u *PayslipUpdateOne) SetNillablePensionDeduction(v *decimal.Decimal) *PayslipUpdateOne {
+	if v != nil {
+		_u.SetPensionDeduction(*v)
+	}
+	return _u
+}
+
+// SetMortgageDeduction sets the "mortgage_deduction" field.
+func (_u *PayslipUpdateOne) SetMortgageDeduction(v decimal.Decimal) *PayslipUpdateOne {
+	_u.mutation.SetMortgageDeduction(v)
+	return _u
+}
+
+// SetNillableMortgageDeduction sets the "mortgage_deduction" field if the given value is not nil.
+func (_u *PayslipUpdateOne) SetNillableMortgageDeduction(v *decimal.Decimal) *PayslipUpdateOne {
+	if v != nil {
+		_u.SetMortgageDeduction(*v)
+	}
+	return _u
+}
+
+// SetDisabilityExemption sets the "disability_exemption" field.
+func (_u *PayslipUpdateOne) SetDisabilityExemption(v decimal.Decimal) *PayslipUpdateOne {
+	_u.mutation.SetDisabilityExemption(v)
+	return _u
+}
+
+// SetNillableDisabilityExemption sets the "disability_exemption" field if the given value is not nil.
+func (_u *PayslipUpdateOne) SetNillableDisabilityExemption(v *decimal.Decimal) *PayslipUpdateOne {
+	if v != nil {
+		_u.SetDisabilityExemption(*v)
 	}
 	return _u
 }
@@ -1369,6 +1493,18 @@ func (_u *PayslipUpdateOne) sqlSave(ctx context.Context) (_node *Payslip, err er
 	}
 	if value, ok := _u.mutation.GrossPayAfterTax(); ok {
 		_spec.SetField(payslip.FieldGrossPayAfterTax, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.InsuranceRelief(); ok {
+		_spec.SetField(payslip.FieldInsuranceRelief, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.PensionDeduction(); ok {
+		_spec.SetField(payslip.FieldPensionDeduction, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.MortgageDeduction(); ok {
+		_spec.SetField(payslip.FieldMortgageDeduction, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.DisabilityExemption(); ok {
+		_spec.SetField(payslip.FieldDisabilityExemption, field.TypeOther, value)
 	}
 	if value, ok := _u.mutation.ShifOrNhifContribution(); ok {
 		_spec.SetField(payslip.FieldShifOrNhifContribution, field.TypeOther, value)

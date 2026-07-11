@@ -36,6 +36,16 @@ func (Payslip) Fields() []ent.Field {
 		moneyField("reliefs"),    // total reliefs applied
 		moneyField("gross_pay_after_tax"),
 
+		// Itemised KRA reliefs the engine applied (for the P9/P9A card). Default 0.
+		//   - insurance_relief:     15% x premium credit (cap 5,000/mo)
+		//   - pension_deduction:    deductible pension (min actual / 30% gross / 30,000)
+		//   - mortgage_deduction:   owner-occupier interest (cap 30,000/mo)
+		//   - disability_exemption: PWD chargeable-pay exemption applied (up to 150,000/mo)
+		moneyField("insurance_relief"),
+		moneyField("pension_deduction"),
+		moneyField("mortgage_deduction"),
+		moneyField("disability_exemption"),
+
 		// Statutory.
 		moneyField("shif_or_nhif_contribution"),
 		moneyField("housing_levy"),
