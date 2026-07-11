@@ -148,6 +148,62 @@ func (_u *SalaryDetailsUpdate) SetNillableDailyRate(v *decimal.Decimal) *SalaryD
 	return _u
 }
 
+// SetInsurancePremium sets the "insurance_premium" field.
+func (_u *SalaryDetailsUpdate) SetInsurancePremium(v decimal.Decimal) *SalaryDetailsUpdate {
+	_u.mutation.SetInsurancePremium(v)
+	return _u
+}
+
+// SetNillableInsurancePremium sets the "insurance_premium" field if the given value is not nil.
+func (_u *SalaryDetailsUpdate) SetNillableInsurancePremium(v *decimal.Decimal) *SalaryDetailsUpdate {
+	if v != nil {
+		_u.SetInsurancePremium(*v)
+	}
+	return _u
+}
+
+// SetPensionContribution sets the "pension_contribution" field.
+func (_u *SalaryDetailsUpdate) SetPensionContribution(v decimal.Decimal) *SalaryDetailsUpdate {
+	_u.mutation.SetPensionContribution(v)
+	return _u
+}
+
+// SetNillablePensionContribution sets the "pension_contribution" field if the given value is not nil.
+func (_u *SalaryDetailsUpdate) SetNillablePensionContribution(v *decimal.Decimal) *SalaryDetailsUpdate {
+	if v != nil {
+		_u.SetPensionContribution(*v)
+	}
+	return _u
+}
+
+// SetMortgageInterest sets the "mortgage_interest" field.
+func (_u *SalaryDetailsUpdate) SetMortgageInterest(v decimal.Decimal) *SalaryDetailsUpdate {
+	_u.mutation.SetMortgageInterest(v)
+	return _u
+}
+
+// SetNillableMortgageInterest sets the "mortgage_interest" field if the given value is not nil.
+func (_u *SalaryDetailsUpdate) SetNillableMortgageInterest(v *decimal.Decimal) *SalaryDetailsUpdate {
+	if v != nil {
+		_u.SetMortgageInterest(*v)
+	}
+	return _u
+}
+
+// SetDisabilityExempt sets the "disability_exempt" field.
+func (_u *SalaryDetailsUpdate) SetDisabilityExempt(v bool) *SalaryDetailsUpdate {
+	_u.mutation.SetDisabilityExempt(v)
+	return _u
+}
+
+// SetNillableDisabilityExempt sets the "disability_exempt" field if the given value is not nil.
+func (_u *SalaryDetailsUpdate) SetNillableDisabilityExempt(v *bool) *SalaryDetailsUpdate {
+	if v != nil {
+		_u.SetDisabilityExempt(*v)
+	}
+	return _u
+}
+
 // SetBankAccountID sets the "bank_account_id" field.
 func (_u *SalaryDetailsUpdate) SetBankAccountID(v uuid.UUID) *SalaryDetailsUpdate {
 	_u.mutation.SetBankAccountID(v)
@@ -304,6 +360,18 @@ func (_u *SalaryDetailsUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if value, ok := _u.mutation.DailyRate(); ok {
 		_spec.SetField(salarydetails.FieldDailyRate, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.InsurancePremium(); ok {
+		_spec.SetField(salarydetails.FieldInsurancePremium, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.PensionContribution(); ok {
+		_spec.SetField(salarydetails.FieldPensionContribution, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.MortgageInterest(); ok {
+		_spec.SetField(salarydetails.FieldMortgageInterest, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.DisabilityExempt(); ok {
+		_spec.SetField(salarydetails.FieldDisabilityExempt, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.BankAccountID(); ok {
 		_spec.SetField(salarydetails.FieldBankAccountID, field.TypeUUID, value)
@@ -463,6 +531,62 @@ func (_u *SalaryDetailsUpdateOne) SetDailyRate(v decimal.Decimal) *SalaryDetails
 func (_u *SalaryDetailsUpdateOne) SetNillableDailyRate(v *decimal.Decimal) *SalaryDetailsUpdateOne {
 	if v != nil {
 		_u.SetDailyRate(*v)
+	}
+	return _u
+}
+
+// SetInsurancePremium sets the "insurance_premium" field.
+func (_u *SalaryDetailsUpdateOne) SetInsurancePremium(v decimal.Decimal) *SalaryDetailsUpdateOne {
+	_u.mutation.SetInsurancePremium(v)
+	return _u
+}
+
+// SetNillableInsurancePremium sets the "insurance_premium" field if the given value is not nil.
+func (_u *SalaryDetailsUpdateOne) SetNillableInsurancePremium(v *decimal.Decimal) *SalaryDetailsUpdateOne {
+	if v != nil {
+		_u.SetInsurancePremium(*v)
+	}
+	return _u
+}
+
+// SetPensionContribution sets the "pension_contribution" field.
+func (_u *SalaryDetailsUpdateOne) SetPensionContribution(v decimal.Decimal) *SalaryDetailsUpdateOne {
+	_u.mutation.SetPensionContribution(v)
+	return _u
+}
+
+// SetNillablePensionContribution sets the "pension_contribution" field if the given value is not nil.
+func (_u *SalaryDetailsUpdateOne) SetNillablePensionContribution(v *decimal.Decimal) *SalaryDetailsUpdateOne {
+	if v != nil {
+		_u.SetPensionContribution(*v)
+	}
+	return _u
+}
+
+// SetMortgageInterest sets the "mortgage_interest" field.
+func (_u *SalaryDetailsUpdateOne) SetMortgageInterest(v decimal.Decimal) *SalaryDetailsUpdateOne {
+	_u.mutation.SetMortgageInterest(v)
+	return _u
+}
+
+// SetNillableMortgageInterest sets the "mortgage_interest" field if the given value is not nil.
+func (_u *SalaryDetailsUpdateOne) SetNillableMortgageInterest(v *decimal.Decimal) *SalaryDetailsUpdateOne {
+	if v != nil {
+		_u.SetMortgageInterest(*v)
+	}
+	return _u
+}
+
+// SetDisabilityExempt sets the "disability_exempt" field.
+func (_u *SalaryDetailsUpdateOne) SetDisabilityExempt(v bool) *SalaryDetailsUpdateOne {
+	_u.mutation.SetDisabilityExempt(v)
+	return _u
+}
+
+// SetNillableDisabilityExempt sets the "disability_exempt" field if the given value is not nil.
+func (_u *SalaryDetailsUpdateOne) SetNillableDisabilityExempt(v *bool) *SalaryDetailsUpdateOne {
+	if v != nil {
+		_u.SetDisabilityExempt(*v)
 	}
 	return _u
 }
@@ -653,6 +777,18 @@ func (_u *SalaryDetailsUpdateOne) sqlSave(ctx context.Context) (_node *SalaryDet
 	}
 	if value, ok := _u.mutation.DailyRate(); ok {
 		_spec.SetField(salarydetails.FieldDailyRate, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.InsurancePremium(); ok {
+		_spec.SetField(salarydetails.FieldInsurancePremium, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.PensionContribution(); ok {
+		_spec.SetField(salarydetails.FieldPensionContribution, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.MortgageInterest(); ok {
+		_spec.SetField(salarydetails.FieldMortgageInterest, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.DisabilityExempt(); ok {
+		_spec.SetField(salarydetails.FieldDisabilityExempt, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.BankAccountID(); ok {
 		_spec.SetField(salarydetails.FieldBankAccountID, field.TypeUUID, value)

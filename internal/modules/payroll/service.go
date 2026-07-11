@@ -249,6 +249,11 @@ func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.
 	}
 	in.GrossPay = sal.MonthlySalary
 	in.TaxCategory = sal.IncomeTax
+	// Per-employee KRA relief inputs (actual monthly amounts; the engine applies the statutory caps).
+	in.InsurancePremium = sal.InsurancePremium
+	in.PensionContribution = sal.PensionContribution
+	in.MortgageInterest = sal.MortgageInterest
+	in.DisabilityExempt = sal.DisabilityExempt
 
 	// Loans: recover min(installment, outstanding) for active, period-effective loans.
 	loans, err := s.orm.EmployeeLoan.Query().
@@ -436,8 +441,8 @@ func (s *Service) persistPayslip(ctx context.Context, p RunParams, emp *ent.Empl
 			SetGrossPay(res.GrossPay).
 			SetTaxablePay(res.TaxablePay).
 			SetPaye(res.PAYE).
-			SetTaxRelief(res.PersonalRelief).
-			SetReliefs(res.PersonalRelief).
+			SetTaxRelief(res.PersonalRelief.Add(res.InsuranceRelief)).
+			SetReliefs(res.PersonalRelief.Add(res.InsuranceRelief)).
 			SetGrossPayAfterTax(res.GrossPayAfterTax).
 			SetShifOrNhifContribution(res.SHIFOrNHIF).
 			SetHousingLevy(res.HousingLevy).

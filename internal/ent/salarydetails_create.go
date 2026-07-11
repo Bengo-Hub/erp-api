@@ -121,6 +121,62 @@ func (_c *SalaryDetailsCreate) SetNillableDailyRate(v *decimal.Decimal) *SalaryD
 	return _c
 }
 
+// SetInsurancePremium sets the "insurance_premium" field.
+func (_c *SalaryDetailsCreate) SetInsurancePremium(v decimal.Decimal) *SalaryDetailsCreate {
+	_c.mutation.SetInsurancePremium(v)
+	return _c
+}
+
+// SetNillableInsurancePremium sets the "insurance_premium" field if the given value is not nil.
+func (_c *SalaryDetailsCreate) SetNillableInsurancePremium(v *decimal.Decimal) *SalaryDetailsCreate {
+	if v != nil {
+		_c.SetInsurancePremium(*v)
+	}
+	return _c
+}
+
+// SetPensionContribution sets the "pension_contribution" field.
+func (_c *SalaryDetailsCreate) SetPensionContribution(v decimal.Decimal) *SalaryDetailsCreate {
+	_c.mutation.SetPensionContribution(v)
+	return _c
+}
+
+// SetNillablePensionContribution sets the "pension_contribution" field if the given value is not nil.
+func (_c *SalaryDetailsCreate) SetNillablePensionContribution(v *decimal.Decimal) *SalaryDetailsCreate {
+	if v != nil {
+		_c.SetPensionContribution(*v)
+	}
+	return _c
+}
+
+// SetMortgageInterest sets the "mortgage_interest" field.
+func (_c *SalaryDetailsCreate) SetMortgageInterest(v decimal.Decimal) *SalaryDetailsCreate {
+	_c.mutation.SetMortgageInterest(v)
+	return _c
+}
+
+// SetNillableMortgageInterest sets the "mortgage_interest" field if the given value is not nil.
+func (_c *SalaryDetailsCreate) SetNillableMortgageInterest(v *decimal.Decimal) *SalaryDetailsCreate {
+	if v != nil {
+		_c.SetMortgageInterest(*v)
+	}
+	return _c
+}
+
+// SetDisabilityExempt sets the "disability_exempt" field.
+func (_c *SalaryDetailsCreate) SetDisabilityExempt(v bool) *SalaryDetailsCreate {
+	_c.mutation.SetDisabilityExempt(v)
+	return _c
+}
+
+// SetNillableDisabilityExempt sets the "disability_exempt" field if the given value is not nil.
+func (_c *SalaryDetailsCreate) SetNillableDisabilityExempt(v *bool) *SalaryDetailsCreate {
+	if v != nil {
+		_c.SetDisabilityExempt(*v)
+	}
+	return _c
+}
+
 // SetBankAccountID sets the "bank_account_id" field.
 func (_c *SalaryDetailsCreate) SetBankAccountID(v uuid.UUID) *SalaryDetailsCreate {
 	_c.mutation.SetBankAccountID(v)
@@ -274,6 +330,22 @@ func (_c *SalaryDetailsCreate) defaults() {
 		v := salarydetails.DefaultDailyRate
 		_c.mutation.SetDailyRate(v)
 	}
+	if _, ok := _c.mutation.InsurancePremium(); !ok {
+		v := salarydetails.DefaultInsurancePremium
+		_c.mutation.SetInsurancePremium(v)
+	}
+	if _, ok := _c.mutation.PensionContribution(); !ok {
+		v := salarydetails.DefaultPensionContribution
+		_c.mutation.SetPensionContribution(v)
+	}
+	if _, ok := _c.mutation.MortgageInterest(); !ok {
+		v := salarydetails.DefaultMortgageInterest
+		_c.mutation.SetMortgageInterest(v)
+	}
+	if _, ok := _c.mutation.DisabilityExempt(); !ok {
+		v := salarydetails.DefaultDisabilityExempt
+		_c.mutation.SetDisabilityExempt(v)
+	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		v := salarydetails.DefaultIsActive
 		_c.mutation.SetIsActive(v)
@@ -314,6 +386,18 @@ func (_c *SalaryDetailsCreate) check() error {
 	}
 	if _, ok := _c.mutation.DailyRate(); !ok {
 		return &ValidationError{Name: "daily_rate", err: errors.New(`ent: missing required field "SalaryDetails.daily_rate"`)}
+	}
+	if _, ok := _c.mutation.InsurancePremium(); !ok {
+		return &ValidationError{Name: "insurance_premium", err: errors.New(`ent: missing required field "SalaryDetails.insurance_premium"`)}
+	}
+	if _, ok := _c.mutation.PensionContribution(); !ok {
+		return &ValidationError{Name: "pension_contribution", err: errors.New(`ent: missing required field "SalaryDetails.pension_contribution"`)}
+	}
+	if _, ok := _c.mutation.MortgageInterest(); !ok {
+		return &ValidationError{Name: "mortgage_interest", err: errors.New(`ent: missing required field "SalaryDetails.mortgage_interest"`)}
+	}
+	if _, ok := _c.mutation.DisabilityExempt(); !ok {
+		return &ValidationError{Name: "disability_exempt", err: errors.New(`ent: missing required field "SalaryDetails.disability_exempt"`)}
 	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "SalaryDetails.is_active"`)}
@@ -391,6 +475,22 @@ func (_c *SalaryDetailsCreate) createSpec() (*SalaryDetails, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.DailyRate(); ok {
 		_spec.SetField(salarydetails.FieldDailyRate, field.TypeOther, value)
 		_node.DailyRate = value
+	}
+	if value, ok := _c.mutation.InsurancePremium(); ok {
+		_spec.SetField(salarydetails.FieldInsurancePremium, field.TypeOther, value)
+		_node.InsurancePremium = value
+	}
+	if value, ok := _c.mutation.PensionContribution(); ok {
+		_spec.SetField(salarydetails.FieldPensionContribution, field.TypeOther, value)
+		_node.PensionContribution = value
+	}
+	if value, ok := _c.mutation.MortgageInterest(); ok {
+		_spec.SetField(salarydetails.FieldMortgageInterest, field.TypeOther, value)
+		_node.MortgageInterest = value
+	}
+	if value, ok := _c.mutation.DisabilityExempt(); ok {
+		_spec.SetField(salarydetails.FieldDisabilityExempt, field.TypeBool, value)
+		_node.DisabilityExempt = value
 	}
 	if value, ok := _c.mutation.BankAccountID(); ok {
 		_spec.SetField(salarydetails.FieldBankAccountID, field.TypeUUID, value)
@@ -567,6 +667,54 @@ func (u *SalaryDetailsUpsert) SetDailyRate(v decimal.Decimal) *SalaryDetailsUpse
 // UpdateDailyRate sets the "daily_rate" field to the value that was provided on create.
 func (u *SalaryDetailsUpsert) UpdateDailyRate() *SalaryDetailsUpsert {
 	u.SetExcluded(salarydetails.FieldDailyRate)
+	return u
+}
+
+// SetInsurancePremium sets the "insurance_premium" field.
+func (u *SalaryDetailsUpsert) SetInsurancePremium(v decimal.Decimal) *SalaryDetailsUpsert {
+	u.Set(salarydetails.FieldInsurancePremium, v)
+	return u
+}
+
+// UpdateInsurancePremium sets the "insurance_premium" field to the value that was provided on create.
+func (u *SalaryDetailsUpsert) UpdateInsurancePremium() *SalaryDetailsUpsert {
+	u.SetExcluded(salarydetails.FieldInsurancePremium)
+	return u
+}
+
+// SetPensionContribution sets the "pension_contribution" field.
+func (u *SalaryDetailsUpsert) SetPensionContribution(v decimal.Decimal) *SalaryDetailsUpsert {
+	u.Set(salarydetails.FieldPensionContribution, v)
+	return u
+}
+
+// UpdatePensionContribution sets the "pension_contribution" field to the value that was provided on create.
+func (u *SalaryDetailsUpsert) UpdatePensionContribution() *SalaryDetailsUpsert {
+	u.SetExcluded(salarydetails.FieldPensionContribution)
+	return u
+}
+
+// SetMortgageInterest sets the "mortgage_interest" field.
+func (u *SalaryDetailsUpsert) SetMortgageInterest(v decimal.Decimal) *SalaryDetailsUpsert {
+	u.Set(salarydetails.FieldMortgageInterest, v)
+	return u
+}
+
+// UpdateMortgageInterest sets the "mortgage_interest" field to the value that was provided on create.
+func (u *SalaryDetailsUpsert) UpdateMortgageInterest() *SalaryDetailsUpsert {
+	u.SetExcluded(salarydetails.FieldMortgageInterest)
+	return u
+}
+
+// SetDisabilityExempt sets the "disability_exempt" field.
+func (u *SalaryDetailsUpsert) SetDisabilityExempt(v bool) *SalaryDetailsUpsert {
+	u.Set(salarydetails.FieldDisabilityExempt, v)
+	return u
+}
+
+// UpdateDisabilityExempt sets the "disability_exempt" field to the value that was provided on create.
+func (u *SalaryDetailsUpsert) UpdateDisabilityExempt() *SalaryDetailsUpsert {
+	u.SetExcluded(salarydetails.FieldDisabilityExempt)
 	return u
 }
 
@@ -815,6 +963,62 @@ func (u *SalaryDetailsUpsertOne) SetDailyRate(v decimal.Decimal) *SalaryDetailsU
 func (u *SalaryDetailsUpsertOne) UpdateDailyRate() *SalaryDetailsUpsertOne {
 	return u.Update(func(s *SalaryDetailsUpsert) {
 		s.UpdateDailyRate()
+	})
+}
+
+// SetInsurancePremium sets the "insurance_premium" field.
+func (u *SalaryDetailsUpsertOne) SetInsurancePremium(v decimal.Decimal) *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetInsurancePremium(v)
+	})
+}
+
+// UpdateInsurancePremium sets the "insurance_premium" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertOne) UpdateInsurancePremium() *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdateInsurancePremium()
+	})
+}
+
+// SetPensionContribution sets the "pension_contribution" field.
+func (u *SalaryDetailsUpsertOne) SetPensionContribution(v decimal.Decimal) *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetPensionContribution(v)
+	})
+}
+
+// UpdatePensionContribution sets the "pension_contribution" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertOne) UpdatePensionContribution() *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdatePensionContribution()
+	})
+}
+
+// SetMortgageInterest sets the "mortgage_interest" field.
+func (u *SalaryDetailsUpsertOne) SetMortgageInterest(v decimal.Decimal) *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetMortgageInterest(v)
+	})
+}
+
+// UpdateMortgageInterest sets the "mortgage_interest" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertOne) UpdateMortgageInterest() *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdateMortgageInterest()
+	})
+}
+
+// SetDisabilityExempt sets the "disability_exempt" field.
+func (u *SalaryDetailsUpsertOne) SetDisabilityExempt(v bool) *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetDisabilityExempt(v)
+	})
+}
+
+// UpdateDisabilityExempt sets the "disability_exempt" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertOne) UpdateDisabilityExempt() *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdateDisabilityExempt()
 	})
 }
 
@@ -1243,6 +1447,62 @@ func (u *SalaryDetailsUpsertBulk) SetDailyRate(v decimal.Decimal) *SalaryDetails
 func (u *SalaryDetailsUpsertBulk) UpdateDailyRate() *SalaryDetailsUpsertBulk {
 	return u.Update(func(s *SalaryDetailsUpsert) {
 		s.UpdateDailyRate()
+	})
+}
+
+// SetInsurancePremium sets the "insurance_premium" field.
+func (u *SalaryDetailsUpsertBulk) SetInsurancePremium(v decimal.Decimal) *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetInsurancePremium(v)
+	})
+}
+
+// UpdateInsurancePremium sets the "insurance_premium" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertBulk) UpdateInsurancePremium() *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdateInsurancePremium()
+	})
+}
+
+// SetPensionContribution sets the "pension_contribution" field.
+func (u *SalaryDetailsUpsertBulk) SetPensionContribution(v decimal.Decimal) *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetPensionContribution(v)
+	})
+}
+
+// UpdatePensionContribution sets the "pension_contribution" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertBulk) UpdatePensionContribution() *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdatePensionContribution()
+	})
+}
+
+// SetMortgageInterest sets the "mortgage_interest" field.
+func (u *SalaryDetailsUpsertBulk) SetMortgageInterest(v decimal.Decimal) *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetMortgageInterest(v)
+	})
+}
+
+// UpdateMortgageInterest sets the "mortgage_interest" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertBulk) UpdateMortgageInterest() *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdateMortgageInterest()
+	})
+}
+
+// SetDisabilityExempt sets the "disability_exempt" field.
+func (u *SalaryDetailsUpsertBulk) SetDisabilityExempt(v bool) *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetDisabilityExempt(v)
+	})
+}
+
+// UpdateDisabilityExempt sets the "disability_exempt" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertBulk) UpdateDisabilityExempt() *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdateDisabilityExempt()
 	})
 }
 

@@ -31,6 +31,17 @@ func (SalaryDetails) Fields() []ent.Field {
 		moneyField("hourly_rate"),
 		moneyField("daily_rate"),
 
+		// KRA relief inputs (per-employee monthly amounts; default 0 = no relief). The engine
+		// applies the statutory caps (from PayrollRelief), so these hold the ACTUAL amounts:
+		//   - insurance_premium: life/health/education premiums -> 15% relief, cap 5,000/mo
+		//   - pension_contribution: registered scheme contribution -> deductible pre-tax, cap 30,000/mo
+		//   - mortgage_interest: owner-occupier interest -> deductible pre-tax, cap 25,000/mo
+		//   - disability_exempt: holds a PWD exemption certificate (first 150,000/mo exempt)
+		moneyField("insurance_premium"),
+		moneyField("pension_contribution"),
+		moneyField("mortgage_interest"),
+		field.Bool("disability_exempt").Default(false).Comment("Holds a PWD tax-exemption certificate"),
+
 		field.UUID("bank_account_id", uuid.UUID{}).Optional().Nillable().Comment("Primary salary bank account"),
 		field.UUID("job_group_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("workers_union_id", uuid.UUID{}).Optional().Nillable(),

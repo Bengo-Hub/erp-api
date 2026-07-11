@@ -31,6 +31,14 @@ const (
 	FieldHourlyRate = "hourly_rate"
 	// FieldDailyRate holds the string denoting the daily_rate field in the database.
 	FieldDailyRate = "daily_rate"
+	// FieldInsurancePremium holds the string denoting the insurance_premium field in the database.
+	FieldInsurancePremium = "insurance_premium"
+	// FieldPensionContribution holds the string denoting the pension_contribution field in the database.
+	FieldPensionContribution = "pension_contribution"
+	// FieldMortgageInterest holds the string denoting the mortgage_interest field in the database.
+	FieldMortgageInterest = "mortgage_interest"
+	// FieldDisabilityExempt holds the string denoting the disability_exempt field in the database.
+	FieldDisabilityExempt = "disability_exempt"
 	// FieldBankAccountID holds the string denoting the bank_account_id field in the database.
 	FieldBankAccountID = "bank_account_id"
 	// FieldJobGroupID holds the string denoting the job_group_id field in the database.
@@ -58,6 +66,10 @@ var Columns = []string{
 	FieldCurrency,
 	FieldHourlyRate,
 	FieldDailyRate,
+	FieldInsurancePremium,
+	FieldPensionContribution,
+	FieldMortgageInterest,
+	FieldDisabilityExempt,
 	FieldBankAccountID,
 	FieldJobGroupID,
 	FieldWorkersUnionID,
@@ -87,6 +99,14 @@ var (
 	DefaultHourlyRate decimal.Decimal
 	// DefaultDailyRate holds the default value on creation for the "daily_rate" field.
 	DefaultDailyRate decimal.Decimal
+	// DefaultInsurancePremium holds the default value on creation for the "insurance_premium" field.
+	DefaultInsurancePremium decimal.Decimal
+	// DefaultPensionContribution holds the default value on creation for the "pension_contribution" field.
+	DefaultPensionContribution decimal.Decimal
+	// DefaultMortgageInterest holds the default value on creation for the "mortgage_interest" field.
+	DefaultMortgageInterest decimal.Decimal
+	// DefaultDisabilityExempt holds the default value on creation for the "disability_exempt" field.
+	DefaultDisabilityExempt bool
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -145,6 +165,26 @@ func ByHourlyRate(opts ...sql.OrderTermOption) OrderOption {
 // ByDailyRate orders the results by the daily_rate field.
 func ByDailyRate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDailyRate, opts...).ToFunc()
+}
+
+// ByInsurancePremium orders the results by the insurance_premium field.
+func ByInsurancePremium(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInsurancePremium, opts...).ToFunc()
+}
+
+// ByPensionContribution orders the results by the pension_contribution field.
+func ByPensionContribution(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPensionContribution, opts...).ToFunc()
+}
+
+// ByMortgageInterest orders the results by the mortgage_interest field.
+func ByMortgageInterest(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMortgageInterest, opts...).ToFunc()
+}
+
+// ByDisabilityExempt orders the results by the disability_exempt field.
+func ByDisabilityExempt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDisabilityExempt, opts...).ToFunc()
 }
 
 // ByBankAccountID orders the results by the bank_account_id field.

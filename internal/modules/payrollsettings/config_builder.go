@@ -3,6 +3,7 @@ package payrollsettings
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollrelief"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 )
 
@@ -102,7 +104,39 @@ func (s *Service) BuildEngineConfig(ctx context.Context, tenantID uuid.UUID, per
 			cfg.DeductionOrder = append(cfg.DeductionOrder, payrollengine.Phase{Name: p.Phase, Components: p.Components})
 		}
 	}
+
+	// KRA relief caps, resolved from the tenant's ACTIVE PayrollRelief rows (data-driven, not
+	// hardcoded). Only the insurance-relief credit and the deductible pension/mortgage/disability
+	// exemptions gate on these — a tenant without the rows simply gets no extra relief (caps zero).
+	if err := s.applyReliefCaps(ctx, tenantID, &cfg); err != nil {
+		return cfg, fmt.Errorf("reliefs: %w", err)
+	}
 	return cfg, nil
+}
+
+// applyReliefCaps loads the tenant's active PayrollRelief rows and maps them onto the engine
+// Config relief caps by title. Personal Relief is handled by the income formula, not here.
+func (s *Service) applyReliefCaps(ctx context.Context, tenantID uuid.UUID, cfg *payrollengine.Config) error {
+	rows, err := s.orm.PayrollRelief.Query().
+		Where(payrollrelief.TenantID(tenantID), payrollrelief.IsActive(true)).All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, r := range rows {
+		title := strings.ToLower(r.Title)
+		switch {
+		case strings.Contains(title, "insurance"):
+			cfg.InsuranceReliefRate = r.Percentage.Div(hundred)
+			cfg.InsuranceReliefCap = r.FixedLimit
+		case strings.Contains(title, "pension"):
+			cfg.PensionReliefCap = r.FixedLimit
+		case strings.Contains(title, "mortgage"):
+			cfg.MortgageReliefCap = r.FixedLimit
+		case strings.Contains(title, "disability"):
+			cfg.DisabilityExemptAmount = r.FixedLimit
+		}
+	}
+	return nil
 }
 
 // statutoryToggleSet is the tenant's statutory opt-out state (GeneralHRSettings toggles).

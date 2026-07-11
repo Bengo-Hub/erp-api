@@ -11,9 +11,17 @@ import (
 type PayslipResult struct {
 	GrossPay          decimal.Decimal
 	TaxablePay        decimal.Decimal
-	PAYE              decimal.Decimal // after personal relief, floored at 0
+	PAYE              decimal.Decimal // after all reliefs, floored at 0
 	PersonalRelief    decimal.Decimal
-	GrossPayAfterTax  decimal.Decimal
+	// InsuranceRelief is the applied insurance-relief credit (min(rate*premium, cap)); it reduces
+	// PAYE alongside PersonalRelief. PensionDeduction/MortgageDeduction are the applied PRE-TAX
+	// allowable deductions, and DisabilityExemption the applied chargeable-pay exemption — all
+	// surfaced for the P9/P9A card. Zero unless the employee has the corresponding relief input.
+	InsuranceRelief     decimal.Decimal
+	PensionDeduction    decimal.Decimal
+	MortgageDeduction   decimal.Decimal
+	DisabilityExemption decimal.Decimal
+	GrossPayAfterTax    decimal.Decimal
 	SHIFOrNHIF        decimal.Decimal
 	HousingLevy       decimal.Decimal
 	NSSFEmployeeTier1 decimal.Decimal
@@ -179,6 +187,33 @@ func applyPAYE(res *PayslipResult, cfg Config, in EmployeeInput) error {
 	if taxable.LessThan(decimal.Zero) {
 		taxable = decimal.Zero
 	}
+
+	// KRA allowable PRE-TAX reliefs further reduce chargeable pay. These lower PAYE/chargeable pay
+	// only — the contributions are remitted separately (private scheme / bank / a deduction line),
+	// so they do NOT alter net pay here. Each is gated on its cap being configured, so a zero-value
+	// Config (no reliefs resolved) leaves taxable pay exactly as before.
+	//
+	// Deductible pension: min(actual, statutory monthly cap, 30% of gross).
+	if in.PensionContribution.IsPositive() && cfg.PensionReliefCap.IsPositive() {
+		pension := minDec(in.PensionContribution, cfg.PensionReliefCap, res.GrossPay.Mul(pct30))
+		res.PensionDeduction = round2(pension)
+		taxable = taxable.Sub(pension)
+	}
+	// Owner-occupier mortgage interest: min(actual, statutory monthly cap).
+	if in.MortgageInterest.IsPositive() && cfg.MortgageReliefCap.IsPositive() {
+		mortgage := minDec(in.MortgageInterest, cfg.MortgageReliefCap)
+		res.MortgageDeduction = round2(mortgage)
+		taxable = taxable.Sub(mortgage)
+	}
+	// PWD exemption certificate: the first DisabilityExemptAmount of chargeable pay is exempt.
+	if in.DisabilityExempt && cfg.DisabilityExemptAmount.IsPositive() {
+		exempt := minDec(taxable, cfg.DisabilityExemptAmount)
+		res.DisabilityExemption = round2(exempt)
+		taxable = taxable.Sub(exempt)
+	}
+	if taxable.LessThan(decimal.Zero) {
+		taxable = decimal.Zero
+	}
 	res.TaxablePay = taxable
 
 	// "none" => no PAYE; "" defaults to primary (legacy default behaviour). A tenant-level
@@ -198,19 +233,38 @@ func applyPAYE(res *PayslipResult, cfg Config, in EmployeeInput) error {
 	if err != nil {
 		return err
 	}
-	relief := decimal.Zero
+	// Relief CREDITS reduce the tax charged. Personal relief plus insurance relief
+	// (min(rate*premium, cap)). Secondary employees get no reliefs (consumed by the primary job).
+	personal := decimal.Zero
 	if in.TaxCategory != "secondary" {
-		relief = cfg.Income.PersonalRelief
+		personal = cfg.Income.PersonalRelief
+		if in.InsurancePremium.IsPositive() && cfg.InsuranceReliefRate.IsPositive() && cfg.InsuranceReliefCap.IsPositive() {
+			res.InsuranceRelief = round2(minDec(in.InsurancePremium.Mul(cfg.InsuranceReliefRate), cfg.InsuranceReliefCap))
+		}
 	}
-	paye := gross.Sub(relief)
+	paye := gross.Sub(personal).Sub(res.InsuranceRelief)
 	if paye.LessThan(decimal.Zero) {
 		paye = decimal.Zero
 	}
 	res.PAYE = round2(paye)
-	res.PersonalRelief = relief
+	res.PersonalRelief = personal
 	res.GrossPayAfterTax = round2(taxable.Sub(res.PAYE))
 	addPhase(res, PhaseAfterTax, res.PAYE)
 	return nil
+}
+
+// pct30 is the 30%-of-gross ceiling used in the deductible-pension test.
+var pct30 = decimal.NewFromFloat(0.30)
+
+// minDec returns the smallest of the given decimals (at least one required).
+func minDec(first decimal.Decimal, rest ...decimal.Decimal) decimal.Decimal {
+	m := first
+	for _, v := range rest {
+		if v.LessThan(m) {
+			m = v
+		}
+	}
+	return m
 }
 
 func addPhase(res *PayslipResult, phase string, amt decimal.Decimal) {

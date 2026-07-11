@@ -82679,27 +82679,31 @@ func (m *RolePermissionMutation) ResetEdge(name string) error {
 // SalaryDetailsMutation represents an operation that mutates the SalaryDetails nodes in the graph.
 type SalaryDetailsMutation struct {
 	config
-	op               Op
-	typ              string
-	id               *uuid.UUID
-	tenant_id        *uuid.UUID
-	employee_id      *uuid.UUID
-	monthly_salary   *decimal.Decimal
-	pay_mode         *string
-	income_tax       *string
-	currency         *string
-	hourly_rate      *decimal.Decimal
-	daily_rate       *decimal.Decimal
-	bank_account_id  *uuid.UUID
-	job_group_id     *uuid.UUID
-	workers_union_id *uuid.UUID
-	is_active        *bool
-	created_at       *time.Time
-	updated_at       *time.Time
-	clearedFields    map[string]struct{}
-	done             bool
-	oldValue         func(context.Context) (*SalaryDetails, error)
-	predicates       []predicate.SalaryDetails
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	tenant_id            *uuid.UUID
+	employee_id          *uuid.UUID
+	monthly_salary       *decimal.Decimal
+	pay_mode             *string
+	income_tax           *string
+	currency             *string
+	hourly_rate          *decimal.Decimal
+	daily_rate           *decimal.Decimal
+	insurance_premium    *decimal.Decimal
+	pension_contribution *decimal.Decimal
+	mortgage_interest    *decimal.Decimal
+	disability_exempt    *bool
+	bank_account_id      *uuid.UUID
+	job_group_id         *uuid.UUID
+	workers_union_id     *uuid.UUID
+	is_active            *bool
+	created_at           *time.Time
+	updated_at           *time.Time
+	clearedFields        map[string]struct{}
+	done                 bool
+	oldValue             func(context.Context) (*SalaryDetails, error)
+	predicates           []predicate.SalaryDetails
 }
 
 var _ ent.Mutation = (*SalaryDetailsMutation)(nil)
@@ -83107,6 +83111,150 @@ func (m *SalaryDetailsMutation) ResetDailyRate() {
 	m.daily_rate = nil
 }
 
+// SetInsurancePremium sets the "insurance_premium" field.
+func (m *SalaryDetailsMutation) SetInsurancePremium(d decimal.Decimal) {
+	m.insurance_premium = &d
+}
+
+// InsurancePremium returns the value of the "insurance_premium" field in the mutation.
+func (m *SalaryDetailsMutation) InsurancePremium() (r decimal.Decimal, exists bool) {
+	v := m.insurance_premium
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInsurancePremium returns the old "insurance_premium" field's value of the SalaryDetails entity.
+// If the SalaryDetails object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SalaryDetailsMutation) OldInsurancePremium(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInsurancePremium is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInsurancePremium requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInsurancePremium: %w", err)
+	}
+	return oldValue.InsurancePremium, nil
+}
+
+// ResetInsurancePremium resets all changes to the "insurance_premium" field.
+func (m *SalaryDetailsMutation) ResetInsurancePremium() {
+	m.insurance_premium = nil
+}
+
+// SetPensionContribution sets the "pension_contribution" field.
+func (m *SalaryDetailsMutation) SetPensionContribution(d decimal.Decimal) {
+	m.pension_contribution = &d
+}
+
+// PensionContribution returns the value of the "pension_contribution" field in the mutation.
+func (m *SalaryDetailsMutation) PensionContribution() (r decimal.Decimal, exists bool) {
+	v := m.pension_contribution
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPensionContribution returns the old "pension_contribution" field's value of the SalaryDetails entity.
+// If the SalaryDetails object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SalaryDetailsMutation) OldPensionContribution(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPensionContribution is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPensionContribution requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPensionContribution: %w", err)
+	}
+	return oldValue.PensionContribution, nil
+}
+
+// ResetPensionContribution resets all changes to the "pension_contribution" field.
+func (m *SalaryDetailsMutation) ResetPensionContribution() {
+	m.pension_contribution = nil
+}
+
+// SetMortgageInterest sets the "mortgage_interest" field.
+func (m *SalaryDetailsMutation) SetMortgageInterest(d decimal.Decimal) {
+	m.mortgage_interest = &d
+}
+
+// MortgageInterest returns the value of the "mortgage_interest" field in the mutation.
+func (m *SalaryDetailsMutation) MortgageInterest() (r decimal.Decimal, exists bool) {
+	v := m.mortgage_interest
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMortgageInterest returns the old "mortgage_interest" field's value of the SalaryDetails entity.
+// If the SalaryDetails object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SalaryDetailsMutation) OldMortgageInterest(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMortgageInterest is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMortgageInterest requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMortgageInterest: %w", err)
+	}
+	return oldValue.MortgageInterest, nil
+}
+
+// ResetMortgageInterest resets all changes to the "mortgage_interest" field.
+func (m *SalaryDetailsMutation) ResetMortgageInterest() {
+	m.mortgage_interest = nil
+}
+
+// SetDisabilityExempt sets the "disability_exempt" field.
+func (m *SalaryDetailsMutation) SetDisabilityExempt(b bool) {
+	m.disability_exempt = &b
+}
+
+// DisabilityExempt returns the value of the "disability_exempt" field in the mutation.
+func (m *SalaryDetailsMutation) DisabilityExempt() (r bool, exists bool) {
+	v := m.disability_exempt
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDisabilityExempt returns the old "disability_exempt" field's value of the SalaryDetails entity.
+// If the SalaryDetails object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SalaryDetailsMutation) OldDisabilityExempt(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDisabilityExempt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDisabilityExempt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDisabilityExempt: %w", err)
+	}
+	return oldValue.DisabilityExempt, nil
+}
+
+// ResetDisabilityExempt resets all changes to the "disability_exempt" field.
+func (m *SalaryDetailsMutation) ResetDisabilityExempt() {
+	m.disability_exempt = nil
+}
+
 // SetBankAccountID sets the "bank_account_id" field.
 func (m *SalaryDetailsMutation) SetBankAccountID(u uuid.UUID) {
 	m.bank_account_id = &u
@@ -83396,7 +83544,7 @@ func (m *SalaryDetailsMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SalaryDetailsMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 18)
 	if m.tenant_id != nil {
 		fields = append(fields, salarydetails.FieldTenantID)
 	}
@@ -83420,6 +83568,18 @@ func (m *SalaryDetailsMutation) Fields() []string {
 	}
 	if m.daily_rate != nil {
 		fields = append(fields, salarydetails.FieldDailyRate)
+	}
+	if m.insurance_premium != nil {
+		fields = append(fields, salarydetails.FieldInsurancePremium)
+	}
+	if m.pension_contribution != nil {
+		fields = append(fields, salarydetails.FieldPensionContribution)
+	}
+	if m.mortgage_interest != nil {
+		fields = append(fields, salarydetails.FieldMortgageInterest)
+	}
+	if m.disability_exempt != nil {
+		fields = append(fields, salarydetails.FieldDisabilityExempt)
 	}
 	if m.bank_account_id != nil {
 		fields = append(fields, salarydetails.FieldBankAccountID)
@@ -83463,6 +83623,14 @@ func (m *SalaryDetailsMutation) Field(name string) (ent.Value, bool) {
 		return m.HourlyRate()
 	case salarydetails.FieldDailyRate:
 		return m.DailyRate()
+	case salarydetails.FieldInsurancePremium:
+		return m.InsurancePremium()
+	case salarydetails.FieldPensionContribution:
+		return m.PensionContribution()
+	case salarydetails.FieldMortgageInterest:
+		return m.MortgageInterest()
+	case salarydetails.FieldDisabilityExempt:
+		return m.DisabilityExempt()
 	case salarydetails.FieldBankAccountID:
 		return m.BankAccountID()
 	case salarydetails.FieldJobGroupID:
@@ -83500,6 +83668,14 @@ func (m *SalaryDetailsMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldHourlyRate(ctx)
 	case salarydetails.FieldDailyRate:
 		return m.OldDailyRate(ctx)
+	case salarydetails.FieldInsurancePremium:
+		return m.OldInsurancePremium(ctx)
+	case salarydetails.FieldPensionContribution:
+		return m.OldPensionContribution(ctx)
+	case salarydetails.FieldMortgageInterest:
+		return m.OldMortgageInterest(ctx)
+	case salarydetails.FieldDisabilityExempt:
+		return m.OldDisabilityExempt(ctx)
 	case salarydetails.FieldBankAccountID:
 		return m.OldBankAccountID(ctx)
 	case salarydetails.FieldJobGroupID:
@@ -83576,6 +83752,34 @@ func (m *SalaryDetailsMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDailyRate(v)
+		return nil
+	case salarydetails.FieldInsurancePremium:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInsurancePremium(v)
+		return nil
+	case salarydetails.FieldPensionContribution:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPensionContribution(v)
+		return nil
+	case salarydetails.FieldMortgageInterest:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMortgageInterest(v)
+		return nil
+	case salarydetails.FieldDisabilityExempt:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDisabilityExempt(v)
 		return nil
 	case salarydetails.FieldBankAccountID:
 		v, ok := value.(uuid.UUID)
@@ -83718,6 +83922,18 @@ func (m *SalaryDetailsMutation) ResetField(name string) error {
 		return nil
 	case salarydetails.FieldDailyRate:
 		m.ResetDailyRate()
+		return nil
+	case salarydetails.FieldInsurancePremium:
+		m.ResetInsurancePremium()
+		return nil
+	case salarydetails.FieldPensionContribution:
+		m.ResetPensionContribution()
+		return nil
+	case salarydetails.FieldMortgageInterest:
+		m.ResetMortgageInterest()
+		return nil
+	case salarydetails.FieldDisabilityExempt:
+		m.ResetDisabilityExempt()
 		return nil
 	case salarydetails.FieldBankAccountID:
 		m.ResetBankAccountID()

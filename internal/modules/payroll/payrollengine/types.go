@@ -56,6 +56,20 @@ type EmployeeInput struct {
 	// in the after-PAYE phase like loans/advances. Filtered/effective-dated by the caller.
 	StaffPurchases  []Recoverable
 	NonCashBenefits decimal.Decimal // sum of effective non-cash benefit amounts
+
+	// --- KRA reliefs (per-employee actual amounts; all additive, zero by default) ---
+	// InsurancePremium is the monthly life/health/education premium the employee pays. It yields
+	// an insurance-relief CREDIT (min(rate*premium, cap)) that reduces PAYE like personal relief.
+	InsurancePremium decimal.Decimal
+	// PensionContribution is the monthly contribution to a registered pension/provident scheme
+	// (beyond NSSF). Deductible PRE-TAX up to min(30% of gross, actual, statutory cap).
+	PensionContribution decimal.Decimal
+	// MortgageInterest is monthly owner-occupier mortgage interest — an allowable PRE-TAX
+	// deduction up to the statutory monthly cap.
+	MortgageInterest decimal.Decimal
+	// DisabilityExempt marks an employee holding a PWD tax-exemption certificate: the first
+	// DisabilityExemptAmount of chargeable pay is exempt from PAYE.
+	DisabilityExempt bool
 }
 
 // Recoverable is an installment-based deduction (loan/advance/loss-damage). The engine
@@ -102,6 +116,14 @@ type Config struct {
 	// non-cash benefits up to KES 36,000/yr ≈ KES 3,000/month are not taxable). Only the excess is
 	// taxed. Applied only when NonCashAsTaxable is true.
 	NonCashMonthlyExemption decimal.Decimal
+
+	// --- KRA relief caps (resolved from the tenant's active PayrollRelief rows). A zero cap means
+	// the relief is NOT configured and is skipped entirely, so a zero-value Config is unchanged. ---
+	InsuranceReliefRate    decimal.Decimal // fraction of premium relieved (0.15 == 15%)
+	InsuranceReliefCap     decimal.Decimal // monthly ceiling on the insurance-relief credit (5,000)
+	PensionReliefCap       decimal.Decimal // monthly ceiling on deductible pension (30,000)
+	MortgageReliefCap      decimal.Decimal // monthly ceiling on deductible mortgage interest (30,000)
+	DisabilityExemptAmount decimal.Decimal // monthly chargeable-pay exemption for PWD holders (150,000)
 }
 
 // Phase is one deduction phase with the components applied in it.

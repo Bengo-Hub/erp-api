@@ -121,6 +121,9 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 	if res.PersonalRelief.IsPositive() {
 		add(secRelief, "personal_relief", "Personal Relief", res.PersonalRelief, decimal.Zero, decimal.Zero, false, false, "", nil)
 	}
+	if res.InsuranceRelief.IsPositive() {
+		add(secRelief, "insurance_relief", "Insurance Relief", res.InsuranceRelief, decimal.Zero, decimal.Zero, false, false, "", nil)
+	}
 	if res.PAYE.IsPositive() {
 		add(secTax, "paye", "P.A.Y.E.", res.PAYE, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseAfterTax, nil)
 	}
