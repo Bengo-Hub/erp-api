@@ -250,7 +250,14 @@ func (s *Service) ensureCustomUser(ctx context.Context, tenantID, authUserID uui
 		if strings.TrimSpace(email) == "" {
 			email = externalID + "@unknown.local"
 		}
+		// Pin the PK to the auth user id, mirroring the SSO/rbac provisioning path
+		// (rbac.Service SetID(extUUID)). This consumer/backfill path fires BEFORE an
+		// admin-provisioned user's first login and wins the create race; without SetID
+		// the row gets a random PK while RBAC (UserRoleAssignment.UserID / requirePermission
+		// scope.UserID) keys on the auth id → every non-superuser request 403s. This was
+		// fixed for the SSO path on 2026-07-10 but the event/backfill path was missed.
 		return s.orm.CustomUser.Create().
+			SetID(authUserID).
 			SetTenantID(tenantID).
 			SetExternalID(externalID).
 			SetEmail(email).
