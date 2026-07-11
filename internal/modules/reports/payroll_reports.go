@@ -49,6 +49,7 @@ func money(d decimal.Decimal) string { return d.StringFixed(2) }
 type p9Acc struct {
 	e                                       *ent.Employee
 	gross, taxable, relief, paye, nssf, net decimal.Decimal
+	shif, ahl                               decimal.Decimal
 }
 
 // P9 is the KRA Tax Deduction Card: ONE row per employee with year-to-date gross, deductions,
@@ -76,25 +77,36 @@ func (s *Service) P9(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report
 		a.relief = a.relief.Add(p.TaxRelief)
 		a.paye = a.paye.Add(p.Paye)
 		a.nssf = a.nssf.Add(p.NssfEmployeeTier1).Add(p.NssfEmployeeTier2)
+		a.shif = a.shif.Add(p.ShifOrNhifContribution)
+		a.ahl = a.ahl.Add(p.HousingLevy)
 		a.net = a.net.Add(p.NetPay)
 	}
+	// P9 (KRA Tax Deduction Card) columns — includes the allowable pre-tax deductions
+	// (NSSF, SHIF, AHL) and the personal-relief credit so the card reconciles to PAYE.
 	rep := &Report{
 		Report:  "P9",
 		Period:  periodMeta(f),
-		Columns: []string{"employee_name", "employee_pin", "national_id", "total_gross_pay", "total_deductions", "chargeable_pay", "total_tax", "net_pay"},
+		Columns: []string{"employee_name", "employee_pin", "national_id", "total_gross_pay", "nssf", "shif", "housing_levy", "total_deductions", "chargeable_pay", "tax_charged", "personal_relief", "total_tax", "net_pay"},
 		Rows:    []map[string]any{},
 	}
 	totChargeable, totPaye, totNet := d(), d(), d()
 	for _, id := range order {
 		a := byEmp[id]
 		deductions := a.gross.Sub(a.net)
+		// tax charged = PAYE before the personal-relief credit (PAYE = tax_charged − relief).
+		taxCharged := a.paye.Add(a.relief)
 		rep.Rows = append(rep.Rows, map[string]any{
 			"employee_name":    empName(a.e),
 			"employee_pin":     pin(a.e),
 			"national_id":      natID(a.e),
 			"total_gross_pay":  money(a.gross),
+			"nssf":             money(a.nssf),
+			"shif":             money(a.shif),
+			"housing_levy":     money(a.ahl),
 			"total_deductions": money(deductions),
 			"chargeable_pay":   money(a.taxable),
+			"tax_charged":      money(taxCharged),
+			"personal_relief":  money(a.relief),
 			"total_tax":        money(a.paye),
 			"net_pay":          money(a.net),
 		})
@@ -111,8 +123,8 @@ func (s *Service) P9(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report
 
 // p10aAcc accumulates an employer-return row per employee across the period.
 type p10aAcc struct {
-	e                       *ent.Employee
-	gross, paye, nssf, nhif decimal.Decimal
+	e                            *ent.Employee
+	gross, paye, nssf, shif, ahl decimal.Decimal
 }
 
 // P10A is the employer PAYE return: ONE row per employee with year-to-date gross, PAYE, NSSF and
@@ -138,24 +150,26 @@ func (s *Service) P10A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 		a.gross = a.gross.Add(p.GrossPay)
 		a.paye = a.paye.Add(p.Paye)
 		a.nssf = a.nssf.Add(p.NssfEmployeeTier1).Add(p.NssfEmployeeTier2)
-		a.nhif = a.nhif.Add(p.ShifOrNhifContribution)
+		a.shif = a.shif.Add(p.ShifOrNhifContribution)
+		a.ahl = a.ahl.Add(p.HousingLevy)
 	}
 	rep := &Report{
 		Report:  "P10A",
 		Period:  periodMeta(f),
-		Columns: []string{"employee_name", "employee_pin", "total_gross_pay", "total_paye", "total_nssf", "total_nhif"},
+		Columns: []string{"employee_name", "employee_pin", "total_gross_pay", "total_paye", "total_nssf", "total_shif", "total_housing_levy"},
 		Rows:    []map[string]any{},
 	}
 	totGross, totPaye := d(), d()
 	for _, id := range order {
 		a := byEmp[id]
 		rep.Rows = append(rep.Rows, map[string]any{
-			"employee_name":   empName(a.e),
-			"employee_pin":    pin(a.e),
-			"total_gross_pay": money(a.gross),
-			"total_paye":      money(a.paye),
-			"total_nssf":      money(a.nssf),
-			"total_nhif":      money(a.nhif),
+			"employee_name":      empName(a.e),
+			"employee_pin":       pin(a.e),
+			"total_gross_pay":    money(a.gross),
+			"total_paye":         money(a.paye),
+			"total_nssf":         money(a.nssf),
+			"total_shif":         money(a.shif),
+			"total_housing_levy": money(a.ahl),
 		})
 		totGross = totGross.Add(a.gross)
 		totPaye = totPaye.Add(a.paye)
