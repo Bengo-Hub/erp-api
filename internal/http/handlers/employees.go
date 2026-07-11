@@ -579,6 +579,24 @@ type upsertSalaryBody struct {
 	PayMode       string `json:"pay_mode"`
 	IncomeTax     string `json:"income_tax"`
 	Currency      string `json:"currency"`
+	// KRA relief inputs (optional; decimal strings, default 0). The engine applies the statutory caps.
+	InsurancePremium    string `json:"insurance_premium"`
+	PensionContribution string `json:"pension_contribution"`
+	MortgageInterest    string `json:"mortgage_interest"`
+	DisabilityExempt    bool   `json:"disability_exempt"`
+}
+
+// decimalOrZero parses a decimal string, returning zero for blank/invalid input (used for
+// optional numeric form fields that default to 0).
+func decimalOrZero(s string) decimal.Decimal {
+	if s == "" {
+		return decimal.Zero
+	}
+	d, err := decimal.NewFromString(s)
+	if err != nil {
+		return decimal.Zero
+	}
+	return d
 }
 
 func (h *EmployeesHandler) UpsertSalary(w http.ResponseWriter, r *http.Request) {
@@ -604,7 +622,14 @@ func (h *EmployeesHandler) UpsertSalary(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid monthly_salary (must be a decimal string)")
 		return
 	}
-	row, err := h.svc.UpsertSalary(r.Context(), scope.TenantID, id, monthly, body.PayMode, body.IncomeTax, body.Currency)
+	// Optional relief amounts default to 0 when blank/unparseable.
+	reliefs := employees.SalaryReliefInput{
+		InsurancePremium:    decimalOrZero(body.InsurancePremium),
+		PensionContribution: decimalOrZero(body.PensionContribution),
+		MortgageInterest:    decimalOrZero(body.MortgageInterest),
+		DisabilityExempt:    body.DisabilityExempt,
+	}
+	row, err := h.svc.UpsertSalary(r.Context(), scope.TenantID, id, monthly, body.PayMode, body.IncomeTax, body.Currency, reliefs)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "salary_failed", err.Error())
 		return
