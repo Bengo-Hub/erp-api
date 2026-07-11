@@ -41,6 +41,14 @@ const (
 	FieldReliefs = "reliefs"
 	// FieldGrossPayAfterTax holds the string denoting the gross_pay_after_tax field in the database.
 	FieldGrossPayAfterTax = "gross_pay_after_tax"
+	// FieldInsuranceRelief holds the string denoting the insurance_relief field in the database.
+	FieldInsuranceRelief = "insurance_relief"
+	// FieldPensionDeduction holds the string denoting the pension_deduction field in the database.
+	FieldPensionDeduction = "pension_deduction"
+	// FieldMortgageDeduction holds the string denoting the mortgage_deduction field in the database.
+	FieldMortgageDeduction = "mortgage_deduction"
+	// FieldDisabilityExemption holds the string denoting the disability_exemption field in the database.
+	FieldDisabilityExemption = "disability_exemption"
 	// FieldShifOrNhifContribution holds the string denoting the shif_or_nhif_contribution field in the database.
 	FieldShifOrNhifContribution = "shif_or_nhif_contribution"
 	// FieldHousingLevy holds the string denoting the housing_levy field in the database.
@@ -103,6 +111,10 @@ var Columns = []string{
 	FieldTaxRelief,
 	FieldReliefs,
 	FieldGrossPayAfterTax,
+	FieldInsuranceRelief,
+	FieldPensionDeduction,
+	FieldMortgageDeduction,
+	FieldDisabilityExemption,
 	FieldShifOrNhifContribution,
 	FieldHousingLevy,
 	FieldNssfEmployeeTier1,
@@ -153,6 +165,14 @@ var (
 	DefaultReliefs decimal.Decimal
 	// DefaultGrossPayAfterTax holds the default value on creation for the "gross_pay_after_tax" field.
 	DefaultGrossPayAfterTax decimal.Decimal
+	// DefaultInsuranceRelief holds the default value on creation for the "insurance_relief" field.
+	DefaultInsuranceRelief decimal.Decimal
+	// DefaultPensionDeduction holds the default value on creation for the "pension_deduction" field.
+	DefaultPensionDeduction decimal.Decimal
+	// DefaultMortgageDeduction holds the default value on creation for the "mortgage_deduction" field.
+	DefaultMortgageDeduction decimal.Decimal
+	// DefaultDisabilityExemption holds the default value on creation for the "disability_exemption" field.
+	DefaultDisabilityExemption decimal.Decimal
 	// DefaultShifOrNhifContribution holds the default value on creation for the "shif_or_nhif_contribution" field.
 	DefaultShifOrNhifContribution decimal.Decimal
 	// DefaultHousingLevy holds the default value on creation for the "housing_levy" field.
@@ -260,6 +280,26 @@ func ByReliefs(opts ...sql.OrderTermOption) OrderOption {
 // ByGrossPayAfterTax orders the results by the gross_pay_after_tax field.
 func ByGrossPayAfterTax(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGrossPayAfterTax, opts...).ToFunc()
+}
+
+// ByInsuranceRelief orders the results by the insurance_relief field.
+func ByInsuranceRelief(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInsuranceRelief, opts...).ToFunc()
+}
+
+// ByPensionDeduction orders the results by the pension_deduction field.
+func ByPensionDeduction(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPensionDeduction, opts...).ToFunc()
+}
+
+// ByMortgageDeduction orders the results by the mortgage_deduction field.
+func ByMortgageDeduction(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMortgageDeduction, opts...).ToFunc()
+}
+
+// ByDisabilityExemption orders the results by the disability_exemption field.
+func ByDisabilityExemption(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDisabilityExemption, opts...).ToFunc()
 }
 
 // ByShifOrNhifContribution orders the results by the shif_or_nhif_contribution field.

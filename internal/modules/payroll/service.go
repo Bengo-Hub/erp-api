@@ -443,6 +443,10 @@ func (s *Service) persistPayslip(ctx context.Context, p RunParams, emp *ent.Empl
 			SetPaye(res.PAYE).
 			SetTaxRelief(res.PersonalRelief.Add(res.InsuranceRelief)).
 			SetReliefs(res.PersonalRelief.Add(res.InsuranceRelief)).
+			SetInsuranceRelief(res.InsuranceRelief).
+			SetPensionDeduction(res.PensionDeduction).
+			SetMortgageDeduction(res.MortgageDeduction).
+			SetDisabilityExemption(res.DisabilityExemption).
 			SetGrossPayAfterTax(res.GrossPayAfterTax).
 			SetShifOrNhifContribution(res.SHIFOrNHIF).
 			SetHousingLevy(res.HousingLevy).

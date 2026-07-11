@@ -41,11 +41,14 @@ type periodReport func(ctx context.Context, tenantID uuid.UUID, f reports.Filter
 func (h *ReportsHandler) producers() map[string]periodReport {
 	return map[string]periodReport{
 		"p9":               h.svc.P9,
+		"p9a":              h.svc.P9A,
+		"p10":              h.svc.P10,
 		"p10a":             h.svc.P10A,
 		"statutory":        h.svc.Statutory,
 		"shif":             h.svc.SHIF,
 		"nhif":             h.svc.NHIF,
 		"nssf":             h.svc.NSSF,
+		"nssf-sf24":        h.svc.NSSF,
 		"nita":             h.svc.NITA,
 		"withholding-tax":  h.svc.WithholdingTax,
 		"bank-schedule":    h.svc.BankSchedule,
@@ -60,6 +63,8 @@ func (h *ReportsHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/reports", func(rr chi.Router) {
 		// Statutory payroll returns + payroll schedules (all period-scoped).
 		rr.Get("/p9", h.period(h.svc.P9))
+		rr.Get("/p9a", h.period(h.svc.P9A))
+		rr.Get("/p10", h.period(h.svc.P10))
 		rr.Get("/p10a", h.period(h.svc.P10A))
 		rr.Get("/statutory", h.period(h.svc.Statutory))
 		rr.Get("/shif", h.period(h.svc.SHIF))

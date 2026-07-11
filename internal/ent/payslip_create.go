@@ -191,6 +191,62 @@ func (_c *PayslipCreate) SetNillableGrossPayAfterTax(v *decimal.Decimal) *Paysli
 	return _c
 }
 
+// SetInsuranceRelief sets the "insurance_relief" field.
+func (_c *PayslipCreate) SetInsuranceRelief(v decimal.Decimal) *PayslipCreate {
+	_c.mutation.SetInsuranceRelief(v)
+	return _c
+}
+
+// SetNillableInsuranceRelief sets the "insurance_relief" field if the given value is not nil.
+func (_c *PayslipCreate) SetNillableInsuranceRelief(v *decimal.Decimal) *PayslipCreate {
+	if v != nil {
+		_c.SetInsuranceRelief(*v)
+	}
+	return _c
+}
+
+// SetPensionDeduction sets the "pension_deduction" field.
+func (_c *PayslipCreate) SetPensionDeduction(v decimal.Decimal) *PayslipCreate {
+	_c.mutation.SetPensionDeduction(v)
+	return _c
+}
+
+// SetNillablePensionDeduction sets the "pension_deduction" field if the given value is not nil.
+func (_c *PayslipCreate) SetNillablePensionDeduction(v *decimal.Decimal) *PayslipCreate {
+	if v != nil {
+		_c.SetPensionDeduction(*v)
+	}
+	return _c
+}
+
+// SetMortgageDeduction sets the "mortgage_deduction" field.
+func (_c *PayslipCreate) SetMortgageDeduction(v decimal.Decimal) *PayslipCreate {
+	_c.mutation.SetMortgageDeduction(v)
+	return _c
+}
+
+// SetNillableMortgageDeduction sets the "mortgage_deduction" field if the given value is not nil.
+func (_c *PayslipCreate) SetNillableMortgageDeduction(v *decimal.Decimal) *PayslipCreate {
+	if v != nil {
+		_c.SetMortgageDeduction(*v)
+	}
+	return _c
+}
+
+// SetDisabilityExemption sets the "disability_exemption" field.
+func (_c *PayslipCreate) SetDisabilityExemption(v decimal.Decimal) *PayslipCreate {
+	_c.mutation.SetDisabilityExemption(v)
+	return _c
+}
+
+// SetNillableDisabilityExemption sets the "disability_exemption" field if the given value is not nil.
+func (_c *PayslipCreate) SetNillableDisabilityExemption(v *decimal.Decimal) *PayslipCreate {
+	if v != nil {
+		_c.SetDisabilityExemption(*v)
+	}
+	return _c
+}
+
 // SetShifOrNhifContribution sets the "shif_or_nhif_contribution" field.
 func (_c *PayslipCreate) SetShifOrNhifContribution(v decimal.Decimal) *PayslipCreate {
 	_c.mutation.SetShifOrNhifContribution(v)
@@ -566,6 +622,22 @@ func (_c *PayslipCreate) defaults() {
 		v := payslip.DefaultGrossPayAfterTax
 		_c.mutation.SetGrossPayAfterTax(v)
 	}
+	if _, ok := _c.mutation.InsuranceRelief(); !ok {
+		v := payslip.DefaultInsuranceRelief
+		_c.mutation.SetInsuranceRelief(v)
+	}
+	if _, ok := _c.mutation.PensionDeduction(); !ok {
+		v := payslip.DefaultPensionDeduction
+		_c.mutation.SetPensionDeduction(v)
+	}
+	if _, ok := _c.mutation.MortgageDeduction(); !ok {
+		v := payslip.DefaultMortgageDeduction
+		_c.mutation.SetMortgageDeduction(v)
+	}
+	if _, ok := _c.mutation.DisabilityExemption(); !ok {
+		v := payslip.DefaultDisabilityExemption
+		_c.mutation.SetDisabilityExemption(v)
+	}
 	if _, ok := _c.mutation.ShifOrNhifContribution(); !ok {
 		v := payslip.DefaultShifOrNhifContribution
 		_c.mutation.SetShifOrNhifContribution(v)
@@ -663,6 +735,18 @@ func (_c *PayslipCreate) check() error {
 	}
 	if _, ok := _c.mutation.GrossPayAfterTax(); !ok {
 		return &ValidationError{Name: "gross_pay_after_tax", err: errors.New(`ent: missing required field "Payslip.gross_pay_after_tax"`)}
+	}
+	if _, ok := _c.mutation.InsuranceRelief(); !ok {
+		return &ValidationError{Name: "insurance_relief", err: errors.New(`ent: missing required field "Payslip.insurance_relief"`)}
+	}
+	if _, ok := _c.mutation.PensionDeduction(); !ok {
+		return &ValidationError{Name: "pension_deduction", err: errors.New(`ent: missing required field "Payslip.pension_deduction"`)}
+	}
+	if _, ok := _c.mutation.MortgageDeduction(); !ok {
+		return &ValidationError{Name: "mortgage_deduction", err: errors.New(`ent: missing required field "Payslip.mortgage_deduction"`)}
+	}
+	if _, ok := _c.mutation.DisabilityExemption(); !ok {
+		return &ValidationError{Name: "disability_exemption", err: errors.New(`ent: missing required field "Payslip.disability_exemption"`)}
 	}
 	if _, ok := _c.mutation.ShifOrNhifContribution(); !ok {
 		return &ValidationError{Name: "shif_or_nhif_contribution", err: errors.New(`ent: missing required field "Payslip.shif_or_nhif_contribution"`)}
@@ -796,6 +880,22 @@ func (_c *PayslipCreate) createSpec() (*Payslip, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.GrossPayAfterTax(); ok {
 		_spec.SetField(payslip.FieldGrossPayAfterTax, field.TypeOther, value)
 		_node.GrossPayAfterTax = value
+	}
+	if value, ok := _c.mutation.InsuranceRelief(); ok {
+		_spec.SetField(payslip.FieldInsuranceRelief, field.TypeOther, value)
+		_node.InsuranceRelief = value
+	}
+	if value, ok := _c.mutation.PensionDeduction(); ok {
+		_spec.SetField(payslip.FieldPensionDeduction, field.TypeOther, value)
+		_node.PensionDeduction = value
+	}
+	if value, ok := _c.mutation.MortgageDeduction(); ok {
+		_spec.SetField(payslip.FieldMortgageDeduction, field.TypeOther, value)
+		_node.MortgageDeduction = value
+	}
+	if value, ok := _c.mutation.DisabilityExemption(); ok {
+		_spec.SetField(payslip.FieldDisabilityExemption, field.TypeOther, value)
+		_node.DisabilityExemption = value
 	}
 	if value, ok := _c.mutation.ShifOrNhifContribution(); ok {
 		_spec.SetField(payslip.FieldShifOrNhifContribution, field.TypeOther, value)
@@ -1104,6 +1204,54 @@ func (u *PayslipUpsert) SetGrossPayAfterTax(v decimal.Decimal) *PayslipUpsert {
 // UpdateGrossPayAfterTax sets the "gross_pay_after_tax" field to the value that was provided on create.
 func (u *PayslipUpsert) UpdateGrossPayAfterTax() *PayslipUpsert {
 	u.SetExcluded(payslip.FieldGrossPayAfterTax)
+	return u
+}
+
+// SetInsuranceRelief sets the "insurance_relief" field.
+func (u *PayslipUpsert) SetInsuranceRelief(v decimal.Decimal) *PayslipUpsert {
+	u.Set(payslip.FieldInsuranceRelief, v)
+	return u
+}
+
+// UpdateInsuranceRelief sets the "insurance_relief" field to the value that was provided on create.
+func (u *PayslipUpsert) UpdateInsuranceRelief() *PayslipUpsert {
+	u.SetExcluded(payslip.FieldInsuranceRelief)
+	return u
+}
+
+// SetPensionDeduction sets the "pension_deduction" field.
+func (u *PayslipUpsert) SetPensionDeduction(v decimal.Decimal) *PayslipUpsert {
+	u.Set(payslip.FieldPensionDeduction, v)
+	return u
+}
+
+// UpdatePensionDeduction sets the "pension_deduction" field to the value that was provided on create.
+func (u *PayslipUpsert) UpdatePensionDeduction() *PayslipUpsert {
+	u.SetExcluded(payslip.FieldPensionDeduction)
+	return u
+}
+
+// SetMortgageDeduction sets the "mortgage_deduction" field.
+func (u *PayslipUpsert) SetMortgageDeduction(v decimal.Decimal) *PayslipUpsert {
+	u.Set(payslip.FieldMortgageDeduction, v)
+	return u
+}
+
+// UpdateMortgageDeduction sets the "mortgage_deduction" field to the value that was provided on create.
+func (u *PayslipUpsert) UpdateMortgageDeduction() *PayslipUpsert {
+	u.SetExcluded(payslip.FieldMortgageDeduction)
+	return u
+}
+
+// SetDisabilityExemption sets the "disability_exemption" field.
+func (u *PayslipUpsert) SetDisabilityExemption(v decimal.Decimal) *PayslipUpsert {
+	u.Set(payslip.FieldDisabilityExemption, v)
+	return u
+}
+
+// UpdateDisabilityExemption sets the "disability_exemption" field to the value that was provided on create.
+func (u *PayslipUpsert) UpdateDisabilityExemption() *PayslipUpsert {
+	u.SetExcluded(payslip.FieldDisabilityExemption)
 	return u
 }
 
@@ -1634,6 +1782,62 @@ func (u *PayslipUpsertOne) SetGrossPayAfterTax(v decimal.Decimal) *PayslipUpsert
 func (u *PayslipUpsertOne) UpdateGrossPayAfterTax() *PayslipUpsertOne {
 	return u.Update(func(s *PayslipUpsert) {
 		s.UpdateGrossPayAfterTax()
+	})
+}
+
+// SetInsuranceRelief sets the "insurance_relief" field.
+func (u *PayslipUpsertOne) SetInsuranceRelief(v decimal.Decimal) *PayslipUpsertOne {
+	return u.Update(func(s *PayslipUpsert) {
+		s.SetInsuranceRelief(v)
+	})
+}
+
+// UpdateInsuranceRelief sets the "insurance_relief" field to the value that was provided on create.
+func (u *PayslipUpsertOne) UpdateInsuranceRelief() *PayslipUpsertOne {
+	return u.Update(func(s *PayslipUpsert) {
+		s.UpdateInsuranceRelief()
+	})
+}
+
+// SetPensionDeduction sets the "pension_deduction" field.
+func (u *PayslipUpsertOne) SetPensionDeduction(v decimal.Decimal) *PayslipUpsertOne {
+	return u.Update(func(s *PayslipUpsert) {
+		s.SetPensionDeduction(v)
+	})
+}
+
+// UpdatePensionDeduction sets the "pension_deduction" field to the value that was provided on create.
+func (u *PayslipUpsertOne) UpdatePensionDeduction() *PayslipUpsertOne {
+	return u.Update(func(s *PayslipUpsert) {
+		s.UpdatePensionDeduction()
+	})
+}
+
+// SetMortgageDeduction sets the "mortgage_deduction" field.
+func (u *PayslipUpsertOne) SetMortgageDeduction(v decimal.Decimal) *PayslipUpsertOne {
+	return u.Update(func(s *PayslipUpsert) {
+		s.SetMortgageDeduction(v)
+	})
+}
+
+// UpdateMortgageDeduction sets the "mortgage_deduction" field to the value that was provided on create.
+func (u *PayslipUpsertOne) UpdateMortgageDeduction() *PayslipUpsertOne {
+	return u.Update(func(s *PayslipUpsert) {
+		s.UpdateMortgageDeduction()
+	})
+}
+
+// SetDisabilityExemption sets the "disability_exemption" field.
+func (u *PayslipUpsertOne) SetDisabilityExemption(v decimal.Decimal) *PayslipUpsertOne {
+	return u.Update(func(s *PayslipUpsert) {
+		s.SetDisabilityExemption(v)
+	})
+}
+
+// UpdateDisabilityExemption sets the "disability_exemption" field to the value that was provided on create.
+func (u *PayslipUpsertOne) UpdateDisabilityExemption() *PayslipUpsertOne {
+	return u.Update(func(s *PayslipUpsert) {
+		s.UpdateDisabilityExemption()
 	})
 }
 
@@ -2377,6 +2581,62 @@ func (u *PayslipUpsertBulk) SetGrossPayAfterTax(v decimal.Decimal) *PayslipUpser
 func (u *PayslipUpsertBulk) UpdateGrossPayAfterTax() *PayslipUpsertBulk {
 	return u.Update(func(s *PayslipUpsert) {
 		s.UpdateGrossPayAfterTax()
+	})
+}
+
+// SetInsuranceRelief sets the "insurance_relief" field.
+func (u *PayslipUpsertBulk) SetInsuranceRelief(v decimal.Decimal) *PayslipUpsertBulk {
+	return u.Update(func(s *PayslipUpsert) {
+		s.SetInsuranceRelief(v)
+	})
+}
+
+// UpdateInsuranceRelief sets the "insurance_relief" field to the value that was provided on create.
+func (u *PayslipUpsertBulk) UpdateInsuranceRelief() *PayslipUpsertBulk {
+	return u.Update(func(s *PayslipUpsert) {
+		s.UpdateInsuranceRelief()
+	})
+}
+
+// SetPensionDeduction sets the "pension_deduction" field.
+func (u *PayslipUpsertBulk) SetPensionDeduction(v decimal.Decimal) *PayslipUpsertBulk {
+	return u.Update(func(s *PayslipUpsert) {
+		s.SetPensionDeduction(v)
+	})
+}
+
+// UpdatePensionDeduction sets the "pension_deduction" field to the value that was provided on create.
+func (u *PayslipUpsertBulk) UpdatePensionDeduction() *PayslipUpsertBulk {
+	return u.Update(func(s *PayslipUpsert) {
+		s.UpdatePensionDeduction()
+	})
+}
+
+// SetMortgageDeduction sets the "mortgage_deduction" field.
+func (u *PayslipUpsertBulk) SetMortgageDeduction(v decimal.Decimal) *PayslipUpsertBulk {
+	return u.Update(func(s *PayslipUpsert) {
+		s.SetMortgageDeduction(v)
+	})
+}
+
+// UpdateMortgageDeduction sets the "mortgage_deduction" field to the value that was provided on create.
+func (u *PayslipUpsertBulk) UpdateMortgageDeduction() *PayslipUpsertBulk {
+	return u.Update(func(s *PayslipUpsert) {
+		s.UpdateMortgageDeduction()
+	})
+}
+
+// SetDisabilityExemption sets the "disability_exemption" field.
+func (u *PayslipUpsertBulk) SetDisabilityExemption(v decimal.Decimal) *PayslipUpsertBulk {
+	return u.Update(func(s *PayslipUpsert) {
+		s.SetDisabilityExemption(v)
+	})
+}
+
+// UpdateDisabilityExemption sets the "disability_exemption" field to the value that was provided on create.
+func (u *PayslipUpsertBulk) UpdateDisabilityExemption() *PayslipUpsertBulk {
+	return u.Update(func(s *PayslipUpsert) {
+		s.UpdateDisabilityExemption()
 	})
 }
 

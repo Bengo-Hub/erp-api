@@ -30,7 +30,16 @@ The P9A is the **employee's** annual PAYE card. iTax expects **one row per month
 | Insurance Relief | 15% of premiums, cap 5,000/mo | **not yet captured** |
 | PAYE Tax | Tax charged − reliefs | `paye` |
 
-**Current fidelity:** the `P9` method emits **one summary row per employee** (annual totals) with the enriched columns `nssf, shif, housing_levy, tax_charged, personal_relief` now added (2026-07-11). The true **12-month grid** and the pension E1/E2/E3 ceiling logic are the remaining gap (needs the multi-sheet workbook + per-month payslip fan-out). Insurance relief depends on §5 (relief capture).
+**Current fidelity (updated 2026-07-11):** `P9` emits one summary row per employee with the full
+statutory + relief columns (nssf, pension_deduction, shif, housing_levy, mortgage_relief,
+disability_exemption, chargeable, tax_charged, personal_relief, insurance_relief, PAYE). The true
+**12-month grid** is now delivered as **`P9A`** — a MULTI-SHEET workbook (one worksheet per
+employee, Jan–Dec rows) via `Report.Sheets` → `docs.Document.Sheets` (`P9A` in
+`payroll_reports.go`; export `?format=excel`). The engine's per-relief amounts are persisted on the
+payslip (insurance_relief / pension_deduction / mortgage_deduction / disability_exemption), so §5 is
+**DONE at both the engine and report layers**. Remaining nicety: the explicit pension E1/E2/E3
+ceiling breakout columns (E2 actual contribution needs a salary_details join); the deductible
+pension is shown.
 
 ---
 
@@ -53,7 +62,10 @@ Filed by the **employer** on iTax. The iTax P10 workbook has multiple sheets:
 | Total SHIF | `total_shif` _(added 2026-07-11)_ |
 | Total Housing Levy | `total_housing_levy` _(added 2026-07-11)_ |
 
-**Current fidelity:** single-sheet employee summary with NSSF/SHIF/AHL now present. Gaps: split into Sheet B1/B2 by PAYE-liability, dedicated **Sheet M** for AHL (employer + employee halves), and monthly rather than annual granularity for the true iTax import template.
+**Current fidelity (updated 2026-07-11):** `P10A` remains the flat single-sheet summary. The true
+multi-sheet iTax return is now delivered as **`P10`** — Sheet **B1** (employees liable to PAYE),
+Sheet **B2** (below threshold), and Sheet **M** (AHL, employee 1.5% + employer 1.5%), via
+`Report.Sheets` (`P10` in `payroll_reports.go`; export `?format=excel`).
 
 ---
 
@@ -72,7 +84,9 @@ NSSF (Year-4 rates, eff. Feb 2026: LEL 9,000 / UEL 108,000, Tier I + Tier II) ex
 | Employer match | equal to employee | 
 | Grand total | 2 × contribution |
 
-**Current fidelity:** NSSF report emits employee tiers. Employer-match column and the official SF24 layout are pending.
+**Current fidelity (updated 2026-07-11):** the `NSSF` report already emits the member schedule with
+the **employer-match column** (name, nssf_number, tier_1, tier_2, employee_total, employer, total),
+i.e. the SF24 shape — exposed additionally under the `nssf-sf24` report key.
 
 ---
 

@@ -70543,6 +70543,10 @@ type PayslipMutation struct {
 	tax_relief                 *decimal.Decimal
 	reliefs                    *decimal.Decimal
 	gross_pay_after_tax        *decimal.Decimal
+	insurance_relief           *decimal.Decimal
+	pension_deduction          *decimal.Decimal
+	mortgage_deduction         *decimal.Decimal
+	disability_exemption       *decimal.Decimal
 	shif_or_nhif_contribution  *decimal.Decimal
 	housing_levy               *decimal.Decimal
 	nssf_employee_tier_1       *decimal.Decimal
@@ -71179,6 +71183,150 @@ func (m *PayslipMutation) OldGrossPayAfterTax(ctx context.Context) (v decimal.De
 // ResetGrossPayAfterTax resets all changes to the "gross_pay_after_tax" field.
 func (m *PayslipMutation) ResetGrossPayAfterTax() {
 	m.gross_pay_after_tax = nil
+}
+
+// SetInsuranceRelief sets the "insurance_relief" field.
+func (m *PayslipMutation) SetInsuranceRelief(d decimal.Decimal) {
+	m.insurance_relief = &d
+}
+
+// InsuranceRelief returns the value of the "insurance_relief" field in the mutation.
+func (m *PayslipMutation) InsuranceRelief() (r decimal.Decimal, exists bool) {
+	v := m.insurance_relief
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInsuranceRelief returns the old "insurance_relief" field's value of the Payslip entity.
+// If the Payslip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipMutation) OldInsuranceRelief(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInsuranceRelief is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInsuranceRelief requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInsuranceRelief: %w", err)
+	}
+	return oldValue.InsuranceRelief, nil
+}
+
+// ResetInsuranceRelief resets all changes to the "insurance_relief" field.
+func (m *PayslipMutation) ResetInsuranceRelief() {
+	m.insurance_relief = nil
+}
+
+// SetPensionDeduction sets the "pension_deduction" field.
+func (m *PayslipMutation) SetPensionDeduction(d decimal.Decimal) {
+	m.pension_deduction = &d
+}
+
+// PensionDeduction returns the value of the "pension_deduction" field in the mutation.
+func (m *PayslipMutation) PensionDeduction() (r decimal.Decimal, exists bool) {
+	v := m.pension_deduction
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPensionDeduction returns the old "pension_deduction" field's value of the Payslip entity.
+// If the Payslip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipMutation) OldPensionDeduction(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPensionDeduction is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPensionDeduction requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPensionDeduction: %w", err)
+	}
+	return oldValue.PensionDeduction, nil
+}
+
+// ResetPensionDeduction resets all changes to the "pension_deduction" field.
+func (m *PayslipMutation) ResetPensionDeduction() {
+	m.pension_deduction = nil
+}
+
+// SetMortgageDeduction sets the "mortgage_deduction" field.
+func (m *PayslipMutation) SetMortgageDeduction(d decimal.Decimal) {
+	m.mortgage_deduction = &d
+}
+
+// MortgageDeduction returns the value of the "mortgage_deduction" field in the mutation.
+func (m *PayslipMutation) MortgageDeduction() (r decimal.Decimal, exists bool) {
+	v := m.mortgage_deduction
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMortgageDeduction returns the old "mortgage_deduction" field's value of the Payslip entity.
+// If the Payslip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipMutation) OldMortgageDeduction(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMortgageDeduction is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMortgageDeduction requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMortgageDeduction: %w", err)
+	}
+	return oldValue.MortgageDeduction, nil
+}
+
+// ResetMortgageDeduction resets all changes to the "mortgage_deduction" field.
+func (m *PayslipMutation) ResetMortgageDeduction() {
+	m.mortgage_deduction = nil
+}
+
+// SetDisabilityExemption sets the "disability_exemption" field.
+func (m *PayslipMutation) SetDisabilityExemption(d decimal.Decimal) {
+	m.disability_exemption = &d
+}
+
+// DisabilityExemption returns the value of the "disability_exemption" field in the mutation.
+func (m *PayslipMutation) DisabilityExemption() (r decimal.Decimal, exists bool) {
+	v := m.disability_exemption
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDisabilityExemption returns the old "disability_exemption" field's value of the Payslip entity.
+// If the Payslip object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayslipMutation) OldDisabilityExemption(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDisabilityExemption is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDisabilityExemption requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDisabilityExemption: %w", err)
+	}
+	return oldValue.DisabilityExemption, nil
+}
+
+// ResetDisabilityExemption resets all changes to the "disability_exemption" field.
+func (m *PayslipMutation) ResetDisabilityExemption() {
+	m.disability_exemption = nil
 }
 
 // SetShifOrNhifContribution sets the "shif_or_nhif_contribution" field.
@@ -72049,7 +72197,7 @@ func (m *PayslipMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PayslipMutation) Fields() []string {
-	fields := make([]string, 0, 34)
+	fields := make([]string, 0, 38)
 	if m.tenant_id != nil {
 		fields = append(fields, payslip.FieldTenantID)
 	}
@@ -72088,6 +72236,18 @@ func (m *PayslipMutation) Fields() []string {
 	}
 	if m.gross_pay_after_tax != nil {
 		fields = append(fields, payslip.FieldGrossPayAfterTax)
+	}
+	if m.insurance_relief != nil {
+		fields = append(fields, payslip.FieldInsuranceRelief)
+	}
+	if m.pension_deduction != nil {
+		fields = append(fields, payslip.FieldPensionDeduction)
+	}
+	if m.mortgage_deduction != nil {
+		fields = append(fields, payslip.FieldMortgageDeduction)
+	}
+	if m.disability_exemption != nil {
+		fields = append(fields, payslip.FieldDisabilityExemption)
 	}
 	if m.shif_or_nhif_contribution != nil {
 		fields = append(fields, payslip.FieldShifOrNhifContribution)
@@ -72186,6 +72346,14 @@ func (m *PayslipMutation) Field(name string) (ent.Value, bool) {
 		return m.Reliefs()
 	case payslip.FieldGrossPayAfterTax:
 		return m.GrossPayAfterTax()
+	case payslip.FieldInsuranceRelief:
+		return m.InsuranceRelief()
+	case payslip.FieldPensionDeduction:
+		return m.PensionDeduction()
+	case payslip.FieldMortgageDeduction:
+		return m.MortgageDeduction()
+	case payslip.FieldDisabilityExemption:
+		return m.DisabilityExemption()
 	case payslip.FieldShifOrNhifContribution:
 		return m.ShifOrNhifContribution()
 	case payslip.FieldHousingLevy:
@@ -72263,6 +72431,14 @@ func (m *PayslipMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldReliefs(ctx)
 	case payslip.FieldGrossPayAfterTax:
 		return m.OldGrossPayAfterTax(ctx)
+	case payslip.FieldInsuranceRelief:
+		return m.OldInsuranceRelief(ctx)
+	case payslip.FieldPensionDeduction:
+		return m.OldPensionDeduction(ctx)
+	case payslip.FieldMortgageDeduction:
+		return m.OldMortgageDeduction(ctx)
+	case payslip.FieldDisabilityExemption:
+		return m.OldDisabilityExemption(ctx)
 	case payslip.FieldShifOrNhifContribution:
 		return m.OldShifOrNhifContribution(ctx)
 	case payslip.FieldHousingLevy:
@@ -72404,6 +72580,34 @@ func (m *PayslipMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetGrossPayAfterTax(v)
+		return nil
+	case payslip.FieldInsuranceRelief:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInsuranceRelief(v)
+		return nil
+	case payslip.FieldPensionDeduction:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPensionDeduction(v)
+		return nil
+	case payslip.FieldMortgageDeduction:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMortgageDeduction(v)
+		return nil
+	case payslip.FieldDisabilityExemption:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDisabilityExemption(v)
 		return nil
 	case payslip.FieldShifOrNhifContribution:
 		v, ok := value.(decimal.Decimal)
@@ -72696,6 +72900,18 @@ func (m *PayslipMutation) ResetField(name string) error {
 		return nil
 	case payslip.FieldGrossPayAfterTax:
 		m.ResetGrossPayAfterTax()
+		return nil
+	case payslip.FieldInsuranceRelief:
+		m.ResetInsuranceRelief()
+		return nil
+	case payslip.FieldPensionDeduction:
+		m.ResetPensionDeduction()
+		return nil
+	case payslip.FieldMortgageDeduction:
+		m.ResetMortgageDeduction()
+		return nil
+	case payslip.FieldDisabilityExemption:
+		m.ResetDisabilityExemption()
 		return nil
 	case payslip.FieldShifOrNhifContribution:
 		m.ResetShifOrNhifContribution()

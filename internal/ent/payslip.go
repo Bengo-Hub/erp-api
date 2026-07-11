@@ -45,6 +45,14 @@ type Payslip struct {
 	Reliefs decimal.Decimal `json:"reliefs,omitempty"`
 	// GrossPayAfterTax holds the value of the "gross_pay_after_tax" field.
 	GrossPayAfterTax decimal.Decimal `json:"gross_pay_after_tax,omitempty"`
+	// InsuranceRelief holds the value of the "insurance_relief" field.
+	InsuranceRelief decimal.Decimal `json:"insurance_relief,omitempty"`
+	// PensionDeduction holds the value of the "pension_deduction" field.
+	PensionDeduction decimal.Decimal `json:"pension_deduction,omitempty"`
+	// MortgageDeduction holds the value of the "mortgage_deduction" field.
+	MortgageDeduction decimal.Decimal `json:"mortgage_deduction,omitempty"`
+	// DisabilityExemption holds the value of the "disability_exemption" field.
+	DisabilityExemption decimal.Decimal `json:"disability_exemption,omitempty"`
 	// ShifOrNhifContribution holds the value of the "shif_or_nhif_contribution" field.
 	ShifOrNhifContribution decimal.Decimal `json:"shif_or_nhif_contribution,omitempty"`
 	// HousingLevy holds the value of the "housing_levy" field.
@@ -97,7 +105,7 @@ func (*Payslip) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case payslip.FieldOutletID, payslip.FieldCreatedBy, payslip.FieldApproverID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case payslip.FieldGrossPay, payslip.FieldTotalEarnings, payslip.FieldNetPay, payslip.FieldTaxablePay, payslip.FieldPaye, payslip.FieldTaxRelief, payslip.FieldReliefs, payslip.FieldGrossPayAfterTax, payslip.FieldShifOrNhifContribution, payslip.FieldHousingLevy, payslip.FieldNssfEmployeeTier1, payslip.FieldNssfEmployeeTier2, payslip.FieldNssfEmployerContribution, payslip.FieldDeductionsBeforeTax, payslip.FieldDeductionsAfterTax, payslip.FieldDeductionsAfterPaye, payslip.FieldDeductionsFinal:
+		case payslip.FieldGrossPay, payslip.FieldTotalEarnings, payslip.FieldNetPay, payslip.FieldTaxablePay, payslip.FieldPaye, payslip.FieldTaxRelief, payslip.FieldReliefs, payslip.FieldGrossPayAfterTax, payslip.FieldInsuranceRelief, payslip.FieldPensionDeduction, payslip.FieldMortgageDeduction, payslip.FieldDisabilityExemption, payslip.FieldShifOrNhifContribution, payslip.FieldHousingLevy, payslip.FieldNssfEmployeeTier1, payslip.FieldNssfEmployeeTier2, payslip.FieldNssfEmployerContribution, payslip.FieldDeductionsBeforeTax, payslip.FieldDeductionsAfterTax, payslip.FieldDeductionsAfterPaye, payslip.FieldDeductionsFinal:
 			values[i] = new(decimal.Decimal)
 		case payslip.FieldPublished, payslip.FieldDeleteStatus:
 			values[i] = new(sql.NullBool)
@@ -208,6 +216,30 @@ func (_m *Payslip) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field gross_pay_after_tax", values[i])
 			} else if value != nil {
 				_m.GrossPayAfterTax = *value
+			}
+		case payslip.FieldInsuranceRelief:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field insurance_relief", values[i])
+			} else if value != nil {
+				_m.InsuranceRelief = *value
+			}
+		case payslip.FieldPensionDeduction:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field pension_deduction", values[i])
+			} else if value != nil {
+				_m.PensionDeduction = *value
+			}
+		case payslip.FieldMortgageDeduction:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field mortgage_deduction", values[i])
+			} else if value != nil {
+				_m.MortgageDeduction = *value
+			}
+		case payslip.FieldDisabilityExemption:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field disability_exemption", values[i])
+			} else if value != nil {
+				_m.DisabilityExemption = *value
 			}
 		case payslip.FieldShifOrNhifContribution:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
@@ -421,6 +453,18 @@ func (_m *Payslip) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("gross_pay_after_tax=")
 	builder.WriteString(fmt.Sprintf("%v", _m.GrossPayAfterTax))
+	builder.WriteString(", ")
+	builder.WriteString("insurance_relief=")
+	builder.WriteString(fmt.Sprintf("%v", _m.InsuranceRelief))
+	builder.WriteString(", ")
+	builder.WriteString("pension_deduction=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PensionDeduction))
+	builder.WriteString(", ")
+	builder.WriteString("mortgage_deduction=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MortgageDeduction))
+	builder.WriteString(", ")
+	builder.WriteString("disability_exemption=")
+	builder.WriteString(fmt.Sprintf("%v", _m.DisabilityExemption))
 	builder.WriteString(", ")
 	builder.WriteString("shif_or_nhif_contribution=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ShifOrNhifContribution))
