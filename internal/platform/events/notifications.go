@@ -43,8 +43,17 @@ func (n *Notifications) RequestEmail(ctx context.Context, tenantID uuid.UUID, ag
 	if n == nil || n.pub == nil {
 		return nil
 	}
+	// Match notifications-api's erp.email.requested contract exactly (recipient_list /
+	// message / html_message). The previous keys (to/body/html) were silently dropped by
+	// the consumer as "no valid recipients", so every payslip / voucher / candidate email
+	// went nowhere. req.HTML is a flag meaning "Body is HTML".
 	payload := map[string]any{
-		"to": req.To, "subject": req.Subject, "body": req.Body, "html": req.HTML,
+		"recipient_list": req.To,
+		"subject":        req.Subject,
+		"message":        req.Body,
+	}
+	if req.HTML {
+		payload["html_message"] = req.Body
 	}
 	if len(req.Attachments) > 0 {
 		atts := make([]map[string]any, 0, len(req.Attachments))
