@@ -10,6 +10,7 @@ package treasury
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,6 +22,11 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+// ErrApprovalPending is returned by Disburse when treasury blocks the payroll batch pending finance
+// approval (HTTP 409 approval_required). It is NOT a transport failure: the GL event is already
+// published; the operator re-triggers disburse once the batch is approved (with OTP) in treasury.
+var ErrApprovalPending = errors.New("treasury: payroll disbursement pending finance approval")
 
 // Payout is one net-pay disbursement line. Amounts are decimal STRINGS (gaps §2.1 — no
 // float across the disburse boundary).
@@ -128,6 +134,9 @@ func (c *Client) Disburse(ctx context.Context, tenantID uuid.UUID, payouts []Pay
 	resp, err := c.sc.Post(ctx, path, map[string]any{"payouts": payouts}, headers)
 	if err != nil {
 		return fmt.Errorf("treasury: disburse: %w", err)
+	}
+	if resp.StatusCode == http.StatusConflict {
+		return ErrApprovalPending
 	}
 	if !resp.IsSuccess() {
 		return fmt.Errorf("treasury: disburse: status %d", resp.StatusCode)

@@ -2,6 +2,7 @@ package payroll
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -40,13 +41,14 @@ type DisburseParams struct {
 
 // DisburseResult summarises the outcome.
 type DisburseResult struct {
-	BatchRef      string          `json:"batch_ref"`
-	Published     bool            `json:"published"`
-	Disbursed     bool            `json:"disbursed"`
-	Count         int             `json:"count"`
-	NetTotal      decimal.Decimal `json:"net_total"`
-	DisburseError string          `json:"disburse_error,omitempty"`
-	AlreadyDone   bool            `json:"already_done,omitempty"`
+	BatchRef        string          `json:"batch_ref"`
+	Published       bool            `json:"published"`
+	Disbursed       bool            `json:"disbursed"`
+	Count           int             `json:"count"`
+	NetTotal        decimal.Decimal `json:"net_total"`
+	DisburseError   string          `json:"disburse_error,omitempty"`
+	AlreadyDone     bool            `json:"already_done,omitempty"`
+	PendingApproval bool            `json:"pending_approval,omitempty"` // treasury requires finance approval (+OTP) first
 }
 
 // Disburse selects approved+complete payslips, publishes the GL event in a tx, persists
@@ -157,8 +159,16 @@ func (d *Disburser) Disburse(ctx context.Context, p DisburseParams) (DisburseRes
 	payouts := buildPayouts(payload, batchRef, p.Period)
 	if d.treasury != nil {
 		if err := d.treasury.Disburse(ctx, p.TenantID, payouts, idemKey); err != nil {
-			res.DisburseError = err.Error()
-			d.log.Warn("treasury disburse failed (GL event already published)", zap.String("batch", batchRef), zap.Error(err))
+			if errors.Is(err, treasury.ErrApprovalPending) {
+				// Not a failure: treasury created a finance payroll-approval request. The GL event is
+				// already published; the operator re-triggers disburse after approval (with OTP).
+				res.PendingApproval = true
+				res.DisburseError = "pending finance approval"
+				d.log.Info("payroll disbursement pending finance approval in treasury", zap.String("batch", batchRef))
+			} else {
+				res.DisburseError = err.Error()
+				d.log.Warn("treasury disburse failed (GL event already published)", zap.String("batch", batchRef), zap.Error(err))
+			}
 		} else {
 			res.Disbursed = true
 			// Confirmation loop: mark the batch's payslips published on synchronous treasury
