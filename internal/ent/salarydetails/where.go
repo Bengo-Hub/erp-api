@@ -96,6 +96,26 @@ func DailyRate(v decimal.Decimal) predicate.SalaryDetails {
 	return predicate.SalaryDetails(sql.FieldEQ(FieldDailyRate, v))
 }
 
+// InsurancePremium applies equality check predicate on the "insurance_premium" field. It's identical to InsurancePremiumEQ.
+func InsurancePremium(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldInsurancePremium, v))
+}
+
+// PensionContribution applies equality check predicate on the "pension_contribution" field. It's identical to PensionContributionEQ.
+func PensionContribution(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldPensionContribution, v))
+}
+
+// MortgageInterest applies equality check predicate on the "mortgage_interest" field. It's identical to MortgageInterestEQ.
+func MortgageInterest(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldMortgageInterest, v))
+}
+
+// DisabilityExempt applies equality check predicate on the "disability_exempt" field. It's identical to DisabilityExemptEQ.
+func DisabilityExempt(v bool) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldDisabilityExempt, v))
+}
+
 // BankAccountID applies equality check predicate on the "bank_account_id" field. It's identical to BankAccountIDEQ.
 func BankAccountID(v uuid.UUID) predicate.SalaryDetails {
 	return predicate.SalaryDetails(sql.FieldEQ(FieldBankAccountID, v))
@@ -529,6 +549,136 @@ func DailyRateLT(v decimal.Decimal) predicate.SalaryDetails {
 // DailyRateLTE applies the LTE predicate on the "daily_rate" field.
 func DailyRateLTE(v decimal.Decimal) predicate.SalaryDetails {
 	return predicate.SalaryDetails(sql.FieldLTE(FieldDailyRate, v))
+}
+
+// InsurancePremiumEQ applies the EQ predicate on the "insurance_premium" field.
+func InsurancePremiumEQ(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldInsurancePremium, v))
+}
+
+// InsurancePremiumNEQ applies the NEQ predicate on the "insurance_premium" field.
+func InsurancePremiumNEQ(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNEQ(FieldInsurancePremium, v))
+}
+
+// InsurancePremiumIn applies the In predicate on the "insurance_premium" field.
+func InsurancePremiumIn(vs ...decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldIn(FieldInsurancePremium, vs...))
+}
+
+// InsurancePremiumNotIn applies the NotIn predicate on the "insurance_premium" field.
+func InsurancePremiumNotIn(vs ...decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNotIn(FieldInsurancePremium, vs...))
+}
+
+// InsurancePremiumGT applies the GT predicate on the "insurance_premium" field.
+func InsurancePremiumGT(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGT(FieldInsurancePremium, v))
+}
+
+// InsurancePremiumGTE applies the GTE predicate on the "insurance_premium" field.
+func InsurancePremiumGTE(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGTE(FieldInsurancePremium, v))
+}
+
+// InsurancePremiumLT applies the LT predicate on the "insurance_premium" field.
+func InsurancePremiumLT(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLT(FieldInsurancePremium, v))
+}
+
+// InsurancePremiumLTE applies the LTE predicate on the "insurance_premium" field.
+func InsurancePremiumLTE(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLTE(FieldInsurancePremium, v))
+}
+
+// PensionContributionEQ applies the EQ predicate on the "pension_contribution" field.
+func PensionContributionEQ(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldPensionContribution, v))
+}
+
+// PensionContributionNEQ applies the NEQ predicate on the "pension_contribution" field.
+func PensionContributionNEQ(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNEQ(FieldPensionContribution, v))
+}
+
+// PensionContributionIn applies the In predicate on the "pension_contribution" field.
+func PensionContributionIn(vs ...decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldIn(FieldPensionContribution, vs...))
+}
+
+// PensionContributionNotIn applies the NotIn predicate on the "pension_contribution" field.
+func PensionContributionNotIn(vs ...decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNotIn(FieldPensionContribution, vs...))
+}
+
+// PensionContributionGT applies the GT predicate on the "pension_contribution" field.
+func PensionContributionGT(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGT(FieldPensionContribution, v))
+}
+
+// PensionContributionGTE applies the GTE predicate on the "pension_contribution" field.
+func PensionContributionGTE(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGTE(FieldPensionContribution, v))
+}
+
+// PensionContributionLT applies the LT predicate on the "pension_contribution" field.
+func PensionContributionLT(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLT(FieldPensionContribution, v))
+}
+
+// PensionContributionLTE applies the LTE predicate on the "pension_contribution" field.
+func PensionContributionLTE(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLTE(FieldPensionContribution, v))
+}
+
+// MortgageInterestEQ applies the EQ predicate on the "mortgage_interest" field.
+func MortgageInterestEQ(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldMortgageInterest, v))
+}
+
+// MortgageInterestNEQ applies the NEQ predicate on the "mortgage_interest" field.
+func MortgageInterestNEQ(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNEQ(FieldMortgageInterest, v))
+}
+
+// MortgageInterestIn applies the In predicate on the "mortgage_interest" field.
+func MortgageInterestIn(vs ...decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldIn(FieldMortgageInterest, vs...))
+}
+
+// MortgageInterestNotIn applies the NotIn predicate on the "mortgage_interest" field.
+func MortgageInterestNotIn(vs ...decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNotIn(FieldMortgageInterest, vs...))
+}
+
+// MortgageInterestGT applies the GT predicate on the "mortgage_interest" field.
+func MortgageInterestGT(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGT(FieldMortgageInterest, v))
+}
+
+// MortgageInterestGTE applies the GTE predicate on the "mortgage_interest" field.
+func MortgageInterestGTE(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGTE(FieldMortgageInterest, v))
+}
+
+// MortgageInterestLT applies the LT predicate on the "mortgage_interest" field.
+func MortgageInterestLT(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLT(FieldMortgageInterest, v))
+}
+
+// MortgageInterestLTE applies the LTE predicate on the "mortgage_interest" field.
+func MortgageInterestLTE(v decimal.Decimal) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLTE(FieldMortgageInterest, v))
+}
+
+// DisabilityExemptEQ applies the EQ predicate on the "disability_exempt" field.
+func DisabilityExemptEQ(v bool) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldDisabilityExempt, v))
+}
+
+// DisabilityExemptNEQ applies the NEQ predicate on the "disability_exempt" field.
+func DisabilityExemptNEQ(v bool) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNEQ(FieldDisabilityExempt, v))
 }
 
 // BankAccountIDEQ applies the EQ predicate on the "bank_account_id" field.

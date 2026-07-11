@@ -67,6 +67,101 @@ func TestLowIncome_NoNegativePAYE(t *testing.T) {
 	}
 }
 
+// reliefConfig is the golden config with the KRA relief caps switched on (as BuildEngineConfig
+// resolves them from the tenant's PayrollRelief rows).
+func reliefConfig() Config {
+	cfg := kra2025Config()
+	cfg.InsuranceReliefRate = d("0.15")
+	cfg.InsuranceReliefCap = d("5000")
+	cfg.PensionReliefCap = d("30000")
+	cfg.MortgageReliefCap = d("30000")
+	cfg.DisabilityExemptAmount = d("150000")
+	return cfg
+}
+
+// TestInsuranceRelief: a 10,000 premium yields a 1,500 credit (15%, under the 5,000 cap) that
+// reduces PAYE by exactly 1,500 vs the no-relief baseline; chargeable pay is unchanged.
+func TestInsuranceRelief(t *testing.T) {
+	base, _ := Compute(kra2025Config(), EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	res, err := Compute(reliefConfig(), EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary", InsurancePremium: d("10000")})
+	if err != nil {
+		t.Fatalf("compute: %v", err)
+	}
+	if !res.InsuranceRelief.Equal(d("1500")) {
+		t.Errorf("insurance relief: got %s want 1500", res.InsuranceRelief)
+	}
+	if !res.TaxablePay.Equal(base.TaxablePay) {
+		t.Errorf("taxable changed: got %s want %s", res.TaxablePay, base.TaxablePay)
+	}
+	if !base.PAYE.Sub(res.PAYE).Equal(d("1500")) {
+		t.Errorf("PAYE delta: got %s want 1500", base.PAYE.Sub(res.PAYE))
+	}
+}
+
+// TestInsuranceReliefCapped: a large premium caps the credit at 5,000/month.
+func TestInsuranceReliefCapped(t *testing.T) {
+	res, _ := Compute(reliefConfig(), EmployeeInput{GrossPay: d("300000"), TaxCategory: "primary", InsurancePremium: d("80000")})
+	if !res.InsuranceRelief.Equal(d("5000")) {
+		t.Errorf("insurance relief cap: got %s want 5000", res.InsuranceRelief)
+	}
+}
+
+// TestPensionDeductible: pension is a PRE-TAX deduction of min(actual, cap, 30% gross); it reduces
+// chargeable pay and therefore PAYE.
+func TestPensionDeductible(t *testing.T) {
+	base, _ := Compute(kra2025Config(), EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	res, _ := Compute(reliefConfig(), EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary", PensionContribution: d("20000")})
+	if !res.PensionDeduction.Equal(d("20000")) {
+		t.Errorf("pension deduction: got %s want 20000", res.PensionDeduction)
+	}
+	if !res.TaxablePay.Equal(base.TaxablePay.Sub(d("20000"))) {
+		t.Errorf("taxable: got %s want %s", res.TaxablePay, base.TaxablePay.Sub(d("20000")))
+	}
+	if !res.PAYE.LessThan(base.PAYE) {
+		t.Errorf("PAYE not reduced: base %s got %s", base.PAYE, res.PAYE)
+	}
+}
+
+// TestPensionCapped30Percent: the 30%-of-gross ceiling wins when it's the smallest.
+func TestPensionCapped30Percent(t *testing.T) {
+	// gross 50,000 => 30% = 15,000 < actual 25,000 and < cap 30,000.
+	res, _ := Compute(reliefConfig(), EmployeeInput{GrossPay: d("50000"), TaxCategory: "primary", PensionContribution: d("25000")})
+	if !res.PensionDeduction.Equal(d("15000")) {
+		t.Errorf("pension 30%% cap: got %s want 15000", res.PensionDeduction)
+	}
+}
+
+// TestMortgageDeductible: owner-occupier interest is deductible up to the 30,000 cap.
+func TestMortgageDeductible(t *testing.T) {
+	res, _ := Compute(reliefConfig(), EmployeeInput{GrossPay: d("200000"), TaxCategory: "primary", MortgageInterest: d("40000")})
+	if !res.MortgageDeduction.Equal(d("30000")) {
+		t.Errorf("mortgage deduction: got %s want 30000 (capped)", res.MortgageDeduction)
+	}
+}
+
+// TestDisabilityExemption: a PWD certificate exempts the first 150,000 of chargeable pay — a
+// 100,000 gross earner ends up with zero PAYE.
+func TestDisabilityExemption(t *testing.T) {
+	res, _ := Compute(reliefConfig(), EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary", DisabilityExempt: true})
+	if !res.PAYE.Equal(decimal.Zero) {
+		t.Errorf("disability PAYE: got %s want 0", res.PAYE)
+	}
+	if res.DisabilityExemption.LessThanOrEqual(decimal.Zero) {
+		t.Errorf("disability exemption not applied: %s", res.DisabilityExemption)
+	}
+	if !res.TaxablePay.Equal(decimal.Zero) {
+		t.Errorf("taxable: got %s want 0", res.TaxablePay)
+	}
+}
+
+// TestSecondaryNoInsuranceRelief: secondary employees get no reliefs (consumed by the primary job).
+func TestSecondaryNoInsuranceRelief(t *testing.T) {
+	res, _ := Compute(reliefConfig(), EmployeeInput{GrossPay: d("100000"), TaxCategory: "secondary", InsurancePremium: d("10000")})
+	if !res.InsuranceRelief.Equal(decimal.Zero) {
+		t.Errorf("secondary insurance relief: got %s want 0", res.InsuranceRelief)
+	}
+}
+
 // TestRecoverablesCappedAtOutstanding: never recover more than outstanding.
 func TestRecoverablesCappedAtOutstanding(t *testing.T) {
 	in := EmployeeInput{

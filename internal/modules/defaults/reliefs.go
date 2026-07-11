@@ -42,6 +42,8 @@ var defaultReliefs = []defaultRelief{
 	{"Deductible", "Affordable Housing Relief", true, "9000", "15", "Actual", true},
 	{"Deductible", "Disability Exemption", false, "150000", "0", "", true},
 	{"Deductible", "Pension Relief", true, "30000", "100", "Actual", true},
+	// Owner-occupier mortgage interest: deductible up to KES 30,000/month (KES 360,000/year).
+	{"Deductible", "Mortgage Interest Relief", true, "30000", "100", "Actual", true},
 }
 
 // EnsureReliefs idempotently seeds the default KRA reliefs for a tenant (the system tenant in

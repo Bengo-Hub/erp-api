@@ -35,6 +35,14 @@ type SalaryDetails struct {
 	HourlyRate decimal.Decimal `json:"hourly_rate,omitempty"`
 	// DailyRate holds the value of the "daily_rate" field.
 	DailyRate decimal.Decimal `json:"daily_rate,omitempty"`
+	// InsurancePremium holds the value of the "insurance_premium" field.
+	InsurancePremium decimal.Decimal `json:"insurance_premium,omitempty"`
+	// PensionContribution holds the value of the "pension_contribution" field.
+	PensionContribution decimal.Decimal `json:"pension_contribution,omitempty"`
+	// MortgageInterest holds the value of the "mortgage_interest" field.
+	MortgageInterest decimal.Decimal `json:"mortgage_interest,omitempty"`
+	// Holds a PWD tax-exemption certificate
+	DisabilityExempt bool `json:"disability_exempt,omitempty"`
 	// Primary salary bank account
 	BankAccountID *uuid.UUID `json:"bank_account_id,omitempty"`
 	// JobGroupID holds the value of the "job_group_id" field.
@@ -57,9 +65,9 @@ func (*SalaryDetails) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case salarydetails.FieldBankAccountID, salarydetails.FieldJobGroupID, salarydetails.FieldWorkersUnionID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case salarydetails.FieldMonthlySalary, salarydetails.FieldHourlyRate, salarydetails.FieldDailyRate:
+		case salarydetails.FieldMonthlySalary, salarydetails.FieldHourlyRate, salarydetails.FieldDailyRate, salarydetails.FieldInsurancePremium, salarydetails.FieldPensionContribution, salarydetails.FieldMortgageInterest:
 			values[i] = new(decimal.Decimal)
-		case salarydetails.FieldIsActive:
+		case salarydetails.FieldDisabilityExempt, salarydetails.FieldIsActive:
 			values[i] = new(sql.NullBool)
 		case salarydetails.FieldPayMode, salarydetails.FieldIncomeTax, salarydetails.FieldCurrency:
 			values[i] = new(sql.NullString)
@@ -135,6 +143,30 @@ func (_m *SalaryDetails) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field daily_rate", values[i])
 			} else if value != nil {
 				_m.DailyRate = *value
+			}
+		case salarydetails.FieldInsurancePremium:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field insurance_premium", values[i])
+			} else if value != nil {
+				_m.InsurancePremium = *value
+			}
+		case salarydetails.FieldPensionContribution:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field pension_contribution", values[i])
+			} else if value != nil {
+				_m.PensionContribution = *value
+			}
+		case salarydetails.FieldMortgageInterest:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field mortgage_interest", values[i])
+			} else if value != nil {
+				_m.MortgageInterest = *value
+			}
+		case salarydetails.FieldDisabilityExempt:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field disability_exempt", values[i])
+			} else if value.Valid {
+				_m.DisabilityExempt = value.Bool
 			}
 		case salarydetails.FieldBankAccountID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -234,6 +266,18 @@ func (_m *SalaryDetails) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("daily_rate=")
 	builder.WriteString(fmt.Sprintf("%v", _m.DailyRate))
+	builder.WriteString(", ")
+	builder.WriteString("insurance_premium=")
+	builder.WriteString(fmt.Sprintf("%v", _m.InsurancePremium))
+	builder.WriteString(", ")
+	builder.WriteString("pension_contribution=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PensionContribution))
+	builder.WriteString(", ")
+	builder.WriteString("mortgage_interest=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MortgageInterest))
+	builder.WriteString(", ")
+	builder.WriteString("disability_exempt=")
+	builder.WriteString(fmt.Sprintf("%v", _m.DisabilityExempt))
 	builder.WriteString(", ")
 	if v := _m.BankAccountID; v != nil {
 		builder.WriteString("bank_account_id=")
