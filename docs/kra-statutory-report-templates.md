@@ -37,9 +37,9 @@ disability_exemption, chargeable, tax_charged, personal_relief, insurance_relief
 employee, Jan–Dec rows) via `Report.Sheets` → `docs.Document.Sheets` (`P9A` in
 `payroll_reports.go`; export `?format=excel`). The engine's per-relief amounts are persisted on the
 payslip (insurance_relief / pension_deduction / mortgage_deduction / disability_exemption), so §5 is
-**DONE at both the engine and report layers**. Remaining nicety: the explicit pension E1/E2/E3
-ceiling breakout columns (E2 actual contribution needs a salary_details join); the deductible
-pension is shown.
+**DONE at both the engine and report layers**. The pension **E1/E2/E3 ceiling breakout** is now on
+the P9A grid too: E1 = 30% × gross, E2 = actual scheme contribution (salary_details join), E3 =
+30,000 cap, and the deductible = min(E1,E2,E3). P9A fidelity is complete.
 
 ---
 

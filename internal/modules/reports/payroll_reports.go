@@ -11,6 +11,13 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
+)
+
+// KRA pension-deduction ceiling constants: deductible pension = min(E1 30%×gross, E2 actual, E3 cap).
+var (
+	pensionPct30 = decimal.NewFromFloat(0.30)
+	pensionCap30 = decimal.NewFromInt(30000)
 )
 
 // Report is the common envelope every report returns: a typed name, the period, column
@@ -148,11 +155,13 @@ func (s *Service) P9(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report
 	return rep, nil
 }
 
-// p9aCols are the monthly-grid columns of the KRA P9A card.
+// p9aCols are the monthly-grid columns of the KRA P9A card, including the pension E1/E2/E3
+// ceiling breakout (E1 = 30% of gross, E2 = actual scheme contribution, E3 = 30,000 cap) and the
+// resulting deductible pension = min(E1, E2, E3).
 var p9aCols = []string{
-	"month", "gross_pay", "nssf", "deductible_pension", "shif", "housing_levy",
-	"mortgage_relief", "chargeable_pay", "tax_charged", "personal_relief",
-	"insurance_relief", "disability_exemption", "paye", "net_pay",
+	"month", "gross_pay", "nssf", "pension_e1_30pct", "pension_e2_actual", "pension_e3_cap",
+	"deductible_pension", "shif", "housing_levy", "mortgage_relief", "chargeable_pay",
+	"tax_charged", "personal_relief", "insurance_relief", "disability_exemption", "paye", "net_pay",
 }
 
 // P9A is the KRA employee Tax Deduction Card as a MULTI-SHEET workbook: one worksheet per employee
@@ -167,6 +176,14 @@ func (s *Service) P9A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 	emps, err := s.employeeMap(ctx, tenantID)
 	if err != nil {
 		return nil, err
+	}
+	// Actual monthly scheme contribution (E2) per employee, from salary_details.
+	salPension := map[uuid.UUID]decimal.Decimal{}
+	if sals, serr := s.orm.SalaryDetails.Query().
+		Where(salarydetails.TenantID(tenantID), salarydetails.IsActive(true)).All(ctx); serr == nil {
+		for _, sd := range sals {
+			salPension[sd.EmployeeID] = sd.PensionContribution
+		}
 	}
 	byEmp := map[uuid.UUID][]*ent.Payslip{}
 	order := []uuid.UUID{}
@@ -195,6 +212,9 @@ func (s *Service) P9A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 				"month":                monthLabel(p),
 				"gross_pay":            money(p.GrossPay),
 				"nssf":                 money(p.NssfEmployeeTier1.Add(p.NssfEmployeeTier2)),
+				"pension_e1_30pct":     money(p.GrossPay.Mul(pensionPct30)),
+				"pension_e2_actual":    money(salPension[p.EmployeeID]),
+				"pension_e3_cap":       money(pensionCap30),
 				"deductible_pension":   money(p.PensionDeduction),
 				"shif":                 money(p.ShifOrNhifContribution),
 				"housing_levy":         money(p.HousingLevy),
