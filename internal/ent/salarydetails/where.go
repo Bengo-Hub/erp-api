@@ -121,6 +121,16 @@ func BankAccountID(v uuid.UUID) predicate.SalaryDetails {
 	return predicate.SalaryDetails(sql.FieldEQ(FieldBankAccountID, v))
 }
 
+// PreferredPayoutMethod applies equality check predicate on the "preferred_payout_method" field. It's identical to PreferredPayoutMethodEQ.
+func PreferredPayoutMethod(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldPreferredPayoutMethod, v))
+}
+
+// PayoutPhone applies equality check predicate on the "payout_phone" field. It's identical to PayoutPhoneEQ.
+func PayoutPhone(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldPayoutPhone, v))
+}
+
 // JobGroupID applies equality check predicate on the "job_group_id" field. It's identical to JobGroupIDEQ.
 func JobGroupID(v uuid.UUID) predicate.SalaryDetails {
 	return predicate.SalaryDetails(sql.FieldEQ(FieldJobGroupID, v))
@@ -729,6 +739,146 @@ func BankAccountIDIsNil() predicate.SalaryDetails {
 // BankAccountIDNotNil applies the NotNil predicate on the "bank_account_id" field.
 func BankAccountIDNotNil() predicate.SalaryDetails {
 	return predicate.SalaryDetails(sql.FieldNotNull(FieldBankAccountID))
+}
+
+// PreferredPayoutMethodEQ applies the EQ predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodEQ(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldPreferredPayoutMethod, v))
+}
+
+// PreferredPayoutMethodNEQ applies the NEQ predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodNEQ(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNEQ(FieldPreferredPayoutMethod, v))
+}
+
+// PreferredPayoutMethodIn applies the In predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodIn(vs ...string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldIn(FieldPreferredPayoutMethod, vs...))
+}
+
+// PreferredPayoutMethodNotIn applies the NotIn predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodNotIn(vs ...string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNotIn(FieldPreferredPayoutMethod, vs...))
+}
+
+// PreferredPayoutMethodGT applies the GT predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodGT(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGT(FieldPreferredPayoutMethod, v))
+}
+
+// PreferredPayoutMethodGTE applies the GTE predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodGTE(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGTE(FieldPreferredPayoutMethod, v))
+}
+
+// PreferredPayoutMethodLT applies the LT predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodLT(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLT(FieldPreferredPayoutMethod, v))
+}
+
+// PreferredPayoutMethodLTE applies the LTE predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodLTE(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLTE(FieldPreferredPayoutMethod, v))
+}
+
+// PreferredPayoutMethodContains applies the Contains predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodContains(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldContains(FieldPreferredPayoutMethod, v))
+}
+
+// PreferredPayoutMethodHasPrefix applies the HasPrefix predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodHasPrefix(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldHasPrefix(FieldPreferredPayoutMethod, v))
+}
+
+// PreferredPayoutMethodHasSuffix applies the HasSuffix predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodHasSuffix(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldHasSuffix(FieldPreferredPayoutMethod, v))
+}
+
+// PreferredPayoutMethodEqualFold applies the EqualFold predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodEqualFold(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEqualFold(FieldPreferredPayoutMethod, v))
+}
+
+// PreferredPayoutMethodContainsFold applies the ContainsFold predicate on the "preferred_payout_method" field.
+func PreferredPayoutMethodContainsFold(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldContainsFold(FieldPreferredPayoutMethod, v))
+}
+
+// PayoutPhoneEQ applies the EQ predicate on the "payout_phone" field.
+func PayoutPhoneEQ(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneNEQ applies the NEQ predicate on the "payout_phone" field.
+func PayoutPhoneNEQ(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNEQ(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneIn applies the In predicate on the "payout_phone" field.
+func PayoutPhoneIn(vs ...string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldIn(FieldPayoutPhone, vs...))
+}
+
+// PayoutPhoneNotIn applies the NotIn predicate on the "payout_phone" field.
+func PayoutPhoneNotIn(vs ...string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNotIn(FieldPayoutPhone, vs...))
+}
+
+// PayoutPhoneGT applies the GT predicate on the "payout_phone" field.
+func PayoutPhoneGT(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGT(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneGTE applies the GTE predicate on the "payout_phone" field.
+func PayoutPhoneGTE(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGTE(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneLT applies the LT predicate on the "payout_phone" field.
+func PayoutPhoneLT(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLT(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneLTE applies the LTE predicate on the "payout_phone" field.
+func PayoutPhoneLTE(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLTE(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneContains applies the Contains predicate on the "payout_phone" field.
+func PayoutPhoneContains(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldContains(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneHasPrefix applies the HasPrefix predicate on the "payout_phone" field.
+func PayoutPhoneHasPrefix(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldHasPrefix(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneHasSuffix applies the HasSuffix predicate on the "payout_phone" field.
+func PayoutPhoneHasSuffix(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldHasSuffix(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneIsNil applies the IsNil predicate on the "payout_phone" field.
+func PayoutPhoneIsNil() predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldIsNull(FieldPayoutPhone))
+}
+
+// PayoutPhoneNotNil applies the NotNil predicate on the "payout_phone" field.
+func PayoutPhoneNotNil() predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNotNull(FieldPayoutPhone))
+}
+
+// PayoutPhoneEqualFold applies the EqualFold predicate on the "payout_phone" field.
+func PayoutPhoneEqualFold(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEqualFold(FieldPayoutPhone, v))
+}
+
+// PayoutPhoneContainsFold applies the ContainsFold predicate on the "payout_phone" field.
+func PayoutPhoneContainsFold(v string) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldContainsFold(FieldPayoutPhone, v))
 }
 
 // JobGroupIDEQ applies the EQ predicate on the "job_group_id" field.

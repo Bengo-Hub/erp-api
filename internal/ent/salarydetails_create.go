@@ -191,6 +191,34 @@ func (_c *SalaryDetailsCreate) SetNillableBankAccountID(v *uuid.UUID) *SalaryDet
 	return _c
 }
 
+// SetPreferredPayoutMethod sets the "preferred_payout_method" field.
+func (_c *SalaryDetailsCreate) SetPreferredPayoutMethod(v string) *SalaryDetailsCreate {
+	_c.mutation.SetPreferredPayoutMethod(v)
+	return _c
+}
+
+// SetNillablePreferredPayoutMethod sets the "preferred_payout_method" field if the given value is not nil.
+func (_c *SalaryDetailsCreate) SetNillablePreferredPayoutMethod(v *string) *SalaryDetailsCreate {
+	if v != nil {
+		_c.SetPreferredPayoutMethod(*v)
+	}
+	return _c
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (_c *SalaryDetailsCreate) SetPayoutPhone(v string) *SalaryDetailsCreate {
+	_c.mutation.SetPayoutPhone(v)
+	return _c
+}
+
+// SetNillablePayoutPhone sets the "payout_phone" field if the given value is not nil.
+func (_c *SalaryDetailsCreate) SetNillablePayoutPhone(v *string) *SalaryDetailsCreate {
+	if v != nil {
+		_c.SetPayoutPhone(*v)
+	}
+	return _c
+}
+
 // SetJobGroupID sets the "job_group_id" field.
 func (_c *SalaryDetailsCreate) SetJobGroupID(v uuid.UUID) *SalaryDetailsCreate {
 	_c.mutation.SetJobGroupID(v)
@@ -346,6 +374,10 @@ func (_c *SalaryDetailsCreate) defaults() {
 		v := salarydetails.DefaultDisabilityExempt
 		_c.mutation.SetDisabilityExempt(v)
 	}
+	if _, ok := _c.mutation.PreferredPayoutMethod(); !ok {
+		v := salarydetails.DefaultPreferredPayoutMethod
+		_c.mutation.SetPreferredPayoutMethod(v)
+	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		v := salarydetails.DefaultIsActive
 		_c.mutation.SetIsActive(v)
@@ -398,6 +430,9 @@ func (_c *SalaryDetailsCreate) check() error {
 	}
 	if _, ok := _c.mutation.DisabilityExempt(); !ok {
 		return &ValidationError{Name: "disability_exempt", err: errors.New(`ent: missing required field "SalaryDetails.disability_exempt"`)}
+	}
+	if _, ok := _c.mutation.PreferredPayoutMethod(); !ok {
+		return &ValidationError{Name: "preferred_payout_method", err: errors.New(`ent: missing required field "SalaryDetails.preferred_payout_method"`)}
 	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "SalaryDetails.is_active"`)}
@@ -495,6 +530,14 @@ func (_c *SalaryDetailsCreate) createSpec() (*SalaryDetails, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.BankAccountID(); ok {
 		_spec.SetField(salarydetails.FieldBankAccountID, field.TypeUUID, value)
 		_node.BankAccountID = &value
+	}
+	if value, ok := _c.mutation.PreferredPayoutMethod(); ok {
+		_spec.SetField(salarydetails.FieldPreferredPayoutMethod, field.TypeString, value)
+		_node.PreferredPayoutMethod = value
+	}
+	if value, ok := _c.mutation.PayoutPhone(); ok {
+		_spec.SetField(salarydetails.FieldPayoutPhone, field.TypeString, value)
+		_node.PayoutPhone = value
 	}
 	if value, ok := _c.mutation.JobGroupID(); ok {
 		_spec.SetField(salarydetails.FieldJobGroupID, field.TypeUUID, value)
@@ -733,6 +776,36 @@ func (u *SalaryDetailsUpsert) UpdateBankAccountID() *SalaryDetailsUpsert {
 // ClearBankAccountID clears the value of the "bank_account_id" field.
 func (u *SalaryDetailsUpsert) ClearBankAccountID() *SalaryDetailsUpsert {
 	u.SetNull(salarydetails.FieldBankAccountID)
+	return u
+}
+
+// SetPreferredPayoutMethod sets the "preferred_payout_method" field.
+func (u *SalaryDetailsUpsert) SetPreferredPayoutMethod(v string) *SalaryDetailsUpsert {
+	u.Set(salarydetails.FieldPreferredPayoutMethod, v)
+	return u
+}
+
+// UpdatePreferredPayoutMethod sets the "preferred_payout_method" field to the value that was provided on create.
+func (u *SalaryDetailsUpsert) UpdatePreferredPayoutMethod() *SalaryDetailsUpsert {
+	u.SetExcluded(salarydetails.FieldPreferredPayoutMethod)
+	return u
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (u *SalaryDetailsUpsert) SetPayoutPhone(v string) *SalaryDetailsUpsert {
+	u.Set(salarydetails.FieldPayoutPhone, v)
+	return u
+}
+
+// UpdatePayoutPhone sets the "payout_phone" field to the value that was provided on create.
+func (u *SalaryDetailsUpsert) UpdatePayoutPhone() *SalaryDetailsUpsert {
+	u.SetExcluded(salarydetails.FieldPayoutPhone)
+	return u
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (u *SalaryDetailsUpsert) ClearPayoutPhone() *SalaryDetailsUpsert {
+	u.SetNull(salarydetails.FieldPayoutPhone)
 	return u
 }
 
@@ -1040,6 +1113,41 @@ func (u *SalaryDetailsUpsertOne) UpdateBankAccountID() *SalaryDetailsUpsertOne {
 func (u *SalaryDetailsUpsertOne) ClearBankAccountID() *SalaryDetailsUpsertOne {
 	return u.Update(func(s *SalaryDetailsUpsert) {
 		s.ClearBankAccountID()
+	})
+}
+
+// SetPreferredPayoutMethod sets the "preferred_payout_method" field.
+func (u *SalaryDetailsUpsertOne) SetPreferredPayoutMethod(v string) *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetPreferredPayoutMethod(v)
+	})
+}
+
+// UpdatePreferredPayoutMethod sets the "preferred_payout_method" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertOne) UpdatePreferredPayoutMethod() *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdatePreferredPayoutMethod()
+	})
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (u *SalaryDetailsUpsertOne) SetPayoutPhone(v string) *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetPayoutPhone(v)
+	})
+}
+
+// UpdatePayoutPhone sets the "payout_phone" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertOne) UpdatePayoutPhone() *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdatePayoutPhone()
+	})
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (u *SalaryDetailsUpsertOne) ClearPayoutPhone() *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.ClearPayoutPhone()
 	})
 }
 
@@ -1524,6 +1632,41 @@ func (u *SalaryDetailsUpsertBulk) UpdateBankAccountID() *SalaryDetailsUpsertBulk
 func (u *SalaryDetailsUpsertBulk) ClearBankAccountID() *SalaryDetailsUpsertBulk {
 	return u.Update(func(s *SalaryDetailsUpsert) {
 		s.ClearBankAccountID()
+	})
+}
+
+// SetPreferredPayoutMethod sets the "preferred_payout_method" field.
+func (u *SalaryDetailsUpsertBulk) SetPreferredPayoutMethod(v string) *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetPreferredPayoutMethod(v)
+	})
+}
+
+// UpdatePreferredPayoutMethod sets the "preferred_payout_method" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertBulk) UpdatePreferredPayoutMethod() *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdatePreferredPayoutMethod()
+	})
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (u *SalaryDetailsUpsertBulk) SetPayoutPhone(v string) *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetPayoutPhone(v)
+	})
+}
+
+// UpdatePayoutPhone sets the "payout_phone" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertBulk) UpdatePayoutPhone() *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdatePayoutPhone()
+	})
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (u *SalaryDetailsUpsertBulk) ClearPayoutPhone() *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.ClearPayoutPhone()
 	})
 }
 

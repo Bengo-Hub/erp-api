@@ -45,6 +45,10 @@ type SalaryDetails struct {
 	DisabilityExempt bool `json:"disability_exempt,omitempty"`
 	// Primary salary bank account
 	BankAccountID *uuid.UUID `json:"bank_account_id,omitempty"`
+	// bank_transfer | mpesa_b2c | airtel | paystack_mobile | cash
+	PreferredPayoutMethod string `json:"preferred_payout_method,omitempty"`
+	// Mobile-money number for mobile payout channels
+	PayoutPhone string `json:"payout_phone,omitempty"`
 	// JobGroupID holds the value of the "job_group_id" field.
 	JobGroupID *uuid.UUID `json:"job_group_id,omitempty"`
 	// WorkersUnionID holds the value of the "workers_union_id" field.
@@ -69,7 +73,7 @@ func (*SalaryDetails) scanValues(columns []string) ([]any, error) {
 			values[i] = new(decimal.Decimal)
 		case salarydetails.FieldDisabilityExempt, salarydetails.FieldIsActive:
 			values[i] = new(sql.NullBool)
-		case salarydetails.FieldPayMode, salarydetails.FieldIncomeTax, salarydetails.FieldCurrency:
+		case salarydetails.FieldPayMode, salarydetails.FieldIncomeTax, salarydetails.FieldCurrency, salarydetails.FieldPreferredPayoutMethod, salarydetails.FieldPayoutPhone:
 			values[i] = new(sql.NullString)
 		case salarydetails.FieldCreatedAt, salarydetails.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -174,6 +178,18 @@ func (_m *SalaryDetails) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.BankAccountID = new(uuid.UUID)
 				*_m.BankAccountID = *value.S.(*uuid.UUID)
+			}
+		case salarydetails.FieldPreferredPayoutMethod:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field preferred_payout_method", values[i])
+			} else if value.Valid {
+				_m.PreferredPayoutMethod = value.String
+			}
+		case salarydetails.FieldPayoutPhone:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payout_phone", values[i])
+			} else if value.Valid {
+				_m.PayoutPhone = value.String
 			}
 		case salarydetails.FieldJobGroupID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -283,6 +299,12 @@ func (_m *SalaryDetails) String() string {
 		builder.WriteString("bank_account_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("preferred_payout_method=")
+	builder.WriteString(_m.PreferredPayoutMethod)
+	builder.WriteString(", ")
+	builder.WriteString("payout_phone=")
+	builder.WriteString(_m.PayoutPhone)
 	builder.WriteString(", ")
 	if v := _m.JobGroupID; v != nil {
 		builder.WriteString("job_group_id=")
