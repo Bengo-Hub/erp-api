@@ -41,6 +41,36 @@ func GenerateXLSX(doc *Document) ([]byte, error) {
 		Fill: excelize.Fill{Type: "pattern", Pattern: 1, Color: []string{builders.HexSlate100}},
 	})
 
+	// Multi-sheet statutory workbook (P9A / P10 Sheet B1/B2/M / NSSF SF24): one worksheet per
+	// ReportSheet. Falls through to the single-table path below when Sheets is empty.
+	if len(doc.Sheets) > 0 {
+		for i, sh := range doc.Sheets {
+			name := ifEmpty(sh.Name, fmt.Sprintf("Sheet%d", i+1))
+			if i == 0 {
+				f.SetSheetName("Sheet1", name)
+			} else {
+				if _, err := f.NewSheet(name); err != nil {
+					return nil, fmt.Errorf("xlsx new sheet %q: %w", name, err)
+				}
+			}
+			writeSheetXLSX(f, name, sh, titleStyle, headerStyle, valueStyle, altRowStyle, totalStyle)
+			cols := len(sh.Columns)
+			if cols < 8 {
+				cols = 8
+			}
+			for c := 1; c <= cols; c++ {
+				colName, _ := excelize.ColumnNumberToName(c)
+				f.SetColWidth(name, colName, colName, 16)
+			}
+			f.SetColWidth(name, "A", "A", 26)
+		}
+		buf, err := f.WriteToBuffer()
+		if err != nil {
+			return nil, fmt.Errorf("xlsx write: %w", err)
+		}
+		return buf.Bytes(), nil
+	}
+
 	row := 1
 	switch doc.Type {
 	case DocTypePayrollReport:
@@ -63,6 +93,37 @@ func GenerateXLSX(doc *Document) ([]byte, error) {
 		return nil, fmt.Errorf("xlsx write: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+// writeSheetXLSX renders one ReportSheet (title + header + rows + optional totals) onto a named
+// worksheet. Used by the multi-sheet statutory workbook path.
+func writeSheetXLSX(f *excelize.File, sheet string, sh ReportSheet, titleStyle, headerStyle, valueStyle, altRowStyle, totalStyle int) {
+	row := 1
+	f.SetCellValue(sheet, cell(1, row), sh.Name)
+	f.SetCellStyle(sheet, cell(1, row), cell(1, row), titleStyle)
+	row += 2
+	for c, h := range sh.Columns {
+		f.SetCellValue(sheet, cell(c+1, row), h)
+		f.SetCellStyle(sheet, cell(c+1, row), cell(c+1, row), headerStyle)
+	}
+	row++
+	for i, r := range sh.Rows {
+		s := valueStyle
+		if i%2 == 1 {
+			s = altRowStyle
+		}
+		for c, v := range r {
+			ref := cell(c+1, row)
+			f.SetCellValue(sheet, ref, v)
+			f.SetCellStyle(sheet, ref, ref, s)
+		}
+		row++
+	}
+	for c, v := range sh.Totals {
+		ref := cell(c+1, row)
+		f.SetCellValue(sheet, ref, v)
+		f.SetCellStyle(sheet, ref, ref, totalStyle)
+	}
 }
 
 func writeReportXLSX(f *excelize.File, sheet string, doc *Document, row, titleStyle, headerStyle, valueStyle, altRowStyle, totalStyle int) int {

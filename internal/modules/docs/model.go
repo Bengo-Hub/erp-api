@@ -155,6 +155,11 @@ type Document struct {
 	ReportColumns []string
 	ReportRows    [][]string
 	ReportTotals  []string
+	// Sheets, when non-empty, renders a MULTI-SHEET workbook (one worksheet per entry) instead of
+	// the single ReportColumns/ReportRows table — used by KRA statutory returns that span multiple
+	// schedules (P9A 12-month grid, P10 Sheet B1/B2/M, NSSF SF24). Ignored by CSV/PDF, which fall
+	// back to the flat ReportColumns/ReportRows. Additive: empty => unchanged single-sheet output.
+	Sheets []ReportSheet
 
 	// Receipt payment block (unused by ERP docs).
 	AgainstInvoice   string
@@ -163,6 +168,15 @@ type Document struct {
 	PaymentRef       string
 	PaymentSwiftRef  string
 	PaymentRemarks   string
+}
+
+// ReportSheet is one worksheet of a multi-sheet statutory workbook (P9A/P10/NSSF SF24). Values are
+// pre-formatted strings, mirroring ReportColumns/ReportRows/ReportTotals for a single table.
+type ReportSheet struct {
+	Name    string
+	Columns []string
+	Rows    [][]string
+	Totals  []string
 }
 
 // LineHeaders are the column headings for line items in export formats.
