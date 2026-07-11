@@ -41,6 +41,10 @@ const (
 	FieldDisabilityExempt = "disability_exempt"
 	// FieldBankAccountID holds the string denoting the bank_account_id field in the database.
 	FieldBankAccountID = "bank_account_id"
+	// FieldPreferredPayoutMethod holds the string denoting the preferred_payout_method field in the database.
+	FieldPreferredPayoutMethod = "preferred_payout_method"
+	// FieldPayoutPhone holds the string denoting the payout_phone field in the database.
+	FieldPayoutPhone = "payout_phone"
 	// FieldJobGroupID holds the string denoting the job_group_id field in the database.
 	FieldJobGroupID = "job_group_id"
 	// FieldWorkersUnionID holds the string denoting the workers_union_id field in the database.
@@ -71,6 +75,8 @@ var Columns = []string{
 	FieldMortgageInterest,
 	FieldDisabilityExempt,
 	FieldBankAccountID,
+	FieldPreferredPayoutMethod,
+	FieldPayoutPhone,
 	FieldJobGroupID,
 	FieldWorkersUnionID,
 	FieldIsActive,
@@ -107,6 +113,8 @@ var (
 	DefaultMortgageInterest decimal.Decimal
 	// DefaultDisabilityExempt holds the default value on creation for the "disability_exempt" field.
 	DefaultDisabilityExempt bool
+	// DefaultPreferredPayoutMethod holds the default value on creation for the "preferred_payout_method" field.
+	DefaultPreferredPayoutMethod string
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -190,6 +198,16 @@ func ByDisabilityExempt(opts ...sql.OrderTermOption) OrderOption {
 // ByBankAccountID orders the results by the bank_account_id field.
 func ByBankAccountID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBankAccountID, opts...).ToFunc()
+}
+
+// ByPreferredPayoutMethod orders the results by the preferred_payout_method field.
+func ByPreferredPayoutMethod(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPreferredPayoutMethod, opts...).ToFunc()
+}
+
+// ByPayoutPhone orders the results by the payout_phone field.
+func ByPayoutPhone(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayoutPhone, opts...).ToFunc()
 }
 
 // ByJobGroupID orders the results by the job_group_id field.

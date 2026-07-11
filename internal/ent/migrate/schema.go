@@ -3015,6 +3015,8 @@ var (
 		{Name: "mortgage_interest", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
 		{Name: "disability_exempt", Type: field.TypeBool, Default: false},
 		{Name: "bank_account_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "preferred_payout_method", Type: field.TypeString, Default: "bank_transfer"},
+		{Name: "payout_phone", Type: field.TypeString, Nullable: true},
 		{Name: "job_group_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "workers_union_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "is_active", Type: field.TypeBool, Default: true},

@@ -2468,16 +2468,20 @@ func init() {
 	salarydetailsDescDisabilityExempt := salarydetailsFields[12].Descriptor()
 	// salarydetails.DefaultDisabilityExempt holds the default value on creation for the disability_exempt field.
 	salarydetails.DefaultDisabilityExempt = salarydetailsDescDisabilityExempt.Default.(bool)
+	// salarydetailsDescPreferredPayoutMethod is the schema descriptor for preferred_payout_method field.
+	salarydetailsDescPreferredPayoutMethod := salarydetailsFields[14].Descriptor()
+	// salarydetails.DefaultPreferredPayoutMethod holds the default value on creation for the preferred_payout_method field.
+	salarydetails.DefaultPreferredPayoutMethod = salarydetailsDescPreferredPayoutMethod.Default.(string)
 	// salarydetailsDescIsActive is the schema descriptor for is_active field.
-	salarydetailsDescIsActive := salarydetailsFields[16].Descriptor()
+	salarydetailsDescIsActive := salarydetailsFields[18].Descriptor()
 	// salarydetails.DefaultIsActive holds the default value on creation for the is_active field.
 	salarydetails.DefaultIsActive = salarydetailsDescIsActive.Default.(bool)
 	// salarydetailsDescCreatedAt is the schema descriptor for created_at field.
-	salarydetailsDescCreatedAt := salarydetailsFields[17].Descriptor()
+	salarydetailsDescCreatedAt := salarydetailsFields[19].Descriptor()
 	// salarydetails.DefaultCreatedAt holds the default value on creation for the created_at field.
 	salarydetails.DefaultCreatedAt = salarydetailsDescCreatedAt.Default.(func() time.Time)
 	// salarydetailsDescUpdatedAt is the schema descriptor for updated_at field.
-	salarydetailsDescUpdatedAt := salarydetailsFields[18].Descriptor()
+	salarydetailsDescUpdatedAt := salarydetailsFields[20].Descriptor()
 	// salarydetails.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	salarydetails.DefaultUpdatedAt = salarydetailsDescUpdatedAt.Default.(func() time.Time)
 	// salarydetails.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

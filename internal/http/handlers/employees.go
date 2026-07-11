@@ -584,6 +584,9 @@ type upsertSalaryBody struct {
 	PensionContribution string `json:"pension_contribution"`
 	MortgageInterest    string `json:"mortgage_interest"`
 	DisabilityExempt    bool   `json:"disability_exempt"`
+	// Preferred net-pay disbursement channel (optional; default bank_transfer).
+	PreferredPayoutMethod string `json:"preferred_payout_method"`
+	PayoutPhone           string `json:"payout_phone"`
 }
 
 // decimalOrZero parses a decimal string, returning zero for blank/invalid input (used for
@@ -624,10 +627,12 @@ func (h *EmployeesHandler) UpsertSalary(w http.ResponseWriter, r *http.Request) 
 	}
 	// Optional relief amounts default to 0 when blank/unparseable.
 	reliefs := employees.SalaryReliefInput{
-		InsurancePremium:    decimalOrZero(body.InsurancePremium),
-		PensionContribution: decimalOrZero(body.PensionContribution),
-		MortgageInterest:    decimalOrZero(body.MortgageInterest),
-		DisabilityExempt:    body.DisabilityExempt,
+		InsurancePremium:      decimalOrZero(body.InsurancePremium),
+		PensionContribution:   decimalOrZero(body.PensionContribution),
+		MortgageInterest:      decimalOrZero(body.MortgageInterest),
+		DisabilityExempt:      body.DisabilityExempt,
+		PreferredPayoutMethod: body.PreferredPayoutMethod,
+		PayoutPhone:           body.PayoutPhone,
 	}
 	row, err := h.svc.UpsertSalary(r.Context(), scope.TenantID, id, monthly, body.PayMode, body.IncomeTax, body.Currency, reliefs)
 	if err != nil {

@@ -365,13 +365,17 @@ func (s *Service) SoftDelete(ctx context.Context, tenantID, id uuid.UUID) error 
 
 // UpsertSalary sets/updates an employee's salary details and recomputes hourly/daily
 // rates from monthly_salary (never trusting client-supplied derived values, §4).
-// SalaryReliefInput carries the per-employee KRA relief amounts captured on the salary form.
-// All zero-value = no relief (backward-compatible with callers that don't set them).
+// SalaryReliefInput carries the per-employee salary extras captured on the salary form: the KRA
+// relief amounts plus the preferred net-pay disbursement channel. Zero-value = no relief and
+// default (bank_transfer) payout — backward-compatible with callers that don't set them.
 type SalaryReliefInput struct {
 	InsurancePremium    decimal.Decimal
 	PensionContribution decimal.Decimal
 	MortgageInterest    decimal.Decimal
 	DisabilityExempt    bool
+	// PreferredPayoutMethod: bank_transfer | mpesa_b2c | airtel | paystack_mobile | cash.
+	PreferredPayoutMethod string
+	PayoutPhone           string // MSISDN for mobile-money channels
 }
 
 func (s *Service) UpsertSalary(ctx context.Context, tenantID, employeeID uuid.UUID, monthly decimal.Decimal, payMode, incomeTax, currency string, reliefs SalaryReliefInput) (*ent.SalaryDetails, error) {
@@ -389,6 +393,10 @@ func (s *Service) UpsertSalary(ctx context.Context, tenantID, employeeID uuid.UU
 	}
 	if currency == "" {
 		currency = "KES"
+	}
+	payoutMethod := reliefs.PreferredPayoutMethod
+	if payoutMethod == "" {
+		payoutMethod = "bank_transfer"
 	}
 
 	existing, err := s.orm.SalaryDetails.Query().
@@ -408,6 +416,8 @@ func (s *Service) UpsertSalary(ctx context.Context, tenantID, employeeID uuid.UU
 			SetPensionContribution(reliefs.PensionContribution).
 			SetMortgageInterest(reliefs.MortgageInterest).
 			SetDisabilityExempt(reliefs.DisabilityExempt).
+			SetPreferredPayoutMethod(payoutMethod).
+			SetPayoutPhone(reliefs.PayoutPhone).
 			Save(ctx)
 	}
 	if err != nil {

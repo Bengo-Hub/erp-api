@@ -82679,31 +82679,33 @@ func (m *RolePermissionMutation) ResetEdge(name string) error {
 // SalaryDetailsMutation represents an operation that mutates the SalaryDetails nodes in the graph.
 type SalaryDetailsMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *uuid.UUID
-	tenant_id            *uuid.UUID
-	employee_id          *uuid.UUID
-	monthly_salary       *decimal.Decimal
-	pay_mode             *string
-	income_tax           *string
-	currency             *string
-	hourly_rate          *decimal.Decimal
-	daily_rate           *decimal.Decimal
-	insurance_premium    *decimal.Decimal
-	pension_contribution *decimal.Decimal
-	mortgage_interest    *decimal.Decimal
-	disability_exempt    *bool
-	bank_account_id      *uuid.UUID
-	job_group_id         *uuid.UUID
-	workers_union_id     *uuid.UUID
-	is_active            *bool
-	created_at           *time.Time
-	updated_at           *time.Time
-	clearedFields        map[string]struct{}
-	done                 bool
-	oldValue             func(context.Context) (*SalaryDetails, error)
-	predicates           []predicate.SalaryDetails
+	op                      Op
+	typ                     string
+	id                      *uuid.UUID
+	tenant_id               *uuid.UUID
+	employee_id             *uuid.UUID
+	monthly_salary          *decimal.Decimal
+	pay_mode                *string
+	income_tax              *string
+	currency                *string
+	hourly_rate             *decimal.Decimal
+	daily_rate              *decimal.Decimal
+	insurance_premium       *decimal.Decimal
+	pension_contribution    *decimal.Decimal
+	mortgage_interest       *decimal.Decimal
+	disability_exempt       *bool
+	bank_account_id         *uuid.UUID
+	preferred_payout_method *string
+	payout_phone            *string
+	job_group_id            *uuid.UUID
+	workers_union_id        *uuid.UUID
+	is_active               *bool
+	created_at              *time.Time
+	updated_at              *time.Time
+	clearedFields           map[string]struct{}
+	done                    bool
+	oldValue                func(context.Context) (*SalaryDetails, error)
+	predicates              []predicate.SalaryDetails
 }
 
 var _ ent.Mutation = (*SalaryDetailsMutation)(nil)
@@ -83304,6 +83306,91 @@ func (m *SalaryDetailsMutation) ResetBankAccountID() {
 	delete(m.clearedFields, salarydetails.FieldBankAccountID)
 }
 
+// SetPreferredPayoutMethod sets the "preferred_payout_method" field.
+func (m *SalaryDetailsMutation) SetPreferredPayoutMethod(s string) {
+	m.preferred_payout_method = &s
+}
+
+// PreferredPayoutMethod returns the value of the "preferred_payout_method" field in the mutation.
+func (m *SalaryDetailsMutation) PreferredPayoutMethod() (r string, exists bool) {
+	v := m.preferred_payout_method
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPreferredPayoutMethod returns the old "preferred_payout_method" field's value of the SalaryDetails entity.
+// If the SalaryDetails object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SalaryDetailsMutation) OldPreferredPayoutMethod(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPreferredPayoutMethod is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPreferredPayoutMethod requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPreferredPayoutMethod: %w", err)
+	}
+	return oldValue.PreferredPayoutMethod, nil
+}
+
+// ResetPreferredPayoutMethod resets all changes to the "preferred_payout_method" field.
+func (m *SalaryDetailsMutation) ResetPreferredPayoutMethod() {
+	m.preferred_payout_method = nil
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (m *SalaryDetailsMutation) SetPayoutPhone(s string) {
+	m.payout_phone = &s
+}
+
+// PayoutPhone returns the value of the "payout_phone" field in the mutation.
+func (m *SalaryDetailsMutation) PayoutPhone() (r string, exists bool) {
+	v := m.payout_phone
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayoutPhone returns the old "payout_phone" field's value of the SalaryDetails entity.
+// If the SalaryDetails object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SalaryDetailsMutation) OldPayoutPhone(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayoutPhone is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayoutPhone requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayoutPhone: %w", err)
+	}
+	return oldValue.PayoutPhone, nil
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (m *SalaryDetailsMutation) ClearPayoutPhone() {
+	m.payout_phone = nil
+	m.clearedFields[salarydetails.FieldPayoutPhone] = struct{}{}
+}
+
+// PayoutPhoneCleared returns if the "payout_phone" field was cleared in this mutation.
+func (m *SalaryDetailsMutation) PayoutPhoneCleared() bool {
+	_, ok := m.clearedFields[salarydetails.FieldPayoutPhone]
+	return ok
+}
+
+// ResetPayoutPhone resets all changes to the "payout_phone" field.
+func (m *SalaryDetailsMutation) ResetPayoutPhone() {
+	m.payout_phone = nil
+	delete(m.clearedFields, salarydetails.FieldPayoutPhone)
+}
+
 // SetJobGroupID sets the "job_group_id" field.
 func (m *SalaryDetailsMutation) SetJobGroupID(u uuid.UUID) {
 	m.job_group_id = &u
@@ -83544,7 +83631,7 @@ func (m *SalaryDetailsMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SalaryDetailsMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 20)
 	if m.tenant_id != nil {
 		fields = append(fields, salarydetails.FieldTenantID)
 	}
@@ -83583,6 +83670,12 @@ func (m *SalaryDetailsMutation) Fields() []string {
 	}
 	if m.bank_account_id != nil {
 		fields = append(fields, salarydetails.FieldBankAccountID)
+	}
+	if m.preferred_payout_method != nil {
+		fields = append(fields, salarydetails.FieldPreferredPayoutMethod)
+	}
+	if m.payout_phone != nil {
+		fields = append(fields, salarydetails.FieldPayoutPhone)
 	}
 	if m.job_group_id != nil {
 		fields = append(fields, salarydetails.FieldJobGroupID)
@@ -83633,6 +83726,10 @@ func (m *SalaryDetailsMutation) Field(name string) (ent.Value, bool) {
 		return m.DisabilityExempt()
 	case salarydetails.FieldBankAccountID:
 		return m.BankAccountID()
+	case salarydetails.FieldPreferredPayoutMethod:
+		return m.PreferredPayoutMethod()
+	case salarydetails.FieldPayoutPhone:
+		return m.PayoutPhone()
 	case salarydetails.FieldJobGroupID:
 		return m.JobGroupID()
 	case salarydetails.FieldWorkersUnionID:
@@ -83678,6 +83775,10 @@ func (m *SalaryDetailsMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldDisabilityExempt(ctx)
 	case salarydetails.FieldBankAccountID:
 		return m.OldBankAccountID(ctx)
+	case salarydetails.FieldPreferredPayoutMethod:
+		return m.OldPreferredPayoutMethod(ctx)
+	case salarydetails.FieldPayoutPhone:
+		return m.OldPayoutPhone(ctx)
 	case salarydetails.FieldJobGroupID:
 		return m.OldJobGroupID(ctx)
 	case salarydetails.FieldWorkersUnionID:
@@ -83788,6 +83889,20 @@ func (m *SalaryDetailsMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetBankAccountID(v)
 		return nil
+	case salarydetails.FieldPreferredPayoutMethod:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPreferredPayoutMethod(v)
+		return nil
+	case salarydetails.FieldPayoutPhone:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayoutPhone(v)
+		return nil
 	case salarydetails.FieldJobGroupID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
@@ -83859,6 +83974,9 @@ func (m *SalaryDetailsMutation) ClearedFields() []string {
 	if m.FieldCleared(salarydetails.FieldBankAccountID) {
 		fields = append(fields, salarydetails.FieldBankAccountID)
 	}
+	if m.FieldCleared(salarydetails.FieldPayoutPhone) {
+		fields = append(fields, salarydetails.FieldPayoutPhone)
+	}
 	if m.FieldCleared(salarydetails.FieldJobGroupID) {
 		fields = append(fields, salarydetails.FieldJobGroupID)
 	}
@@ -83884,6 +84002,9 @@ func (m *SalaryDetailsMutation) ClearField(name string) error {
 		return nil
 	case salarydetails.FieldBankAccountID:
 		m.ClearBankAccountID()
+		return nil
+	case salarydetails.FieldPayoutPhone:
+		m.ClearPayoutPhone()
 		return nil
 	case salarydetails.FieldJobGroupID:
 		m.ClearJobGroupID()
@@ -83937,6 +84058,12 @@ func (m *SalaryDetailsMutation) ResetField(name string) error {
 		return nil
 	case salarydetails.FieldBankAccountID:
 		m.ResetBankAccountID()
+		return nil
+	case salarydetails.FieldPreferredPayoutMethod:
+		m.ResetPreferredPayoutMethod()
+		return nil
+	case salarydetails.FieldPayoutPhone:
+		m.ResetPayoutPhone()
 		return nil
 	case salarydetails.FieldJobGroupID:
 		m.ResetJobGroupID()

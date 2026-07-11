@@ -224,6 +224,40 @@ func (_u *SalaryDetailsUpdate) ClearBankAccountID() *SalaryDetailsUpdate {
 	return _u
 }
 
+// SetPreferredPayoutMethod sets the "preferred_payout_method" field.
+func (_u *SalaryDetailsUpdate) SetPreferredPayoutMethod(v string) *SalaryDetailsUpdate {
+	_u.mutation.SetPreferredPayoutMethod(v)
+	return _u
+}
+
+// SetNillablePreferredPayoutMethod sets the "preferred_payout_method" field if the given value is not nil.
+func (_u *SalaryDetailsUpdate) SetNillablePreferredPayoutMethod(v *string) *SalaryDetailsUpdate {
+	if v != nil {
+		_u.SetPreferredPayoutMethod(*v)
+	}
+	return _u
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (_u *SalaryDetailsUpdate) SetPayoutPhone(v string) *SalaryDetailsUpdate {
+	_u.mutation.SetPayoutPhone(v)
+	return _u
+}
+
+// SetNillablePayoutPhone sets the "payout_phone" field if the given value is not nil.
+func (_u *SalaryDetailsUpdate) SetNillablePayoutPhone(v *string) *SalaryDetailsUpdate {
+	if v != nil {
+		_u.SetPayoutPhone(*v)
+	}
+	return _u
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (_u *SalaryDetailsUpdate) ClearPayoutPhone() *SalaryDetailsUpdate {
+	_u.mutation.ClearPayoutPhone()
+	return _u
+}
+
 // SetJobGroupID sets the "job_group_id" field.
 func (_u *SalaryDetailsUpdate) SetJobGroupID(v uuid.UUID) *SalaryDetailsUpdate {
 	_u.mutation.SetJobGroupID(v)
@@ -378,6 +412,15 @@ func (_u *SalaryDetailsUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if _u.mutation.BankAccountIDCleared() {
 		_spec.ClearField(salarydetails.FieldBankAccountID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.PreferredPayoutMethod(); ok {
+		_spec.SetField(salarydetails.FieldPreferredPayoutMethod, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PayoutPhone(); ok {
+		_spec.SetField(salarydetails.FieldPayoutPhone, field.TypeString, value)
+	}
+	if _u.mutation.PayoutPhoneCleared() {
+		_spec.ClearField(salarydetails.FieldPayoutPhone, field.TypeString)
 	}
 	if value, ok := _u.mutation.JobGroupID(); ok {
 		_spec.SetField(salarydetails.FieldJobGroupID, field.TypeUUID, value)
@@ -611,6 +654,40 @@ func (_u *SalaryDetailsUpdateOne) ClearBankAccountID() *SalaryDetailsUpdateOne {
 	return _u
 }
 
+// SetPreferredPayoutMethod sets the "preferred_payout_method" field.
+func (_u *SalaryDetailsUpdateOne) SetPreferredPayoutMethod(v string) *SalaryDetailsUpdateOne {
+	_u.mutation.SetPreferredPayoutMethod(v)
+	return _u
+}
+
+// SetNillablePreferredPayoutMethod sets the "preferred_payout_method" field if the given value is not nil.
+func (_u *SalaryDetailsUpdateOne) SetNillablePreferredPayoutMethod(v *string) *SalaryDetailsUpdateOne {
+	if v != nil {
+		_u.SetPreferredPayoutMethod(*v)
+	}
+	return _u
+}
+
+// SetPayoutPhone sets the "payout_phone" field.
+func (_u *SalaryDetailsUpdateOne) SetPayoutPhone(v string) *SalaryDetailsUpdateOne {
+	_u.mutation.SetPayoutPhone(v)
+	return _u
+}
+
+// SetNillablePayoutPhone sets the "payout_phone" field if the given value is not nil.
+func (_u *SalaryDetailsUpdateOne) SetNillablePayoutPhone(v *string) *SalaryDetailsUpdateOne {
+	if v != nil {
+		_u.SetPayoutPhone(*v)
+	}
+	return _u
+}
+
+// ClearPayoutPhone clears the value of the "payout_phone" field.
+func (_u *SalaryDetailsUpdateOne) ClearPayoutPhone() *SalaryDetailsUpdateOne {
+	_u.mutation.ClearPayoutPhone()
+	return _u
+}
+
 // SetJobGroupID sets the "job_group_id" field.
 func (_u *SalaryDetailsUpdateOne) SetJobGroupID(v uuid.UUID) *SalaryDetailsUpdateOne {
 	_u.mutation.SetJobGroupID(v)
@@ -795,6 +872,15 @@ func (_u *SalaryDetailsUpdateOne) sqlSave(ctx context.Context) (_node *SalaryDet
 	}
 	if _u.mutation.BankAccountIDCleared() {
 		_spec.ClearField(salarydetails.FieldBankAccountID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.PreferredPayoutMethod(); ok {
+		_spec.SetField(salarydetails.FieldPreferredPayoutMethod, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PayoutPhone(); ok {
+		_spec.SetField(salarydetails.FieldPayoutPhone, field.TypeString, value)
+	}
+	if _u.mutation.PayoutPhoneCleared() {
+		_spec.ClearField(salarydetails.FieldPayoutPhone, field.TypeString)
 	}
 	if value, ok := _u.mutation.JobGroupID(); ok {
 		_spec.SetField(salarydetails.FieldJobGroupID, field.TypeUUID, value)

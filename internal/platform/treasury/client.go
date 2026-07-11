@@ -29,8 +29,10 @@ type Payout struct {
 	Amount        string `json:"amount"`
 	Currency      string `json:"currency"`
 	PaymentMethod string `json:"payment_method"`
-	ReferenceID   string `json:"reference_id"`
-	Description   string `json:"description"`
+	// Phone is the mobile-money MSISDN for mobile payout channels (mpesa_b2c/airtel/paystack_mobile).
+	Phone       string `json:"phone,omitempty"`
+	ReferenceID string `json:"reference_id"`
+	Description string `json:"description"`
 }
 
 // Client calls treasury-api over S2S (X-API-Key: INTERNAL_SERVICE_KEY) using the shared

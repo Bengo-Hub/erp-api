@@ -43,6 +43,16 @@ func (SalaryDetails) Fields() []ent.Field {
 		field.Bool("disability_exempt").Default(false).Comment("Holds a PWD tax-exemption certificate"),
 
 		field.UUID("bank_account_id", uuid.UUID{}).Optional().Nillable().Comment("Primary salary bank account"),
+
+		// Preferred net-pay disbursement channel, honoured by the payroll disburse flow when it
+		// requests payout from treasury. Default bank_transfer preserves prior behaviour.
+		field.String("preferred_payout_method").
+			Default("bank_transfer").
+			Comment("bank_transfer | mpesa_b2c | airtel | paystack_mobile | cash"),
+		// payout_phone is the mobile-money MSISDN used when preferred_payout_method is a mobile
+		// channel (mpesa_b2c/airtel/paystack_mobile). Bank transfers use bank_account_id.
+		field.String("payout_phone").Optional().Comment("Mobile-money number for mobile payout channels"),
+
 		field.UUID("job_group_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("workers_union_id", uuid.UUID{}).Optional().Nillable(),
 
