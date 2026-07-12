@@ -38,7 +38,7 @@ func (h *ApprovalsHandler) RegisterRoutes(r chi.Router) {
 		// feature — ERP Growth tier and above. Reads and the approve/reject/escalate/cancel ACTIONS
 		// below stay available on every tier (leave/expense approvals work on Starter too).
 		ar.Group(func(pr chi.Router) {
-			pr.Use(authclient.RequireFeature("approval_workflows"))
+			pr.Use(authclient.RequireFeatureCode("approval_workflows"))
 			pr.Post("/workflows", h.CreateWorkflow)
 			pr.Patch("/workflows/{id}/active", h.SetWorkflowActive)
 			pr.Delete("/workflows/{id}", h.DeleteWorkflow)

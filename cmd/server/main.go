@@ -346,7 +346,7 @@ func run() error {
 			// (reads still pass). Superusers, platform owners, demo + service-charge tenants
 			// bypass via the shared IsSubscriptionActive funnel. Matches the inline enforcement
 			// in logistics/marketflow/projects + TruLoad's SubscriptionEnforcementMiddleware.
-			priv.Use(authclient.RequireActiveSubscriptionForMutations())
+			priv.Use(authclient.RequireActiveSubscriptionForMutationsWithGrace(7))
 			priv.Use(mw.OutletContext)
 			priv.Use(mw.EnsureServiceUser(rbacService, tenantSyncer, log)) // Trinity L3: JIT-sync erp roles + tenant shadow from SSO
 			authHandler.RegisterRoutes(priv)
