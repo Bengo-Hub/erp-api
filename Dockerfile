@@ -24,7 +24,11 @@ COPY --from=builder /out/erp-seed /usr/local/bin/erp-seed
 COPY --from=builder /out/erp-seed-payroll /usr/local/bin/erp-seed-payroll
 COPY --from=builder /out/erp-seed-defaults /usr/local/bin/erp-seed-defaults
 COPY --from=builder /out/erp-sync-employees /usr/local/bin/erp-sync-employees
+# Entrypoint script: run migrate + seed (idempotent), then start the server — same pattern as
+# inventory-api/pos-api/logistics-api/subscriptions-api.
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 USER app
 EXPOSE 4000
 ENV HTTP_PORT=4000
-ENTRYPOINT ["/usr/local/bin/erp-api"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
