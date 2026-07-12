@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Bengo-Hub/pagination"
+	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -32,10 +33,16 @@ func NewApprovalsHandler(log *zap.Logger, svc *approvals.Service) *ApprovalsHand
 func (h *ApprovalsHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/approvals", func(ar chi.Router) {
 		ar.Get("/workflows", h.ListWorkflows)
-		ar.Post("/workflows", h.CreateWorkflow)
 		ar.Get("/workflows/{id}", h.GetWorkflow)
-		ar.Patch("/workflows/{id}/active", h.SetWorkflowActive)
-		ar.Delete("/workflows/{id}", h.DeleteWorkflow)
+		// The approval-workflow BUILDER (create/activate/delete) is the premium `approval_workflows`
+		// feature — ERP Growth tier and above. Reads and the approve/reject/escalate/cancel ACTIONS
+		// below stay available on every tier (leave/expense approvals work on Starter too).
+		ar.Group(func(pr chi.Router) {
+			pr.Use(authclient.RequireFeature("approval_workflows"))
+			pr.Post("/workflows", h.CreateWorkflow)
+			pr.Patch("/workflows/{id}/active", h.SetWorkflowActive)
+			pr.Delete("/workflows/{id}", h.DeleteWorkflow)
+		})
 
 		ar.Get("/requests", h.ListRequests)
 		ar.Get("/requests/{id}", h.GetRequest)
