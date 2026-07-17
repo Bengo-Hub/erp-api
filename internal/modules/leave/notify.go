@@ -43,5 +43,5 @@ func (n *outboxNotifier) NotifyLeaveDecision(ctx context.Context, tenantID uuid.
 			"end_date":         req.EndDate.Format("2006-01-02"),
 		},
 	}
-	return n.pub.Publish(ctx, tenantID, req.ID.String(), "notification.requested", payload)
+	return n.pub.Publish(ctx, tenantID, req.ID, "notification.requested", payload)
 }

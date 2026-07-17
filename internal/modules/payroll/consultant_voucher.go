@@ -189,7 +189,7 @@ func (s *Service) ApproveConsultantVoucher(ctx context.Context, tenantID, id, ap
 			"project_id":    projectID,
 			"cost_center":   costCenter,
 		}
-		if err := s.publisher.Publish(ctx, tenantID, updated.ID.String(), "consultant_voucher.approved", payload); err != nil {
+		if err := s.publisher.Publish(ctx, tenantID, updated.ID, "consultant_voucher.approved", payload); err != nil {
 			return updated, fmt.Errorf("consultant voucher: publish approved: %w", err)
 		}
 	}

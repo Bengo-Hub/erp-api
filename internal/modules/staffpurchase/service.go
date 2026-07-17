@@ -115,7 +115,7 @@ func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, in CreateInput
 		if emp.EmployeeNumber != nil {
 			empNo = *emp.EmployeeNumber
 		}
-		_ = s.publisher.Publish(ctx, tenantID, emp.ID.String(), "employee.upserted", map[string]any{
+		_ = s.publisher.Publish(ctx, tenantID, emp.ID, "employee.upserted", map[string]any{
 			"employee_id":     emp.ID.String(),
 			"auth_user_id":    in.AuthUserID.String(),
 			"employee_number": empNo,

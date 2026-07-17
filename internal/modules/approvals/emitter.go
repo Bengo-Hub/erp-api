@@ -41,5 +41,5 @@ func (e *outboxEmitter) EmitApprovalEvent(ctx context.Context, tenantID uuid.UUI
 	if req.RequesterEmployeeID != nil {
 		payload["user_id"] = req.RequesterEmployeeID.String()
 	}
-	return e.pub.Publish(ctx, tenantID, req.ID.String(), "notification.requested", payload)
+	return e.pub.Publish(ctx, tenantID, req.ID, "notification.requested", payload)
 }
