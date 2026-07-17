@@ -256,7 +256,7 @@ func (s *Service) ApproveCasualPayment(ctx context.Context, tenantID, id, approv
 		if updated.CostCenterID != nil {
 			payload["cost_center_id"] = updated.CostCenterID.String()
 		}
-		if err := s.publisher.Publish(ctx, tenantID, updated.ID.String(), "casual_payment.approved", payload); err != nil {
+		if err := s.publisher.Publish(ctx, tenantID, updated.ID, "casual_payment.approved", payload); err != nil {
 			return updated, fmt.Errorf("casual payment: publish approved: %w", err)
 		}
 	}

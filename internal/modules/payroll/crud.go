@@ -467,7 +467,7 @@ func (s *Service) ApproveClaim(ctx context.Context, tenantID, id, approverID uui
 		if updated.CostCenterID != nil {
 			payload["cost_center_id"] = updated.CostCenterID.String()
 		}
-		if err := s.publisher.Publish(ctx, tenantID, updated.ID.String(), "expense_claim.approved", payload); err != nil {
+		if err := s.publisher.Publish(ctx, tenantID, updated.ID, "expense_claim.approved", payload); err != nil {
 			// Approval persisted; event failure is logged by the caller. Surface so caller can retry.
 			return updated, fmt.Errorf("payroll: publish expense_claim.approved: %w", err)
 		}

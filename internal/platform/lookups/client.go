@@ -87,12 +87,22 @@ func (c *Client) Projects(ctx context.Context, tenantID uuid.UUID, bearer string
 	if v, ok := c.cached(key); ok {
 		return v, nil
 	}
-	url := fmt.Sprintf("%s/api/v1/%s/projects?limit=500", c.projectsURL, tenantID.String())
-	raw, err := c.get(ctx, url, bearer)
-	if err != nil {
-		return nil, err
+	// Shared pagination clamps limit to MaxLimit=100 — a single big-limit fetch is silently
+	// truncated, so page until a short page.
+	const pageSize = 100
+	var opts []Option
+	for page := 1; ; page++ {
+		url := fmt.Sprintf("%s/api/v1/%s/projects?limit=%d&page=%d", c.projectsURL, tenantID.String(), pageSize, page)
+		raw, err := c.get(ctx, url, bearer)
+		if err != nil {
+			return nil, err
+		}
+		pageOpts := normalize(raw, "name")
+		opts = append(opts, pageOpts...)
+		if len(pageOpts) < pageSize {
+			break
+		}
 	}
-	opts := normalize(raw, "name")
 	c.store(key, opts)
 	return opts, nil
 }

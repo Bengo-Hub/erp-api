@@ -158,8 +158,14 @@ func run() error {
 	}
 
 	if natsConn != nil && cfg.Events.OutboxEnabled {
+		// JetStream (not core) so publishes are ACKed into the erp stream — consumers
+		// (treasury GL, notifications) are durable JS subscribers and need replay.
+		js, jsErr := natsConn.JetStream()
+		if jsErr != nil {
+			return fmt.Errorf("jetstream init for outbox poller: %w", jsErr)
+		}
 		repo := eventslib.NewSQLOutboxRepository(sqlDB)
-		poller := eventslib.NewOutboxPoller(repo, eventslib.NewNATSAdapter(natsConn, log), log, eventslib.PollerConfig{
+		poller := eventslib.NewOutboxPoller(repo, eventslib.NewJetStreamAdapter(js, log), log, eventslib.PollerConfig{
 			BatchSize:  cfg.Events.OutboxBatchSize,
 			PollPeriod: cfg.Events.OutboxPollPeriod,
 		})

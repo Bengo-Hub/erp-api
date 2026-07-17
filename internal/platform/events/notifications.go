@@ -67,7 +67,7 @@ func (n *Notifications) RequestEmail(ctx context.Context, tenantID uuid.UUID, ag
 	if req.DeliverAt != nil {
 		payload["deliver_at"] = req.DeliverAt.Format(time.RFC3339)
 	}
-	return n.pub.Publish(ctx, tenantID, aggregateID, "email.requested", payload)
+	return n.pub.Publish(ctx, tenantID, AggregateUUID(tenantID, aggregateID), "email.requested", payload)
 }
 
 // NotificationRequest is the payload for erp.notification.requested (in-app/multi-channel).
@@ -92,5 +92,5 @@ func (n *Notifications) RequestNotification(ctx context.Context, tenantID uuid.U
 	if req.Data != nil {
 		payload["data"] = req.Data
 	}
-	return n.pub.Publish(ctx, tenantID, aggregateID, "notification.requested", payload)
+	return n.pub.Publish(ctx, tenantID, AggregateUUID(tenantID, aggregateID), "notification.requested", payload)
 }
