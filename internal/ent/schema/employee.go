@@ -39,6 +39,11 @@ func (Employee) Fields() []ent.Field {
 		field.String("shif_or_nhif_number").Optional().Nillable().Comment("SHIF (2024+) or NHIF number"),
 		field.String("nssf_no").Optional(),
 
+		// Governance flags — directors/shareholders are remunerated + exited under the
+		// Companies Act 2015 (fees/dividends, removal by resolution), not the Employment Act.
+		field.Bool("is_director").Default(false),
+		field.Bool("is_shareholder").Default(false),
+
 		field.Bool("terminated").Default(false),
 		field.Bool("deleted").Default(false).Comment("Soft delete (delete_status)"),
 

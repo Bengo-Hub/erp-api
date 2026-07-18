@@ -945,6 +945,7 @@ var (
 		{Name: "duration_months", Type: field.TypeInt, Nullable: true},
 		{Name: "salary", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
 		{Name: "status", Type: field.TypeString, Default: "active"},
+		{Name: "terms_html", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
@@ -1119,6 +1120,8 @@ var (
 		{Name: "pin_no", Type: field.TypeString, Nullable: true},
 		{Name: "shif_or_nhif_number", Type: field.TypeString, Nullable: true},
 		{Name: "nssf_no", Type: field.TypeString, Nullable: true},
+		{Name: "is_director", Type: field.TypeBool, Default: false},
+		{Name: "is_shareholder", Type: field.TypeBool, Default: false},
 		{Name: "terminated", Type: field.TypeBool, Default: false},
 		{Name: "deleted", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
@@ -1143,7 +1146,7 @@ var (
 			{
 				Name:    "employee_tenant_id_deleted",
 				Unique:  false,
-				Columns: []*schema.Column{EmployeesColumns[1], EmployeesColumns[16]},
+				Columns: []*schema.Column{EmployeesColumns[1], EmployeesColumns[18]},
 			},
 			{
 				Name:    "employee_tenant_id_national_id",

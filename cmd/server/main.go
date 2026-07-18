@@ -242,6 +242,8 @@ func run() error {
 	staffPurchaseSvc := staffpurchase.NewService(orm, employeesSvc, subsGate, notifyPublisher, log)
 	staffPurchaseHandler := handlers.NewStaffPurchaseHandler(log, staffPurchaseSvc)
 	mediaStore := media.NewStore(cfg.Media.Root, cfg.Media.URLBase)
+	// HR document upload/streaming + branded employment-contract PDF (tenant letterhead).
+	employeesHandler.WithMedia(mediaStore).WithBranding(brandingClient)
 	// Cost-allocation lookups: proxy projects-service + treasury cost-centers (JWT-forwarded);
 	// falls back to ERP-derived distinct ids when an upstream is unconfigured/unavailable.
 	lookupsClient := lookups.NewClient(cfg.Services.ProjectsURL, cfg.Services.TreasuryURL, cfg.Auth.APIKey, log)

@@ -121,6 +121,20 @@ func (_c *ContractCreate) SetNillableStatus(v *string) *ContractCreate {
 	return _c
 }
 
+// SetTermsHTML sets the "terms_html" field.
+func (_c *ContractCreate) SetTermsHTML(v string) *ContractCreate {
+	_c.mutation.SetTermsHTML(v)
+	return _c
+}
+
+// SetNillableTermsHTML sets the "terms_html" field if the given value is not nil.
+func (_c *ContractCreate) SetNillableTermsHTML(v *string) *ContractCreate {
+	if v != nil {
+		_c.SetTermsHTML(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *ContractCreate) SetCreatedAt(v time.Time) *ContractCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -308,6 +322,10 @@ func (_c *ContractCreate) createSpec() (*Contract, *sqlgraph.CreateSpec) {
 		_spec.SetField(contract.FieldStatus, field.TypeString, value)
 		_node.Status = value
 	}
+	if value, ok := _c.mutation.TermsHTML(); ok {
+		_spec.SetField(contract.FieldTermsHTML, field.TypeString, value)
+		_node.TermsHTML = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(contract.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -491,6 +509,24 @@ func (u *ContractUpsert) SetStatus(v string) *ContractUpsert {
 // UpdateStatus sets the "status" field to the value that was provided on create.
 func (u *ContractUpsert) UpdateStatus() *ContractUpsert {
 	u.SetExcluded(contract.FieldStatus)
+	return u
+}
+
+// SetTermsHTML sets the "terms_html" field.
+func (u *ContractUpsert) SetTermsHTML(v string) *ContractUpsert {
+	u.Set(contract.FieldTermsHTML, v)
+	return u
+}
+
+// UpdateTermsHTML sets the "terms_html" field to the value that was provided on create.
+func (u *ContractUpsert) UpdateTermsHTML() *ContractUpsert {
+	u.SetExcluded(contract.FieldTermsHTML)
+	return u
+}
+
+// ClearTermsHTML clears the value of the "terms_html" field.
+func (u *ContractUpsert) ClearTermsHTML() *ContractUpsert {
+	u.SetNull(contract.FieldTermsHTML)
 	return u
 }
 
@@ -701,6 +737,27 @@ func (u *ContractUpsertOne) SetStatus(v string) *ContractUpsertOne {
 func (u *ContractUpsertOne) UpdateStatus() *ContractUpsertOne {
 	return u.Update(func(s *ContractUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetTermsHTML sets the "terms_html" field.
+func (u *ContractUpsertOne) SetTermsHTML(v string) *ContractUpsertOne {
+	return u.Update(func(s *ContractUpsert) {
+		s.SetTermsHTML(v)
+	})
+}
+
+// UpdateTermsHTML sets the "terms_html" field to the value that was provided on create.
+func (u *ContractUpsertOne) UpdateTermsHTML() *ContractUpsertOne {
+	return u.Update(func(s *ContractUpsert) {
+		s.UpdateTermsHTML()
+	})
+}
+
+// ClearTermsHTML clears the value of the "terms_html" field.
+func (u *ContractUpsertOne) ClearTermsHTML() *ContractUpsertOne {
+	return u.Update(func(s *ContractUpsert) {
+		s.ClearTermsHTML()
 	})
 }
 
@@ -1080,6 +1137,27 @@ func (u *ContractUpsertBulk) SetStatus(v string) *ContractUpsertBulk {
 func (u *ContractUpsertBulk) UpdateStatus() *ContractUpsertBulk {
 	return u.Update(func(s *ContractUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetTermsHTML sets the "terms_html" field.
+func (u *ContractUpsertBulk) SetTermsHTML(v string) *ContractUpsertBulk {
+	return u.Update(func(s *ContractUpsert) {
+		s.SetTermsHTML(v)
+	})
+}
+
+// UpdateTermsHTML sets the "terms_html" field to the value that was provided on create.
+func (u *ContractUpsertBulk) UpdateTermsHTML() *ContractUpsertBulk {
+	return u.Update(func(s *ContractUpsert) {
+		s.UpdateTermsHTML()
+	})
+}
+
+// ClearTermsHTML clears the value of the "terms_html" field.
+func (u *ContractUpsertBulk) ClearTermsHTML() *ContractUpsertBulk {
+	return u.Update(func(s *ContractUpsert) {
+		s.ClearTermsHTML()
 	})
 }
 

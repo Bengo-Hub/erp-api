@@ -26638,6 +26638,7 @@ type ContractMutation struct {
 	addduration_months *int
 	salary             *decimal.Decimal
 	status             *string
+	terms_html         *string
 	created_at         *time.Time
 	updated_at         *time.Time
 	clearedFields      map[string]struct{}
@@ -27111,6 +27112,55 @@ func (m *ContractMutation) ResetStatus() {
 	m.status = nil
 }
 
+// SetTermsHTML sets the "terms_html" field.
+func (m *ContractMutation) SetTermsHTML(s string) {
+	m.terms_html = &s
+}
+
+// TermsHTML returns the value of the "terms_html" field in the mutation.
+func (m *ContractMutation) TermsHTML() (r string, exists bool) {
+	v := m.terms_html
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTermsHTML returns the old "terms_html" field's value of the Contract entity.
+// If the Contract object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ContractMutation) OldTermsHTML(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTermsHTML is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTermsHTML requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTermsHTML: %w", err)
+	}
+	return oldValue.TermsHTML, nil
+}
+
+// ClearTermsHTML clears the value of the "terms_html" field.
+func (m *ContractMutation) ClearTermsHTML() {
+	m.terms_html = nil
+	m.clearedFields[contract.FieldTermsHTML] = struct{}{}
+}
+
+// TermsHTMLCleared returns if the "terms_html" field was cleared in this mutation.
+func (m *ContractMutation) TermsHTMLCleared() bool {
+	_, ok := m.clearedFields[contract.FieldTermsHTML]
+	return ok
+}
+
+// ResetTermsHTML resets all changes to the "terms_html" field.
+func (m *ContractMutation) ResetTermsHTML() {
+	m.terms_html = nil
+	delete(m.clearedFields, contract.FieldTermsHTML)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *ContractMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -27217,7 +27267,7 @@ func (m *ContractMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ContractMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.tenant_id != nil {
 		fields = append(fields, contract.FieldTenantID)
 	}
@@ -27241,6 +27291,9 @@ func (m *ContractMutation) Fields() []string {
 	}
 	if m.status != nil {
 		fields = append(fields, contract.FieldStatus)
+	}
+	if m.terms_html != nil {
+		fields = append(fields, contract.FieldTermsHTML)
 	}
 	if m.created_at != nil {
 		fields = append(fields, contract.FieldCreatedAt)
@@ -27272,6 +27325,8 @@ func (m *ContractMutation) Field(name string) (ent.Value, bool) {
 		return m.Salary()
 	case contract.FieldStatus:
 		return m.Status()
+	case contract.FieldTermsHTML:
+		return m.TermsHTML()
 	case contract.FieldCreatedAt:
 		return m.CreatedAt()
 	case contract.FieldUpdatedAt:
@@ -27301,6 +27356,8 @@ func (m *ContractMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldSalary(ctx)
 	case contract.FieldStatus:
 		return m.OldStatus(ctx)
+	case contract.FieldTermsHTML:
+		return m.OldTermsHTML(ctx)
 	case contract.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case contract.FieldUpdatedAt:
@@ -27369,6 +27426,13 @@ func (m *ContractMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
+		return nil
+	case contract.FieldTermsHTML:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTermsHTML(v)
 		return nil
 	case contract.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -27441,6 +27505,9 @@ func (m *ContractMutation) ClearedFields() []string {
 	if m.FieldCleared(contract.FieldDurationMonths) {
 		fields = append(fields, contract.FieldDurationMonths)
 	}
+	if m.FieldCleared(contract.FieldTermsHTML) {
+		fields = append(fields, contract.FieldTermsHTML)
+	}
 	return fields
 }
 
@@ -27466,6 +27533,9 @@ func (m *ContractMutation) ClearField(name string) error {
 		return nil
 	case contract.FieldDurationMonths:
 		m.ClearDurationMonths()
+		return nil
+	case contract.FieldTermsHTML:
+		m.ClearTermsHTML()
 		return nil
 	}
 	return fmt.Errorf("unknown Contract nullable field %s", name)
@@ -27498,6 +27568,9 @@ func (m *ContractMutation) ResetField(name string) error {
 		return nil
 	case contract.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case contract.FieldTermsHTML:
+		m.ResetTermsHTML()
 		return nil
 	case contract.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -31801,6 +31874,8 @@ type EmployeeMutation struct {
 	pin_no              *string
 	shif_or_nhif_number *string
 	nssf_no             *string
+	is_director         *bool
+	is_shareholder      *bool
 	terminated          *bool
 	deleted             *bool
 	created_at          *time.Time
@@ -32588,6 +32663,78 @@ func (m *EmployeeMutation) ResetNssfNo() {
 	delete(m.clearedFields, employee.FieldNssfNo)
 }
 
+// SetIsDirector sets the "is_director" field.
+func (m *EmployeeMutation) SetIsDirector(b bool) {
+	m.is_director = &b
+}
+
+// IsDirector returns the value of the "is_director" field in the mutation.
+func (m *EmployeeMutation) IsDirector() (r bool, exists bool) {
+	v := m.is_director
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsDirector returns the old "is_director" field's value of the Employee entity.
+// If the Employee object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeMutation) OldIsDirector(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsDirector is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsDirector requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsDirector: %w", err)
+	}
+	return oldValue.IsDirector, nil
+}
+
+// ResetIsDirector resets all changes to the "is_director" field.
+func (m *EmployeeMutation) ResetIsDirector() {
+	m.is_director = nil
+}
+
+// SetIsShareholder sets the "is_shareholder" field.
+func (m *EmployeeMutation) SetIsShareholder(b bool) {
+	m.is_shareholder = &b
+}
+
+// IsShareholder returns the value of the "is_shareholder" field in the mutation.
+func (m *EmployeeMutation) IsShareholder() (r bool, exists bool) {
+	v := m.is_shareholder
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsShareholder returns the old "is_shareholder" field's value of the Employee entity.
+// If the Employee object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeMutation) OldIsShareholder(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsShareholder is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsShareholder requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsShareholder: %w", err)
+	}
+	return oldValue.IsShareholder, nil
+}
+
+// ResetIsShareholder resets all changes to the "is_shareholder" field.
+func (m *EmployeeMutation) ResetIsShareholder() {
+	m.is_shareholder = nil
+}
+
 // SetTerminated sets the "terminated" field.
 func (m *EmployeeMutation) SetTerminated(b bool) {
 	m.terminated = &b
@@ -32766,7 +32913,7 @@ func (m *EmployeeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EmployeeMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 20)
 	if m.tenant_id != nil {
 		fields = append(fields, employee.FieldTenantID)
 	}
@@ -32808,6 +32955,12 @@ func (m *EmployeeMutation) Fields() []string {
 	}
 	if m.nssf_no != nil {
 		fields = append(fields, employee.FieldNssfNo)
+	}
+	if m.is_director != nil {
+		fields = append(fields, employee.FieldIsDirector)
+	}
+	if m.is_shareholder != nil {
+		fields = append(fields, employee.FieldIsShareholder)
 	}
 	if m.terminated != nil {
 		fields = append(fields, employee.FieldTerminated)
@@ -32857,6 +33010,10 @@ func (m *EmployeeMutation) Field(name string) (ent.Value, bool) {
 		return m.ShifOrNhifNumber()
 	case employee.FieldNssfNo:
 		return m.NssfNo()
+	case employee.FieldIsDirector:
+		return m.IsDirector()
+	case employee.FieldIsShareholder:
+		return m.IsShareholder()
 	case employee.FieldTerminated:
 		return m.Terminated()
 	case employee.FieldDeleted:
@@ -32902,6 +33059,10 @@ func (m *EmployeeMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldShifOrNhifNumber(ctx)
 	case employee.FieldNssfNo:
 		return m.OldNssfNo(ctx)
+	case employee.FieldIsDirector:
+		return m.OldIsDirector(ctx)
+	case employee.FieldIsShareholder:
+		return m.OldIsShareholder(ctx)
 	case employee.FieldTerminated:
 		return m.OldTerminated(ctx)
 	case employee.FieldDeleted:
@@ -33016,6 +33177,20 @@ func (m *EmployeeMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetNssfNo(v)
+		return nil
+	case employee.FieldIsDirector:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsDirector(v)
+		return nil
+	case employee.FieldIsShareholder:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsShareholder(v)
 		return nil
 	case employee.FieldTerminated:
 		v, ok := value.(bool)
@@ -33216,6 +33391,12 @@ func (m *EmployeeMutation) ResetField(name string) error {
 		return nil
 	case employee.FieldNssfNo:
 		m.ResetNssfNo()
+		return nil
+	case employee.FieldIsDirector:
+		m.ResetIsDirector()
+		return nil
+	case employee.FieldIsShareholder:
+		m.ResetIsShareholder()
 		return nil
 	case employee.FieldTerminated:
 		m.ResetTerminated()

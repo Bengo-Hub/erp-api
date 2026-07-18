@@ -28,6 +28,8 @@ type UpdateInput struct {
 	ResidentialStatus *string
 	EmployeeNumber    *string
 	Terminated        *bool
+	IsDirector        *bool
+	IsShareholder     *bool
 }
 
 // Update edits a tenant-scoped employee. Only non-nil fields are applied.
@@ -68,6 +70,12 @@ func (s *Service) Update(ctx context.Context, tenantID, id uuid.UUID, in UpdateI
 	}
 	if in.Terminated != nil {
 		u = u.SetTerminated(*in.Terminated)
+	}
+	if in.IsDirector != nil {
+		u = u.SetIsDirector(*in.IsDirector)
+	}
+	if in.IsShareholder != nil {
+		u = u.SetIsShareholder(*in.IsShareholder)
 	}
 	row, err := u.Save(ctx)
 	if err != nil {

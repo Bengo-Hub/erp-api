@@ -46,6 +46,10 @@ type Employee struct {
 	ShifOrNhifNumber *string `json:"shif_or_nhif_number,omitempty"`
 	// NssfNo holds the value of the "nssf_no" field.
 	NssfNo string `json:"nssf_no,omitempty"`
+	// IsDirector holds the value of the "is_director" field.
+	IsDirector bool `json:"is_director,omitempty"`
+	// IsShareholder holds the value of the "is_shareholder" field.
+	IsShareholder bool `json:"is_shareholder,omitempty"`
 	// Terminated holds the value of the "terminated" field.
 	Terminated bool `json:"terminated,omitempty"`
 	// Soft delete (delete_status)
@@ -64,7 +68,7 @@ func (*Employee) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case employee.FieldOutletID, employee.FieldUserID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case employee.FieldTerminated, employee.FieldDeleted:
+		case employee.FieldIsDirector, employee.FieldIsShareholder, employee.FieldTerminated, employee.FieldDeleted:
 			values[i] = new(sql.NullBool)
 		case employee.FieldEmployeeNumber, employee.FieldFirstName, employee.FieldLastName, employee.FieldEmail, employee.FieldGender, employee.FieldResidentialStatus, employee.FieldNationalID, employee.FieldPinNo, employee.FieldShifOrNhifNumber, employee.FieldNssfNo:
 			values[i] = new(sql.NullString)
@@ -182,6 +186,18 @@ func (_m *Employee) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.NssfNo = value.String
 			}
+		case employee.FieldIsDirector:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_director", values[i])
+			} else if value.Valid {
+				_m.IsDirector = value.Bool
+			}
+		case employee.FieldIsShareholder:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_shareholder", values[i])
+			} else if value.Valid {
+				_m.IsShareholder = value.Bool
+			}
 		case employee.FieldTerminated:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field terminated", values[i])
@@ -293,6 +309,12 @@ func (_m *Employee) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("nssf_no=")
 	builder.WriteString(_m.NssfNo)
+	builder.WriteString(", ")
+	builder.WriteString("is_director=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsDirector))
+	builder.WriteString(", ")
+	builder.WriteString("is_shareholder=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsShareholder))
 	builder.WriteString(", ")
 	builder.WriteString("terminated=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Terminated))

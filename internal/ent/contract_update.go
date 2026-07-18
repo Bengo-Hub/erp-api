@@ -173,6 +173,26 @@ func (_u *ContractUpdate) SetNillableStatus(v *string) *ContractUpdate {
 	return _u
 }
 
+// SetTermsHTML sets the "terms_html" field.
+func (_u *ContractUpdate) SetTermsHTML(v string) *ContractUpdate {
+	_u.mutation.SetTermsHTML(v)
+	return _u
+}
+
+// SetNillableTermsHTML sets the "terms_html" field if the given value is not nil.
+func (_u *ContractUpdate) SetNillableTermsHTML(v *string) *ContractUpdate {
+	if v != nil {
+		_u.SetTermsHTML(*v)
+	}
+	return _u
+}
+
+// ClearTermsHTML clears the value of the "terms_html" field.
+func (_u *ContractUpdate) ClearTermsHTML() *ContractUpdate {
+	_u.mutation.ClearTermsHTML()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *ContractUpdate) SetUpdatedAt(v time.Time) *ContractUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -267,6 +287,12 @@ func (_u *ContractUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(contract.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.TermsHTML(); ok {
+		_spec.SetField(contract.FieldTermsHTML, field.TypeString, value)
+	}
+	if _u.mutation.TermsHTMLCleared() {
+		_spec.ClearField(contract.FieldTermsHTML, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(contract.FieldUpdatedAt, field.TypeTime, value)
@@ -434,6 +460,26 @@ func (_u *ContractUpdateOne) SetNillableStatus(v *string) *ContractUpdateOne {
 	return _u
 }
 
+// SetTermsHTML sets the "terms_html" field.
+func (_u *ContractUpdateOne) SetTermsHTML(v string) *ContractUpdateOne {
+	_u.mutation.SetTermsHTML(v)
+	return _u
+}
+
+// SetNillableTermsHTML sets the "terms_html" field if the given value is not nil.
+func (_u *ContractUpdateOne) SetNillableTermsHTML(v *string) *ContractUpdateOne {
+	if v != nil {
+		_u.SetTermsHTML(*v)
+	}
+	return _u
+}
+
+// ClearTermsHTML clears the value of the "terms_html" field.
+func (_u *ContractUpdateOne) ClearTermsHTML() *ContractUpdateOne {
+	_u.mutation.ClearTermsHTML()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *ContractUpdateOne) SetUpdatedAt(v time.Time) *ContractUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -558,6 +604,12 @@ func (_u *ContractUpdateOne) sqlSave(ctx context.Context) (_node *Contract, err 
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(contract.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.TermsHTML(); ok {
+		_spec.SetField(contract.FieldTermsHTML, field.TypeString, value)
+	}
+	if _u.mutation.TermsHTMLCleared() {
+		_spec.ClearField(contract.FieldTermsHTML, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(contract.FieldUpdatedAt, field.TypeTime, value)

@@ -35,6 +35,8 @@ type Contract struct {
 	Salary decimal.Decimal `json:"salary,omitempty"`
 	// active | expired | terminated
 	Status string `json:"status,omitempty"`
+	// Editable rich-text (HTML) body of the employment terms/contract
+	TermsHTML string `json:"terms_html,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -51,7 +53,7 @@ func (*Contract) scanValues(columns []string) ([]any, error) {
 			values[i] = new(decimal.Decimal)
 		case contract.FieldDurationMonths:
 			values[i] = new(sql.NullInt64)
-		case contract.FieldContractType, contract.FieldStatus:
+		case contract.FieldContractType, contract.FieldStatus, contract.FieldTermsHTML:
 			values[i] = new(sql.NullString)
 		case contract.FieldStartDate, contract.FieldEndDate, contract.FieldCreatedAt, contract.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -128,6 +130,12 @@ func (_m *Contract) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Status = value.String
 			}
+		case contract.FieldTermsHTML:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field terms_html", values[i])
+			} else if value.Valid {
+				_m.TermsHTML = value.String
+			}
 		case contract.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -203,6 +211,9 @@ func (_m *Contract) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)
+	builder.WriteString(", ")
+	builder.WriteString("terms_html=")
+	builder.WriteString(_m.TermsHTML)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

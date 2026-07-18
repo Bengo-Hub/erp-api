@@ -86,6 +86,43 @@ func (s *Store) SaveClaimAttachment(tenantID, claimID uuid.UUID, originalName st
 	return rel, nil
 }
 
+// employeeDocumentExt is the HR employee-document allow-list (documents + images).
+var employeeDocumentExt = map[string]bool{
+	".pdf": true, ".doc": true, ".docx": true, ".odt": true,
+	".png": true, ".jpg": true, ".jpeg": true, ".webp": true, ".gif": true,
+}
+
+// SaveEmployeeDocument writes an HR employee document under {tenant}/hr/documents/{employeeID}/
+// and returns its relative media path (persisted on the row; resolved at read time). The filename
+// keeps its extension but is namespaced by employee id with a short random suffix to avoid
+// overwrites when several documents are uploaded. Mirrors SaveResume/SaveClaimAttachment.
+func (s *Store) SaveEmployeeDocument(tenantID, employeeID uuid.UUID, filename string, data []byte) (string, error) {
+	ext := strings.ToLower(filepath.Ext(filename))
+	if !employeeDocumentExt[ext] {
+		return "", fmt.Errorf("media: unsupported document type %q (allowed: pdf, doc, docx, odt, png, jpg, jpeg, webp, gif)", ext)
+	}
+	name := employeeID.String() + "_" + uuid.New().String()[:8] + ext
+	rel := filepath.ToSlash(filepath.Join(tenantID.String(), "hr", "documents", employeeID.String(), name))
+	abs := filepath.Join(s.root, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
+		return "", fmt.Errorf("media: mkdir: %w", err)
+	}
+	if err := os.WriteFile(abs, data, 0o644); err != nil {
+		return "", fmt.Errorf("media: write file: %w", err)
+	}
+	return rel, nil
+}
+
+// Abs resolves a stored relative media path to an absolute filesystem path under MEDIA_ROOT.
+func (s *Store) Abs(rel string) string {
+	return filepath.Join(s.root, filepath.FromSlash(filepath.Clean("/"+rel)))
+}
+
+// ReadFile reads the bytes of a stored media file by its relative path (for streaming downloads).
+func (s *Store) ReadFile(rel string) ([]byte, error) {
+	return os.ReadFile(s.Abs(rel))
+}
+
 // URL resolves a stored relative path to a public URL when MEDIA_URL_BASE is set.
 func (s *Store) URL(rel string) string {
 	if rel == "" || s.urlBase == "" {

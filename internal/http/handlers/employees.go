@@ -3,7 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"io"
+	"mime"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
@@ -13,6 +17,8 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
+	platformauth "github.com/Bengo-Hub/erp-api/internal/platform/auth"
+	"github.com/Bengo-Hub/erp-api/internal/platform/media"
 	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 )
 
@@ -27,6 +33,8 @@ type EmployeesHandler struct {
 	log      *zap.Logger
 	svc      *employees.Service
 	treasury *treasury.Client
+	media    *media.Store
+	branding *platformauth.BrandingClient
 }
 
 func NewEmployeesHandler(log *zap.Logger, svc *employees.Service) *EmployeesHandler {
@@ -36,6 +44,18 @@ func NewEmployeesHandler(log *zap.Logger, svc *employees.Service) *EmployeesHand
 // WithTreasury injects the treasury S2S client used to verify employee bank accounts (Paystack).
 func (h *EmployeesHandler) WithTreasury(c *treasury.Client) *EmployeesHandler {
 	h.treasury = c
+	return h
+}
+
+// WithMedia wires the media store so HR documents / generated contracts can be stored. Optional.
+func (h *EmployeesHandler) WithMedia(m *media.Store) *EmployeesHandler {
+	h.media = m
+	return h
+}
+
+// WithBranding wires the auth-api branding client so contracts render on the tenant letterhead.
+func (h *EmployeesHandler) WithBranding(b *platformauth.BrandingClient) *EmployeesHandler {
+	h.branding = b
 	return h
 }
 
@@ -51,6 +71,15 @@ func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 		er.Delete("/{id}", h.Delete)
 		er.Put("/{id}/salary", h.UpsertSalary)
 		er.Put("/{id}/bank-accounts/{accountID}/primary", h.SetPrimaryBank)
+		// HR documents (upload / list / stream).
+		er.Post("/{id}/documents", h.UploadDocument)
+		er.Get("/{id}/documents", h.ListDocuments)
+		er.Get("/{id}/documents/{docId}/file", h.DownloadDocument)
+		// Employment-contract terms (editable, tenant-scoped) + branded PDF.
+		er.Get("/{id}/contract/terms", h.GetContractTerms)
+		er.Put("/{id}/contract/terms", h.PutContractTerms)
+		er.Get("/{id}/contract/pdf", h.ContractPDF)
+		er.Post("/{id}/contract/generate", h.GenerateContract)
 	})
 	// Bank accounts + next-of-kin are managed at top-level /hrm paths (erp-ui passes
 	// the employee via emp_id query / employee body field).
@@ -110,6 +139,8 @@ type updateEmployeeBody struct {
 	ResidentialStatus *string `json:"residential_status"`
 	EmployeeNumber    *string `json:"employee_number"`
 	Terminated        *bool   `json:"terminated"`
+	IsDirector        *bool   `json:"is_director"`
+	IsShareholder     *bool   `json:"is_shareholder"`
 }
 
 // Update edits a tenant-scoped employee (PUT/PATCH /hrm/employees/{id}).
@@ -140,6 +171,8 @@ func (h *EmployeesHandler) Update(w http.ResponseWriter, r *http.Request) {
 		ResidentialStatus: body.ResidentialStatus,
 		EmployeeNumber:    body.EmployeeNumber,
 		Terminated:        body.Terminated,
+		IsDirector:        body.IsDirector,
+		IsShareholder:     body.IsShareholder,
 	})
 	if ent.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "not_found", "employee not found")
@@ -500,6 +533,8 @@ type createEmployeeBody struct {
 	ShifOrNhifNumber  string `json:"shif_or_nhif_number"`
 	NssfNo            string `json:"nssf_no"`
 	ResidentialStatus string `json:"residential_status"`
+	IsDirector        bool   `json:"is_director"`
+	IsShareholder     bool   `json:"is_shareholder"`
 }
 
 func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -526,6 +561,8 @@ func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ShifOrNhifNumber:  body.ShifOrNhifNumber,
 		NssfNo:            body.NssfNo,
 		ResidentialStatus: body.ResidentialStatus,
+		IsDirector:        body.IsDirector,
+		IsShareholder:     body.IsShareholder,
 	}
 	// Restricted users default the new employee to their own outlet.
 	if body.OutletID != "" {
@@ -665,4 +702,333 @@ func (h *EmployeesHandler) SetPrimaryBank(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// ---- Employee HR documents ----
+
+func (h *EmployeesHandler) documentView(d *ent.EmployeeDocument) map[string]any {
+	v := map[string]any{
+		"id":          d.ID,
+		"employee":    d.EmployeeID,
+		"employee_id": d.EmployeeID,
+		"title":       d.Title,
+		"created_at":  d.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+	if d.DocumentType != nil {
+		v["document_type"] = *d.DocumentType
+	}
+	if d.FileURL != nil {
+		v["file_url"] = *d.FileURL
+		if h.media != nil {
+			v["file_download_url"] = h.media.URL(*d.FileURL)
+		}
+	}
+	return v
+}
+
+// UploadDocument stores a multipart HR document (file + title + document_type) in the per-tenant
+// media store and records the EmployeeDocument row.
+func (h *EmployeesHandler) UploadDocument(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permEmployeeManage) {
+		return
+	}
+	if h.media == nil {
+		writeError(w, http.StatusServiceUnavailable, "media_unavailable", "media storage not configured")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MiB cap
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid multipart form")
+		return
+	}
+	title := strings.TrimSpace(r.FormValue("title"))
+	if title == "" {
+		writeError(w, http.StatusBadRequest, "bad_request", "title is required")
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "missing 'file' field")
+		return
+	}
+	defer func() { _ = file.Close() }()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "failed to read file")
+		return
+	}
+	rel, err := h.media.SaveEmployeeDocument(scope.TenantID, id, header.Filename, data)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "upload_failed", err.Error())
+		return
+	}
+	row, err := h.svc.CreateDocument(r.Context(), scope.TenantID, employees.DocumentInput{
+		EmployeeID:   id,
+		Title:        title,
+		DocumentType: strings.TrimSpace(r.FormValue("document_type")),
+		FileURL:      rel,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, h.documentView(row))
+}
+
+// ListDocuments lists a tenant-scoped employee's HR documents.
+func (h *EmployeesHandler) ListDocuments(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permEmployeeView) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	rows, err := h.svc.ListDocuments(r.Context(), scope.TenantID, id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list documents")
+		return
+	}
+	out := make([]map[string]any, 0, len(rows))
+	for _, d := range rows {
+		out = append(out, h.documentView(d))
+	}
+	writePagedSlice(w, out, pagination.Parse(r))
+}
+
+// DownloadDocument streams the stored bytes of an employee document (Content-Type by extension).
+func (h *EmployeesHandler) DownloadDocument(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permEmployeeView) {
+		return
+	}
+	if h.media == nil {
+		writeError(w, http.StatusServiceUnavailable, "media_unavailable", "media storage not configured")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	docID, err := uuid.Parse(chi.URLParam(r, "docId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid document id")
+		return
+	}
+	doc, err := h.svc.GetDocument(r.Context(), scope.TenantID, id, docID)
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "document not found")
+		return
+	}
+	if err != nil || doc.FileURL == nil || *doc.FileURL == "" {
+		writeError(w, http.StatusNotFound, "not_found", "document file not found")
+		return
+	}
+	body, err := h.media.ReadFile(*doc.FileURL)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "document file not found")
+		return
+	}
+	mimeType := mime.TypeByExtension(filepath.Ext(*doc.FileURL))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+	streamDownload(w, body, mimeType, filepath.Base(*doc.FileURL))
+}
+
+// ---- Employment contract terms ----
+
+// contractTermsInput resolves branding + employee into a ContractTermsInput for the given type.
+func (h *EmployeesHandler) contractTermsInput(scope RequestScope, emp *ent.Employee, empType, jobTitle string) employees.ContractTermsInput {
+	in := employees.ContractTermsInput{
+		EmployeeName:   employeeFullName(emp),
+		JobTitle:       jobTitle,
+		IsDirector:     emp.IsDirector,
+		IsShareholder:  emp.IsShareholder,
+		EmploymentType: empType,
+	}
+	if h.branding != nil {
+		if slug := h.svc.TenantSlug(scope.Ctx, scope.TenantID); slug != "" {
+			if b, err := h.branding.GetBySlug(scope.Ctx, slug); err == nil && b != nil {
+				in.CompanyName = b.Name
+				in.CompanyAddress = b.Address
+				in.CompanyKraPin = b.KraPin
+				in.PrimaryColor = b.PrimaryColor
+				in.LogoURL = b.LogoURL
+			}
+		}
+	}
+	return in
+}
+
+func employeeFullName(emp *ent.Employee) string {
+	name := strings.TrimSpace(emp.FirstName + " " + emp.LastName)
+	return name
+}
+
+// resolvedTermsHTML returns the stored terms_html for the employee's contract, or the auto-
+// generated default for the requested type when none is stored.
+func (h *EmployeesHandler) resolvedTermsHTML(scope RequestScope, emp *ent.Employee, empType, jobTitle string) (string, error) {
+	stored, err := h.svc.StoredContractTerms(scope.Ctx, scope.TenantID, emp.ID)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(stored) != "" {
+		return stored, nil
+	}
+	return employees.BuildDefaultTermsHTML(h.contractTermsInput(scope, emp, empType, jobTitle)), nil
+}
+
+// GetContractTerms returns the stored contract terms_html if set, else the auto-generated default.
+func (h *EmployeesHandler) GetContractTerms(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permEmployeeView) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	emp, err := h.svc.Get(r.Context(), scope.TenantID, id)
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "employee not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to fetch employee")
+		return
+	}
+	empType := employees.NormalizeEmploymentType(r.URL.Query().Get("type"), emp.IsDirector, emp.IsShareholder)
+	termsHTML, err := h.resolvedTermsHTML(scope, emp, empType, r.URL.Query().Get("role"))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to resolve terms")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"terms_html": termsHTML, "employment_type": empType})
+}
+
+type contractTermsBody struct {
+	TermsHTML string `json:"terms_html"`
+}
+
+// PutContractTerms saves edited HTML onto the employee's Contract (creating one if none).
+func (h *EmployeesHandler) PutContractTerms(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permEmployeeManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var body contractTermsBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	if strings.TrimSpace(body.TermsHTML) == "" {
+		writeError(w, http.StatusBadRequest, "bad_request", "terms_html is required")
+		return
+	}
+	c, err := h.svc.SaveContractTerms(r.Context(), scope.TenantID, id, body.TermsHTML)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "save_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"id": c.ID, "employee_id": c.EmployeeID, "terms_html": c.TermsHTML})
+}
+
+// ContractPDF renders the (stored or default) terms into a branded PDF and streams it.
+func (h *EmployeesHandler) ContractPDF(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permEmployeeView) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	body, filename, err := h.contractPDFBytes(scope, id, r.URL.Query().Get("type"), r.URL.Query().Get("role"))
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "employee not found")
+		return
+	}
+	if err != nil {
+		h.log.Error("contract pdf", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to generate contract")
+		return
+	}
+	streamDownload(w, body, "application/pdf", filename)
+}
+
+// contractPDFBytes resolves the employee + terms and renders the branded contract PDF bytes.
+func (h *EmployeesHandler) contractPDFBytes(scope RequestScope, id uuid.UUID, typeParam, jobTitle string) ([]byte, string, error) {
+	emp, err := h.svc.Get(scope.Ctx, scope.TenantID, id)
+	if err != nil {
+		return nil, "", err
+	}
+	empType := employees.NormalizeEmploymentType(typeParam, emp.IsDirector, emp.IsShareholder)
+	termsHTML, err := h.resolvedTermsHTML(scope, emp, empType, jobTitle)
+	if err != nil {
+		return nil, "", err
+	}
+	body, err := employees.RenderContractPDF(h.contractTermsInput(scope, emp, empType, jobTitle), termsHTML)
+	if err != nil {
+		return nil, "", err
+	}
+	return body, "employment-contract-" + emp.ID.String()[:8] + ".pdf", nil
+}
+
+// GenerateContract renders the branded PDF and stores it as an EmployeeDocument.
+func (h *EmployeesHandler) GenerateContract(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permEmployeeManage) {
+		return
+	}
+	if h.media == nil {
+		writeError(w, http.StatusServiceUnavailable, "media_unavailable", "media storage not configured")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	body, filename, err := h.contractPDFBytes(scope, id, r.URL.Query().Get("type"), r.URL.Query().Get("role"))
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "employee not found")
+		return
+	}
+	if err != nil {
+		h.log.Error("contract generate", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to generate contract")
+		return
+	}
+	rel, err := h.media.SaveEmployeeDocument(scope.TenantID, id, filename, body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "save_failed", err.Error())
+		return
+	}
+	row, err := h.svc.CreateDocument(r.Context(), scope.TenantID, employees.DocumentInput{
+		EmployeeID:   id,
+		Title:        "Employment Terms & Contract",
+		DocumentType: "employment_contract",
+		FileURL:      rel,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, h.documentView(row))
 }

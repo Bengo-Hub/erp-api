@@ -807,11 +807,11 @@ func init() {
 	// contract.DefaultStatus holds the default value on creation for the status field.
 	contract.DefaultStatus = contractDescStatus.Default.(string)
 	// contractDescCreatedAt is the schema descriptor for created_at field.
-	contractDescCreatedAt := contractFields[9].Descriptor()
+	contractDescCreatedAt := contractFields[10].Descriptor()
 	// contract.DefaultCreatedAt holds the default value on creation for the created_at field.
 	contract.DefaultCreatedAt = contractDescCreatedAt.Default.(func() time.Time)
 	// contractDescUpdatedAt is the schema descriptor for updated_at field.
-	contractDescUpdatedAt := contractFields[10].Descriptor()
+	contractDescUpdatedAt := contractFields[11].Descriptor()
 	// contract.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	contract.DefaultUpdatedAt = contractDescUpdatedAt.Default.(func() time.Time)
 	// contract.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -980,20 +980,28 @@ func init() {
 	esssettings.DefaultID = esssettingsDescID.Default.(func() uuid.UUID)
 	employeeFields := schema.Employee{}.Fields()
 	_ = employeeFields
+	// employeeDescIsDirector is the schema descriptor for is_director field.
+	employeeDescIsDirector := employeeFields[15].Descriptor()
+	// employee.DefaultIsDirector holds the default value on creation for the is_director field.
+	employee.DefaultIsDirector = employeeDescIsDirector.Default.(bool)
+	// employeeDescIsShareholder is the schema descriptor for is_shareholder field.
+	employeeDescIsShareholder := employeeFields[16].Descriptor()
+	// employee.DefaultIsShareholder holds the default value on creation for the is_shareholder field.
+	employee.DefaultIsShareholder = employeeDescIsShareholder.Default.(bool)
 	// employeeDescTerminated is the schema descriptor for terminated field.
-	employeeDescTerminated := employeeFields[15].Descriptor()
+	employeeDescTerminated := employeeFields[17].Descriptor()
 	// employee.DefaultTerminated holds the default value on creation for the terminated field.
 	employee.DefaultTerminated = employeeDescTerminated.Default.(bool)
 	// employeeDescDeleted is the schema descriptor for deleted field.
-	employeeDescDeleted := employeeFields[16].Descriptor()
+	employeeDescDeleted := employeeFields[18].Descriptor()
 	// employee.DefaultDeleted holds the default value on creation for the deleted field.
 	employee.DefaultDeleted = employeeDescDeleted.Default.(bool)
 	// employeeDescCreatedAt is the schema descriptor for created_at field.
-	employeeDescCreatedAt := employeeFields[17].Descriptor()
+	employeeDescCreatedAt := employeeFields[19].Descriptor()
 	// employee.DefaultCreatedAt holds the default value on creation for the created_at field.
 	employee.DefaultCreatedAt = employeeDescCreatedAt.Default.(func() time.Time)
 	// employeeDescUpdatedAt is the schema descriptor for updated_at field.
-	employeeDescUpdatedAt := employeeFields[18].Descriptor()
+	employeeDescUpdatedAt := employeeFields[20].Descriptor()
 	// employee.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	employee.DefaultUpdatedAt = employeeDescUpdatedAt.Default.(func() time.Time)
 	// employee.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
