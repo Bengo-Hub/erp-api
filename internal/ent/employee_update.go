@@ -303,6 +303,34 @@ func (_u *EmployeeUpdate) ClearNssfNo() *EmployeeUpdate {
 	return _u
 }
 
+// SetIsDirector sets the "is_director" field.
+func (_u *EmployeeUpdate) SetIsDirector(v bool) *EmployeeUpdate {
+	_u.mutation.SetIsDirector(v)
+	return _u
+}
+
+// SetNillableIsDirector sets the "is_director" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableIsDirector(v *bool) *EmployeeUpdate {
+	if v != nil {
+		_u.SetIsDirector(*v)
+	}
+	return _u
+}
+
+// SetIsShareholder sets the "is_shareholder" field.
+func (_u *EmployeeUpdate) SetIsShareholder(v bool) *EmployeeUpdate {
+	_u.mutation.SetIsShareholder(v)
+	return _u
+}
+
+// SetNillableIsShareholder sets the "is_shareholder" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableIsShareholder(v *bool) *EmployeeUpdate {
+	if v != nil {
+		_u.SetIsShareholder(*v)
+	}
+	return _u
+}
+
 // SetTerminated sets the "terminated" field.
 func (_u *EmployeeUpdate) SetTerminated(v bool) *EmployeeUpdate {
 	_u.mutation.SetTerminated(v)
@@ -467,6 +495,12 @@ func (_u *EmployeeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.NssfNoCleared() {
 		_spec.ClearField(employee.FieldNssfNo, field.TypeString)
+	}
+	if value, ok := _u.mutation.IsDirector(); ok {
+		_spec.SetField(employee.FieldIsDirector, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.IsShareholder(); ok {
+		_spec.SetField(employee.FieldIsShareholder, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Terminated(); ok {
 		_spec.SetField(employee.FieldTerminated, field.TypeBool, value)
@@ -771,6 +805,34 @@ func (_u *EmployeeUpdateOne) ClearNssfNo() *EmployeeUpdateOne {
 	return _u
 }
 
+// SetIsDirector sets the "is_director" field.
+func (_u *EmployeeUpdateOne) SetIsDirector(v bool) *EmployeeUpdateOne {
+	_u.mutation.SetIsDirector(v)
+	return _u
+}
+
+// SetNillableIsDirector sets the "is_director" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableIsDirector(v *bool) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetIsDirector(*v)
+	}
+	return _u
+}
+
+// SetIsShareholder sets the "is_shareholder" field.
+func (_u *EmployeeUpdateOne) SetIsShareholder(v bool) *EmployeeUpdateOne {
+	_u.mutation.SetIsShareholder(v)
+	return _u
+}
+
+// SetNillableIsShareholder sets the "is_shareholder" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableIsShareholder(v *bool) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetIsShareholder(*v)
+	}
+	return _u
+}
+
 // SetTerminated sets the "terminated" field.
 func (_u *EmployeeUpdateOne) SetTerminated(v bool) *EmployeeUpdateOne {
 	_u.mutation.SetTerminated(v)
@@ -965,6 +1027,12 @@ func (_u *EmployeeUpdateOne) sqlSave(ctx context.Context) (_node *Employee, err 
 	}
 	if _u.mutation.NssfNoCleared() {
 		_spec.ClearField(employee.FieldNssfNo, field.TypeString)
+	}
+	if value, ok := _u.mutation.IsDirector(); ok {
+		_spec.SetField(employee.FieldIsDirector, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.IsShareholder(); ok {
+		_spec.SetField(employee.FieldIsShareholder, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Terminated(); ok {
 		_spec.SetField(employee.FieldTerminated, field.TypeBool, value)

@@ -127,6 +127,8 @@ type CreateInput struct {
 	ShifOrNhifNumber  string
 	NssfNo            string
 	ResidentialStatus string
+	IsDirector        bool
+	IsShareholder     bool
 }
 
 // ErrNameRequired is returned by Create when first_name or last_name is blank. The HTTP
@@ -152,7 +154,9 @@ func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, in CreateInput
 		SetNationalID(in.NationalID).
 		SetPinNo(in.PinNo).
 		SetNssfNo(in.NssfNo).
-		SetResidentialStatus(in.ResidentialStatus)
+		SetResidentialStatus(in.ResidentialStatus).
+		SetIsDirector(in.IsDirector).
+		SetIsShareholder(in.IsShareholder)
 	if in.OutletID != nil {
 		b = b.SetOutletID(*in.OutletID)
 	}

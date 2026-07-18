@@ -31,6 +31,8 @@ const (
 	FieldSalary = "salary"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldTermsHTML holds the string denoting the terms_html field in the database.
+	FieldTermsHTML = "terms_html"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -50,6 +52,7 @@ var Columns = []string{
 	FieldDurationMonths,
 	FieldSalary,
 	FieldStatus,
+	FieldTermsHTML,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -125,6 +128,11 @@ func BySalary(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByTermsHTML orders the results by the terms_html field.
+func ByTermsHTML(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTermsHTML, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

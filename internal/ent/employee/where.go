@@ -125,6 +125,16 @@ func NssfNo(v string) predicate.Employee {
 	return predicate.Employee(sql.FieldEQ(FieldNssfNo, v))
 }
 
+// IsDirector applies equality check predicate on the "is_director" field. It's identical to IsDirectorEQ.
+func IsDirector(v bool) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldIsDirector, v))
+}
+
+// IsShareholder applies equality check predicate on the "is_shareholder" field. It's identical to IsShareholderEQ.
+func IsShareholder(v bool) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldIsShareholder, v))
+}
+
 // Terminated applies equality check predicate on the "terminated" field. It's identical to TerminatedEQ.
 func Terminated(v bool) predicate.Employee {
 	return predicate.Employee(sql.FieldEQ(FieldTerminated, v))
@@ -1083,6 +1093,26 @@ func NssfNoEqualFold(v string) predicate.Employee {
 // NssfNoContainsFold applies the ContainsFold predicate on the "nssf_no" field.
 func NssfNoContainsFold(v string) predicate.Employee {
 	return predicate.Employee(sql.FieldContainsFold(FieldNssfNo, v))
+}
+
+// IsDirectorEQ applies the EQ predicate on the "is_director" field.
+func IsDirectorEQ(v bool) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldIsDirector, v))
+}
+
+// IsDirectorNEQ applies the NEQ predicate on the "is_director" field.
+func IsDirectorNEQ(v bool) predicate.Employee {
+	return predicate.Employee(sql.FieldNEQ(FieldIsDirector, v))
+}
+
+// IsShareholderEQ applies the EQ predicate on the "is_shareholder" field.
+func IsShareholderEQ(v bool) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldIsShareholder, v))
+}
+
+// IsShareholderNEQ applies the NEQ predicate on the "is_shareholder" field.
+func IsShareholderNEQ(v bool) predicate.Employee {
+	return predicate.Employee(sql.FieldNEQ(FieldIsShareholder, v))
 }
 
 // TerminatedEQ applies the EQ predicate on the "terminated" field.

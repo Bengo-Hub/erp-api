@@ -96,6 +96,11 @@ func Status(v string) predicate.Contract {
 	return predicate.Contract(sql.FieldEQ(FieldStatus, v))
 }
 
+// TermsHTML applies equality check predicate on the "terms_html" field. It's identical to TermsHTMLEQ.
+func TermsHTML(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldEQ(FieldTermsHTML, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Contract {
 	return predicate.Contract(sql.FieldEQ(FieldCreatedAt, v))
@@ -514,6 +519,81 @@ func StatusEqualFold(v string) predicate.Contract {
 // StatusContainsFold applies the ContainsFold predicate on the "status" field.
 func StatusContainsFold(v string) predicate.Contract {
 	return predicate.Contract(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// TermsHTMLEQ applies the EQ predicate on the "terms_html" field.
+func TermsHTMLEQ(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldEQ(FieldTermsHTML, v))
+}
+
+// TermsHTMLNEQ applies the NEQ predicate on the "terms_html" field.
+func TermsHTMLNEQ(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldNEQ(FieldTermsHTML, v))
+}
+
+// TermsHTMLIn applies the In predicate on the "terms_html" field.
+func TermsHTMLIn(vs ...string) predicate.Contract {
+	return predicate.Contract(sql.FieldIn(FieldTermsHTML, vs...))
+}
+
+// TermsHTMLNotIn applies the NotIn predicate on the "terms_html" field.
+func TermsHTMLNotIn(vs ...string) predicate.Contract {
+	return predicate.Contract(sql.FieldNotIn(FieldTermsHTML, vs...))
+}
+
+// TermsHTMLGT applies the GT predicate on the "terms_html" field.
+func TermsHTMLGT(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldGT(FieldTermsHTML, v))
+}
+
+// TermsHTMLGTE applies the GTE predicate on the "terms_html" field.
+func TermsHTMLGTE(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldGTE(FieldTermsHTML, v))
+}
+
+// TermsHTMLLT applies the LT predicate on the "terms_html" field.
+func TermsHTMLLT(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldLT(FieldTermsHTML, v))
+}
+
+// TermsHTMLLTE applies the LTE predicate on the "terms_html" field.
+func TermsHTMLLTE(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldLTE(FieldTermsHTML, v))
+}
+
+// TermsHTMLContains applies the Contains predicate on the "terms_html" field.
+func TermsHTMLContains(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldContains(FieldTermsHTML, v))
+}
+
+// TermsHTMLHasPrefix applies the HasPrefix predicate on the "terms_html" field.
+func TermsHTMLHasPrefix(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldHasPrefix(FieldTermsHTML, v))
+}
+
+// TermsHTMLHasSuffix applies the HasSuffix predicate on the "terms_html" field.
+func TermsHTMLHasSuffix(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldHasSuffix(FieldTermsHTML, v))
+}
+
+// TermsHTMLIsNil applies the IsNil predicate on the "terms_html" field.
+func TermsHTMLIsNil() predicate.Contract {
+	return predicate.Contract(sql.FieldIsNull(FieldTermsHTML))
+}
+
+// TermsHTMLNotNil applies the NotNil predicate on the "terms_html" field.
+func TermsHTMLNotNil() predicate.Contract {
+	return predicate.Contract(sql.FieldNotNull(FieldTermsHTML))
+}
+
+// TermsHTMLEqualFold applies the EqualFold predicate on the "terms_html" field.
+func TermsHTMLEqualFold(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldEqualFold(FieldTermsHTML, v))
+}
+
+// TermsHTMLContainsFold applies the ContainsFold predicate on the "terms_html" field.
+func TermsHTMLContainsFold(v string) predicate.Contract {
+	return predicate.Contract(sql.FieldContainsFold(FieldTermsHTML, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

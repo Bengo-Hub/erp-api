@@ -212,6 +212,34 @@ func (_c *EmployeeCreate) SetNillableNssfNo(v *string) *EmployeeCreate {
 	return _c
 }
 
+// SetIsDirector sets the "is_director" field.
+func (_c *EmployeeCreate) SetIsDirector(v bool) *EmployeeCreate {
+	_c.mutation.SetIsDirector(v)
+	return _c
+}
+
+// SetNillableIsDirector sets the "is_director" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableIsDirector(v *bool) *EmployeeCreate {
+	if v != nil {
+		_c.SetIsDirector(*v)
+	}
+	return _c
+}
+
+// SetIsShareholder sets the "is_shareholder" field.
+func (_c *EmployeeCreate) SetIsShareholder(v bool) *EmployeeCreate {
+	_c.mutation.SetIsShareholder(v)
+	return _c
+}
+
+// SetNillableIsShareholder sets the "is_shareholder" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableIsShareholder(v *bool) *EmployeeCreate {
+	if v != nil {
+		_c.SetIsShareholder(*v)
+	}
+	return _c
+}
+
 // SetTerminated sets the "terminated" field.
 func (_c *EmployeeCreate) SetTerminated(v bool) *EmployeeCreate {
 	_c.mutation.SetTerminated(v)
@@ -317,6 +345,14 @@ func (_c *EmployeeCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *EmployeeCreate) defaults() {
+	if _, ok := _c.mutation.IsDirector(); !ok {
+		v := employee.DefaultIsDirector
+		_c.mutation.SetIsDirector(v)
+	}
+	if _, ok := _c.mutation.IsShareholder(); !ok {
+		v := employee.DefaultIsShareholder
+		_c.mutation.SetIsShareholder(v)
+	}
 	if _, ok := _c.mutation.Terminated(); !ok {
 		v := employee.DefaultTerminated
 		_c.mutation.SetTerminated(v)
@@ -343,6 +379,12 @@ func (_c *EmployeeCreate) defaults() {
 func (_c *EmployeeCreate) check() error {
 	if _, ok := _c.mutation.TenantID(); !ok {
 		return &ValidationError{Name: "tenant_id", err: errors.New(`ent: missing required field "Employee.tenant_id"`)}
+	}
+	if _, ok := _c.mutation.IsDirector(); !ok {
+		return &ValidationError{Name: "is_director", err: errors.New(`ent: missing required field "Employee.is_director"`)}
+	}
+	if _, ok := _c.mutation.IsShareholder(); !ok {
+		return &ValidationError{Name: "is_shareholder", err: errors.New(`ent: missing required field "Employee.is_shareholder"`)}
 	}
 	if _, ok := _c.mutation.Terminated(); !ok {
 		return &ValidationError{Name: "terminated", err: errors.New(`ent: missing required field "Employee.terminated"`)}
@@ -447,6 +489,14 @@ func (_c *EmployeeCreate) createSpec() (*Employee, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.NssfNo(); ok {
 		_spec.SetField(employee.FieldNssfNo, field.TypeString, value)
 		_node.NssfNo = value
+	}
+	if value, ok := _c.mutation.IsDirector(); ok {
+		_spec.SetField(employee.FieldIsDirector, field.TypeBool, value)
+		_node.IsDirector = value
+	}
+	if value, ok := _c.mutation.IsShareholder(); ok {
+		_spec.SetField(employee.FieldIsShareholder, field.TypeBool, value)
+		_node.IsShareholder = value
 	}
 	if value, ok := _c.mutation.Terminated(); ok {
 		_spec.SetField(employee.FieldTerminated, field.TypeBool, value)
@@ -759,6 +809,30 @@ func (u *EmployeeUpsert) UpdateNssfNo() *EmployeeUpsert {
 // ClearNssfNo clears the value of the "nssf_no" field.
 func (u *EmployeeUpsert) ClearNssfNo() *EmployeeUpsert {
 	u.SetNull(employee.FieldNssfNo)
+	return u
+}
+
+// SetIsDirector sets the "is_director" field.
+func (u *EmployeeUpsert) SetIsDirector(v bool) *EmployeeUpsert {
+	u.Set(employee.FieldIsDirector, v)
+	return u
+}
+
+// UpdateIsDirector sets the "is_director" field to the value that was provided on create.
+func (u *EmployeeUpsert) UpdateIsDirector() *EmployeeUpsert {
+	u.SetExcluded(employee.FieldIsDirector)
+	return u
+}
+
+// SetIsShareholder sets the "is_shareholder" field.
+func (u *EmployeeUpsert) SetIsShareholder(v bool) *EmployeeUpsert {
+	u.Set(employee.FieldIsShareholder, v)
+	return u
+}
+
+// UpdateIsShareholder sets the "is_shareholder" field to the value that was provided on create.
+func (u *EmployeeUpsert) UpdateIsShareholder() *EmployeeUpsert {
+	u.SetExcluded(employee.FieldIsShareholder)
 	return u
 }
 
@@ -1133,6 +1207,34 @@ func (u *EmployeeUpsertOne) UpdateNssfNo() *EmployeeUpsertOne {
 func (u *EmployeeUpsertOne) ClearNssfNo() *EmployeeUpsertOne {
 	return u.Update(func(s *EmployeeUpsert) {
 		s.ClearNssfNo()
+	})
+}
+
+// SetIsDirector sets the "is_director" field.
+func (u *EmployeeUpsertOne) SetIsDirector(v bool) *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetIsDirector(v)
+	})
+}
+
+// UpdateIsDirector sets the "is_director" field to the value that was provided on create.
+func (u *EmployeeUpsertOne) UpdateIsDirector() *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateIsDirector()
+	})
+}
+
+// SetIsShareholder sets the "is_shareholder" field.
+func (u *EmployeeUpsertOne) SetIsShareholder(v bool) *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetIsShareholder(v)
+	})
+}
+
+// UpdateIsShareholder sets the "is_shareholder" field to the value that was provided on create.
+func (u *EmployeeUpsertOne) UpdateIsShareholder() *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateIsShareholder()
 	})
 }
 
@@ -1680,6 +1782,34 @@ func (u *EmployeeUpsertBulk) UpdateNssfNo() *EmployeeUpsertBulk {
 func (u *EmployeeUpsertBulk) ClearNssfNo() *EmployeeUpsertBulk {
 	return u.Update(func(s *EmployeeUpsert) {
 		s.ClearNssfNo()
+	})
+}
+
+// SetIsDirector sets the "is_director" field.
+func (u *EmployeeUpsertBulk) SetIsDirector(v bool) *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetIsDirector(v)
+	})
+}
+
+// UpdateIsDirector sets the "is_director" field to the value that was provided on create.
+func (u *EmployeeUpsertBulk) UpdateIsDirector() *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateIsDirector()
+	})
+}
+
+// SetIsShareholder sets the "is_shareholder" field.
+func (u *EmployeeUpsertBulk) SetIsShareholder(v bool) *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetIsShareholder(v)
+	})
+}
+
+// UpdateIsShareholder sets the "is_shareholder" field to the value that was provided on create.
+func (u *EmployeeUpsertBulk) UpdateIsShareholder() *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateIsShareholder()
 	})
 }
 

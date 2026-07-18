@@ -27,6 +27,7 @@ func (Contract) Fields() []ent.Field {
 		field.Int("duration_months").Optional().Comment("Recomputed from start/end on write"),
 		moneyField("salary"),
 		field.String("status").Default("active").Comment("active | expired | terminated"),
+		field.Text("terms_html").Optional().Comment("Editable rich-text (HTML) body of the employment terms/contract"),
 
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),

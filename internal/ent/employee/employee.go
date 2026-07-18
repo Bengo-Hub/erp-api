@@ -42,6 +42,10 @@ const (
 	FieldShifOrNhifNumber = "shif_or_nhif_number"
 	// FieldNssfNo holds the string denoting the nssf_no field in the database.
 	FieldNssfNo = "nssf_no"
+	// FieldIsDirector holds the string denoting the is_director field in the database.
+	FieldIsDirector = "is_director"
+	// FieldIsShareholder holds the string denoting the is_shareholder field in the database.
+	FieldIsShareholder = "is_shareholder"
 	// FieldTerminated holds the string denoting the terminated field in the database.
 	FieldTerminated = "terminated"
 	// FieldDeleted holds the string denoting the deleted field in the database.
@@ -71,6 +75,8 @@ var Columns = []string{
 	FieldPinNo,
 	FieldShifOrNhifNumber,
 	FieldNssfNo,
+	FieldIsDirector,
+	FieldIsShareholder,
 	FieldTerminated,
 	FieldDeleted,
 	FieldCreatedAt,
@@ -88,6 +94,10 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultIsDirector holds the default value on creation for the "is_director" field.
+	DefaultIsDirector bool
+	// DefaultIsShareholder holds the default value on creation for the "is_shareholder" field.
+	DefaultIsShareholder bool
 	// DefaultTerminated holds the default value on creation for the "terminated" field.
 	DefaultTerminated bool
 	// DefaultDeleted holds the default value on creation for the "deleted" field.
@@ -178,6 +188,16 @@ func ByShifOrNhifNumber(opts ...sql.OrderTermOption) OrderOption {
 // ByNssfNo orders the results by the nssf_no field.
 func ByNssfNo(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNssfNo, opts...).ToFunc()
+}
+
+// ByIsDirector orders the results by the is_director field.
+func ByIsDirector(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsDirector, opts...).ToFunc()
+}
+
+// ByIsShareholder orders the results by the is_shareholder field.
+func ByIsShareholder(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsShareholder, opts...).ToFunc()
 }
 
 // ByTerminated orders the results by the terminated field.
