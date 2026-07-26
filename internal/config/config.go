@@ -60,7 +60,7 @@ type HTTPConfig struct {
 	TLSCertFile  string        `envconfig:"TLS_CERT_FILE"`
 	TLSKeyFile   string        `envconfig:"TLS_KEY_FILE"`
 	// AllowedOrigins is an explicit allow-list; never use a credentialed wildcard (fixes gaps §1.3).
-	AllowedOrigins []string `envconfig:"HTTP_ALLOWED_ORIGINS" default:"https://erp.codevertexitsolutions.com,https://accounts.codevertexitsolutions.com,http://localhost:3000"`
+	AllowedOrigins []string `envconfig:"HTTP_ALLOWED_ORIGINS" default:"https://erp.codevertexafrica.com,https://accounts.codevertexafrica.com,http://localhost:3000"`
 }
 
 type PostgresConfig struct {
@@ -146,10 +146,10 @@ type EventsConfig struct {
 }
 
 type AuthConfig struct {
-	ServiceURL          string        `envconfig:"AUTH_SERVICE_URL" default:"https://sso.codevertexitsolutions.com"`
-	Issuer              string        `envconfig:"AUTH_ISSUER" default:"https://sso.codevertexitsolutions.com"`
+	ServiceURL          string        `envconfig:"AUTH_SERVICE_URL" default:"https://sso.codevertexafrica.com"`
+	Issuer              string        `envconfig:"AUTH_ISSUER" default:"https://sso.codevertexafrica.com"`
 	Audience            string        `envconfig:"AUTH_AUDIENCE" default:"codevertex"`
-	JWKSUrl             string        `envconfig:"AUTH_JWKS_URL" default:"https://sso.codevertexitsolutions.com/api/v1/.well-known/jwks.json"`
+	JWKSUrl             string        `envconfig:"AUTH_JWKS_URL" default:"https://sso.codevertexafrica.com/api/v1/.well-known/jwks.json"`
 	JWKSCacheTTL        time.Duration `envconfig:"AUTH_JWKS_CACHE_TTL" default:"3600s"`
 	JWKSRefreshInterval time.Duration `envconfig:"AUTH_JWKS_REFRESH_INTERVAL" default:"300s"`
 	EnableAPIKeyAuth    bool          `envconfig:"AUTH_ENABLE_API_KEY_AUTH" default:"true"`
@@ -158,15 +158,15 @@ type AuthConfig struct {
 }
 
 type ServicesConfig struct {
-	TreasuryURL      string `envconfig:"TREASURY_SERVICE_URL" default:"https://booksapi.codevertexitsolutions.com"`
+	TreasuryURL      string `envconfig:"TREASURY_SERVICE_URL" default:"https://booksapi.codevertexafrica.com"`
 	NotificationsURL string `envconfig:"NOTIFICATIONS_SERVICE_URL" default:""`
 	// ProjectsURL is the projects-service base URL for the payroll cost-allocation project
 	// lookup (projectsapi per reference_production_service_hosts). The list endpoint is
 	// GET /api/v1/{tenant}/projects (JWT-gated; erp-api forwards the caller's bearer token).
-	ProjectsURL string `envconfig:"PROJECTS_SERVICE_URL" default:"https://projectsapi.codevertexitsolutions.com"`
+	ProjectsURL string `envconfig:"PROJECTS_SERVICE_URL" default:"https://projectsapi.codevertexafrica.com"`
 	// SubscriptionsURL is the subscriptions-api base URL (pricingapi per reference hosts) for the
 	// per-feature entitlement check that gates premium features (e.g. staff_fund_from_salary).
-	SubscriptionsURL string `envconfig:"SUBSCRIPTIONS_SERVICE_URL" default:"https://pricingapi.codevertexitsolutions.com"`
+	SubscriptionsURL string `envconfig:"SUBSCRIPTIONS_SERVICE_URL" default:"https://pricingapi.codevertexafrica.com"`
 }
 
 type MediaConfig struct {

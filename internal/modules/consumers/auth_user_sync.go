@@ -17,7 +17,7 @@ import (
 // platformEmailDomain is the platform owner's email domain. A user on this domain holding a
 // superuser/admin role is treated as the PLATFORM owner and is NOT projected into a tenant's
 // employee roster (see IsPlatformAdmin). Kept minimal + documented per the projection design.
-const platformEmailDomain = "codevertexitsolutions.com"
+const platformEmailDomain = "codevertexafrica.com"
 
 // AuthUserSyncConsumer consumes auth.user.created / auth.user.updated events and projects each
 // auth-api user into the local Employee table (keyed on the auth user id) via

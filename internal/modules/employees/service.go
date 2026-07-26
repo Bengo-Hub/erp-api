@@ -182,7 +182,7 @@ func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, in CreateInput
 //     name/email/outlet, generating a stable employee_number when none exists.
 //
 // isPlatformAdmin lets the caller skip projecting the platform superuser (the global
-// codevertexitsolutions.com owner) into a tenant's employee roster — see the guard below.
+// codevertexafrica.com owner) into a tenant's employee roster — see the guard below.
 func (s *Service) UpsertFromAuthUser(ctx context.Context, tenantID, authUserID uuid.UUID, email, fullName string, outletID *uuid.UUID, isPlatformAdmin bool) (*ent.Employee, error) {
 	if tenantID == uuid.Nil || authUserID == uuid.Nil {
 		return nil, fmt.Errorf("employees: upsert-from-auth requires tenant_id and auth_user_id")
