@@ -1,33 +1,41 @@
-// Package subscriptions provides a minimal per-feature entitlement check for erp-api. ERP only had
-// binary active-subscription gating; this adds "does tenant T have feature F", used to gate premium
-// features (e.g. staff_fund_from_salary) on the S2S staff-purchase path where there is no user JWT.
-//
-// It mirrors the pos-api consumer-gate contract: S2S GET /api/v1/tenants/{id}/subscription with the
-// shared INTERNAL_SERVICE_KEY, a short in-process TTL cache, exempt demo/service_charge tenants, and
+// Package subscriptions provides a per-feature entitlement check for erp-api. It mirrors the
+// pos-api consumer-gate contract: S2S GET /api/v1/tenants/{id}/subscription with the shared
+// INTERNAL_SERVICE_KEY, a short in-process TTL cache, exempt demo/service_charge tenants, and
 // FAIL-OPEN on any lookup error (never block a paying tenant because the pricing API blipped).
 package subscriptions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	serviceclient "github.com/Bengo-Hub/shared-service-client"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 const entitlementCacheTTL = 60 * time.Second
 
-// Entitlements is the subset of GET /tenants/{id}/subscription this gate needs.
+// Entitlements is the canonical tenant subscription snapshot returned by subscriptions-api's
+// GET /api/v1/tenants/{id}/subscription — the same full field set treasury-api's and pos-api's
+// platform/subscriptions clients decode, so all fleet subscriptions clients converge on one
+// shape instead of each reading a different partial subset (the "drifting shape" bug class
+// behind the 2026-08-07 boi-enterprises subscription-gating audit).
 type Entitlements struct {
-	Features     []string `json:"features"`
-	Status       string   `json:"status"`
-	BillingMode  string   `json:"billing_mode"`
-	IsDemoBypass bool     `json:"is_demo_bypass"`
+	Features         []string       `json:"features"`
+	Status           string         `json:"status"`
+	BillingMode      string         `json:"billing_mode"`
+	IsDemoBypass     bool           `json:"is_demo_bypass"`
+	ActiveProducts   []string       `json:"active_products"`
+	Limits           map[string]int `json:"limits"`
+	PlanCode         string         `json:"plan_code"`
+	TierOrder        int            `json:"tier_order"`
+	AllowOverage     bool           `json:"allow_overage"`
+	CurrentPeriodEnd string         `json:"current_period_end"`
+	IsPerpetual      bool           `json:"is_perpetual"`
+	Exempt           bool           `json:"exempt"`
 }
 
 type cacheEntry struct {
@@ -35,23 +43,33 @@ type cacheEntry struct {
 	at  time.Time
 }
 
-// Client fetches + caches tenant entitlements.
+// Client fetches + caches tenant entitlements over S2S, built on shared-service-client (circuit
+// breaker + bounded retry) instead of a bare http.Client.
 type Client struct {
 	baseURL string
 	apiKey  string
-	http    *http.Client
+	sc      *serviceclient.Client
 	log     *zap.Logger
 	mu      sync.Mutex
 	cache   map[uuid.UUID]cacheEntry
 }
 
 // NewClient builds a subscriptions gate client. A blank baseURL/apiKey disables it (HasFeature
-// then fails open — allow).
+// then fails open — allow). The retry budget is kept close to a single request's timeout (not
+// shared-service-client's default 30s budget): this client sits on the S2S staff-purchase path,
+// which must fail open fast on a subscriptions-api outage, not after a multi-second retry storm.
 func NewClient(baseURL, apiKey string, log *zap.Logger) *Client {
+	baseURL = strings.TrimRight(baseURL, "/")
+	const timeout = 5 * time.Second
+	scCfg := serviceclient.DefaultConfig(baseURL, "subscriptions-api", log)
+	scCfg.Timeout = timeout
+	scCfg.InitialInterval = 100 * time.Millisecond
+	scCfg.MaxInterval = timeout
+	scCfg.MaxElapsedTime = timeout
 	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"),
+		baseURL: baseURL,
 		apiKey:  apiKey,
-		http:    &http.Client{Timeout: 5 * time.Second},
+		sc:      serviceclient.New(scCfg),
 		log:     log.Named("subscriptions.gate"),
 		cache:   map[uuid.UUID]cacheEntry{},
 	}
@@ -90,23 +108,17 @@ func (c *Client) getEntitlements(ctx context.Context, tenantID uuid.UUID) (*Enti
 	}
 	c.mu.Unlock()
 
-	url := fmt.Sprintf("%s/api/v1/tenants/%s/subscription", c.baseURL, tenantID.String())
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("X-API-Key", c.apiKey)
-	resp, err := c.http.Do(req)
+	headers := map[string]string{"X-API-Key": c.apiKey, "X-Tenant-ID": tenantID.String()}
+	resp, err := c.sc.Get(ctx, fmt.Sprintf("/api/v1/tenants/%s/subscription", tenantID.String()), headers)
 	if err != nil {
 		c.log.Warn("entitlement lookup failed (fail-open)", zap.Error(err))
 		return nil, err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("entitlement lookup: status %d", resp.StatusCode)
 	}
 	var ent Entitlements
-	if err := json.NewDecoder(resp.Body).Decode(&ent); err != nil {
+	if err := resp.DecodeJSON(&ent); err != nil {
 		return nil, err
 	}
 	c.mu.Lock()
