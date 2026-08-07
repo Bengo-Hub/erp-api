@@ -166,7 +166,7 @@ type ServicesConfig struct {
 	ProjectsURL string `envconfig:"PROJECTS_SERVICE_URL" default:"https://projectsapi.codevertexafrica.com"`
 	// SubscriptionsURL is the subscriptions-api base URL (pricingapi per reference hosts) for the
 	// per-feature entitlement check that gates premium features (e.g. staff_fund_from_salary).
-	SubscriptionsURL string `envconfig:"SUBSCRIPTIONS_SERVICE_URL" default:"https://pricingapi.codevertexafrica.com"`
+	SubscriptionsURL string `envconfig:"SUBSCRIPTION_BASE_URL" default:"https://pricingapi.codevertexafrica.com"`
 }
 
 type MediaConfig struct {
