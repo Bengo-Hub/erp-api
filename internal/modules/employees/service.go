@@ -16,6 +16,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
+	"github.com/Bengo-Hub/erp-api/internal/ent/userroleassignment"
 )
 
 // blankOrNull matches a string column that is NULL or empty (junk placeholder rows
@@ -237,6 +238,57 @@ func (s *Service) UpsertFromAuthUser(ctx context.Context, tenantID, authUserID u
 		upd = upd.SetEmployeeNumber(employeeNumberFromEmail(email, authUserID))
 	}
 	return upd.Save(ctx)
+}
+
+// HardDeleteAuthUser reacts to auth-api's real hard-delete (AdminPurgeUser, published as
+// auth.user.deleted) of a platform user. Two different things reference this user's id:
+//
+//   - CustomUser (this package's SSO/RBAC shadow, PK == authUserID) + its
+//     UserRoleAssignment child (real OnDelete:NoAction FK) — pure identity data,
+//     hard-deleted here, child first.
+//   - Employee (own random PK, plain `user_id` column pointing at CustomUser.id — no
+//     ent edge/FK at all) is the documented "FK hub" for 40+ payroll/leave/attendance/
+//     contract/loan/benefit tables with no cascade of their own. Hard-deleting it would
+//     orphan or destroy that HR/payroll history. It already carries a `deleted bool`
+//     soft-delete field for exactly this situation — SOFT-delete it (deleted=true)
+//     instead, across every tenant this person was an employee of.
+//
+// No-op (not an error) if the user was never provisioned in erp-api at all.
+func (s *Service) HardDeleteAuthUser(ctx context.Context, authUserID uuid.UUID) error {
+	tx, err := s.orm.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("employees: hard-delete: begin tx: %w", err)
+	}
+
+	if _, err := tx.Employee.Update().
+		Where(employee.UserID(authUserID), employee.Deleted(false)).
+		SetDeleted(true).
+		Save(ctx); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("employees: hard-delete: soft-delete employee records: %w", err)
+	}
+
+	if _, err := tx.CustomUser.Get(ctx, authUserID); err != nil {
+		_ = tx.Rollback()
+		if ent.IsNotFound(err) {
+			return nil // never provisioned locally beyond a soft-deleted Employee, if any
+		}
+		return fmt.Errorf("employees: hard-delete: query custom user: %w", err)
+	}
+
+	if _, err := tx.UserRoleAssignment.Delete().Where(userroleassignment.UserID(authUserID)).Exec(ctx); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("employees: hard-delete: delete role assignments: %w", err)
+	}
+	if err := tx.CustomUser.DeleteOneID(authUserID).Exec(ctx); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("employees: hard-delete: delete custom user: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("employees: hard-delete: commit: %w", err)
+	}
+	return nil
 }
 
 // ensureCustomUser resolves the erp CustomUser shadow keyed on external_id (= auth user id),
