@@ -65,6 +65,7 @@ func (c *AuthUserSyncConsumer) Start(ctx context.Context, nc *nats.Conn) error {
 	specs := []subSpec{
 		{"auth.user.created", "erp-auth-user-created", c.handleUserEvent},
 		{"auth.user.updated", "erp-auth-user-updated", c.handleUserEvent},
+		{"auth.user.deleted", "erp-auth-user-deleted", c.handleUserDeleted},
 	}
 
 	for _, s := range specs {
@@ -145,6 +146,24 @@ func (c *AuthUserSyncConsumer) handleUserEvent(ctx context.Context, evt *sharede
 		zap.String("auth_user_id", authUserID.String()),
 		zap.String("event", evt.EventType),
 		zap.Bool("skipped_platform_admin", isPlatformAdmin))
+	return nil
+}
+
+// handleUserDeleted reacts to auth-api's real hard-delete (AdminPurgeUser) of a platform
+// user by delegating to employees.Service.HardDeleteAuthUser — see that method's doc
+// comment for the CustomUser-hard-delete-vs-Employee-soft-delete distinction.
+func (c *AuthUserSyncConsumer) handleUserDeleted(ctx context.Context, evt *sharedevents.Event) error {
+	authUserID := parseUUID(str(evt.Payload, "user_id"))
+	if authUserID == uuid.Nil {
+		authUserID = evt.AggregateID
+	}
+	if authUserID == uuid.Nil {
+		return fmt.Errorf("auth.user.deleted event missing user id")
+	}
+	if err := c.svc.HardDeleteAuthUser(ctx, authUserID); err != nil {
+		return err
+	}
+	c.log.Info("user hard-deleted from auth.user.deleted event", zap.String("auth_user_id", authUserID.String()))
 	return nil
 }
 
