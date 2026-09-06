@@ -34,7 +34,7 @@ func (p *painter) drawPayslipBody(d *Document, top float64) float64 {
 	availW := contentW - labelW - 8.0
 	lineH := 3.6
 	p.pdf.SetFont("Helvetica", "B", 8)
-	nLines := len(p.pdf.SplitText(p.tr(words), availW))
+	nLines := len(p.splitText(p.tr(words), availW))
 	if nLines < 1 {
 		nLines = 1
 	}

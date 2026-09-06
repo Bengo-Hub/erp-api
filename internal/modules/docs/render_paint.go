@@ -26,32 +26,15 @@ type painter struct {
 
 func newPainter(pdf *fpdf.Fpdf, pal palette) *painter {
 	base := pdf.UnicodeTranslatorFromDescriptor("") // UTF-8 → cp1252 (core fonts are 256-glyph)
-	// Defensive wrapper: fpdf core fonts only have a 256-entry width table, so ANY rune that the
-	// cp1252 translator leaves above 0xFF (e.g. U+FFFD from invalid UTF-8, or an un-mapped symbol)
-	// makes SplitText/MultiCell panic with "index out of range". Strip those to '?' so no document
-	// (payslip, voucher, muster-roll, …) can ever crash the renderer on a stray character.
+	// The translator maps UTF-8 → cp1252 single bytes (≤0xFF), which core fonts render — including
+	// accented Latin-1 like "é" (Café) and punctuation like em-dash/×. We only sanitize INVALID UTF-8
+	// in the input first: a stray byte would decode to U+FFFD which the translator can't map, and
+	// passing malformed bytes to MultiCell/SplitText can panic. Translating already-valid UTF-8 never
+	// yields a wide byte, so no post-processing is needed — a prior version here ranged over the
+	// translator's output (a raw cp1252 byte string, not UTF-8) looking for runes above 0xFF, which
+	// misdecoded every translated non-ASCII byte as U+FFFD and corrupted it to "?" (dashes, ×, é, …).
 	tr := func(s string) string {
-		out := base(s)
-		safe := false
-		for _, r := range out {
-			if r > 0xFF {
-				safe = true
-				break
-			}
-		}
-		if !safe {
-			return out
-		}
-		var b strings.Builder
-		b.Grow(len(out))
-		for _, r := range out {
-			if r > 0xFF {
-				b.WriteByte('?')
-			} else {
-				b.WriteRune(r)
-			}
-		}
-		return b.String()
+		return base(strings.ToValidUTF8(s, ""))
 	}
 	return &painter{pdf: pdf, tr: tr, pal: pal}
 }
@@ -110,4 +93,19 @@ func (p *painter) multiCell(x, y, w, lineH float64, s, font string, sz float64, 
 	p.pdf.SetXY(x, y)
 	p.pdf.MultiCell(w, lineH, p.tr(s), "", "L", false)
 	return p.pdf.GetY()
+}
+
+// splitText wraps fpdf's SplitText for text already run through p.tr. Unlike MultiCell/Cell/
+// GetStringWidth, SplitText always UTF-8-decodes its input regardless of the active font's
+// encoding, so a translated core-font byte above 0x7F (e.g. cp1252 0x95 for "•") is invalid
+// UTF-8 on its own and decodes to U+FFFD, which then panics indexing the 256-entry width
+// table. Re-encoding each byte as its own UTF-8 rune recovers the exact code points SplitText
+// expects, without changing what MultiCell/Cell render (they still receive p.tr's raw bytes).
+func (p *painter) splitText(s string, w float64) []string {
+	bs := []byte(s)
+	rs := make([]rune, len(bs))
+	for i, b := range bs {
+		rs[i] = rune(b)
+	}
+	return p.pdf.SplitText(string(rs), w)
 }
