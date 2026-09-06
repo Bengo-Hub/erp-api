@@ -127,7 +127,7 @@ func (p *painter) drawMetaAndCompany(d *Document, ruleY float64) float64 {
 	ry := y
 	for i, r := range rows {
 		p.pdf.SetFont("Helvetica", "B", 8)
-		valLines := p.pdf.SplitText(p.tr(r[1]), valW)
+		valLines := p.splitText(p.tr(r[1]), valW)
 		if len(valLines) == 0 {
 			valLines = []string{""}
 		}
