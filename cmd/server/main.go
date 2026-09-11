@@ -382,6 +382,12 @@ func run() error {
 			// claim populated — see auth-api revocation runbook.
 			priv.Group(func(erp chi.Router) {
 				erp.Use(authclient.RequireServiceAccess("erp"))
+				// Mutations-only annual support-fee gate for a perpetual/one-time-license tenant
+				// (e.g. boi-enterprises on POWERSUITE_DUKA_GOLD_ONE_TIME) whose support fee has
+				// gone unpaid past its 7-day grace window — independent axis from the
+				// subscription gate (a one-time license never expires, so that gate alone never
+				// catches this). No-ops for every tenant without a support-fee obligation.
+				erp.Use(authclient.RequireSupportFeeCurrentForMutations(7))
 
 				employeesHandler.RegisterRoutes(erp)
 				orgSettingsHandler.RegisterRoutes(erp)
