@@ -370,14 +370,14 @@ func run() error {
 			// very first authenticated call.
 			authHandler.RegisterRoutes(priv)
 
-			// Module gate: block the WHOLE erp module (reads and writes alike) for a tenant whose
-			// plan never included ERP at all (e.g. PowerSuite Basic — ERP unlocks at Professional).
-			// Distinct from the mutations-only gate above and from per-feature locks on payroll/
-			// attendance/etc. below: without this, any SSO user of any tenant could still reach
-			// erp-api's basic, ungated routes regardless of their plan.
+			// EMERGENCY REVERT 2026-09-11: RequireServiceAccess("erp") blocked every tenant
+			// fleet-wide within ~40 minutes of deploy (confirmed on pos-api's identical gate).
+			// subscriptions-api's active_service_tags claim is omitempty, so an empty/nil
+			// computed list is indistinguishable from "claim never existed" on any JWT minted
+			// before this claim shipped — every already-logged-in session got hard-blocked.
+			// Do NOT re-enable via authclient.RequireServiceAccess until Claims carries an
+			// explicit presence flag with a safe fail-open default for "claim absent".
 			priv.Group(func(erp chi.Router) {
-				erp.Use(authclient.RequireServiceAccess("erp"))
-
 				employeesHandler.RegisterRoutes(erp)
 				orgSettingsHandler.RegisterRoutes(erp)
 				contractsHandler.RegisterRoutes(erp)
