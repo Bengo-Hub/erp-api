@@ -356,47 +356,63 @@ func run() error {
 			priv.Use(rateLimiter.TenantRateLimiter(cfg.RateLimit.RequestsPerMinute, time.Minute))
 			priv.Use(rateLimiter.IPRateLimiter(cfg.RateLimit.RequestsPerHour, time.Hour))
 			// Subscription gate: block mutations for tenants without an active subscription
-			// (reads still pass). Superusers, platform owners, demo + service-charge tenants
-			// bypass via the shared IsSubscriptionActive funnel. Matches the inline enforcement
-			// in logistics/marketflow/projects + TruLoad's SubscriptionEnforcementMiddleware.
+			// (reads still pass). Platform owners, demo, service-charge, and explicitly-exempt
+			// tenants bypass via the shared IsSubscriptionActive funnel — a tenant superuser does
+			// NOT bypass. Matches the inline enforcement in logistics/marketflow/projects +
+			// TruLoad's SubscriptionEnforcementMiddleware.
 			priv.Use(authclient.RequireActiveSubscriptionForMutationsWithGrace(7))
 			priv.Use(mw.OutletContext)
 			priv.Use(mw.EnsureServiceUser(rbacService, tenantSyncer, log)) // Trinity L3: JIT-sync erp roles + tenant shadow from SSO
-			authHandler.RegisterRoutes(priv)
-			employeesHandler.RegisterRoutes(priv)
-			orgSettingsHandler.RegisterRoutes(priv)
-			contractsHandler.RegisterRoutes(priv)
-			payrollSettingsHandler.RegisterRoutes(priv)
-			staffPurchaseHandler.RegisterRoutes(priv) // POS↔ERP staff-credit (S2S + reconcile)
-			leaveHandler.RegisterRoutes(priv)
-			attendanceHandler.RegisterRoutes(priv)
-			recruitmentHandler.RegisterRoutes(priv)
-			trainingHandler.RegisterRoutes(priv)
-			appraisalsHandler.RegisterRoutes(priv)
-			performanceHandler.RegisterRoutes(priv)
-			approvalsHandler.RegisterRoutes(priv)
-			tasksHandler.RegisterRoutes(priv)
-			reportsHandler.RegisterRoutes(priv)
-			documentsHandler.RegisterRoutes(priv)
-			businessHandler.RegisterRoutes(priv)
-			rbacHandler.RegisterRoutes(priv)               // service-level role/permission management
-			backupDestHandler.RegisterPlatformRoutes(priv) // platform-default backup destination (platform-owner gated)
 
-			// Sensitive surfaces (money paths + external fetches + bulk backup operations) get
-			// an ADDITIONAL stricter per-endpoint+IP limiter on top of the per-tenant budget.
-			sensitiveLimit := cfg.RateLimit.PaymentRequestsPerMinute
-			priv.Group(func(s chi.Router) {
-				s.Use(rateLimiter.EndpointRateLimiter("payroll", sensitiveLimit, time.Minute))
-				payrollHandler.RegisterRoutes(s)
-			})
-			priv.Group(func(s chi.Router) {
-				s.Use(rateLimiter.EndpointRateLimiter("fx", sensitiveLimit, time.Minute))
-				fxHandler.RegisterRoutes(s)
-			})
-			priv.Group(func(s chi.Router) {
-				s.Use(rateLimiter.EndpointRateLimiter("backups", sensitiveLimit, time.Minute))
-				backupsHandler.RegisterRoutes(s)    // tenant-scoped backups (this tenant's data only)
-				backupDestHandler.RegisterRoutes(s) // per-tenant backup-destination override (backups.view/manage)
+			// auth/me must stay reachable even for a tenant whose plan doesn't include ERP at all
+			// (kept OUTSIDE the module gate below), so the frontend can bootstrap identity/roles
+			// and show a graceful "not included in your plan" screen instead of a raw 403 on its
+			// very first authenticated call.
+			authHandler.RegisterRoutes(priv)
+
+			// Module gate: block the WHOLE erp module (reads and writes alike) for a tenant whose
+			// plan never included ERP at all (e.g. PowerSuite Basic — ERP unlocks at Professional).
+			// Distinct from the mutations-only gate above and from per-feature locks on payroll/
+			// attendance/etc. below: without this, any SSO user of any tenant could still reach
+			// erp-api's basic, ungated routes regardless of their plan.
+			priv.Group(func(erp chi.Router) {
+				erp.Use(authclient.RequireServiceAccess("erp"))
+
+				employeesHandler.RegisterRoutes(erp)
+				orgSettingsHandler.RegisterRoutes(erp)
+				contractsHandler.RegisterRoutes(erp)
+				payrollSettingsHandler.RegisterRoutes(erp)
+				staffPurchaseHandler.RegisterRoutes(erp) // POS↔ERP staff-credit (S2S + reconcile)
+				leaveHandler.RegisterRoutes(erp)
+				attendanceHandler.RegisterRoutes(erp)
+				recruitmentHandler.RegisterRoutes(erp)
+				trainingHandler.RegisterRoutes(erp)
+				appraisalsHandler.RegisterRoutes(erp)
+				performanceHandler.RegisterRoutes(erp)
+				approvalsHandler.RegisterRoutes(erp)
+				tasksHandler.RegisterRoutes(erp)
+				reportsHandler.RegisterRoutes(erp)
+				documentsHandler.RegisterRoutes(erp)
+				businessHandler.RegisterRoutes(erp)
+				rbacHandler.RegisterRoutes(erp)               // service-level role/permission management
+				backupDestHandler.RegisterPlatformRoutes(erp) // platform-default backup destination (platform-owner gated)
+
+				// Sensitive surfaces (money paths + external fetches + bulk backup operations) get
+				// an ADDITIONAL stricter per-endpoint+IP limiter on top of the per-tenant budget.
+				sensitiveLimit := cfg.RateLimit.PaymentRequestsPerMinute
+				erp.Group(func(s chi.Router) {
+					s.Use(rateLimiter.EndpointRateLimiter("payroll", sensitiveLimit, time.Minute))
+					payrollHandler.RegisterRoutes(s)
+				})
+				erp.Group(func(s chi.Router) {
+					s.Use(rateLimiter.EndpointRateLimiter("fx", sensitiveLimit, time.Minute))
+					fxHandler.RegisterRoutes(s)
+				})
+				erp.Group(func(s chi.Router) {
+					s.Use(rateLimiter.EndpointRateLimiter("backups", sensitiveLimit, time.Minute))
+					backupsHandler.RegisterRoutes(s)    // tenant-scoped backups (this tenant's data only)
+					backupDestHandler.RegisterRoutes(s) // per-tenant backup-destination override (backups.view/manage)
+				})
 			})
 		})
 	})
