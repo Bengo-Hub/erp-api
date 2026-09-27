@@ -16,27 +16,32 @@ func (s *Service) HeadcountSummary(ctx context.Context, tenantID uuid.UUID, outl
 	if outletID != nil {
 		q = q.Where(employee.OutletID(*outletID))
 	}
-	rows, err := q.All(ctx)
-	if err != nil {
+	// Counted in SQL (one row per status), not by loading every employee.
+	var counts []struct {
+		Terminated bool `json:"terminated"`
+		Count      int  `json:"count"`
+	}
+	if err := q.GroupBy(employee.FieldTerminated).Aggregate(entCount()).Scan(ctx, &counts); err != nil {
 		return nil, err
 	}
 	active, terminated := 0, 0
-	for _, e := range rows {
-		if e.Terminated {
-			terminated++
+	for _, c := range counts {
+		if c.Terminated {
+			terminated = c.Count
 		} else {
-			active++
+			active = c.Count
 		}
 	}
+	total := active + terminated
 	return &Report{
 		Report:  "headcount_summary",
 		Columns: []string{"metric", "value"},
 		Rows: []map[string]any{
-			{"metric": "total", "value": len(rows)},
+			{"metric": "total", "value": total},
 			{"metric": "active", "value": active},
 			{"metric": "terminated", "value": terminated},
 		},
-		Totals: map[string]any{"total": len(rows), "active": active, "terminated": terminated},
+		Totals: map[string]any{"total": total, "active": active, "terminated": terminated},
 	}, nil
 }
 
