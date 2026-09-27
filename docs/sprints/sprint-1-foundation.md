@@ -1,5 +1,7 @@
 # Sprint 1 — Foundation (Go scaffold, auth, tenancy, eventing)
 
+> **Status: Done** (verified against code on `main` 2026-09-27). The Go service, outbox, tenant and outlet consumers and `auth.user.*` sync are live.
+
 > Stand up the new Go `erp-service/erp-api` skeleton on the platform patterns so every later sprint
 > plugs domain modules into a working server. No HR domain logic yet — just the rails.
 > References: `revamp-plan.md`, `architecture.md` (TARGET), `integrations.md`,

@@ -5,6 +5,11 @@
 > `treasury-api`). Companion docs: `architecture.md` (current + target), `integrations.md`
 > (contracts to keep identical), `erd.md` (schema), `data-migration.md` (prod ETL),
 > `gaps-and-bugs.md` (what we're fixing), `sprints/` (execution).
+>
+> **Status (verified against code on `main` 2026-09-27): all five sprints are done** and the Django app
+> is gone. Open follow-ups, including HRM analytics for dashboards, SQL-grouped reports and payroll
+> cost dimensions, are in [`backlog.md`](./backlog.md). erp-api has no dashboard endpoint; the erp-ui
+> dashboards that `erp-ui/docs/revamp-plan.md` called done read placeholder data.
 
 ---
 
@@ -174,11 +179,11 @@ flowchart LR
 
 | Sprint | Theme | Headline deliverables | File |
 |---|---|---|---|
-| 1 | Foundation | Go scaffold, Ent core+auth shadows, Atlas, config/health, httpware, shared-auth-client + `/auth/me`, tenant/outlet middleware, NATS + transactional outbox + `auth.tenant.>`/`auth.outlet.>` consumers | `sprints/sprint-1-foundation.md` |
-| 2 | HRM + Payroll | employees, payroll engine (payslips/components/deductions/loans/relief/claims) + **ERP-owned tax engine + versioned tenant rate tables**, `POST /payroll/disburse` → publish `erp.payroll.processed` + treasury `/payouts/disburse` (idempotent), consume `treasury.payroll.disbursed` | `sprints/sprint-2-hrm-payroll.md` |
+| 1 ✅ | Foundation | Go scaffold, Ent core+auth shadows, Atlas, config/health, httpware, shared-auth-client + `/auth/me`, tenant/outlet middleware, NATS + transactional outbox + `auth.tenant.>`/`auth.outlet.>` consumers | `sprints/sprint-1-foundation.md` |
+| 2 ✅ | HRM + Payroll | employees, payroll engine (payslips/components/deductions/loans/relief/claims) + **ERP-owned tax engine + versioned tenant rate tables**, `POST /payroll/disburse` → publish `erp.payroll.processed` + treasury `/payouts/disburse` (idempotent), consume `treasury.payroll.disbursed` | `sprints/sprint-2-hrm-payroll.md` |
 | 3 ✅ | Leave/Attendance/Recruitment/Appraisals | leave + accrual cron, attendance/shifts/rotations/timesheets/ESS, recruitment + onboarding, training, appraisals/performance — **DONE** (see sprint-3 status section) | `sprints/sprint-3-leave-attendance-recruitment-appraisals.md` |
 | 4 ✅ | Approvals/Tasks/Reports/Config | approval matrix engine (typed, tenant-scoped) wired into leave+appraisals, task_management, **reports built for real** (P9/P10A/SHIF/NHIF/NSSF/NITA/WHT/statutory/bank/variance + headcount/leave/payroll summaries), slim business config (settings + document_sequence), branding read-through + FX cron + email/notification outbox helpers, `cmd/seed` RBAC + candidate resume upload — plus the **data-ownership conformance cleanup** (removed project + bank masters). `addresses`/core dashboards intentionally NOT built (ordering-service / decomposed). **DONE** | `sprints/sprint-4-approvals-tasks-reports.md` |
-| 5 🟡 | Data migration & cutover | **migrator BUILT**: `cmd/migrate-data` one-shot ETL (idempotent UUIDv5 PKs, tenant backfill, decimal money, FK-ordered, `--dry-run`/`--only`/`--verbose`/`--default-tenant`, end-of-run reconcile) + [`data-migration-runbook.md`](./data-migration-runbook.md); local dry-run green. **PENDING (needs coordinated prod step)**: prod assessment + dry-run-on-restored-copy + parity gate + cutover/flip ingress | `sprints/sprint-5-data-migration-cutover.md` |
+| 5 ✅ | Data migration & cutover | **Done** (cutover completed; the migrator was removed in commit `1e25504` on 2026-08-30). Earlier note: **migrator BUILT**: `cmd/migrate-data` one-shot ETL (idempotent UUIDv5 PKs, tenant backfill, decimal money, FK-ordered, `--dry-run`/`--only`/`--verbose`/`--default-tenant`, end-of-run reconcile) + [`data-migration-runbook.md`](./data-migration-runbook.md); local dry-run green. **PENDING (needs coordinated prod step)**: prod assessment + dry-run-on-restored-copy + parity gate + cutover/flip ingress | `sprints/sprint-5-data-migration-cutover.md` |
 
 Each sprint file lists goals, scope, modules/endpoints, events, Ent schemas, acceptance criteria, deps.
 

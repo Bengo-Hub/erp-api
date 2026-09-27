@@ -1,5 +1,7 @@
 # Sprint 2 — HRM core + Payroll engine (ERP-owned tax)
 
+> **Status: Done** (verified against code on `main` 2026-09-27). Employees, the `payrollengine` package, idempotent disburse with `hrm.payroll.disburse` segregation, and `erp.payroll.processed` are live. Deviation: the `treasury.payroll.disbursed` consumer was removed on 2026-06-15; payslips are marked published on S2S success instead (see `integrations.md`). Follow-ups in `docs/backlog.md`: the payload's empty `cost_center` and the missing per-project cost split, both In progress (plan budgets-planning-projects-bi-2026-09-27).
+
 > The crown jewel. Port employees + the payroll calculation engine and ERP-owned statutory tax
 > tables, then wire the treasury disbursement flow. This is where most of `gaps-and-bugs.md §2`
 > gets fixed. References: `hrm/payroll/services/core_calculations.py`, `functions.py`,

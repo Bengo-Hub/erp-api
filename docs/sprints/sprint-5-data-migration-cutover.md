@@ -5,7 +5,11 @@
 > against a **prod snapshot**. Full table mapping and gotchas live in `data-migration.md` — this
 > sprint executes it. References: `data-migration.md`, `erd.md`, `revamp-plan.md §6`.
 
-## Status — 🟡 MIGRATOR BUILT (prod run pending, coordinated step)
+## Status: Done (verified 2026-09-27)
+
+The cutover is complete: commit `1e25504` (2026-08-30) removed `cmd/migrate-data` as "completed Django-to-Go ERP cutover migration tool", and the repo no longer contains the Django app. The notes below are kept as history.
+
+### Earlier status: migrator built, prod run pending
 
 **DONE (build + verify without prod):**
 - `cmd/migrate-data` — one-shot Django→Ent ETL in the SAME DB (plan §0c). Idempotent

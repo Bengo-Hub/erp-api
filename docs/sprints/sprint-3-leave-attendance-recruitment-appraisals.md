@@ -69,7 +69,9 @@ All entities above with `tenant_id` + composite `(tenant_id, …)` indexes; per-
 
 ---
 
-## Status — DONE (revamp branch)
+## Status: Done (re-verified on `main` 2026-09-27)
+
+The RBAC seed and resume upload from the deferred list below shipped in Sprint 4, and leave and appraisals now use the shared approval engine. Still open: attendance penalty deductions are not applied to payslips (`docs/backlog.md`).
 
 All five domains implemented in Go, tenant-scoped, RBAC-enforced, building green
 (`go build ./...` + `go vet ./...`). Endpoints under `/api/v1/hrm/...`, all `data`-enveloped.
