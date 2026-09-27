@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -81,6 +82,8 @@ func (h *ReportsHandler) RegisterRoutes(r chi.Router) {
 		// Non-period summaries.
 		rr.Get("/headcount-summary", h.Headcount)
 		rr.Get("/leave-summary", h.LeaveSummary)
+		// Dashboard analytics (headcount breakdowns, contracts expiring, payroll trend).
+		rr.Get("/hrm-analytics", h.HRMAnalytics)
 
 		// Export: run the report then render it as a tenant-branded PDF/Excel.
 		rr.Get("/{type}/export", h.Export)
@@ -214,6 +217,40 @@ func (h *ReportsHandler) Headcount(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.log.Error("headcount", zap.Error(err))
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to generate report")
+		return
+	}
+	writeJSON(w, http.StatusOK, rep)
+}
+
+// HRMAnalytics godoc
+// @Summary HR dashboard analytics
+// @Description Headcount (active, terminated) by department, gender and employment type; new hires in the period (?from, ?to, default this month); contracts expiring in 30/60/90 days; payroll trend (12 months) and the latest month's payroll by department. All grouped in SQL.
+// @Tags reports
+// @Produce json
+// @Success 200 {object} reports.HRMAnalytics
+// @Router /api/v1/{tenant}/reports/hrm-analytics [get]
+func (h *ReportsHandler) HRMAnalytics(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permReportsView) {
+		return
+	}
+	now := time.Now()
+	from := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	to := now
+	if v := r.URL.Query().Get("from"); v != "" {
+		if t, err := time.Parse("2006-01-02", v); err == nil {
+			from = t
+		}
+	}
+	if v := r.URL.Query().Get("to"); v != "" {
+		if t, err := time.Parse("2006-01-02", v); err == nil {
+			to = t.Add(24*time.Hour - time.Nanosecond)
+		}
+	}
+	rep, err := h.svc.HRMAnalytics(r.Context(), scope.TenantID, from, to)
+	if err != nil {
+		h.log.Error("hrm analytics", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to build analytics")
 		return
 	}
 	writeJSON(w, http.StatusOK, rep)
