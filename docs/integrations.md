@@ -89,9 +89,25 @@ consumed by `manage.py consume_events`.
 | `erp.email.requested` | `integrations/notifications_client.py:EmailService.send_email` | `{subject, message, recipient_list[], html_message, from_email, cc[], bcc[], reply_to, attachments[{filename,content(base64),mimetype,encoding}]}` | notifications-api |
 | `erp.notification.requested` | `integrations/notifications_client.py:NotificationService.send_notification` | `{user_id, email, title, message, notification_type, channels[], data{}, image_url, action_url, email_subject, templates:{email,sms,push}, context{}}` | notifications-api |
 
-> Additional `erp.*` subjects can be emitted by any module via `publish_event(...)`. As of audit,
-> only the three above are wired. Payslip emailing and payroll notifications both flow through
-> `erp.email.requested` / `erp.notification.requested`.
+> Additional `erp.*` subjects can be emitted by any module via `publish_event(...)`. Payslip emailing
+> and payroll notifications both flow through `erp.email.requested` / `erp.notification.requested`.
+>
+> **Re-verified against the Go code 2026-09-27.** The "only three subjects" note from the Django audit
+> is out of date. The Go service also publishes, all consumed by treasury-api:
+>
+> | Subject | Purpose |
+> |---|---|
+> | `erp.payroll.reversed` | Reverse a posted payroll journal |
+> | `erp.expense_claim.approved` | Post an approved staff claim |
+> | `erp.casual_payment.approved` | Post casual labour pay (the name is `casual_payment`, not `casual_labor`) |
+> | `erp.consultant_voucher.approved` | Post a consultant voucher with its cost center |
+> | `erp.staff_purchase.recovered`, `erp.staff_purchase.recovery_reversed` | Staff purchase recovery through payroll |
+>
+> Known gaps, in progress under `.claude/plans/budgets-planning-projects-bi-2026-09-27.md`: the
+> `erp.payroll.processed` payload hardcodes `"cost_center": ""` (`internal/modules/payroll/event_payload.go`)
+> and has no per-project split from `EmployeeProjectAllocation`; `erp.payroll.project_allocations` is
+> named in a schema comment but never published; `erp.expense_claim.submitted` and `.rejected` are not
+> published yet.
 
 ### Subjects CONSUMED by erp-api
 

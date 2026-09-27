@@ -1,6 +1,7 @@
 # Sprint 4 — Approvals, Tasks, Reports, Business/Core/Addresses config, Events polish
 
-> **STATUS: DONE (revamp branch).** Delivered: data-ownership cleanup (removed `project` +
+> **STATUS: Done** (re-verified on `main` 2026-09-27). Follow-ups in `docs/backlog.md`: the reports and summaries aggregate in Go memory rather than SQL, the projects lookup client sends no `X-Tenant-ID` and falls back to an unbounded scan, and there is no `/hrm/analytics` endpoint for dashboards. All three are In progress (plan budgets-planning-projects-bi-2026-09-27).
+> Delivered: data-ownership cleanup (removed `project` +
 > `bank_institution`/`bank_branch` masters; `employee_bank_account` bank fields; dropped
 > HRDetails.project_id; confirmed no address_book/pickup_station/service_type), the generic
 > tenant-scoped **approvals engine** (typed module enum, multi-step, approver resolution
