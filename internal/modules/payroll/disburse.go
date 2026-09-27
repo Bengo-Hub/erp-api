@@ -84,6 +84,10 @@ func (d *Disburser) Disburse(ctx context.Context, p DisburseParams) (DisburseRes
 	}
 	prefs := d.loadPayoutPrefs(ctx, p.TenantID, slips)
 	payload, netTotal := buildPayrollEvent(slips, empByID, prefs, p, batchRef)
+	// Attribute the gross to projects and department cost centers for treasury budgets.
+	if shares, aerr := d.buildCostAllocations(ctx, p.TenantID, p.Period, slips); aerr == nil {
+		payload["allocations"] = allocationsPayload(shares)
+	}
 
 	// Atomic: write outbox event + batch_ref on payslips + idempotency key in one tx.
 	tx, err := d.orm.Tx(ctx)
@@ -220,6 +224,10 @@ func (d *Disburser) Reverse(ctx context.Context, p DisburseParams) (DisburseResu
 	}
 	prefs := d.loadPayoutPrefs(ctx, p.TenantID, slips)
 	payload, netTotal := buildPayrollEvent(slips, empByID, prefs, p, batchRef)
+	// Attribute the gross to projects and department cost centers for treasury budgets.
+	if shares, aerr := d.buildCostAllocations(ctx, p.TenantID, p.Period, slips); aerr == nil {
+		payload["allocations"] = allocationsPayload(shares)
+	}
 
 	tx, err := d.orm.Tx(ctx)
 	if err != nil {

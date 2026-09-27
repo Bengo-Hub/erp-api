@@ -75,6 +75,11 @@ func ParentDepartmentID(v uuid.UUID) predicate.Department {
 	return predicate.Department(sql.FieldEQ(FieldParentDepartmentID, v))
 }
 
+// CostCenterID applies equality check predicate on the "cost_center_id" field. It's identical to CostCenterIDEQ.
+func CostCenterID(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldEQ(FieldCostCenterID, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Department {
 	return predicate.Department(sql.FieldEQ(FieldCreatedAt, v))
@@ -318,6 +323,56 @@ func ParentDepartmentIDIsNil() predicate.Department {
 // ParentDepartmentIDNotNil applies the NotNil predicate on the "parent_department_id" field.
 func ParentDepartmentIDNotNil() predicate.Department {
 	return predicate.Department(sql.FieldNotNull(FieldParentDepartmentID))
+}
+
+// CostCenterIDEQ applies the EQ predicate on the "cost_center_id" field.
+func CostCenterIDEQ(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldEQ(FieldCostCenterID, v))
+}
+
+// CostCenterIDNEQ applies the NEQ predicate on the "cost_center_id" field.
+func CostCenterIDNEQ(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldNEQ(FieldCostCenterID, v))
+}
+
+// CostCenterIDIn applies the In predicate on the "cost_center_id" field.
+func CostCenterIDIn(vs ...uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldIn(FieldCostCenterID, vs...))
+}
+
+// CostCenterIDNotIn applies the NotIn predicate on the "cost_center_id" field.
+func CostCenterIDNotIn(vs ...uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldNotIn(FieldCostCenterID, vs...))
+}
+
+// CostCenterIDGT applies the GT predicate on the "cost_center_id" field.
+func CostCenterIDGT(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldGT(FieldCostCenterID, v))
+}
+
+// CostCenterIDGTE applies the GTE predicate on the "cost_center_id" field.
+func CostCenterIDGTE(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldGTE(FieldCostCenterID, v))
+}
+
+// CostCenterIDLT applies the LT predicate on the "cost_center_id" field.
+func CostCenterIDLT(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldLT(FieldCostCenterID, v))
+}
+
+// CostCenterIDLTE applies the LTE predicate on the "cost_center_id" field.
+func CostCenterIDLTE(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldLTE(FieldCostCenterID, v))
+}
+
+// CostCenterIDIsNil applies the IsNil predicate on the "cost_center_id" field.
+func CostCenterIDIsNil() predicate.Department {
+	return predicate.Department(sql.FieldIsNull(FieldCostCenterID))
+}
+
+// CostCenterIDNotNil applies the NotNil predicate on the "cost_center_id" field.
+func CostCenterIDNotNil() predicate.Department {
+	return predicate.Department(sql.FieldNotNull(FieldCostCenterID))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

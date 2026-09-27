@@ -1,4 +1,4 @@
-h1:rhU8JIUbZB4oyHgVY17Ogfml/Ajpa4q4pHsaqNTO5KY=
+h1:9XFH1N0HIXLiEyye7/cCroZCfQq0Q/uvA7JqQzhI6d4=
 20260614111624_initial_schema.sql h1:tduj8h0RdEm+lMEI2bb30y3PuaaHSJmw5kPoJ1kC5jk=
 20260614165124_leave_schema.sql h1:nMX5BEZkndFmBfl63yvqIKFsnuuMwtZ90snrBefIfrE=
 20260614170337_attendance_schema.sql h1:z7tsaY/igRA6rGJJoBcVLgeuNS6Y8d8wR5vwdeQboAw=
@@ -29,3 +29,4 @@ h1:rhU8JIUbZB4oyHgVY17Ogfml/Ajpa4q4pHsaqNTO5KY=
 20260711100324_add_salary_payout_method.sql h1:ltOrwGPVgzhHs1fBJjKIK9lvg2tha7YZU7oXSr6bjBI=
 20260711111335_add_payslip_relief_columns.sql h1:Kl4u02NjEXZDs6ZG6BbVXOSwUpVJyUJd4cGsGF6YCUA=
 20260718123000_add_employee_governance_flags.sql h1:tRwKBggL16I60mA5rjizyEIIhkPJS6+/Ibke18bDxbc=
+20260927214819_add_department_cost_center.sql h1:YAwB6PRsPjEgLD3Ah6iQw7UQ7Bapsccjh9zISc5EfnQ=

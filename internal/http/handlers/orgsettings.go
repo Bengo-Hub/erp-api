@@ -66,10 +66,15 @@ type namedView struct {
 	Description string    `json:"description,omitempty"`
 	TenantID    *string   `json:"tenant_id,omitempty"`
 	CreatedAt   string    `json:"created_at,omitempty"`
+	// CostCenterID (departments only) is the treasury cost center for unallocated payroll cost.
+	CostCenterID *string `json:"cost_center_id,omitempty"`
 }
 
 func deptView(d *ent.Department) namedView {
 	v := namedView{ID: d.ID, Name: d.Title, Title: d.Title, Code: d.Code}
+	if d.CostCenterID != nil {
+		v.CostCenterID = strPtr(d.CostCenterID.String())
+	}
 	if d.TenantID != nil {
 		s := d.TenantID.String()
 		v.TenantID = &s
@@ -105,6 +110,8 @@ type namedBody struct {
 	Title       string `json:"title"`
 	Code        string `json:"code"`
 	Description string `json:"description"`
+	// CostCenterID (departments only): absent leaves it unchanged, "" clears it, an id sets it.
+	CostCenterID *string `json:"cost_center_id"`
 }
 
 func (b namedBody) toInput() orgsettings.NamedInput {
@@ -112,7 +119,14 @@ func (b namedBody) toInput() orgsettings.NamedInput {
 	if title == "" {
 		title = b.Title
 	}
-	return orgsettings.NamedInput{Title: title, Code: b.Code, Description: b.Description}
+	in := orgsettings.NamedInput{Title: title, Code: b.Code, Description: b.Description}
+	if b.CostCenterID != nil {
+		in.CostCenterSet = true
+		if id, err := uuid.Parse(*b.CostCenterID); err == nil {
+			in.CostCenterID = &id
+		}
+	}
+	return in
 }
 
 func decodeNamed(w http.ResponseWriter, r *http.Request) (orgsettings.NamedInput, bool) {

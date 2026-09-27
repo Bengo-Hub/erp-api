@@ -867,7 +867,7 @@ func init() {
 	// department.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	department.TitleValidator = departmentDescTitle.Validators[0].(func(string) error)
 	// departmentDescCreatedAt is the schema descriptor for created_at field.
-	departmentDescCreatedAt := departmentFields[5].Descriptor()
+	departmentDescCreatedAt := departmentFields[6].Descriptor()
 	// department.DefaultCreatedAt holds the default value on creation for the created_at field.
 	department.DefaultCreatedAt = departmentDescCreatedAt.Default.(func() time.Time)
 	// departmentDescID is the schema descriptor for id field.

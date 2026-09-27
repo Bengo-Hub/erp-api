@@ -1022,6 +1022,7 @@ var (
 		{Name: "code", Type: field.TypeString, Nullable: true},
 		{Name: "title", Type: field.TypeString},
 		{Name: "parent_department_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "cost_center_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// DepartmentsTable holds the schema information for the "departments" table.

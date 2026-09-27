@@ -26,6 +26,8 @@ type Department struct {
 	Title string `json:"title,omitempty"`
 	// ParentDepartmentID holds the value of the "parent_department_id" field.
 	ParentDepartmentID *uuid.UUID `json:"parent_department_id,omitempty"`
+	// treasury cost center for this department's unallocated payroll cost
+	CostCenterID *uuid.UUID `json:"cost_center_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt    time.Time `json:"created_at,omitempty"`
 	selectValues sql.SelectValues
@@ -36,7 +38,7 @@ func (*Department) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case department.FieldTenantID, department.FieldParentDepartmentID:
+		case department.FieldTenantID, department.FieldParentDepartmentID, department.FieldCostCenterID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case department.FieldCode, department.FieldTitle:
 			values[i] = new(sql.NullString)
@@ -90,6 +92,13 @@ func (_m *Department) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ParentDepartmentID = new(uuid.UUID)
 				*_m.ParentDepartmentID = *value.S.(*uuid.UUID)
+			}
+		case department.FieldCostCenterID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field cost_center_id", values[i])
+			} else if value.Valid {
+				_m.CostCenterID = new(uuid.UUID)
+				*_m.CostCenterID = *value.S.(*uuid.UUID)
 			}
 		case department.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -146,6 +155,11 @@ func (_m *Department) String() string {
 	builder.WriteString(", ")
 	if v := _m.ParentDepartmentID; v != nil {
 		builder.WriteString("parent_department_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.CostCenterID; v != nil {
+		builder.WriteString("cost_center_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")

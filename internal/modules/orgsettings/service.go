@@ -45,6 +45,10 @@ type NamedInput struct {
 	Title       string
 	Code        string
 	Description string
+	// CostCenterSet marks that the caller sent cost_center_id (departments only): CostCenterID
+	// nil then clears the link, otherwise sets it.
+	CostCenterSet bool
+	CostCenterID  *uuid.UUID
 }
 
 func (s *Service) CreateDepartment(ctx context.Context, tenantID uuid.UUID, in NamedInput) (*ent.Department, error) {
@@ -54,6 +58,9 @@ func (s *Service) CreateDepartment(ctx context.Context, tenantID uuid.UUID, in N
 	b := s.orm.Department.Create().SetTenantID(tenantID).SetTitle(in.Title)
 	if in.Code != "" {
 		b = b.SetCode(in.Code)
+	}
+	if in.CostCenterSet && in.CostCenterID != nil {
+		b = b.SetCostCenterID(*in.CostCenterID)
 	}
 	return b.Save(ctx)
 }
@@ -68,6 +75,13 @@ func (s *Service) UpdateDepartment(ctx context.Context, tenantID, id uuid.UUID, 
 	}
 	if in.Code != "" {
 		u = u.SetCode(in.Code)
+	}
+	if in.CostCenterSet {
+		if in.CostCenterID != nil {
+			u = u.SetCostCenterID(*in.CostCenterID)
+		} else {
+			u = u.ClearCostCenterID()
+		}
 	}
 	return u.Save(ctx)
 }
