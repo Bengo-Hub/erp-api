@@ -22,6 +22,8 @@ const (
 	FieldTitle = "title"
 	// FieldParentDepartmentID holds the string denoting the parent_department_id field in the database.
 	FieldParentDepartmentID = "parent_department_id"
+	// FieldCostCenterID holds the string denoting the cost_center_id field in the database.
+	FieldCostCenterID = "cost_center_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// Table holds the table name of the department in the database.
@@ -35,6 +37,7 @@ var Columns = []string{
 	FieldCode,
 	FieldTitle,
 	FieldParentDepartmentID,
+	FieldCostCenterID,
 	FieldCreatedAt,
 }
 
@@ -83,6 +86,11 @@ func ByTitle(opts ...sql.OrderTermOption) OrderOption {
 // ByParentDepartmentID orders the results by the parent_department_id field.
 func ByParentDepartmentID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldParentDepartmentID, opts...).ToFunc()
+}
+
+// ByCostCenterID orders the results by the cost_center_id field.
+func ByCostCenterID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCostCenterID, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

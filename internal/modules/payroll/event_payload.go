@@ -129,9 +129,8 @@ func buildPayrollEvent(slips []*ent.Payslip, empByID map[uuid.UUID]*ent.Employee
 			"deductions": deductions.StringFixed(2),
 			"net":        net.StringFixed(2),
 		},
-		"lines":       lines,
-		"cost_center": "",
-		"batch_ref":   batchRef,
+		"lines":     lines,
+		"batch_ref": batchRef,
 	}
 	return payload, net
 }

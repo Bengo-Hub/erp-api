@@ -29011,6 +29011,7 @@ type DepartmentMutation struct {
 	code                 *string
 	title                *string
 	parent_department_id *uuid.UUID
+	cost_center_id       *uuid.UUID
 	created_at           *time.Time
 	clearedFields        map[string]struct{}
 	done                 bool
@@ -29305,6 +29306,55 @@ func (m *DepartmentMutation) ResetParentDepartmentID() {
 	delete(m.clearedFields, department.FieldParentDepartmentID)
 }
 
+// SetCostCenterID sets the "cost_center_id" field.
+func (m *DepartmentMutation) SetCostCenterID(u uuid.UUID) {
+	m.cost_center_id = &u
+}
+
+// CostCenterID returns the value of the "cost_center_id" field in the mutation.
+func (m *DepartmentMutation) CostCenterID() (r uuid.UUID, exists bool) {
+	v := m.cost_center_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostCenterID returns the old "cost_center_id" field's value of the Department entity.
+// If the Department object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DepartmentMutation) OldCostCenterID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostCenterID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostCenterID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostCenterID: %w", err)
+	}
+	return oldValue.CostCenterID, nil
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (m *DepartmentMutation) ClearCostCenterID() {
+	m.cost_center_id = nil
+	m.clearedFields[department.FieldCostCenterID] = struct{}{}
+}
+
+// CostCenterIDCleared returns if the "cost_center_id" field was cleared in this mutation.
+func (m *DepartmentMutation) CostCenterIDCleared() bool {
+	_, ok := m.clearedFields[department.FieldCostCenterID]
+	return ok
+}
+
+// ResetCostCenterID resets all changes to the "cost_center_id" field.
+func (m *DepartmentMutation) ResetCostCenterID() {
+	m.cost_center_id = nil
+	delete(m.clearedFields, department.FieldCostCenterID)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *DepartmentMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -29375,7 +29425,7 @@ func (m *DepartmentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DepartmentMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.tenant_id != nil {
 		fields = append(fields, department.FieldTenantID)
 	}
@@ -29387,6 +29437,9 @@ func (m *DepartmentMutation) Fields() []string {
 	}
 	if m.parent_department_id != nil {
 		fields = append(fields, department.FieldParentDepartmentID)
+	}
+	if m.cost_center_id != nil {
+		fields = append(fields, department.FieldCostCenterID)
 	}
 	if m.created_at != nil {
 		fields = append(fields, department.FieldCreatedAt)
@@ -29407,6 +29460,8 @@ func (m *DepartmentMutation) Field(name string) (ent.Value, bool) {
 		return m.Title()
 	case department.FieldParentDepartmentID:
 		return m.ParentDepartmentID()
+	case department.FieldCostCenterID:
+		return m.CostCenterID()
 	case department.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -29426,6 +29481,8 @@ func (m *DepartmentMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldTitle(ctx)
 	case department.FieldParentDepartmentID:
 		return m.OldParentDepartmentID(ctx)
+	case department.FieldCostCenterID:
+		return m.OldCostCenterID(ctx)
 	case department.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -29464,6 +29521,13 @@ func (m *DepartmentMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetParentDepartmentID(v)
+		return nil
+	case department.FieldCostCenterID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostCenterID(v)
 		return nil
 	case department.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -29511,6 +29575,9 @@ func (m *DepartmentMutation) ClearedFields() []string {
 	if m.FieldCleared(department.FieldParentDepartmentID) {
 		fields = append(fields, department.FieldParentDepartmentID)
 	}
+	if m.FieldCleared(department.FieldCostCenterID) {
+		fields = append(fields, department.FieldCostCenterID)
+	}
 	return fields
 }
 
@@ -29534,6 +29601,9 @@ func (m *DepartmentMutation) ClearField(name string) error {
 	case department.FieldParentDepartmentID:
 		m.ClearParentDepartmentID()
 		return nil
+	case department.FieldCostCenterID:
+		m.ClearCostCenterID()
+		return nil
 	}
 	return fmt.Errorf("unknown Department nullable field %s", name)
 }
@@ -29553,6 +29623,9 @@ func (m *DepartmentMutation) ResetField(name string) error {
 		return nil
 	case department.FieldParentDepartmentID:
 		m.ResetParentDepartmentID()
+		return nil
+	case department.FieldCostCenterID:
+		m.ResetCostCenterID()
 		return nil
 	case department.FieldCreatedAt:
 		m.ResetCreatedAt()

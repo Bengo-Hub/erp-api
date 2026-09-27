@@ -93,7 +93,7 @@ func (c *Client) Projects(ctx context.Context, tenantID uuid.UUID, bearer string
 	var opts []Option
 	for page := 1; ; page++ {
 		url := fmt.Sprintf("%s/api/v1/%s/projects?limit=%d&page=%d", c.projectsURL, tenantID.String(), pageSize, page)
-		raw, err := c.get(ctx, url, bearer)
+		raw, err := c.get(ctx, url, bearer, tenantID)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +118,7 @@ func (c *Client) CostCenters(ctx context.Context, tenantID uuid.UUID, bearer str
 		return v, nil
 	}
 	url := fmt.Sprintf("%s/api/v1/%s/cost-centers?active_only=true", c.treasuryURL, tenantID.String())
-	raw, err := c.get(ctx, url, bearer)
+	raw, err := c.get(ctx, url, bearer, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -127,11 +127,14 @@ func (c *Client) CostCenters(ctx context.Context, tenantID uuid.UUID, bearer str
 	return opts, nil
 }
 
-func (c *Client) get(ctx context.Context, url, bearer string) (json.RawMessage, error) {
+func (c *Client) get(ctx context.Context, url, bearer string, tenantID uuid.UUID) (json.RawMessage, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
+	// projects-api resolves the tenant from X-Tenant-ID (not the path); without it every lookup
+	// answered 400 and silently fell back to the local id-only list.
+	req.Header.Set("X-Tenant-ID", tenantID.String())
 	if bearer != "" {
 		req.Header.Set("Authorization", "Bearer "+bearer)
 	}

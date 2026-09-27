@@ -72,6 +72,20 @@ func (_c *DepartmentCreate) SetNillableParentDepartmentID(v *uuid.UUID) *Departm
 	return _c
 }
 
+// SetCostCenterID sets the "cost_center_id" field.
+func (_c *DepartmentCreate) SetCostCenterID(v uuid.UUID) *DepartmentCreate {
+	_c.mutation.SetCostCenterID(v)
+	return _c
+}
+
+// SetNillableCostCenterID sets the "cost_center_id" field if the given value is not nil.
+func (_c *DepartmentCreate) SetNillableCostCenterID(v *uuid.UUID) *DepartmentCreate {
+	if v != nil {
+		_c.SetCostCenterID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *DepartmentCreate) SetCreatedAt(v time.Time) *DepartmentCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -210,6 +224,10 @@ func (_c *DepartmentCreate) createSpec() (*Department, *sqlgraph.CreateSpec) {
 		_spec.SetField(department.FieldParentDepartmentID, field.TypeUUID, value)
 		_node.ParentDepartmentID = &value
 	}
+	if value, ok := _c.mutation.CostCenterID(); ok {
+		_spec.SetField(department.FieldCostCenterID, field.TypeUUID, value)
+		_node.CostCenterID = &value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(department.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -329,6 +347,24 @@ func (u *DepartmentUpsert) UpdateParentDepartmentID() *DepartmentUpsert {
 // ClearParentDepartmentID clears the value of the "parent_department_id" field.
 func (u *DepartmentUpsert) ClearParentDepartmentID() *DepartmentUpsert {
 	u.SetNull(department.FieldParentDepartmentID)
+	return u
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (u *DepartmentUpsert) SetCostCenterID(v uuid.UUID) *DepartmentUpsert {
+	u.Set(department.FieldCostCenterID, v)
+	return u
+}
+
+// UpdateCostCenterID sets the "cost_center_id" field to the value that was provided on create.
+func (u *DepartmentUpsert) UpdateCostCenterID() *DepartmentUpsert {
+	u.SetExcluded(department.FieldCostCenterID)
+	return u
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (u *DepartmentUpsert) ClearCostCenterID() *DepartmentUpsert {
+	u.SetNull(department.FieldCostCenterID)
 	return u
 }
 
@@ -457,6 +493,27 @@ func (u *DepartmentUpsertOne) UpdateParentDepartmentID() *DepartmentUpsertOne {
 func (u *DepartmentUpsertOne) ClearParentDepartmentID() *DepartmentUpsertOne {
 	return u.Update(func(s *DepartmentUpsert) {
 		s.ClearParentDepartmentID()
+	})
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (u *DepartmentUpsertOne) SetCostCenterID(v uuid.UUID) *DepartmentUpsertOne {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.SetCostCenterID(v)
+	})
+}
+
+// UpdateCostCenterID sets the "cost_center_id" field to the value that was provided on create.
+func (u *DepartmentUpsertOne) UpdateCostCenterID() *DepartmentUpsertOne {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.UpdateCostCenterID()
+	})
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (u *DepartmentUpsertOne) ClearCostCenterID() *DepartmentUpsertOne {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.ClearCostCenterID()
 	})
 }
 
@@ -752,6 +809,27 @@ func (u *DepartmentUpsertBulk) UpdateParentDepartmentID() *DepartmentUpsertBulk 
 func (u *DepartmentUpsertBulk) ClearParentDepartmentID() *DepartmentUpsertBulk {
 	return u.Update(func(s *DepartmentUpsert) {
 		s.ClearParentDepartmentID()
+	})
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (u *DepartmentUpsertBulk) SetCostCenterID(v uuid.UUID) *DepartmentUpsertBulk {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.SetCostCenterID(v)
+	})
+}
+
+// UpdateCostCenterID sets the "cost_center_id" field to the value that was provided on create.
+func (u *DepartmentUpsertBulk) UpdateCostCenterID() *DepartmentUpsertBulk {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.UpdateCostCenterID()
+	})
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (u *DepartmentUpsertBulk) ClearCostCenterID() *DepartmentUpsertBulk {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.ClearCostCenterID()
 	})
 }
 

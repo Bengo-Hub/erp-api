@@ -102,6 +102,26 @@ func (_u *DepartmentUpdate) ClearParentDepartmentID() *DepartmentUpdate {
 	return _u
 }
 
+// SetCostCenterID sets the "cost_center_id" field.
+func (_u *DepartmentUpdate) SetCostCenterID(v uuid.UUID) *DepartmentUpdate {
+	_u.mutation.SetCostCenterID(v)
+	return _u
+}
+
+// SetNillableCostCenterID sets the "cost_center_id" field if the given value is not nil.
+func (_u *DepartmentUpdate) SetNillableCostCenterID(v *uuid.UUID) *DepartmentUpdate {
+	if v != nil {
+		_u.SetCostCenterID(*v)
+	}
+	return _u
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (_u *DepartmentUpdate) ClearCostCenterID() *DepartmentUpdate {
+	_u.mutation.ClearCostCenterID()
+	return _u
+}
+
 // Mutation returns the DepartmentMutation object of the builder.
 func (_u *DepartmentUpdate) Mutation() *DepartmentMutation {
 	return _u.mutation
@@ -176,6 +196,12 @@ func (_u *DepartmentUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.ParentDepartmentIDCleared() {
 		_spec.ClearField(department.FieldParentDepartmentID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.CostCenterID(); ok {
+		_spec.SetField(department.FieldCostCenterID, field.TypeUUID, value)
+	}
+	if _u.mutation.CostCenterIDCleared() {
+		_spec.ClearField(department.FieldCostCenterID, field.TypeUUID)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -268,6 +294,26 @@ func (_u *DepartmentUpdateOne) SetNillableParentDepartmentID(v *uuid.UUID) *Depa
 // ClearParentDepartmentID clears the value of the "parent_department_id" field.
 func (_u *DepartmentUpdateOne) ClearParentDepartmentID() *DepartmentUpdateOne {
 	_u.mutation.ClearParentDepartmentID()
+	return _u
+}
+
+// SetCostCenterID sets the "cost_center_id" field.
+func (_u *DepartmentUpdateOne) SetCostCenterID(v uuid.UUID) *DepartmentUpdateOne {
+	_u.mutation.SetCostCenterID(v)
+	return _u
+}
+
+// SetNillableCostCenterID sets the "cost_center_id" field if the given value is not nil.
+func (_u *DepartmentUpdateOne) SetNillableCostCenterID(v *uuid.UUID) *DepartmentUpdateOne {
+	if v != nil {
+		_u.SetCostCenterID(*v)
+	}
+	return _u
+}
+
+// ClearCostCenterID clears the value of the "cost_center_id" field.
+func (_u *DepartmentUpdateOne) ClearCostCenterID() *DepartmentUpdateOne {
+	_u.mutation.ClearCostCenterID()
 	return _u
 }
 
@@ -375,6 +421,12 @@ func (_u *DepartmentUpdateOne) sqlSave(ctx context.Context) (_node *Department, 
 	}
 	if _u.mutation.ParentDepartmentIDCleared() {
 		_spec.ClearField(department.FieldParentDepartmentID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.CostCenterID(); ok {
+		_spec.SetField(department.FieldCostCenterID, field.TypeUUID, value)
+	}
+	if _u.mutation.CostCenterIDCleared() {
+		_spec.ClearField(department.FieldCostCenterID, field.TypeUUID)
 	}
 	_node = &Department{config: _u.config}
 	_spec.Assign = _node.assignValues

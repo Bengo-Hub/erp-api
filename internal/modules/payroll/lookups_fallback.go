@@ -15,76 +15,63 @@ type LookupOption struct {
 	Label string `json:"label"`
 }
 
+// fallbackLookupLimit bounds each distinct-id read: the fallback feeds a combobox, and the
+// database returns distinct ids (SELECT DISTINCT ... LIMIT), never every claim row.
+const fallbackLookupLimit = 500
+
+// mergeOptions de-duplicates ids from several sources into combobox options (id as label; the
+// fallback has no names).
+func mergeOptions(lists ...[]uuid.UUID) []LookupOption {
+	seen := map[uuid.UUID]bool{}
+	out := []LookupOption{}
+	for _, ids := range lists {
+		for _, id := range ids {
+			if id == uuid.Nil || seen[id] {
+				continue
+			}
+			seen[id] = true
+			out = append(out, LookupOption{Value: id.String(), Label: id.String()})
+		}
+	}
+	return out
+}
+
 // DistinctProjectIDs returns the distinct project ids already referenced on tenant claims +
 // casual-labour records. This is the FALLBACK source for the project lookup when projects-api
-// is unavailable/unconfigured — it never fabricates a project list, only surfaces ids the ERP
+// is unavailable/unconfigured: it never fabricates a project list, only surfaces ids the ERP
 // has actually used so the combobox stays useful offline.
 func (s *Service) DistinctProjectIDs(ctx context.Context, tenantID uuid.UUID) ([]LookupOption, error) {
-	seen := map[string]bool{}
-	out := []LookupOption{}
-	add := func(id *uuid.UUID) {
-		if id == nil {
-			return
-		}
-		v := id.String()
-		if !seen[v] {
-			seen[v] = true
-			out = append(out, LookupOption{Value: v, Label: v})
-		}
-	}
-	claims, err := s.orm.ExpenseClaim.Query().
+	var fromClaims, fromCasuals []uuid.UUID
+	if err := s.orm.ExpenseClaim.Query().
 		Where(expenseclaim.TenantID(tenantID), expenseclaim.ProjectIDNotNil()).
-		Select(expenseclaim.FieldProjectID).All(ctx)
-	if err != nil {
+		Unique(true).Limit(fallbackLookupLimit).
+		Select(expenseclaim.FieldProjectID).Scan(ctx, &fromClaims); err != nil {
 		return nil, err
 	}
-	for _, c := range claims {
-		add(c.ProjectID)
-	}
-	casuals, err := s.orm.CasualPayment.Query().
+	if err := s.orm.CasualPayment.Query().
 		Where(casualpayment.TenantID(tenantID), casualpayment.ProjectIDNotNil()).
-		Select(casualpayment.FieldProjectID).All(ctx)
-	if err != nil {
+		Unique(true).Limit(fallbackLookupLimit).
+		Select(casualpayment.FieldProjectID).Scan(ctx, &fromCasuals); err != nil {
 		return nil, err
 	}
-	for _, c := range casuals {
-		add(c.ProjectID)
-	}
-	return out, nil
+	return mergeOptions(fromClaims, fromCasuals), nil
 }
 
 // DistinctCostCenterIDs returns the distinct cost-center ids already referenced on tenant
 // claims + casual-labour records (fallback source for the cost-center lookup).
 func (s *Service) DistinctCostCenterIDs(ctx context.Context, tenantID uuid.UUID) ([]LookupOption, error) {
-	seen := map[string]bool{}
-	out := []LookupOption{}
-	add := func(id *uuid.UUID) {
-		if id == nil {
-			return
-		}
-		v := id.String()
-		if !seen[v] {
-			seen[v] = true
-			out = append(out, LookupOption{Value: v, Label: v})
-		}
-	}
-	claims, err := s.orm.ExpenseClaim.Query().
+	var fromClaims, fromCasuals []uuid.UUID
+	if err := s.orm.ExpenseClaim.Query().
 		Where(expenseclaim.TenantID(tenantID), expenseclaim.CostCenterIDNotNil()).
-		Select(expenseclaim.FieldCostCenterID).All(ctx)
-	if err != nil {
+		Unique(true).Limit(fallbackLookupLimit).
+		Select(expenseclaim.FieldCostCenterID).Scan(ctx, &fromClaims); err != nil {
 		return nil, err
 	}
-	for _, c := range claims {
-		add(c.CostCenterID)
-	}
-	casuals, err := s.orm.CasualPayment.Query().
+	if err := s.orm.CasualPayment.Query().
 		Where(casualpayment.TenantID(tenantID), casualpayment.CostCenterIDNotNil()).
-		Select(casualpayment.FieldCostCenterID).All(ctx)
-	if err != nil {
+		Unique(true).Limit(fallbackLookupLimit).
+		Select(casualpayment.FieldCostCenterID).Scan(ctx, &fromCasuals); err != nil {
 		return nil, err
 	}
-	for _, c := range casuals {
-		add(c.CostCenterID)
-	}
-	return out, nil
+	return mergeOptions(fromClaims, fromCasuals), nil
 }
