@@ -3,6 +3,7 @@ package employees
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -34,7 +35,8 @@ type UpdateInput struct {
 
 // Update edits a tenant-scoped employee. Only non-nil fields are applied.
 func (s *Service) Update(ctx context.Context, tenantID, id uuid.UUID, in UpdateInput) (*ent.Employee, error) {
-	if _, err := s.Get(ctx, tenantID, id); err != nil {
+	current, err := s.Get(ctx, tenantID, id)
+	if err != nil {
 		return nil, err
 	}
 	u := s.orm.Employee.UpdateOneID(id)
@@ -70,6 +72,13 @@ func (s *Service) Update(ctx context.Context, tenantID, id uuid.UUID, in UpdateI
 	}
 	if in.Terminated != nil {
 		u = u.SetTerminated(*in.Terminated)
+		// Date the exit when the employee is terminated; a reinstatement clears it.
+		switch {
+		case *in.Terminated && !current.Terminated:
+			u = u.SetTerminatedAt(time.Now())
+		case !*in.Terminated && current.Terminated:
+			u = u.ClearTerminatedAt()
+		}
 	}
 	if in.IsDirector != nil {
 		u = u.SetIsDirector(*in.IsDirector)

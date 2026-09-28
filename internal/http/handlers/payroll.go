@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -1276,9 +1277,22 @@ func (h *PayrollHandler) ApproveClaim(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	c, err := h.svc.ApproveClaim(r.Context(), scope.TenantID, id, scope.UserID)
+	// A budget set to Stop blocks approval; an approver with approvals.decide may push it through
+	// with ?override_budget=true (the same approver rule inventory applies to purchase orders).
+	override := strings.EqualFold(r.URL.Query().Get("override_budget"), "true") && hasPermission(scope, permApprovalDecide)
+	c, err := h.svc.ApproveClaim(r.Context(), scope.TenantID, id, scope.UserID, override)
 	if ent.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "not_found", "claim not found")
+		return
+	}
+	var over *payroll.OverBudgetError
+	if errors.As(err, &over) {
+		writeJSON(w, http.StatusConflict, map[string]any{
+			"code":    "over_budget",
+			"error":   "over_budget",
+			"message": "Approving this claim would exceed a budget set to stop. An approver can approve it over budget.",
+			"budget":  over.Result,
+		})
 		return
 	}
 	if err != nil {

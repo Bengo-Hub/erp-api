@@ -52,6 +52,8 @@ type Employee struct {
 	IsShareholder bool `json:"is_shareholder,omitempty"`
 	// Terminated holds the value of the "terminated" field.
 	Terminated bool `json:"terminated,omitempty"`
+	// TerminatedAt holds the value of the "terminated_at" field.
+	TerminatedAt *time.Time `json:"terminated_at,omitempty"`
 	// Soft delete (delete_status)
 	Deleted bool `json:"deleted,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -72,7 +74,7 @@ func (*Employee) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case employee.FieldEmployeeNumber, employee.FieldFirstName, employee.FieldLastName, employee.FieldEmail, employee.FieldGender, employee.FieldResidentialStatus, employee.FieldNationalID, employee.FieldPinNo, employee.FieldShifOrNhifNumber, employee.FieldNssfNo:
 			values[i] = new(sql.NullString)
-		case employee.FieldDateOfBirth, employee.FieldCreatedAt, employee.FieldUpdatedAt:
+		case employee.FieldDateOfBirth, employee.FieldTerminatedAt, employee.FieldCreatedAt, employee.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case employee.FieldID, employee.FieldTenantID:
 			values[i] = new(uuid.UUID)
@@ -204,6 +206,13 @@ func (_m *Employee) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Terminated = value.Bool
 			}
+		case employee.FieldTerminatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field terminated_at", values[i])
+			} else if value.Valid {
+				_m.TerminatedAt = new(time.Time)
+				*_m.TerminatedAt = value.Time
+			}
 		case employee.FieldDeleted:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field deleted", values[i])
@@ -318,6 +327,11 @@ func (_m *Employee) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("terminated=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Terminated))
+	builder.WriteString(", ")
+	if v := _m.TerminatedAt; v != nil {
+		builder.WriteString("terminated_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("deleted=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Deleted))

@@ -45,6 +45,9 @@ func (Employee) Fields() []ent.Field {
 		field.Bool("is_shareholder").Default(false),
 
 		field.Bool("terminated").Default(false),
+		// TerminatedAt is when the employee was terminated (set on the change to terminated,
+		// cleared on reinstatement); exits and turnover are counted from it.
+		field.Time("terminated_at").Optional().Nillable(),
 		field.Bool("deleted").Default(false).Comment("Soft delete (delete_status)"),
 
 		field.Time("created_at").Default(time.Now).Immutable(),
@@ -57,6 +60,7 @@ func (Employee) Indexes() []ent.Index {
 		index.Fields("tenant_id"),
 		index.Fields("tenant_id", "outlet_id"),
 		index.Fields("tenant_id", "deleted"),
+		index.Fields("tenant_id", "terminated_at"),
 		// National ID unique within tenant (was globally unique in Django — tenant-scoping fixes isolation).
 		index.Fields("tenant_id", "national_id").Unique(),
 		index.Fields("user_id"),

@@ -254,6 +254,20 @@ func (_c *EmployeeCreate) SetNillableTerminated(v *bool) *EmployeeCreate {
 	return _c
 }
 
+// SetTerminatedAt sets the "terminated_at" field.
+func (_c *EmployeeCreate) SetTerminatedAt(v time.Time) *EmployeeCreate {
+	_c.mutation.SetTerminatedAt(v)
+	return _c
+}
+
+// SetNillableTerminatedAt sets the "terminated_at" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableTerminatedAt(v *time.Time) *EmployeeCreate {
+	if v != nil {
+		_c.SetTerminatedAt(*v)
+	}
+	return _c
+}
+
 // SetDeleted sets the "deleted" field.
 func (_c *EmployeeCreate) SetDeleted(v bool) *EmployeeCreate {
 	_c.mutation.SetDeleted(v)
@@ -501,6 +515,10 @@ func (_c *EmployeeCreate) createSpec() (*Employee, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Terminated(); ok {
 		_spec.SetField(employee.FieldTerminated, field.TypeBool, value)
 		_node.Terminated = value
+	}
+	if value, ok := _c.mutation.TerminatedAt(); ok {
+		_spec.SetField(employee.FieldTerminatedAt, field.TypeTime, value)
+		_node.TerminatedAt = &value
 	}
 	if value, ok := _c.mutation.Deleted(); ok {
 		_spec.SetField(employee.FieldDeleted, field.TypeBool, value)
@@ -845,6 +863,24 @@ func (u *EmployeeUpsert) SetTerminated(v bool) *EmployeeUpsert {
 // UpdateTerminated sets the "terminated" field to the value that was provided on create.
 func (u *EmployeeUpsert) UpdateTerminated() *EmployeeUpsert {
 	u.SetExcluded(employee.FieldTerminated)
+	return u
+}
+
+// SetTerminatedAt sets the "terminated_at" field.
+func (u *EmployeeUpsert) SetTerminatedAt(v time.Time) *EmployeeUpsert {
+	u.Set(employee.FieldTerminatedAt, v)
+	return u
+}
+
+// UpdateTerminatedAt sets the "terminated_at" field to the value that was provided on create.
+func (u *EmployeeUpsert) UpdateTerminatedAt() *EmployeeUpsert {
+	u.SetExcluded(employee.FieldTerminatedAt)
+	return u
+}
+
+// ClearTerminatedAt clears the value of the "terminated_at" field.
+func (u *EmployeeUpsert) ClearTerminatedAt() *EmployeeUpsert {
+	u.SetNull(employee.FieldTerminatedAt)
 	return u
 }
 
@@ -1249,6 +1285,27 @@ func (u *EmployeeUpsertOne) SetTerminated(v bool) *EmployeeUpsertOne {
 func (u *EmployeeUpsertOne) UpdateTerminated() *EmployeeUpsertOne {
 	return u.Update(func(s *EmployeeUpsert) {
 		s.UpdateTerminated()
+	})
+}
+
+// SetTerminatedAt sets the "terminated_at" field.
+func (u *EmployeeUpsertOne) SetTerminatedAt(v time.Time) *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetTerminatedAt(v)
+	})
+}
+
+// UpdateTerminatedAt sets the "terminated_at" field to the value that was provided on create.
+func (u *EmployeeUpsertOne) UpdateTerminatedAt() *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateTerminatedAt()
+	})
+}
+
+// ClearTerminatedAt clears the value of the "terminated_at" field.
+func (u *EmployeeUpsertOne) ClearTerminatedAt() *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.ClearTerminatedAt()
 	})
 }
 
@@ -1824,6 +1881,27 @@ func (u *EmployeeUpsertBulk) SetTerminated(v bool) *EmployeeUpsertBulk {
 func (u *EmployeeUpsertBulk) UpdateTerminated() *EmployeeUpsertBulk {
 	return u.Update(func(s *EmployeeUpsert) {
 		s.UpdateTerminated()
+	})
+}
+
+// SetTerminatedAt sets the "terminated_at" field.
+func (u *EmployeeUpsertBulk) SetTerminatedAt(v time.Time) *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetTerminatedAt(v)
+	})
+}
+
+// UpdateTerminatedAt sets the "terminated_at" field to the value that was provided on create.
+func (u *EmployeeUpsertBulk) UpdateTerminatedAt() *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateTerminatedAt()
+	})
+}
+
+// ClearTerminatedAt clears the value of the "terminated_at" field.
+func (u *EmployeeUpsertBulk) ClearTerminatedAt() *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.ClearTerminatedAt()
 	})
 }
 
