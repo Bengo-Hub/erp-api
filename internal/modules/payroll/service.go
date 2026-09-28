@@ -36,6 +36,7 @@ type Service struct {
 	settings  *payrollsettings.Service
 	publisher *events.Publisher
 	log       *zap.Logger
+	budgets   BudgetChecker
 }
 
 func NewService(orm *ent.Client, settings *payrollsettings.Service) *Service {

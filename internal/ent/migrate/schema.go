@@ -1124,6 +1124,7 @@ var (
 		{Name: "is_director", Type: field.TypeBool, Default: false},
 		{Name: "is_shareholder", Type: field.TypeBool, Default: false},
 		{Name: "terminated", Type: field.TypeBool, Default: false},
+		{Name: "terminated_at", Type: field.TypeTime, Nullable: true},
 		{Name: "deleted", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -1146,6 +1147,11 @@ var (
 			},
 			{
 				Name:    "employee_tenant_id_deleted",
+				Unique:  false,
+				Columns: []*schema.Column{EmployeesColumns[1], EmployeesColumns[19]},
+			},
+			{
+				Name:    "employee_tenant_id_terminated_at",
 				Unique:  false,
 				Columns: []*schema.Column{EmployeesColumns[1], EmployeesColumns[18]},
 			},

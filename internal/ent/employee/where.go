@@ -140,6 +140,11 @@ func Terminated(v bool) predicate.Employee {
 	return predicate.Employee(sql.FieldEQ(FieldTerminated, v))
 }
 
+// TerminatedAt applies equality check predicate on the "terminated_at" field. It's identical to TerminatedAtEQ.
+func TerminatedAt(v time.Time) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldTerminatedAt, v))
+}
+
 // Deleted applies equality check predicate on the "deleted" field. It's identical to DeletedEQ.
 func Deleted(v bool) predicate.Employee {
 	return predicate.Employee(sql.FieldEQ(FieldDeleted, v))
@@ -1123,6 +1128,56 @@ func TerminatedEQ(v bool) predicate.Employee {
 // TerminatedNEQ applies the NEQ predicate on the "terminated" field.
 func TerminatedNEQ(v bool) predicate.Employee {
 	return predicate.Employee(sql.FieldNEQ(FieldTerminated, v))
+}
+
+// TerminatedAtEQ applies the EQ predicate on the "terminated_at" field.
+func TerminatedAtEQ(v time.Time) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldTerminatedAt, v))
+}
+
+// TerminatedAtNEQ applies the NEQ predicate on the "terminated_at" field.
+func TerminatedAtNEQ(v time.Time) predicate.Employee {
+	return predicate.Employee(sql.FieldNEQ(FieldTerminatedAt, v))
+}
+
+// TerminatedAtIn applies the In predicate on the "terminated_at" field.
+func TerminatedAtIn(vs ...time.Time) predicate.Employee {
+	return predicate.Employee(sql.FieldIn(FieldTerminatedAt, vs...))
+}
+
+// TerminatedAtNotIn applies the NotIn predicate on the "terminated_at" field.
+func TerminatedAtNotIn(vs ...time.Time) predicate.Employee {
+	return predicate.Employee(sql.FieldNotIn(FieldTerminatedAt, vs...))
+}
+
+// TerminatedAtGT applies the GT predicate on the "terminated_at" field.
+func TerminatedAtGT(v time.Time) predicate.Employee {
+	return predicate.Employee(sql.FieldGT(FieldTerminatedAt, v))
+}
+
+// TerminatedAtGTE applies the GTE predicate on the "terminated_at" field.
+func TerminatedAtGTE(v time.Time) predicate.Employee {
+	return predicate.Employee(sql.FieldGTE(FieldTerminatedAt, v))
+}
+
+// TerminatedAtLT applies the LT predicate on the "terminated_at" field.
+func TerminatedAtLT(v time.Time) predicate.Employee {
+	return predicate.Employee(sql.FieldLT(FieldTerminatedAt, v))
+}
+
+// TerminatedAtLTE applies the LTE predicate on the "terminated_at" field.
+func TerminatedAtLTE(v time.Time) predicate.Employee {
+	return predicate.Employee(sql.FieldLTE(FieldTerminatedAt, v))
+}
+
+// TerminatedAtIsNil applies the IsNil predicate on the "terminated_at" field.
+func TerminatedAtIsNil() predicate.Employee {
+	return predicate.Employee(sql.FieldIsNull(FieldTerminatedAt))
+}
+
+// TerminatedAtNotNil applies the NotNil predicate on the "terminated_at" field.
+func TerminatedAtNotNil() predicate.Employee {
+	return predicate.Employee(sql.FieldNotNull(FieldTerminatedAt))
 }
 
 // DeletedEQ applies the EQ predicate on the "deleted" field.

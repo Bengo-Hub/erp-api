@@ -31950,6 +31950,7 @@ type EmployeeMutation struct {
 	is_director         *bool
 	is_shareholder      *bool
 	terminated          *bool
+	terminated_at       *time.Time
 	deleted             *bool
 	created_at          *time.Time
 	updated_at          *time.Time
@@ -32844,6 +32845,55 @@ func (m *EmployeeMutation) ResetTerminated() {
 	m.terminated = nil
 }
 
+// SetTerminatedAt sets the "terminated_at" field.
+func (m *EmployeeMutation) SetTerminatedAt(t time.Time) {
+	m.terminated_at = &t
+}
+
+// TerminatedAt returns the value of the "terminated_at" field in the mutation.
+func (m *EmployeeMutation) TerminatedAt() (r time.Time, exists bool) {
+	v := m.terminated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTerminatedAt returns the old "terminated_at" field's value of the Employee entity.
+// If the Employee object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeMutation) OldTerminatedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTerminatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTerminatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTerminatedAt: %w", err)
+	}
+	return oldValue.TerminatedAt, nil
+}
+
+// ClearTerminatedAt clears the value of the "terminated_at" field.
+func (m *EmployeeMutation) ClearTerminatedAt() {
+	m.terminated_at = nil
+	m.clearedFields[employee.FieldTerminatedAt] = struct{}{}
+}
+
+// TerminatedAtCleared returns if the "terminated_at" field was cleared in this mutation.
+func (m *EmployeeMutation) TerminatedAtCleared() bool {
+	_, ok := m.clearedFields[employee.FieldTerminatedAt]
+	return ok
+}
+
+// ResetTerminatedAt resets all changes to the "terminated_at" field.
+func (m *EmployeeMutation) ResetTerminatedAt() {
+	m.terminated_at = nil
+	delete(m.clearedFields, employee.FieldTerminatedAt)
+}
+
 // SetDeleted sets the "deleted" field.
 func (m *EmployeeMutation) SetDeleted(b bool) {
 	m.deleted = &b
@@ -32986,7 +33036,7 @@ func (m *EmployeeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EmployeeMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.tenant_id != nil {
 		fields = append(fields, employee.FieldTenantID)
 	}
@@ -33037,6 +33087,9 @@ func (m *EmployeeMutation) Fields() []string {
 	}
 	if m.terminated != nil {
 		fields = append(fields, employee.FieldTerminated)
+	}
+	if m.terminated_at != nil {
+		fields = append(fields, employee.FieldTerminatedAt)
 	}
 	if m.deleted != nil {
 		fields = append(fields, employee.FieldDeleted)
@@ -33089,6 +33142,8 @@ func (m *EmployeeMutation) Field(name string) (ent.Value, bool) {
 		return m.IsShareholder()
 	case employee.FieldTerminated:
 		return m.Terminated()
+	case employee.FieldTerminatedAt:
+		return m.TerminatedAt()
 	case employee.FieldDeleted:
 		return m.Deleted()
 	case employee.FieldCreatedAt:
@@ -33138,6 +33193,8 @@ func (m *EmployeeMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldIsShareholder(ctx)
 	case employee.FieldTerminated:
 		return m.OldTerminated(ctx)
+	case employee.FieldTerminatedAt:
+		return m.OldTerminatedAt(ctx)
 	case employee.FieldDeleted:
 		return m.OldDeleted(ctx)
 	case employee.FieldCreatedAt:
@@ -33272,6 +33329,13 @@ func (m *EmployeeMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTerminated(v)
 		return nil
+	case employee.FieldTerminatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTerminatedAt(v)
+		return nil
 	case employee.FieldDeleted:
 		v, ok := value.(bool)
 		if !ok {
@@ -33362,6 +33426,9 @@ func (m *EmployeeMutation) ClearedFields() []string {
 	if m.FieldCleared(employee.FieldNssfNo) {
 		fields = append(fields, employee.FieldNssfNo)
 	}
+	if m.FieldCleared(employee.FieldTerminatedAt) {
+		fields = append(fields, employee.FieldTerminatedAt)
+	}
 	return fields
 }
 
@@ -33414,6 +33481,9 @@ func (m *EmployeeMutation) ClearField(name string) error {
 		return nil
 	case employee.FieldNssfNo:
 		m.ClearNssfNo()
+		return nil
+	case employee.FieldTerminatedAt:
+		m.ClearTerminatedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Employee nullable field %s", name)
@@ -33473,6 +33543,9 @@ func (m *EmployeeMutation) ResetField(name string) error {
 		return nil
 	case employee.FieldTerminated:
 		m.ResetTerminated()
+		return nil
+	case employee.FieldTerminatedAt:
+		m.ResetTerminatedAt()
 		return nil
 	case employee.FieldDeleted:
 		m.ResetDeleted()

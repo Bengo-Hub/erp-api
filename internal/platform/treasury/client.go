@@ -112,6 +112,45 @@ func (c *Client) getRaw(ctx context.Context, fullURL string) (json.RawMessage, e
 	return json.RawMessage(body), nil
 }
 
+// ClaimCheck is what treasury needs to check a staff claim against the tenant's budgets.
+type ClaimCheck struct {
+	ClaimID      string  `json:"claim_id"`
+	ClaimType    string  `json:"claim_type"`
+	Amount       string  `json:"amount"`
+	Currency     string  `json:"currency"`
+	Taxable      bool    `json:"taxable"`
+	ProjectID    *string `json:"project_id,omitempty"`
+	CostCenterID *string `json:"cost_center_id,omitempty"`
+	Date         string  `json:"date,omitempty"`
+}
+
+// BudgetResult is treasury's answer: action ok, warn or stop, with the budget lines concerned.
+type BudgetResult struct {
+	Action string          `json:"action"`
+	Lines  json.RawMessage `json:"lines"`
+}
+
+// CheckClaimBudget asks treasury whether approving the claim stays within budget. It fails open:
+// an unconfigured client or an unreachable treasury answers ok, so budgets never block payroll
+// work because another service is down (the stop is a control, not a dependency).
+func (c *Client) CheckClaimBudget(ctx context.Context, tenantID uuid.UUID, in ClaimCheck) BudgetResult {
+	ok := BudgetResult{Action: "ok"}
+	if !c.enabled {
+		return ok
+	}
+	path := fmt.Sprintf("/api/v1/s2s/%s/budgets/claim-check", tenantID.String())
+	resp, err := c.sc.Post(ctx, path, in, map[string]string{"X-API-Key": c.apiKey, "X-Tenant-ID": tenantID.String()})
+	if err != nil || !resp.IsSuccess() {
+		c.log.Warn("claim budget check unavailable; allowing", zap.Error(err))
+		return ok
+	}
+	var out BudgetResult
+	if err := json.Unmarshal(resp.Body, &out); err != nil || out.Action == "" {
+		return ok
+	}
+	return out
+}
+
 // Enabled reports whether the client is configured for S2S calls.
 func (c *Client) Enabled() bool { return c.enabled }
 

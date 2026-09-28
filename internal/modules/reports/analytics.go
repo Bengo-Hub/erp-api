@@ -32,6 +32,18 @@ type HRMAnalytics struct {
 	PayrollByDept    []NamedAmount   `json:"payroll_by_department"` // latest payroll month
 	PeriodFrom       string          `json:"period_from"`
 	PeriodTo         string          `json:"period_to"`
+
+	// Exits are employees terminated within the period (dated by terminated_at); TurnoverPct is
+	// exits over the average headcount of the period, nil without a headcount.
+	Exits       int      `json:"exits"`
+	TurnoverPct *float64 `json:"turnover_pct"`
+	// Overtime hours in the period, from clock-in attendance and from approved timesheets (kept
+	// apart: a tenant normally uses one, and adding them could count the same hours twice).
+	OvertimeAttendanceHours decimal.Decimal `json:"overtime_attendance_hours"`
+	OvertimeTimesheetHours  decimal.Decimal `json:"overtime_timesheet_hours"`
+	// LeaveLiability is this year's remaining leave days of active employees at their daily rate.
+	LeaveLiability     decimal.Decimal `json:"leave_liability"`
+	LeaveDaysRemaining decimal.Decimal `json:"leave_days_remaining"`
 }
 
 // NamedCount is one group of a headcount breakdown.
@@ -168,6 +180,10 @@ func (s *Service) HRMAnalytics(ctx context.Context, tenantID uuid.UUID, from, to
 		return nil, err
 	}
 	if out.ContractsExpiry.Within90, err = expiring(90); err != nil {
+		return nil, err
+	}
+
+	if err := s.workforceFigures(ctx, tenantID, from, to, out); err != nil {
 		return nil, err
 	}
 

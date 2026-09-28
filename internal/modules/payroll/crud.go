@@ -443,13 +443,22 @@ func (s *Service) UpdateClaim(ctx context.Context, tenantID, id uuid.UUID, in Cl
 // NOT through payroll gross — so it never inflates PAYE; the taxable portion (when taxable=true)
 // is handled through the payslip taxable lane. Idempotent: re-approving an already-approved claim
 // does not re-emit.
-func (s *Service) ApproveClaim(ctx context.Context, tenantID, id, approverID uuid.UUID) (*ent.ExpenseClaim, error) {
+//
+// With a budget checker wired, the claim is checked against treasury budgets first: a budget set
+// to Stop returns *OverBudgetError (nothing changes) unless overrideBudget is set; the caller
+// decides who may override.
+func (s *Service) ApproveClaim(ctx context.Context, tenantID, id, approverID uuid.UUID, overrideBudget bool) (*ent.ExpenseClaim, error) {
 	existing, err := s.GetClaim(ctx, tenantID, id)
 	if err != nil {
 		return nil, err
 	}
 	if existing.Approved {
 		return existing, nil // already approved — idempotent, no re-emit
+	}
+	if s.budgets != nil && !overrideBudget {
+		if res := s.budgets.CheckClaimBudget(ctx, tenantID, claimCheckOf(existing)); res.Action == "stop" {
+			return nil, &OverBudgetError{Result: res}
+		}
 	}
 	updated, err := existing.Update().
 		SetApproved(true).

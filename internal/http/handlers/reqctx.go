@@ -119,9 +119,22 @@ func platformTenantOverride(r *http.Request) uuid.UUID {
 // requirePermission gates a handler on an RBAC permission code. Platform owners and
 // superusers bypass. Returns false (and writes 403) when not permitted.
 func requirePermission(w http.ResponseWriter, scope RequestScope, perm string) bool {
+	if scope.Claims == nil {
+		writeError(w, http.StatusForbidden, "forbidden", "no claims")
+		return false
+	}
+	if hasPermission(scope, perm) {
+		return true
+	}
+	writeError(w, http.StatusForbidden, "forbidden", "missing permission: "+perm)
+	return false
+}
+
+// hasPermission is requirePermission's rule without the 403, for optional capabilities (for
+// example approving a claim over budget).
+func hasPermission(scope RequestScope, perm string) bool {
 	c := scope.Claims
 	if c == nil {
-		writeError(w, http.StatusForbidden, "forbidden", "no claims")
 		return false
 	}
 	if c.IsPlatformOwner || c.IsSuperuser() || c.IsService || c.HasPermission(perm) {
@@ -142,6 +155,5 @@ func requirePermission(w http.ResponseWriter, scope RequestScope, perm string) b
 			}
 		}
 	}
-	writeError(w, http.StatusForbidden, "forbidden", "missing permission: "+perm)
 	return false
 }

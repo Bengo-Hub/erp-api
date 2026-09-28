@@ -345,6 +345,26 @@ func (_u *EmployeeUpdate) SetNillableTerminated(v *bool) *EmployeeUpdate {
 	return _u
 }
 
+// SetTerminatedAt sets the "terminated_at" field.
+func (_u *EmployeeUpdate) SetTerminatedAt(v time.Time) *EmployeeUpdate {
+	_u.mutation.SetTerminatedAt(v)
+	return _u
+}
+
+// SetNillableTerminatedAt sets the "terminated_at" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableTerminatedAt(v *time.Time) *EmployeeUpdate {
+	if v != nil {
+		_u.SetTerminatedAt(*v)
+	}
+	return _u
+}
+
+// ClearTerminatedAt clears the value of the "terminated_at" field.
+func (_u *EmployeeUpdate) ClearTerminatedAt() *EmployeeUpdate {
+	_u.mutation.ClearTerminatedAt()
+	return _u
+}
+
 // SetDeleted sets the "deleted" field.
 func (_u *EmployeeUpdate) SetDeleted(v bool) *EmployeeUpdate {
 	_u.mutation.SetDeleted(v)
@@ -504,6 +524,12 @@ func (_u *EmployeeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Terminated(); ok {
 		_spec.SetField(employee.FieldTerminated, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.TerminatedAt(); ok {
+		_spec.SetField(employee.FieldTerminatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TerminatedAtCleared() {
+		_spec.ClearField(employee.FieldTerminatedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Deleted(); ok {
 		_spec.SetField(employee.FieldDeleted, field.TypeBool, value)
@@ -847,6 +873,26 @@ func (_u *EmployeeUpdateOne) SetNillableTerminated(v *bool) *EmployeeUpdateOne {
 	return _u
 }
 
+// SetTerminatedAt sets the "terminated_at" field.
+func (_u *EmployeeUpdateOne) SetTerminatedAt(v time.Time) *EmployeeUpdateOne {
+	_u.mutation.SetTerminatedAt(v)
+	return _u
+}
+
+// SetNillableTerminatedAt sets the "terminated_at" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableTerminatedAt(v *time.Time) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetTerminatedAt(*v)
+	}
+	return _u
+}
+
+// ClearTerminatedAt clears the value of the "terminated_at" field.
+func (_u *EmployeeUpdateOne) ClearTerminatedAt() *EmployeeUpdateOne {
+	_u.mutation.ClearTerminatedAt()
+	return _u
+}
+
 // SetDeleted sets the "deleted" field.
 func (_u *EmployeeUpdateOne) SetDeleted(v bool) *EmployeeUpdateOne {
 	_u.mutation.SetDeleted(v)
@@ -1036,6 +1082,12 @@ func (_u *EmployeeUpdateOne) sqlSave(ctx context.Context) (_node *Employee, err 
 	}
 	if value, ok := _u.mutation.Terminated(); ok {
 		_spec.SetField(employee.FieldTerminated, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.TerminatedAt(); ok {
+		_spec.SetField(employee.FieldTerminatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TerminatedAtCleared() {
+		_spec.ClearField(employee.FieldTerminatedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Deleted(); ok {
 		_spec.SetField(employee.FieldDeleted, field.TypeBool, value)

@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 )
 
 // Claim lifecycle events for treasury budgets. A pending claim is money the business has agreed
@@ -17,6 +18,41 @@ import (
 //   - erp.expense_claim.deleted releases it.
 // The payload is the one treasury's claimApprovedPayload reads, plus approved and
 // application_date.
+
+// BudgetChecker checks a claim against treasury budgets (the treasury S2S client).
+type BudgetChecker interface {
+	CheckClaimBudget(ctx context.Context, tenantID uuid.UUID, in treasury.ClaimCheck) treasury.BudgetResult
+}
+
+// WithBudgetChecker wires the approval-time budget check. Optional.
+func (s *Service) WithBudgetChecker(b BudgetChecker) *Service {
+	s.budgets = b
+	return s
+}
+
+// OverBudgetError is returned when approving a claim would pass a budget set to Stop.
+type OverBudgetError struct {
+	Result treasury.BudgetResult
+}
+
+func (e *OverBudgetError) Error() string { return "payroll: claim is over budget" }
+
+// claimCheckOf is the budget check request for a claim (the same fields as its events).
+func claimCheckOf(c *ent.ExpenseClaim) treasury.ClaimCheck {
+	in := treasury.ClaimCheck{
+		ClaimID: c.ID.String(), ClaimType: c.ClaimType, Amount: c.Amount.StringFixed(2),
+		Currency: "KES", Taxable: c.Taxable, Date: time.Now().Format(time.DateOnly),
+	}
+	if c.ProjectID != nil {
+		v := c.ProjectID.String()
+		in.ProjectID = &v
+	}
+	if c.CostCenterID != nil {
+		v := c.CostCenterID.String()
+		in.CostCenterID = &v
+	}
+	return in
+}
 
 // WithLogger sets the logger used for best-effort event failures. Optional.
 func (s *Service) WithLogger(log *zap.Logger) *Service {

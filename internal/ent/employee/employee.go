@@ -48,6 +48,8 @@ const (
 	FieldIsShareholder = "is_shareholder"
 	// FieldTerminated holds the string denoting the terminated field in the database.
 	FieldTerminated = "terminated"
+	// FieldTerminatedAt holds the string denoting the terminated_at field in the database.
+	FieldTerminatedAt = "terminated_at"
 	// FieldDeleted holds the string denoting the deleted field in the database.
 	FieldDeleted = "deleted"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -78,6 +80,7 @@ var Columns = []string{
 	FieldIsDirector,
 	FieldIsShareholder,
 	FieldTerminated,
+	FieldTerminatedAt,
 	FieldDeleted,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -203,6 +206,11 @@ func ByIsShareholder(opts ...sql.OrderTermOption) OrderOption {
 // ByTerminated orders the results by the terminated field.
 func ByTerminated(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTerminated, opts...).ToFunc()
+}
+
+// ByTerminatedAt orders the results by the terminated_at field.
+func ByTerminatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTerminatedAt, opts...).ToFunc()
 }
 
 // ByDeleted orders the results by the deleted field.

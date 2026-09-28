@@ -233,8 +233,9 @@ func run() error {
 	// own current formula inherit it (feedback_shared_core_reference_data). uuid.Nil = no fallback.
 	systemTenant, _ := uuid.Parse(cfg.Payroll.SystemTenantID)
 	payrollSettingsSvc := payrollsettings.NewService(orm, systemTenant)
-	payrollSvc := payroll.NewService(orm, payrollSettingsSvc).WithPublisher(notifyPublisher).WithLogger(log.Named("payroll"))
 	treasuryClient := treasury.NewClient(cfg.Services.TreasuryURL, cfg.Auth.APIKey, log)
+	// Claim approval checks treasury budgets first (fails open when treasury is unreachable).
+	payrollSvc := payroll.NewService(orm, payrollSettingsSvc).WithPublisher(notifyPublisher).WithLogger(log.Named("payroll")).WithBudgetChecker(treasuryClient)
 	employeesHandler.WithTreasury(treasuryClient) // enables /hrm/banks/* verify proxy
 	payrollDisburser := payroll.NewDisburser(orm, notifyPublisher, treasuryClient, log)
 	// POS↔ERP staff-credit: premium-gated recoverable created S2S by pos-api (staff_fund_from_salary).
