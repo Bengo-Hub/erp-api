@@ -35,7 +35,7 @@ func (s *Service) NSSF(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (s *Service) HousingLevy(ctx context.Context, tenantID uuid.UUID, f Filter)
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (s *Service) NITA(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (s *Service) singleStatutory(ctx context.Context, tenantID uuid.UUID, f Fil
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
@@ -230,16 +230,18 @@ func (s *Service) singleStatutory(ctx context.Context, tenantID uuid.UUID, f Fil
 	return rep, nil
 }
 
-// primaryBankMap returns the primary bank account per employee (for the bank schedule).
-func (s *Service) primaryBankMap(ctx context.Context, tenantID uuid.UUID) (map[uuid.UUID]*ent.EmployeeBankAccount, error) {
-	rows, err := s.orm.EmployeeBankAccount.Query().
-		Where(employeebankaccount.TenantID(tenantID), employeebankaccount.IsPrimary(true)).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	m := make(map[uuid.UUID]*ent.EmployeeBankAccount, len(rows))
-	for _, b := range rows {
-		m[b.EmployeeID] = b
+// primaryBankMap returns the primary bank account of each employee on the payslips.
+func (s *Service) primaryBankMap(ctx context.Context, tenantID uuid.UUID, slips []*ent.Payslip) (map[uuid.UUID]*ent.EmployeeBankAccount, error) {
+	m := map[uuid.UUID]*ent.EmployeeBankAccount{}
+	for _, chunk := range idChunks(slipEmployeeIDs(slips)) {
+		rows, err := s.orm.EmployeeBankAccount.Query().
+			Where(employeebankaccount.TenantID(tenantID), employeebankaccount.IsPrimary(true), employeebankaccount.EmployeeIDIn(chunk...)).All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range rows {
+			m[r.EmployeeID] = r
+		}
 	}
 	return m, nil
 }

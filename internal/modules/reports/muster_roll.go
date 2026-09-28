@@ -61,7 +61,7 @@ func (s *Service) MusterRoll(ctx context.Context, tenantID uuid.UUID, f Filter) 
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}

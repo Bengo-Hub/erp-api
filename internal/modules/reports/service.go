@@ -66,15 +66,48 @@ func (s *Service) fetchPayslips(ctx context.Context, tenantID uuid.UUID, f Filte
 	return q.Order(ent.Asc(payslip.FieldEmployeeID)).All(ctx)
 }
 
-// employeeMap returns a tenant-scoped employee lookup keyed by id (for names/PIN on reports).
-func (s *Service) employeeMap(ctx context.Context, tenantID uuid.UUID) (map[uuid.UUID]*ent.Employee, error) {
-	rows, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID)).All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("reports: load employees: %w", err)
+// slipEmployeeIDs is the distinct employees on the given payslip sets.
+func slipEmployeeIDs(sets ...[]*ent.Payslip) []uuid.UUID {
+	seen := map[uuid.UUID]bool{}
+	var ids []uuid.UUID
+	for _, set := range sets {
+		for _, p := range set {
+			if !seen[p.EmployeeID] {
+				seen[p.EmployeeID] = true
+				ids = append(ids, p.EmployeeID)
+			}
+		}
 	}
-	m := make(map[uuid.UUID]*ent.Employee, len(rows))
-	for _, e := range rows {
-		m[e.ID] = e
+	return ids
+}
+
+// idChunks splits ids for IN queries so a large payroll never builds one huge parameter list.
+func idChunks(ids []uuid.UUID) [][]uuid.UUID {
+	const size = 1000
+	var out [][]uuid.UUID
+	for len(ids) > size {
+		out = append(out, ids[:size])
+		ids = ids[size:]
+	}
+	if len(ids) > 0 {
+		out = append(out, ids)
+	}
+	return out
+}
+
+// employeeMap returns the employees on the given payslips keyed by id (names and PINs for the
+// report). Only those employees are loaded, not every employee the tenant ever had, so a
+// report's cost follows its own period's payroll, not the tenant's history.
+func (s *Service) employeeMap(ctx context.Context, tenantID uuid.UUID, slips ...[]*ent.Payslip) (map[uuid.UUID]*ent.Employee, error) {
+	m := map[uuid.UUID]*ent.Employee{}
+	for _, chunk := range idChunks(slipEmployeeIDs(slips...)) {
+		rows, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.IDIn(chunk...)).All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("reports: load employees: %w", err)
+		}
+		for _, e := range rows {
+			m[e.ID] = e
+		}
 	}
 	return m, nil
 }
