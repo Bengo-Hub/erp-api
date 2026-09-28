@@ -116,10 +116,15 @@ func ruleInForce(start, end *time.Time, period time.Time) bool {
 	return true
 }
 
-// buildCostAllocations loads, in three batched queries, the allocations in force, each
-// employee's department and each department's cost center, and returns the run's gross pay
-// attributed by (project, cost center).
+// buildCostAllocations is costAllocations on the disburser's client (the payroll event).
 func (d *Disburser) buildCostAllocations(ctx context.Context, tenantID uuid.UUID, period time.Time, slips []*ent.Payslip) ([]costShare, error) {
+	return costAllocations(ctx, d.orm, tenantID, period, slips)
+}
+
+// costAllocations loads, in three batched queries, the allocations in force, each employee's
+// department and each department's cost center, and returns the run's gross pay attributed by
+// (project, cost center). The payroll event and the labour cost report both use it.
+func costAllocations(ctx context.Context, orm *ent.Client, tenantID uuid.UUID, period time.Time, slips []*ent.Payslip) ([]costShare, error) {
 	if len(slips) == 0 {
 		return nil, nil
 	}
@@ -127,7 +132,7 @@ func (d *Disburser) buildCostAllocations(ctx context.Context, tenantID uuid.UUID
 	for _, s := range slips {
 		empIDs = append(empIDs, s.EmployeeID)
 	}
-	allocs, err := d.orm.EmployeeProjectAllocation.Query().
+	allocs, err := orm.EmployeeProjectAllocation.Query().
 		Where(
 			employeeprojectallocation.TenantID(tenantID),
 			employeeprojectallocation.EmployeeIDIn(empIDs...),
@@ -149,7 +154,7 @@ func (d *Disburser) buildCostAllocations(ctx context.Context, tenantID uuid.UUID
 		rulesByEmp[a.EmployeeID] = append(rulesByEmp[a.EmployeeID], r)
 	}
 
-	hr, err := d.orm.HRDetails.Query().
+	hr, err := orm.HRDetails.Query().
 		Where(hrdetails.EmployeeIDIn(empIDs...), hrdetails.DepartmentIDNotNil()).
 		Select(hrdetails.FieldEmployeeID, hrdetails.FieldDepartmentID).
 		All(ctx)
@@ -166,7 +171,7 @@ func (d *Disburser) buildCostAllocations(ctx context.Context, tenantID uuid.UUID
 	}
 	ccByDept := map[uuid.UUID]*uuid.UUID{}
 	if len(deptIDs) > 0 {
-		depts, err := d.orm.Department.Query().
+		depts, err := orm.Department.Query().
 			Where(department.IDIn(deptIDs...), department.CostCenterIDNotNil()).
 			All(ctx)
 		if err != nil {

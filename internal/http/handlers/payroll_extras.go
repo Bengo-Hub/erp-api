@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -90,6 +91,51 @@ func (h *PayrollHandler) setLossDamageApproval(w http.ResponseWriter, r *http.Re
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, l.EmployeeID)
 	writeJSON(w, http.StatusOK, lossDamageView(l, name))
+}
+
+// LabourCost returns a payroll month's gross pay split by project (?month=YYYY-MM, default this
+// month), with project names from projects-api when reachable.
+func (h *PayrollHandler) LabourCost(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollView) {
+		return
+	}
+	month := time.Now().UTC()
+	if v := r.URL.Query().Get("month"); v != "" {
+		m, err := time.Parse("2006-01", v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", "month must be YYYY-MM")
+			return
+		}
+		month = m
+	}
+	rep, err := h.svc.ProjectLabourCost(r.Context(), scope.TenantID, month)
+	if err != nil {
+		h.log.Error("labour cost failed", zapErr(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to build labour cost")
+		return
+	}
+	names := map[string]string{}
+	if h.lookups != nil && h.lookups.ProjectsEnabled() && len(rep.Projects) > 0 {
+		if opts, err := h.lookups.Projects(r.Context(), scope.TenantID, bearerToken(r)); err == nil {
+			for _, o := range opts {
+				names[o.Value] = o.Label
+			}
+		}
+	}
+	rows := make([]map[string]any, 0, len(rep.Projects))
+	for _, p := range rep.Projects {
+		row := map[string]any{"amount": p.Amount.StringFixed(2), "share_pct": p.SharePct, "project_id": nil, "project_name": "Not allocated to a project"}
+		if p.ProjectID != nil {
+			id := p.ProjectID.String()
+			row["project_id"], row["project_name"] = id, names[id]
+			if names[id] == "" {
+				row["project_name"] = id
+			}
+		}
+		rows = append(rows, row)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"month": rep.Month, "total_gross": rep.TotalGross.StringFixed(2), "projects": rows})
 }
 
 // ---- Cost-allocation lookups (projects + cost-centers) ----

@@ -2,19 +2,12 @@ package payroll
 
 import (
 	"context"
-	"database/sql"
 	"errors"
-	"os"
-	"strings"
 	"testing"
 
-	"entgo.io/ent/dialect"
-	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/shopspring/decimal"
 
-	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 )
 
@@ -30,35 +23,9 @@ func (f *fakeBudget) CheckClaimBudget(_ context.Context, _ uuid.UUID, in treasur
 	return treasury.BudgetResult{Action: f.action}
 }
 
-// Runs against Postgres when ERP_TEST_DATABASE_URL is set (a throwaway schema per run).
 func TestIntegration_ApproveClaimBudgetCheck(t *testing.T) {
-	url := os.Getenv("ERP_TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("ERP_TEST_DATABASE_URL not set")
-	}
-	admin, err := sql.Open("pgx", url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	schema := "erp_claim_" + strings.ReplaceAll(uuid.NewString()[:8], "-", "")
-	if _, err := admin.Exec("CREATE SCHEMA " + schema); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _, _ = admin.Exec("DROP SCHEMA " + schema + " CASCADE"); _ = admin.Close() })
-	sep := "?"
-	if strings.Contains(url, "?") {
-		sep = "&"
-	}
-	db, err := sql.Open("pgx", url+sep+"search_path="+schema)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, db)))
-	t.Cleanup(func() { _ = client.Close() })
+	client := testClient(t)
 	ctx := context.Background()
-	if err := client.Schema.Create(ctx); err != nil {
-		t.Fatalf("schema: %v", err)
-	}
 	tenant := uuid.New()
 	emp := client.Employee.Create().SetTenantID(tenant).SetFirstName("E").SaveX(ctx)
 	proj := uuid.New()
