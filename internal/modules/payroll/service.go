@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
@@ -34,6 +35,7 @@ type Service struct {
 	orm       *ent.Client
 	settings  *payrollsettings.Service
 	publisher *events.Publisher
+	log       *zap.Logger
 }
 
 func NewService(orm *ent.Client, settings *payrollsettings.Service) *Service {

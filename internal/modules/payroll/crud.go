@@ -393,7 +393,12 @@ func (s *Service) CreateClaim(ctx context.Context, tenantID uuid.UUID, in ClaimI
 	if in.ApplicationDate != nil {
 		b = b.SetApplicationDate(*in.ApplicationDate)
 	}
-	return b.Save(ctx)
+	c, err := b.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s.publishClaimBestEffort(ctx, tenantID, c.ID, "expense_claim.created", claimPayload(c))
+	return c, nil
 }
 
 func (s *Service) UpdateClaim(ctx context.Context, tenantID, id uuid.UUID, in ClaimInput) (*ent.ExpenseClaim, error) {
@@ -423,7 +428,14 @@ func (s *Service) UpdateClaim(ctx context.Context, tenantID, id uuid.UUID, in Cl
 	if in.ApplicationDate != nil {
 		u = u.SetApplicationDate(*in.ApplicationDate)
 	}
-	return u.Save(ctx)
+	c, err := u.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !c.Approved { // an approved claim is already booked; only pending ones are commitments
+		s.publishClaimBestEffort(ctx, tenantID, c.ID, "expense_claim.updated", claimPayload(c))
+	}
+	return c, nil
 }
 
 // ApproveClaim approves an expense claim and emits erp.expense_claim.approved so treasury posts
@@ -447,27 +459,9 @@ func (s *Service) ApproveClaim(ctx context.Context, tenantID, id, approverID uui
 		return nil, fmt.Errorf("payroll: approve claim: %w", err)
 	}
 	if s.publisher != nil {
-		projectID := ""
-		if updated.ProjectID != nil {
-			projectID = updated.ProjectID.String()
-		}
-		// Inner payload MUST match treasury claimApprovedPayload exactly. taxable=true makes
-		// treasury skip AP (the taxable portion is taxed via the payslip lane instead).
-		payload := map[string]any{
-			"claim_id":    updated.ID.String(),
-			"tenant_id":   tenantID.String(),
-			"employee_id": updated.EmployeeID.String(),
-			"amount":      updated.Amount.StringFixed(2),
-			"currency":    "KES",
-			"claim_type":  updated.ClaimType,
-			"taxable":     updated.Taxable,
-			"category":    updated.Category,
-			"project_id":  projectID,
-		}
-		if updated.CostCenterID != nil {
-			payload["cost_center_id"] = updated.CostCenterID.String()
-		}
-		if err := s.publisher.Publish(ctx, tenantID, updated.ID, "expense_claim.approved", payload); err != nil {
+		// The payload MUST match treasury claimApprovedPayload. taxable=true makes treasury skip
+		// AP (the taxable portion is taxed via the payslip lane instead).
+		if err := s.publisher.Publish(ctx, tenantID, updated.ID, "expense_claim.approved", claimPayload(updated)); err != nil {
 			// Approval persisted; event failure is logged by the caller. Surface so caller can retry.
 			return updated, fmt.Errorf("payroll: publish expense_claim.approved: %w", err)
 		}
@@ -485,5 +479,6 @@ func (s *Service) DeleteClaim(ctx context.Context, tenantID, id uuid.UUID) error
 	if n == 0 {
 		return fmt.Errorf("payroll: claim not found")
 	}
+	s.publishClaimBestEffort(ctx, tenantID, id, "expense_claim.deleted", map[string]any{"claim_id": id.String(), "tenant_id": tenantID.String()})
 	return nil
 }
