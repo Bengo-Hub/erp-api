@@ -83,7 +83,7 @@ func (s *Service) P9(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
@@ -173,14 +173,18 @@ func (s *Service) P9A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
 	// Actual monthly scheme contribution (E2) per employee, from salary_details.
 	salPension := map[uuid.UUID]decimal.Decimal{}
-	if sals, serr := s.orm.SalaryDetails.Query().
-		Where(salarydetails.TenantID(tenantID), salarydetails.IsActive(true)).All(ctx); serr == nil {
+	for _, chunk := range idChunks(slipEmployeeIDs(slips)) {
+		sals, serr := s.orm.SalaryDetails.Query().
+			Where(salarydetails.TenantID(tenantID), salarydetails.IsActive(true), salarydetails.EmployeeIDIn(chunk...)).All(ctx)
+		if serr != nil {
+			break
+		}
 		for _, sd := range sals {
 			salPension[sd.EmployeeID] = sd.PensionContribution
 		}
@@ -280,7 +284,7 @@ func (s *Service) P10A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +338,7 @@ func (s *Service) P10(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +407,7 @@ func (s *Service) Statutory(ctx context.Context, tenantID uuid.UUID, f Filter) (
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
@@ -443,11 +447,11 @@ func (s *Service) BankSchedule(ctx context.Context, tenantID uuid.UUID, f Filter
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
-	banks, err := s.primaryBankMap(ctx, tenantID)
+	banks, err := s.primaryBankMap(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
@@ -485,7 +489,7 @@ func (s *Service) PayrollVariance(ctx context.Context, tenantID uuid.UUID, f Fil
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID)
+	emps, err := s.employeeMap(ctx, tenantID, cur, prev)
 	if err != nil {
 		return nil, err
 	}
