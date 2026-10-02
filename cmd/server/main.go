@@ -31,6 +31,7 @@ import (
 	httpware "github.com/Bengo-Hub/httpware"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	eventslib "github.com/Bengo-Hub/shared-events"
+	sharedratelimit "github.com/Bengo-Hub/shared-ratelimit"
 
 	"github.com/Bengo-Hub/erp-api/internal/config"
 	"github.com/Bengo-Hub/erp-api/internal/ent"
@@ -124,22 +125,18 @@ func run() error {
 	orm := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, sqlDB)))
 	defer func() { _ = orm.Close() }()
 
-	// Auto-migrate only in dev when explicitly enabled; prod uses cmd/migrate (Atlas).
-	if cfg.Postgres.RunMigrations {
-		if err := orm.Schema.Create(ctx); err != nil {
-			return fmt.Errorf("ent schema create: %w", err)
-		}
-		log.Info("ent schema auto-migrated (POSTGRES_RUN_MIGRATIONS=true)")
-	}
+	// Schema changes only through cmd/migrate (direct connection, advisory lock). An unlocked
+	// in-process auto-migrate on every replica start was removed.
 
 	// --- Redis cache + shared cache-aside helper (read-through for branding etc.) ---
 	redisClient := cache.NewClient(cfg.Redis)
 	defer func() { _ = redisClient.Close() }()
 	cacheAside := sharedcache.New(redisClient, log)
+	// Lease client for the once-per-period job guards (fx, leave accrual).
+	sharedcache.SetLeaseClient(redisClient)
 
-	// Distributed rate limiter (Redis sliding-window). Ported from ordering-backend — the
-	// best-in-class model in the monorepo: smooth (no fixed-window cliff), multi-tenant/per-
-	// endpoint granularity, works across replicas, fails open on a Redis outage.
+	// Distributed rate limiter (shared GCRA, exact across replicas, per-pod fallback bucket when
+	// Redis is down).
 	rateLimiter := mw.NewRateLimiter(redisClient, cfg.RateLimit, log)
 	if cfg.RateLimit.Enabled {
 		log.Info("rate limiting enabled",
@@ -155,6 +152,11 @@ func run() error {
 		if err := events.EnsureStream(ctx, natsConn, cfg.Events); err != nil {
 			log.Warn("ensure erp stream failed", zap.Error(err))
 		}
+		// A revoked or rotated API key stops working on every replica at once, not after the
+		// validator cache TTL.
+		_ = eventslib.NewBroadcaster(log, natsConn, "auth").Subscribe("apikey.changed", func(m eventslib.BroadcastMessage) {
+			authclient.InvalidateAPIKeyHash(string(m.Data))
+		})
 	}
 
 	if natsConn != nil && cfg.Events.OutboxEnabled {
@@ -208,12 +210,12 @@ func run() error {
 		WithMirrorer(backupDestUploader)
 	backupsHandler := handlers.NewBackupsHandler(log, backupSvc, cfg.Backup.RetentionDays)
 	// Daily tenant-scoped auto-backup (02:00) + retention churn (file + DB row). Multi-replica
-	// safe via a Postgres advisory lock so only one replica runs it.
+	// safe via a Redis once-per-hour lease so only one replica runs each tick.
 	backup.NewScheduler(backupSvc, backup.SchedulerConfig{
 		Enabled:       cfg.Backup.ScheduleEnabled,
 		Hour:          cfg.Backup.ScheduleHour,
 		RetentionDays: cfg.Backup.RetentionDays,
-	}, log).Start(ctx)
+	}, log).WithRedis(redisClient).Start(ctx)
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
 	// Branding read-through: auth-api SoT, Redis-cached (plan §0a-map).
 	brandingClient := platformauth.NewBrandingClient(cfg.Auth.ServiceURL, cacheAside, log)
@@ -307,7 +309,8 @@ func run() error {
 	// --- Router (shared httpware middleware: request-id, structured logging,
 	// panic recovery, CORS — replaces the hand-rolled chi/CORS stack). ---
 	r := chi.NewRouter()
-	r.Use(chimw.RealIP)
+	// Not chi RealIP: it trusts a client-supplied True-Client-IP / X-Forwarded-For.
+	r.Use(sharedratelimit.TrustedRealIP)
 	// Tolerate DRF-style trailing slashes (erp-ui calls /api/v1/hrm/employees/) — chi routes are
 	// registered without trailing slashes, so strip before matching to avoid 404s.
 	r.Use(chimw.StripSlashes)

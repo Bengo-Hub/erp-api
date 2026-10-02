@@ -2,6 +2,7 @@ package leave
 
 import (
 	"context"
+	sharedcache "github.com/Bengo-Hub/cache"
 	"time"
 
 	"go.uber.org/zap"
@@ -50,6 +51,10 @@ func (c *AccrualCron) Start(ctx context.Context) {
 }
 
 func (c *AccrualCron) runOnce(ctx context.Context) {
+	// Runs on every replica's ticker; only the first replica in each period does the work.
+	if !sharedcache.ClaimPeriod(ctx, "erp:leave-accrual", c.interval) {
+		return
+	}
 	year := time.Now().UTC().Year()
 	n, err := c.svc.AccrueAllTenants(ctx, year)
 	if err != nil {

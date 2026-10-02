@@ -24,6 +24,9 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/migrate"
 )
 
+// migrationLockKey serialises concurrent migration runs (any constant unique to this service).
+const migrationLockKey int64 = 0x6572705f6d696772 // "erp_migr"
+
 func main() {
 	_ = godotenv.Load()
 
@@ -48,13 +51,28 @@ func main() {
 	}
 
 	ctx := context.Background()
+	// One connection, so the advisory lock and every migration statement share one session; the
+	// lock makes concurrent runs (two replicas' init containers) apply migrations one at a time.
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	if _, err := sqlDB.ExecContext(ctx, "SELECT pg_advisory_lock($1)", migrationLockKey); err != nil {
+		log.Fatalf("acquire migration lock: %v", err)
+	}
+	unlock := func() {
+		if _, err := sqlDB.ExecContext(context.Background(), "SELECT pg_advisory_unlock($1)", migrationLockKey); err != nil {
+			log.Printf("release migration lock: %v", err)
+		}
+	}
+
 	drv := entsql.OpenDB(dialect.Postgres, sqlDB)
 	client := ent.NewClient(ent.Driver(drv))
 	defer func() { _ = client.Close() }()
 
 	if err := client.Schema.Create(ctx, schema.WithDir(migrate.Dir)); err != nil {
+		unlock()
 		log.Fatalf("apply migrations: %v", err)
 	}
+	unlock()
 
 	fmt.Println("erp-api migrations applied successfully")
 }

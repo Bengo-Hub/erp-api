@@ -16,13 +16,13 @@ const namespace = ""
 // Config aggregates runtime configuration for the erp service.
 // Mirrors the Django env vars documented in docs/architecture.md §5.
 type Config struct {
-	App      AppConfig
-	HTTP     HTTPConfig
-	Postgres PostgresConfig
-	Redis    RedisConfig
-	Events   EventsConfig
-	Auth     AuthConfig
-	Services ServicesConfig
+	App       AppConfig
+	HTTP      HTTPConfig
+	Postgres  PostgresConfig
+	Redis     RedisConfig
+	Events    EventsConfig
+	Auth      AuthConfig
+	Services  ServicesConfig
 	Media     MediaConfig
 	Backup    BackupConfig
 	RateLimit mw.RateLimitConfig
@@ -70,9 +70,6 @@ type PostgresConfig struct {
 	ConnMaxLifetime          time.Duration `envconfig:"POSTGRES_CONN_MAX_LIFETIME" default:"5m"`
 	StatementTimeout         time.Duration `envconfig:"POSTGRES_STATEMENT_TIMEOUT" default:"30s"`
 	IdleInTransactionTimeout time.Duration `envconfig:"POSTGRES_IDLE_IN_TRANSACTION_TIMEOUT" default:"60s"`
-	// RunMigrations applies versioned migrations on boot. Keep false in prod; the entrypoint
-	// runs cmd/migrate before the server starts.
-	RunMigrations bool `envconfig:"POSTGRES_RUN_MIGRATIONS" default:"false"`
 	// Schema is the Postgres schema the Go ERP lives in. It is "erp" (NOT public) so the new
 	// Ent tables are isolated from the legacy Django tables that still occupy the public schema
 	// of the SAME bengo_erp database during/after cutover (16 table names collide). See

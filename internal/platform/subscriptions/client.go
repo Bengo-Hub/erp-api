@@ -7,8 +7,8 @@ package subscriptions
 import (
 	"context"
 	"fmt"
+	sharedcache "github.com/Bengo-Hub/cache"
 	"strings"
-	"sync"
 	"time"
 
 	serviceclient "github.com/Bengo-Hub/shared-service-client"
@@ -38,11 +38,6 @@ type Entitlements struct {
 	Exempt           bool           `json:"exempt"`
 }
 
-type cacheEntry struct {
-	ent *Entitlements
-	at  time.Time
-}
-
 // Client fetches + caches tenant entitlements over S2S, built on shared-service-client (circuit
 // breaker + bounded retry) instead of a bare http.Client.
 type Client struct {
@@ -50,8 +45,8 @@ type Client struct {
 	apiKey  string
 	sc      *serviceclient.Client
 	log     *zap.Logger
-	mu      sync.Mutex
-	cache   map[uuid.UUID]cacheEntry
+	// cache is a bounded LRU with the entitlement TTL (the old map never dropped expired tenants).
+	cache *sharedcache.Local[uuid.UUID, *Entitlements]
 }
 
 // NewClient builds a subscriptions gate client. A blank baseURL/apiKey disables it (HasFeature
@@ -71,7 +66,7 @@ func NewClient(baseURL, apiKey string, log *zap.Logger) *Client {
 		apiKey:  apiKey,
 		sc:      serviceclient.New(scCfg),
 		log:     log.Named("subscriptions.gate"),
-		cache:   map[uuid.UUID]cacheEntry{},
+		cache:   sharedcache.NewLocal[uuid.UUID, *Entitlements](4096, entitlementCacheTTL),
 	}
 }
 
@@ -101,12 +96,9 @@ func (c *Client) HasFeature(ctx context.Context, tenantID uuid.UUID, code string
 }
 
 func (c *Client) getEntitlements(ctx context.Context, tenantID uuid.UUID) (*Entitlements, error) {
-	c.mu.Lock()
-	if e, ok := c.cache[tenantID]; ok && time.Since(e.at) < entitlementCacheTTL {
-		c.mu.Unlock()
-		return e.ent, nil
+	if e, ok := c.cache.Get(tenantID); ok {
+		return e, nil
 	}
-	c.mu.Unlock()
 
 	headers := map[string]string{"X-API-Key": c.apiKey, "X-Tenant-ID": tenantID.String()}
 	resp, err := c.sc.Get(ctx, fmt.Sprintf("/api/v1/tenants/%s/subscription", tenantID.String()), headers)
@@ -121,8 +113,6 @@ func (c *Client) getEntitlements(ctx context.Context, tenantID uuid.UUID) (*Enti
 	if err := resp.DecodeJSON(&ent); err != nil {
 		return nil, err
 	}
-	c.mu.Lock()
-	c.cache[tenantID] = cacheEntry{ent: &ent, at: time.Now()}
-	c.mu.Unlock()
+	c.cache.Set(tenantID, &ent)
 	return &ent, nil
 }

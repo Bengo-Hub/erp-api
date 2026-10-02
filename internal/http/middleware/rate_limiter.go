@@ -3,7 +3,6 @@ package middleware
 import (
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	authclient "github.com/Bengo-Hub/shared-auth-client"
@@ -48,10 +47,8 @@ func (c RateLimitConfig) WithBurst(limit int) int {
 	return scaled
 }
 
-// RateLimiter wraps github.com/Bengo-Hub/shared-ratelimit's Limiter — the same Redis
-// sliding-window primitive (ZREMRANGEBYSCORE + ZCARD + ZADD, fail-open on any Redis error)
-// treasury-api uses, extracted from what used to be erp's own hand-rolled copy of the same
-// algorithm (ported from ordering-backend's security.RateLimiter) — with erp's
+// RateLimiter wraps github.com/Bengo-Hub/shared-ratelimit's Limiter (GCRA in one atomic Redis
+// call, exact across replicas, per-pod fallback bucket when Redis is down) with erp's
 // tenant/IP/endpoint key strategies and its RATE_LIMIT_ENABLED killswitch layered on top.
 type RateLimiter struct {
 	limiter *sharedratelimit.Limiter
@@ -85,9 +82,10 @@ func (rl *RateLimiter) Middleware(keyFunc func(r *http.Request) string, limit in
 	}
 }
 
-// TenantRateLimiter rate-limits per tenant — the fair multi-tenant default so one busy tenant
-// cannot starve others. It reads the tenant from the validated JWT claims (set by RequireAuth),
-// falling back to the X-Tenant-ID header and finally the caller IP for unauthenticated paths.
+// TenantRateLimiter rate-limits per tenant, the fair multi-tenant default so one busy tenant
+// cannot starve others. The tenant comes only from validated JWT claims (set by RequireAuth);
+// otherwise the caller IP. The X-Tenant-ID header is never used: any caller could set it and
+// spend another tenant's budget.
 func (rl *RateLimiter) TenantRateLimiter(limit int, window time.Duration) func(http.Handler) http.Handler {
 	return rl.Middleware(func(r *http.Request) string {
 		if claims, ok := authclient.ClaimsFromContext(r.Context()); ok && claims != nil {
@@ -95,17 +93,14 @@ func (rl *RateLimiter) TenantRateLimiter(limit int, window time.Duration) func(h
 				return "tenant:" + t.String()
 			}
 		}
-		if t := r.Header.Get("X-Tenant-ID"); t != "" {
-			return "tenant:" + t
-		}
-		return "ip:" + getRealIP(r)
+		return "ip:" + sharedratelimit.ClientIP(r)
 	}, limit, window)
 }
 
 // IPRateLimiter rate-limits per client IP.
 func (rl *RateLimiter) IPRateLimiter(limit int, window time.Duration) func(http.Handler) http.Handler {
 	return rl.Middleware(func(r *http.Request) string {
-		return "ip:" + getRealIP(r)
+		return "ip:" + sharedratelimit.ClientIP(r)
 	}, limit, window)
 }
 
@@ -113,24 +108,6 @@ func (rl *RateLimiter) IPRateLimiter(limit int, window time.Duration) func(http.
 // payroll process/disburse and bulk import beyond the per-tenant budget.
 func (rl *RateLimiter) EndpointRateLimiter(endpoint string, limit int, window time.Duration) func(http.Handler) http.Handler {
 	return rl.Middleware(func(r *http.Request) string {
-		return fmt.Sprintf("endpoint:%s:ip:%s", endpoint, getRealIP(r))
+		return fmt.Sprintf("endpoint:%s:ip:%s", endpoint, sharedratelimit.ClientIP(r))
 	}, limit, window)
-}
-
-// getRealIP extracts the client IP, honoring the proxy headers set by the ingress.
-func getRealIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			return strings.TrimSpace(xff[:i])
-		}
-		return strings.TrimSpace(xff)
-	}
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-	ip := r.RemoteAddr
-	if i := strings.LastIndexByte(ip, ':'); i >= 0 {
-		return ip[:i]
-	}
-	return ip
 }
