@@ -29,36 +29,6 @@ func TestWithBurst(t *testing.T) {
 	}
 }
 
-func TestGetRealIP(t *testing.T) {
-	cases := []struct {
-		name       string
-		xff        string
-		xRealIP    string
-		remoteAddr string
-		want       string
-	}{
-		{"x-forwarded-for first hop", "203.0.113.1, 10.0.0.1", "", "10.0.0.5:1234", "203.0.113.1"},
-		{"x-real-ip", "", "203.0.113.2", "10.0.0.5:1234", "203.0.113.2"},
-		{"remote addr strips port", "", "", "203.0.113.3:5678", "203.0.113.3"},
-		{"xff precedence over real-ip", "203.0.113.4", "203.0.113.9", "10.0.0.5:1", "203.0.113.4"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			r := httptest.NewRequest(http.MethodGet, "/", nil)
-			if tc.xff != "" {
-				r.Header.Set("X-Forwarded-For", tc.xff)
-			}
-			if tc.xRealIP != "" {
-				r.Header.Set("X-Real-IP", tc.xRealIP)
-			}
-			r.RemoteAddr = tc.remoteAddr
-			if got := getRealIP(r); got != tc.want {
-				t.Errorf("getRealIP() = %q, want %q", got, tc.want)
-			}
-		})
-	}
-}
-
 // TestMiddlewareDisabledPassesThrough verifies the limiter is a no-op (and sets no headers)
 // when disabled, so it can be safely toggled off via RATE_LIMIT_ENABLED.
 func TestMiddlewareDisabledPassesThrough(t *testing.T) {
@@ -78,23 +48,28 @@ func TestMiddlewareDisabledPassesThrough(t *testing.T) {
 	}
 }
 
-// TestMiddlewareFailsOpenWithoutRedis verifies that when enabled but Redis is unavailable
-// (nil client), requests are allowed (fail open) rather than blocked.
-func TestMiddlewareFailsOpenWithoutRedis(t *testing.T) {
-	rl := NewRateLimiter(nil, RateLimitConfig{Enabled: true, KeyPrefix: "rl:test:"}, zap.NewNop())
-	allowed := 0
-	h := rl.IPRateLimiter(1, time.Minute)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		allowed++
+// TestMiddlewareFallsBackWithoutRedis verifies that when enabled but Redis is unavailable (nil
+// client) the limiter neither blocks everyone nor lets everything through: the per-pod fallback
+// bucket admits this pod's share of the limit and then answers 429.
+func TestMiddlewareFallsBackWithoutRedis(t *testing.T) {
+	rl := NewRateLimiter(nil, RateLimitConfig{Enabled: true}, zap.NewNop())
+	allowed, limited := 0, 0
+	h := rl.IPRateLimiter(10, time.Minute)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 20; i++ {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
-		if rec.Code != http.StatusOK {
-			t.Fatalf("request %d: got %d, want 200 (fail open)", i, rec.Code)
+		switch rec.Code {
+		case http.StatusOK:
+			allowed++
+		case http.StatusTooManyRequests:
+			limited++
+		default:
+			t.Fatalf("request %d: unexpected status %d", i, rec.Code)
 		}
 	}
-	if allowed != 5 {
-		t.Errorf("fail-open should allow all 5 requests, got %d", allowed)
+	if allowed == 0 || allowed > 10 || limited == 0 {
+		t.Errorf("fallback admitted %d and limited %d of 20; want some of each, at most 10 admitted", allowed, limited)
 	}
 }

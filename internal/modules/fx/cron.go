@@ -2,6 +2,7 @@ package fx
 
 import (
 	"context"
+	sharedcache "github.com/Bengo-Hub/cache"
 	"time"
 
 	"go.uber.org/zap"
@@ -45,6 +46,10 @@ func (c *Cron) Start(ctx context.Context) {
 }
 
 func (c *Cron) runOnce(ctx context.Context) {
+	// Runs on every replica's ticker; only the first replica in each period does the work.
+	if !sharedcache.ClaimPeriod(ctx, "erp:fx-fetch", c.interval) {
+		return
+	}
 	n, err := c.svc.FetchAllActive(ctx)
 	if err != nil {
 		c.log.Error("fx fetch run failed", zap.Error(err))

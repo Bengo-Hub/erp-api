@@ -19,10 +19,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	sharedcache "github.com/Bengo-Hub/cache"
 	"io"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -43,14 +43,8 @@ type Client struct {
 	httpc       *http.Client
 	log         *zap.Logger
 
-	mu    sync.Mutex
-	cache map[string]cacheEntry
-	ttl   time.Duration
-}
-
-type cacheEntry struct {
-	opts []Option
-	exp  time.Time
+	// cache is a bounded LRU (the old map never dropped expired keys).
+	cache *sharedcache.Local[string, []Option]
 }
 
 // NewClient builds the lookups client. Empty base URLs disable the corresponding lookup
@@ -62,8 +56,7 @@ func NewClient(projectsURL, treasuryURL, apiKey string, log *zap.Logger) *Client
 		apiKey:      apiKey,
 		httpc:       &http.Client{Timeout: 8 * time.Second},
 		log:         log.Named("lookups.client"),
-		cache:       map[string]cacheEntry{},
-		ttl:         60 * time.Second,
+		cache:       sharedcache.NewLocal[string, []Option](2048, 60*time.Second),
 	}
 }
 
@@ -229,18 +222,6 @@ func strVal(v any) string {
 	return fmt.Sprintf("%v", v)
 }
 
-func (c *Client) cached(key string) ([]Option, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	e, ok := c.cache[key]
-	if !ok || time.Now().After(e.exp) {
-		return nil, false
-	}
-	return e.opts, true
-}
+func (c *Client) cached(key string) ([]Option, bool) { return c.cache.Get(key) }
 
-func (c *Client) store(key string, opts []Option) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.cache[key] = cacheEntry{opts: opts, exp: time.Now().Add(c.ttl)}
-}
+func (c *Client) store(key string, opts []Option) { c.cache.Set(key, opts) }
