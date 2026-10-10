@@ -247,6 +247,12 @@ func (_c *ExpenseClaimCreate) SetNillableDeleteStatus(v *bool) *ExpenseClaimCrea
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *ExpenseClaimCreate) SetMetadata(v map[string]interface{}) *ExpenseClaimCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *ExpenseClaimCreate) SetCreatedAt(v time.Time) *ExpenseClaimCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -511,6 +517,10 @@ func (_c *ExpenseClaimCreate) createSpec() (*ExpenseClaim, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.DeleteStatus(); ok {
 		_spec.SetField(expenseclaim.FieldDeleteStatus, field.TypeBool, value)
 		_node.DeleteStatus = value
+	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(expenseclaim.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(expenseclaim.FieldCreatedAt, field.TypeTime, value)
@@ -815,6 +825,24 @@ func (u *ExpenseClaimUpsert) SetDeleteStatus(v bool) *ExpenseClaimUpsert {
 // UpdateDeleteStatus sets the "delete_status" field to the value that was provided on create.
 func (u *ExpenseClaimUpsert) UpdateDeleteStatus() *ExpenseClaimUpsert {
 	u.SetExcluded(expenseclaim.FieldDeleteStatus)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *ExpenseClaimUpsert) SetMetadata(v map[string]interface{}) *ExpenseClaimUpsert {
+	u.Set(expenseclaim.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *ExpenseClaimUpsert) UpdateMetadata() *ExpenseClaimUpsert {
+	u.SetExcluded(expenseclaim.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *ExpenseClaimUpsert) ClearMetadata() *ExpenseClaimUpsert {
+	u.SetNull(expenseclaim.FieldMetadata)
 	return u
 }
 
@@ -1165,6 +1193,27 @@ func (u *ExpenseClaimUpsertOne) SetDeleteStatus(v bool) *ExpenseClaimUpsertOne {
 func (u *ExpenseClaimUpsertOne) UpdateDeleteStatus() *ExpenseClaimUpsertOne {
 	return u.Update(func(s *ExpenseClaimUpsert) {
 		s.UpdateDeleteStatus()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *ExpenseClaimUpsertOne) SetMetadata(v map[string]interface{}) *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *ExpenseClaimUpsertOne) UpdateMetadata() *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *ExpenseClaimUpsertOne) ClearMetadata() *ExpenseClaimUpsertOne {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -1684,6 +1733,27 @@ func (u *ExpenseClaimUpsertBulk) SetDeleteStatus(v bool) *ExpenseClaimUpsertBulk
 func (u *ExpenseClaimUpsertBulk) UpdateDeleteStatus() *ExpenseClaimUpsertBulk {
 	return u.Update(func(s *ExpenseClaimUpsert) {
 		s.UpdateDeleteStatus()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *ExpenseClaimUpsertBulk) SetMetadata(v map[string]interface{}) *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *ExpenseClaimUpsertBulk) UpdateMetadata() *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *ExpenseClaimUpsertBulk) ClearMetadata() *ExpenseClaimUpsertBulk {
+	return u.Update(func(s *ExpenseClaimUpsert) {
+		s.ClearMetadata()
 	})
 }
 

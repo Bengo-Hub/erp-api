@@ -1347,11 +1347,11 @@ func init() {
 	// expenseclaim.DefaultDeleteStatus holds the default value on creation for the delete_status field.
 	expenseclaim.DefaultDeleteStatus = expenseclaimDescDeleteStatus.Default.(bool)
 	// expenseclaimDescCreatedAt is the schema descriptor for created_at field.
-	expenseclaimDescCreatedAt := expenseclaimFields[18].Descriptor()
+	expenseclaimDescCreatedAt := expenseclaimFields[19].Descriptor()
 	// expenseclaim.DefaultCreatedAt holds the default value on creation for the created_at field.
 	expenseclaim.DefaultCreatedAt = expenseclaimDescCreatedAt.Default.(func() time.Time)
 	// expenseclaimDescUpdatedAt is the schema descriptor for updated_at field.
-	expenseclaimDescUpdatedAt := expenseclaimFields[19].Descriptor()
+	expenseclaimDescUpdatedAt := expenseclaimFields[20].Descriptor()
 	// expenseclaim.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	expenseclaim.DefaultUpdatedAt = expenseclaimDescUpdatedAt.Default.(func() time.Time)
 	// expenseclaim.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

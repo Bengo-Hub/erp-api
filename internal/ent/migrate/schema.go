@@ -1591,6 +1591,7 @@ var (
 		{Name: "is_paid", Type: field.TypeBool, Default: false},
 		{Name: "schedule_to_payroll", Type: field.TypeBool, Default: false},
 		{Name: "delete_status", Type: field.TypeBool, Default: false},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
@@ -1609,6 +1610,16 @@ var (
 				Name:    "expenseclaim_employee_id",
 				Unique:  false,
 				Columns: []*schema.Column{ExpenseClaimsColumns[2]},
+			},
+			{
+				Name:    "expenseclaim_metadata",
+				Unique:  false,
+				Columns: []*schema.Column{ExpenseClaimsColumns[18]},
+				Annotation: &entsql.IndexAnnotation{
+					Types: map[string]string{
+						"postgres": "GIN",
+					},
+				},
 			},
 		},
 	}

@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -43,6 +45,9 @@ func (ExpenseClaim) Fields() []ent.Field {
 		field.Bool("is_paid").Default(false),
 		field.Bool("schedule_to_payroll").Default(false),
 		field.Bool("delete_status").Default(false),
+		// metadata carries claim provenance for claims raised by other services, e.g.
+		// {"source":"logistics","source_key":"logistics:task:<id>:per_diem","days":2,...}.
+		field.JSON("metadata", map[string]any{}).Optional(),
 
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
@@ -53,5 +58,8 @@ func (ExpenseClaim) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_id"),
 		index.Fields("employee_id"),
+		// GIN so the source_key containment lookup for external claims stays an index scan.
+		index.Fields("metadata").
+			Annotations(entsql.IndexTypes(map[string]string{dialect.Postgres: "GIN"})),
 	}
 }

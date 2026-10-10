@@ -796,6 +796,16 @@ func DeleteStatusNEQ(v bool) predicate.ExpenseClaim {
 	return predicate.ExpenseClaim(sql.FieldNEQ(FieldDeleteStatus, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.ExpenseClaim {
+	return predicate.ExpenseClaim(sql.FieldNotNull(FieldMetadata))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.ExpenseClaim {
 	return predicate.ExpenseClaim(sql.FieldEQ(FieldCreatedAt, v))

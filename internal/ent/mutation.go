@@ -44719,6 +44719,7 @@ type ExpenseClaimMutation struct {
 	is_paid             *bool
 	schedule_to_payroll *bool
 	delete_status       *bool
+	metadata            *map[string]interface{}
 	created_at          *time.Time
 	updated_at          *time.Time
 	clearedFields       map[string]struct{}
@@ -45534,6 +45535,55 @@ func (m *ExpenseClaimMutation) ResetDeleteStatus() {
 	m.delete_status = nil
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *ExpenseClaimMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *ExpenseClaimMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the ExpenseClaim entity.
+// If the ExpenseClaim object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExpenseClaimMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *ExpenseClaimMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[expenseclaim.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *ExpenseClaimMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[expenseclaim.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *ExpenseClaimMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, expenseclaim.FieldMetadata)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *ExpenseClaimMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -45640,7 +45690,7 @@ func (m *ExpenseClaimMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ExpenseClaimMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.tenant_id != nil {
 		fields = append(fields, expenseclaim.FieldTenantID)
 	}
@@ -45692,6 +45742,9 @@ func (m *ExpenseClaimMutation) Fields() []string {
 	if m.delete_status != nil {
 		fields = append(fields, expenseclaim.FieldDeleteStatus)
 	}
+	if m.metadata != nil {
+		fields = append(fields, expenseclaim.FieldMetadata)
+	}
 	if m.created_at != nil {
 		fields = append(fields, expenseclaim.FieldCreatedAt)
 	}
@@ -45740,6 +45793,8 @@ func (m *ExpenseClaimMutation) Field(name string) (ent.Value, bool) {
 		return m.ScheduleToPayroll()
 	case expenseclaim.FieldDeleteStatus:
 		return m.DeleteStatus()
+	case expenseclaim.FieldMetadata:
+		return m.Metadata()
 	case expenseclaim.FieldCreatedAt:
 		return m.CreatedAt()
 	case expenseclaim.FieldUpdatedAt:
@@ -45787,6 +45842,8 @@ func (m *ExpenseClaimMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldScheduleToPayroll(ctx)
 	case expenseclaim.FieldDeleteStatus:
 		return m.OldDeleteStatus(ctx)
+	case expenseclaim.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case expenseclaim.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case expenseclaim.FieldUpdatedAt:
@@ -45919,6 +45976,13 @@ func (m *ExpenseClaimMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDeleteStatus(v)
 		return nil
+	case expenseclaim.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
+		return nil
 	case expenseclaim.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -45984,6 +46048,9 @@ func (m *ExpenseClaimMutation) ClearedFields() []string {
 	if m.FieldCleared(expenseclaim.FieldAttachmentURL) {
 		fields = append(fields, expenseclaim.FieldAttachmentURL)
 	}
+	if m.FieldCleared(expenseclaim.FieldMetadata) {
+		fields = append(fields, expenseclaim.FieldMetadata)
+	}
 	return fields
 }
 
@@ -46018,6 +46085,9 @@ func (m *ExpenseClaimMutation) ClearField(name string) error {
 		return nil
 	case expenseclaim.FieldAttachmentURL:
 		m.ClearAttachmentURL()
+		return nil
+	case expenseclaim.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	}
 	return fmt.Errorf("unknown ExpenseClaim nullable field %s", name)
@@ -46077,6 +46147,9 @@ func (m *ExpenseClaimMutation) ResetField(name string) error {
 		return nil
 	case expenseclaim.FieldDeleteStatus:
 		m.ResetDeleteStatus()
+		return nil
+	case expenseclaim.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case expenseclaim.FieldCreatedAt:
 		m.ResetCreatedAt()
