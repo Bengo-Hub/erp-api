@@ -167,6 +167,27 @@ Public/health endpoints:
 > Revamp note: if other services later need HR data (e.g. employee directory), add a versioned
 > `/api/v1/s2s/{tenant}/...` surface guarded by `INTERNAL_SERVICE_KEY` (httpware API-key auth).
 
+#### External expense claims (added 2026-10-10)
+
+Other services raise employee claims here instead of keeping their own allowance logic. First
+caller: logistics-api, for staff (salaried) riders' per diem.
+
+| Path | Auth | Purpose |
+|---|---|---|
+| `POST /api/v1/hrm/claims/external` | X-API-Key + X-Tenant-ID, or JWT with `hrm.payroll.manage` | Raise a claim for the employee whose auth user id is given. Idempotent on `source_key` (201 created, 200 existing). |
+| `GET /api/v1/hrm/claims/external?source_key=` | same | Status of the claim raised for a key. |
+| `GET\|PUT /api/v1/hrm/payroll/per-diem-policy` | JWT `hrm.payroll.view` / `hrm.payroll.manage` (services may read) | Tenant per diem policy, AppSetting `hrm.per_diem_policy`. |
+
+Body: `auth_user_id`, `source`, `source_key`, `claim_type` (`per_diem` default, `reimbursement`,
+`other`), `days` (0 derives whole days from `started_at`/`ended_at`), `distance_km`, `amount`
+(non per diem only), `description`, `reference` (caller ids). For `per_diem` the amount is
+`days x rate`, where rate is the employee's job group rate (from salary details) or the policy's
+`daily_rate`; `max_days` caps days; trips shorter than `min_distance_km` are refused. The claim
+is an ordinary `expense_claims` row (`claim_type = per_diem`, `metadata.source/source_key/...`)
+that goes through approval, KRA per diem caps, payroll scheduling and reimbursement like any
+other. 422 codes: `not_an_employee`, `per_diem_disabled` (policy off or no rate), `not_eligible`.
+The policy is disabled until HR saves a rate.
+
 ---
 
 ## 3. SSO / OIDC (auth-api as IdP)
@@ -303,6 +324,7 @@ sequenceDiagram
 | OUT | treasury-api | `GET /api/v1/s2s/{tenant}/taxes` |
 | OUT | treasury-api | `GET /api/v1/s2s/{tenant}/taxes/{code}` |
 | OUT | treasury-api | `POST /api/v1/s2s/{tenant}/payouts/disburse` |
+| IN | logistics-api | `POST /api/v1/hrm/claims/external` (staff rider per diem) |
 | IN | (k8s/UI) | `GET /api/v1/core/health/`, `GET /api/v1/integrations/health/`, `GET /api/v1/business/public-branding/`, `GET /api/v1/auth/me/` |
 
 ---

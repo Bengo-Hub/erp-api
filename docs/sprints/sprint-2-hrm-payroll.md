@@ -39,6 +39,11 @@
 ### `modules/payroll` (transactions)
 - `Payslip` (+ audit), `Earnings`, `Deductions`, `Benefits`, `EmployeLoans`, `Advances`,
   `LossesAndDamages`, `ExpenseClaims`(+`ClaimItems`), `CustomReport`.
+- Per diem policy and external claims (2026-10-10, `98ec720`): `hrm.per_diem_policy` (daily rate,
+  job group rates, minimum trip distance, max days, auto approve) and `POST /hrm/claims/external`
+  (idempotent on `source_key`, `expense_claims.metadata` jsonb + GIN). Logistics raises staff
+  riders' per diem through it. Open: erp-ui policy card under payroll settings, and showing the
+  claim source (logistics trip) on the claims list.
 - Payslip generation (port `payroll/views.py` actions + `tasks.py`): batch generate, single rerun,
   casual/consultant voucher; run as background goroutines/NATS jobs (replace Celery).
 
