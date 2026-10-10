@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -53,6 +54,8 @@ type ExpenseClaim struct {
 	ScheduleToPayroll bool `json:"schedule_to_payroll,omitempty"`
 	// DeleteStatus holds the value of the "delete_status" field.
 	DeleteStatus bool `json:"delete_status,omitempty"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -67,6 +70,8 @@ func (*ExpenseClaim) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case expenseclaim.FieldApproverID, expenseclaim.FieldProjectID, expenseclaim.FieldCostCenterID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case expenseclaim.FieldMetadata:
+			values[i] = new([]byte)
 		case expenseclaim.FieldAmount:
 			values[i] = new(decimal.Decimal)
 		case expenseclaim.FieldApproved, expenseclaim.FieldTaxable, expenseclaim.FieldIsActive, expenseclaim.FieldIsPaid, expenseclaim.FieldScheduleToPayroll, expenseclaim.FieldDeleteStatus:
@@ -206,6 +211,14 @@ func (_m *ExpenseClaim) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.DeleteStatus = value.Bool
 			}
+		case expenseclaim.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
+			}
 		case expenseclaim.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -316,6 +329,9 @@ func (_m *ExpenseClaim) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("delete_status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.DeleteStatus))
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

@@ -310,6 +310,18 @@ func (_u *ExpenseClaimUpdate) SetNillableDeleteStatus(v *bool) *ExpenseClaimUpda
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *ExpenseClaimUpdate) SetMetadata(v map[string]interface{}) *ExpenseClaimUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *ExpenseClaimUpdate) ClearMetadata() *ExpenseClaimUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *ExpenseClaimUpdate) SetUpdatedAt(v time.Time) *ExpenseClaimUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -437,6 +449,12 @@ func (_u *ExpenseClaimUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.DeleteStatus(); ok {
 		_spec.SetField(expenseclaim.FieldDeleteStatus, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(expenseclaim.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(expenseclaim.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(expenseclaim.FieldUpdatedAt, field.TypeTime, value)
@@ -741,6 +759,18 @@ func (_u *ExpenseClaimUpdateOne) SetNillableDeleteStatus(v *bool) *ExpenseClaimU
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *ExpenseClaimUpdateOne) SetMetadata(v map[string]interface{}) *ExpenseClaimUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *ExpenseClaimUpdateOne) ClearMetadata() *ExpenseClaimUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *ExpenseClaimUpdateOne) SetUpdatedAt(v time.Time) *ExpenseClaimUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -898,6 +928,12 @@ func (_u *ExpenseClaimUpdateOne) sqlSave(ctx context.Context) (_node *ExpenseCla
 	}
 	if value, ok := _u.mutation.DeleteStatus(); ok {
 		_spec.SetField(expenseclaim.FieldDeleteStatus, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(expenseclaim.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(expenseclaim.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(expenseclaim.FieldUpdatedAt, field.TypeTime, value)

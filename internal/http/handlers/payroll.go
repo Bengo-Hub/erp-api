@@ -51,6 +51,7 @@ func (h *PayrollHandler) WithMedia(m *media.Store) *PayrollHandler { h.media = m
 func (h *PayrollHandler) WithLookups(l *lookups.Client) *PayrollHandler { h.lookups = l; return h }
 
 func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
+	h.registerExternalClaimRoutes(r)
 	r.Route("/hrm/payroll", func(pr chi.Router) {
 		// Runs / payslips collection (erp-ui calls /hrm/payroll/payroll/...).
 		pr.Get("/payroll", h.ListPayslips)

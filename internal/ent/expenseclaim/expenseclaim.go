@@ -49,6 +49,8 @@ const (
 	FieldScheduleToPayroll = "schedule_to_payroll"
 	// FieldDeleteStatus holds the string denoting the delete_status field in the database.
 	FieldDeleteStatus = "delete_status"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -77,6 +79,7 @@ var Columns = []string{
 	FieldIsPaid,
 	FieldScheduleToPayroll,
 	FieldDeleteStatus,
+	FieldMetadata,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
