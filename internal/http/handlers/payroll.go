@@ -990,6 +990,20 @@ func claimView(c *ent.ExpenseClaim, name string) map[string]any {
 	if c.AttachmentURL != nil {
 		v["attachment_url"] = *c.AttachmentURL
 	}
+	// Claims raised by another service (POST /hrm/claims/external) say where they came from and
+	// what the trip was, so HR can see a logistics per diem next to the trip it pays for.
+	if src, _ := c.Metadata["source"].(string); src != "" {
+		v["source"] = src
+		trip := map[string]any{}
+		for _, k := range []string{"days", "daily_rate", "distance_km", "started_at", "ended_at", "reference"} {
+			if val, ok := c.Metadata[k]; ok {
+				trip[k] = val
+			}
+		}
+		if len(trip) > 0 {
+			v["source_details"] = trip
+		}
+	}
 	return v
 }
 

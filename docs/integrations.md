@@ -186,7 +186,9 @@ Body: `auth_user_id`, `source`, `source_key`, `claim_type` (`per_diem` default, 
 is an ordinary `expense_claims` row (`claim_type = per_diem`, `metadata.source/source_key/...`)
 that goes through approval, KRA per diem caps, payroll scheduling and reimbursement like any
 other. 422 codes: `not_an_employee`, `per_diem_disabled` (policy off or no rate), `not_eligible`.
-The policy is disabled until HR saves a rate.
+The policy is disabled until HR saves a rate (erp-ui Settings, Payroll, Per diem). The claims list
+returns `source` and `source_details` (days, daily rate, distance, trip window, caller reference)
+for these claims, so HR sees the trip behind each logistics per diem.
 
 ---
 
