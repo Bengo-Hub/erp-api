@@ -156,6 +156,8 @@ type Tx struct {
 	PayrollFormulaItem *PayrollFormulaItemClient
 	// PayrollRelief is the client for interacting with the PayrollRelief builders.
 	PayrollRelief *PayrollReliefClient
+	// PayrollRunJob is the client for interacting with the PayrollRunJob builders.
+	PayrollRunJob *PayrollRunJobClient
 	// PayrollSplitRatio is the client for interacting with the PayrollSplitRatio builders.
 	PayrollSplitRatio *PayrollSplitRatioClient
 	// Payslip is the client for interacting with the Payslip builders.
@@ -427,6 +429,7 @@ func (tx *Tx) init() {
 	tx.PayrollFormula = NewPayrollFormulaClient(tx.config)
 	tx.PayrollFormulaItem = NewPayrollFormulaItemClient(tx.config)
 	tx.PayrollRelief = NewPayrollReliefClient(tx.config)
+	tx.PayrollRunJob = NewPayrollRunJobClient(tx.config)
 	tx.PayrollSplitRatio = NewPayrollSplitRatioClient(tx.config)
 	tx.Payslip = NewPayslipClient(tx.config)
 	tx.PayslipAudit = NewPayslipAuditClient(tx.config)

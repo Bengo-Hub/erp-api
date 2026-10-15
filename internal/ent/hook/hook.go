@@ -873,6 +873,18 @@ func (f PayrollReliefFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Valu
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PayrollReliefMutation", m)
 }
 
+// The PayrollRunJobFunc type is an adapter to allow the use of ordinary
+// function as PayrollRunJob mutator.
+type PayrollRunJobFunc func(context.Context, *ent.PayrollRunJobMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PayrollRunJobFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PayrollRunJobMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PayrollRunJobMutation", m)
+}
+
 // The PayrollSplitRatioFunc type is an adapter to allow the use of ordinary
 // function as PayrollSplitRatio mutator.
 type PayrollSplitRatioFunc func(context.Context, *ent.PayrollSplitRatioMutation) (ent.Value, error)

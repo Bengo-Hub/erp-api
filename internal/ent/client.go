@@ -88,6 +88,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollrelief"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollrunjob"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
@@ -273,6 +274,8 @@ type Client struct {
 	PayrollFormulaItem *PayrollFormulaItemClient
 	// PayrollRelief is the client for interacting with the PayrollRelief builders.
 	PayrollRelief *PayrollReliefClient
+	// PayrollRunJob is the client for interacting with the PayrollRunJob builders.
+	PayrollRunJob *PayrollRunJobClient
 	// PayrollSplitRatio is the client for interacting with the PayrollSplitRatio builders.
 	PayrollSplitRatio *PayrollSplitRatioClient
 	// Payslip is the client for interacting with the Payslip builders.
@@ -424,6 +427,7 @@ func (c *Client) init() {
 	c.PayrollFormula = NewPayrollFormulaClient(c.config)
 	c.PayrollFormulaItem = NewPayrollFormulaItemClient(c.config)
 	c.PayrollRelief = NewPayrollReliefClient(c.config)
+	c.PayrollRunJob = NewPayrollRunJobClient(c.config)
 	c.PayrollSplitRatio = NewPayrollSplitRatioClient(c.config)
 	c.Payslip = NewPayslipClient(c.config)
 	c.PayslipAudit = NewPayslipAuditClient(c.config)
@@ -622,6 +626,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PayrollFormula:            NewPayrollFormulaClient(cfg),
 		PayrollFormulaItem:        NewPayrollFormulaItemClient(cfg),
 		PayrollRelief:             NewPayrollReliefClient(cfg),
+		PayrollRunJob:             NewPayrollRunJobClient(cfg),
 		PayrollSplitRatio:         NewPayrollSplitRatioClient(cfg),
 		Payslip:                   NewPayslipClient(cfg),
 		PayslipAudit:              NewPayslipAuditClient(cfg),
@@ -747,6 +752,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PayrollFormula:            NewPayrollFormulaClient(cfg),
 		PayrollFormulaItem:        NewPayrollFormulaItemClient(cfg),
 		PayrollRelief:             NewPayrollReliefClient(cfg),
+		PayrollRunJob:             NewPayrollRunJobClient(cfg),
 		PayrollSplitRatio:         NewPayrollSplitRatioClient(cfg),
 		Payslip:                   NewPayslipClient(cfg),
 		PayslipAudit:              NewPayslipAuditClient(cfg),
@@ -827,11 +833,11 @@ func (c *Client) Use(hooks ...Hook) {
 		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
 		c.MetricTarget, c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask,
 		c.OutboxEvent, c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem,
-		c.PayrollRelief, c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
-		c.PerformanceMetric, c.PerformanceReview, c.Permission, c.PublicHoliday,
-		c.RecoveryLine, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
-		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
-		c.ShiftRosterSlot, c.ShiftRotation, c.StaffPurchaseDeduction,
+		c.PayrollRelief, c.PayrollRunJob, c.PayrollSplitRatio, c.Payslip,
+		c.PayslipAudit, c.PayslipLine, c.PerformanceMetric, c.PerformanceReview,
+		c.Permission, c.PublicHoliday, c.RecoveryLine, c.Region, c.RepayOption,
+		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
+		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffPurchaseDeduction,
 		c.StaffShiftOverride, c.Task, c.TaskComment, c.TaskLog, c.Timesheet,
 		c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
 		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
@@ -862,11 +868,11 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
 		c.MetricTarget, c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask,
 		c.OutboxEvent, c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem,
-		c.PayrollRelief, c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
-		c.PerformanceMetric, c.PerformanceReview, c.Permission, c.PublicHoliday,
-		c.RecoveryLine, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
-		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
-		c.ShiftRosterSlot, c.ShiftRotation, c.StaffPurchaseDeduction,
+		c.PayrollRelief, c.PayrollRunJob, c.PayrollSplitRatio, c.Payslip,
+		c.PayslipAudit, c.PayslipLine, c.PerformanceMetric, c.PerformanceReview,
+		c.Permission, c.PublicHoliday, c.RecoveryLine, c.Region, c.RepayOption,
+		c.ReviewMetric, c.Role, c.RolePermission, c.SalaryDetails, c.ShiftAssignment,
+		c.ShiftRoster, c.ShiftRosterSlot, c.ShiftRotation, c.StaffPurchaseDeduction,
 		c.StaffShiftOverride, c.Task, c.TaskComment, c.TaskLog, c.Timesheet,
 		c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
 		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
@@ -1023,6 +1029,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PayrollFormulaItem.mutate(ctx, m)
 	case *PayrollReliefMutation:
 		return c.PayrollRelief.mutate(ctx, m)
+	case *PayrollRunJobMutation:
+		return c.PayrollRunJob.mutate(ctx, m)
 	case *PayrollSplitRatioMutation:
 		return c.PayrollSplitRatio.mutate(ctx, m)
 	case *PayslipMutation:
@@ -10784,6 +10792,139 @@ func (c *PayrollReliefClient) mutate(ctx context.Context, m *PayrollReliefMutati
 	}
 }
 
+// PayrollRunJobClient is a client for the PayrollRunJob schema.
+type PayrollRunJobClient struct {
+	config
+}
+
+// NewPayrollRunJobClient returns a client for the PayrollRunJob from the given config.
+func NewPayrollRunJobClient(c config) *PayrollRunJobClient {
+	return &PayrollRunJobClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `payrollrunjob.Hooks(f(g(h())))`.
+func (c *PayrollRunJobClient) Use(hooks ...Hook) {
+	c.hooks.PayrollRunJob = append(c.hooks.PayrollRunJob, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `payrollrunjob.Intercept(f(g(h())))`.
+func (c *PayrollRunJobClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PayrollRunJob = append(c.inters.PayrollRunJob, interceptors...)
+}
+
+// Create returns a builder for creating a PayrollRunJob entity.
+func (c *PayrollRunJobClient) Create() *PayrollRunJobCreate {
+	mutation := newPayrollRunJobMutation(c.config, OpCreate)
+	return &PayrollRunJobCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PayrollRunJob entities.
+func (c *PayrollRunJobClient) CreateBulk(builders ...*PayrollRunJobCreate) *PayrollRunJobCreateBulk {
+	return &PayrollRunJobCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PayrollRunJobClient) MapCreateBulk(slice any, setFunc func(*PayrollRunJobCreate, int)) *PayrollRunJobCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PayrollRunJobCreateBulk{err: fmt.Errorf("calling to PayrollRunJobClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PayrollRunJobCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PayrollRunJobCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PayrollRunJob.
+func (c *PayrollRunJobClient) Update() *PayrollRunJobUpdate {
+	mutation := newPayrollRunJobMutation(c.config, OpUpdate)
+	return &PayrollRunJobUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PayrollRunJobClient) UpdateOne(_m *PayrollRunJob) *PayrollRunJobUpdateOne {
+	mutation := newPayrollRunJobMutation(c.config, OpUpdateOne, withPayrollRunJob(_m))
+	return &PayrollRunJobUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PayrollRunJobClient) UpdateOneID(id uuid.UUID) *PayrollRunJobUpdateOne {
+	mutation := newPayrollRunJobMutation(c.config, OpUpdateOne, withPayrollRunJobID(id))
+	return &PayrollRunJobUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PayrollRunJob.
+func (c *PayrollRunJobClient) Delete() *PayrollRunJobDelete {
+	mutation := newPayrollRunJobMutation(c.config, OpDelete)
+	return &PayrollRunJobDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PayrollRunJobClient) DeleteOne(_m *PayrollRunJob) *PayrollRunJobDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PayrollRunJobClient) DeleteOneID(id uuid.UUID) *PayrollRunJobDeleteOne {
+	builder := c.Delete().Where(payrollrunjob.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PayrollRunJobDeleteOne{builder}
+}
+
+// Query returns a query builder for PayrollRunJob.
+func (c *PayrollRunJobClient) Query() *PayrollRunJobQuery {
+	return &PayrollRunJobQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePayrollRunJob},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PayrollRunJob entity by its id.
+func (c *PayrollRunJobClient) Get(ctx context.Context, id uuid.UUID) (*PayrollRunJob, error) {
+	return c.Query().Where(payrollrunjob.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PayrollRunJobClient) GetX(ctx context.Context, id uuid.UUID) *PayrollRunJob {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PayrollRunJobClient) Hooks() []Hook {
+	return c.hooks.PayrollRunJob
+}
+
+// Interceptors returns the client interceptors.
+func (c *PayrollRunJobClient) Interceptors() []Interceptor {
+	return c.inters.PayrollRunJob
+}
+
+func (c *PayrollRunJobClient) mutate(ctx context.Context, m *PayrollRunJobMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PayrollRunJobCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PayrollRunJobUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PayrollRunJobUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PayrollRunJobDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PayrollRunJob mutation op: %q", m.Op())
+	}
+}
+
 // PayrollSplitRatioClient is a client for the PayrollSplitRatio schema.
 type PayrollSplitRatioClient struct {
 	config
@@ -15531,12 +15672,13 @@ type (
 		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
 		LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
 		MileageRoute, NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
-		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
-		PayslipAudit, PayslipLine, PerformanceMetric, PerformanceReview, Permission,
-		PublicHoliday, RecoveryLine, Region, RepayOption, ReviewMetric, Role,
-		RolePermission, SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot,
-		ShiftRotation, StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment,
-		TaskLog, Timesheet, TimesheetEntry, TrainingCourse, TrainingEnrollment,
+		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollRunJob,
+		PayrollSplitRatio, Payslip, PayslipAudit, PayslipLine, PerformanceMetric,
+		PerformanceReview, Permission, PublicHoliday, RecoveryLine, Region,
+		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
+		StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment, TaskLog,
+		Timesheet, TimesheetEntry, TrainingCourse, TrainingEnrollment,
 		TrainingEvaluation, UserRoleAssignment, WithHoldingTax, WorkShift,
 		WorkShiftSchedule, WorkersUnion []ent.Hook
 	}
@@ -15555,12 +15697,13 @@ type (
 		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
 		LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
 		MileageRoute, NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
-		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollSplitRatio, Payslip,
-		PayslipAudit, PayslipLine, PerformanceMetric, PerformanceReview, Permission,
-		PublicHoliday, RecoveryLine, Region, RepayOption, ReviewMetric, Role,
-		RolePermission, SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot,
-		ShiftRotation, StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment,
-		TaskLog, Timesheet, TimesheetEntry, TrainingCourse, TrainingEnrollment,
+		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollRunJob,
+		PayrollSplitRatio, Payslip, PayslipAudit, PayslipLine, PerformanceMetric,
+		PerformanceReview, Permission, PublicHoliday, RecoveryLine, Region,
+		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
+		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
+		StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment, TaskLog,
+		Timesheet, TimesheetEntry, TrainingCourse, TrainingEnrollment,
 		TrainingEvaluation, UserRoleAssignment, WithHoldingTax, WorkShift,
 		WorkShiftSchedule, WorkersUnion []ent.Interceptor
 	}

@@ -77,6 +77,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollrelief"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payrollrunjob"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipaudit"
@@ -2115,6 +2116,34 @@ func init() {
 	payrollreliefDescID := payrollreliefFields[0].Descriptor()
 	// payrollrelief.DefaultID holds the default value on creation for the id field.
 	payrollrelief.DefaultID = payrollreliefDescID.Default.(func() uuid.UUID)
+	payrollrunjobFields := schema.PayrollRunJob{}.Fields()
+	_ = payrollrunjobFields
+	// payrollrunjobDescTotal is the schema descriptor for total field.
+	payrollrunjobDescTotal := payrollrunjobFields[5].Descriptor()
+	// payrollrunjob.DefaultTotal holds the default value on creation for the total field.
+	payrollrunjob.DefaultTotal = payrollrunjobDescTotal.Default.(int)
+	// payrollrunjobDescDone is the schema descriptor for done field.
+	payrollrunjobDescDone := payrollrunjobFields[6].Descriptor()
+	// payrollrunjob.DefaultDone holds the default value on creation for the done field.
+	payrollrunjob.DefaultDone = payrollrunjobDescDone.Default.(int)
+	// payrollrunjobDescPayslips is the schema descriptor for payslips field.
+	payrollrunjobDescPayslips := payrollrunjobFields[7].Descriptor()
+	// payrollrunjob.DefaultPayslips holds the default value on creation for the payslips field.
+	payrollrunjob.DefaultPayslips = payrollrunjobDescPayslips.Default.(int)
+	// payrollrunjobDescCreatedAt is the schema descriptor for created_at field.
+	payrollrunjobDescCreatedAt := payrollrunjobFields[14].Descriptor()
+	// payrollrunjob.DefaultCreatedAt holds the default value on creation for the created_at field.
+	payrollrunjob.DefaultCreatedAt = payrollrunjobDescCreatedAt.Default.(func() time.Time)
+	// payrollrunjobDescUpdatedAt is the schema descriptor for updated_at field.
+	payrollrunjobDescUpdatedAt := payrollrunjobFields[15].Descriptor()
+	// payrollrunjob.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	payrollrunjob.DefaultUpdatedAt = payrollrunjobDescUpdatedAt.Default.(func() time.Time)
+	// payrollrunjob.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	payrollrunjob.UpdateDefaultUpdatedAt = payrollrunjobDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// payrollrunjobDescID is the schema descriptor for id field.
+	payrollrunjobDescID := payrollrunjobFields[0].Descriptor()
+	// payrollrunjob.DefaultID holds the default value on creation for the id field.
+	payrollrunjob.DefaultID = payrollrunjobDescID.Default.(func() uuid.UUID)
 	payrollsplitratioFields := schema.PayrollSplitRatio{}.Fields()
 	_ = payrollsplitratioFields
 	// payrollsplitratioDescEmployeePercentage is the schema descriptor for employee_percentage field.

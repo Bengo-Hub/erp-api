@@ -250,8 +250,14 @@ func run() error {
 	// Cost-allocation lookups: proxy projects-service + treasury cost-centers (JWT-forwarded);
 	// falls back to ERP-derived distinct ids when an upstream is unconfigured/unavailable.
 	lookupsClient := lookups.NewClient(cfg.Services.ProjectsURL, cfg.Services.TreasuryURL, cfg.Auth.APIKey, log)
+	// Payroll "process" runs as a background job (progress streamed over SSE). Jobs stop with
+	// the server and are marked interrupted; every pod sweeps runs whose heartbeat went stale.
+	jobsCtx, stopJobs := context.WithCancel(context.Background())
+	defer stopJobs()
+	payrollJobs := payroll.NewJobRunner(jobsCtx, payrollSvc, log.Named("payroll.jobs"))
+	payrollJobs.StartSweeper()
 	payrollHandler := handlers.NewPayrollHandler(log, payrollSvc, payrollDisburser).
-		WithMedia(mediaStore).WithLookups(lookupsClient)
+		WithMedia(mediaStore).WithLookups(lookupsClient).WithJobs(payrollJobs)
 	payrollSettingsHandler := handlers.NewPayrollSettingsHandler(log, payrollSettingsSvc, orm)
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher)).WithSystemTenant(systemTenant)
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
@@ -459,6 +465,15 @@ func run() error {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("graceful shutdown: %w", err)
+	}
+	// Interrupt background payroll runs and wait (bounded) for them to record that.
+	stopJobs()
+	jobsDone := make(chan struct{})
+	go func() { payrollJobs.Wait(); close(jobsDone) }()
+	select {
+	case <-jobsDone:
+	case <-time.After(10 * time.Second):
+		log.Warn("payroll runs did not stop in time; the sweeper will mark them interrupted")
 	}
 	log.Info("erp-api stopped cleanly")
 	return nil

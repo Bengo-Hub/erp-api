@@ -2539,6 +2539,48 @@ var (
 			},
 		},
 	}
+	// PayrollRunJobsColumns holds the columns for the "payroll_run_jobs" table.
+	PayrollRunJobsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "period", Type: field.TypeTime},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"queued", "running", "completed", "failed"}, Default: "queued"},
+		{Name: "params", Type: field.TypeJSON, Nullable: true},
+		{Name: "total", Type: field.TypeInt, Default: 0},
+		{Name: "done", Type: field.TypeInt, Default: 0},
+		{Name: "payslips", Type: field.TypeInt, Default: 0},
+		{Name: "error", Type: field.TypeString, Nullable: true},
+		{Name: "active_lock", Type: field.TypeString, Nullable: true},
+		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "started_at", Type: field.TypeTime, Nullable: true},
+		{Name: "finished_at", Type: field.TypeTime, Nullable: true},
+		{Name: "heartbeat_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// PayrollRunJobsTable holds the schema information for the "payroll_run_jobs" table.
+	PayrollRunJobsTable = &schema.Table{
+		Name:       "payroll_run_jobs",
+		Columns:    PayrollRunJobsColumns,
+		PrimaryKey: []*schema.Column{PayrollRunJobsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "payrollrunjob_tenant_id_active_lock",
+				Unique:  true,
+				Columns: []*schema.Column{PayrollRunJobsColumns[1], PayrollRunJobsColumns[9]},
+			},
+			{
+				Name:    "payrollrunjob_tenant_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{PayrollRunJobsColumns[1], PayrollRunJobsColumns[14]},
+			},
+			{
+				Name:    "payrollrunjob_active_lock_heartbeat_at",
+				Unique:  false,
+				Columns: []*schema.Column{PayrollRunJobsColumns[9], PayrollRunJobsColumns[13]},
+			},
+		},
+	}
 	// PayrollSplitRatiosColumns holds the columns for the "payroll_split_ratios" table.
 	PayrollSplitRatiosColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -3847,6 +3889,7 @@ var (
 		PayrollFormulasTable,
 		PayrollFormulaItemsTable,
 		PayrollReliefsTable,
+		PayrollRunJobsTable,
 		PayrollSplitRatiosTable,
 		PayslipsTable,
 		PayslipAuditsTable,

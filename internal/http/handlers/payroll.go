@@ -37,7 +37,12 @@ type PayrollHandler struct {
 	disburser *payroll.Disburser
 	media     *media.Store
 	lookups   *lookups.Client
+	jobs      *payroll.JobRunner
 }
+
+// WithJobs runs "process" as a background job with streamed progress. Optional: without it the
+// run happens inside the request, as before.
+func (h *PayrollHandler) WithJobs(j *payroll.JobRunner) *PayrollHandler { h.jobs = j; return h }
 
 func NewPayrollHandler(log *zap.Logger, svc *payroll.Service, disburser *payroll.Disburser) *PayrollHandler {
 	return &PayrollHandler{log: log.Named("hrm.payroll"), svc: svc, disburser: disburser}
@@ -64,6 +69,8 @@ func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 		pr.Post("/calculation-preview", h.Preview)
 		pr.Post("/process-with-formulas", h.Process)
 		pr.Get("/task_status", h.TaskStatus)
+		// Background runs: history, state and a progress stream (Server-Sent Events).
+		h.registerRunRoutes(pr)
 		// /hrm/payroll/email-payslips is served by DocumentsHandler (it owns PDF rendering).
 
 		// Cost-allocation lookups (S2S proxy to projects-service + treasury, JWT-forwarded).
@@ -355,6 +362,23 @@ type processBody struct {
 	EmployeeIDs    []string `json:"employee_ids"`
 }
 
+// asParams records the run's filters on the job for display.
+func (b processBody) asParams() map[string]any {
+	out := map[string]any{"payment_period": b.PaymentPeriod}
+	for k, v := range map[string]string{
+		"from_date": b.FromDate, "to_date": b.ToDate, "employment_type": b.EmploymentType,
+		"outlet_id": b.OutletID, "department_id": b.DepartmentID, "region_id": b.RegionID, "project_id": b.ProjectID,
+	} {
+		if v != "" {
+			out[k] = v
+		}
+	}
+	if len(b.EmployeeIDs) > 0 {
+		out["employee_count"] = len(b.EmployeeIDs)
+	}
+	return out
+}
+
 func (b processBody) period() (time.Time, bool) {
 	if p, ok := parsePeriod(b.PaymentPeriod); ok {
 		return p, true
@@ -458,13 +482,31 @@ func (h *PayrollHandler) Process(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "payment_period or from_date is required")
 		return
 	}
+	if h.jobs != nil {
+		// Background run: answer at once with the job; progress streams from /runs/{id}/events.
+		job, err := h.jobs.Start(r.Context(), rp, body.asParams())
+		var busy *payroll.RunInProgressError
+		if errors.As(err, &busy) {
+			writeJSON(w, http.StatusConflict, map[string]any{
+				"code": "run_in_progress", "error": "A payroll run is already in progress", "task_id": job.ID, "job": job,
+			})
+			return
+		}
+		if err != nil {
+			h.log.Error("queue payroll run failed", zapErr(err))
+			writeError(w, http.StatusInternalServerError, "internal_error", "failed to start the payroll run")
+			return
+		}
+		writeJSON(w, http.StatusAccepted, map[string]any{
+			"task_id": job.ID, "status": job.Status, "message": "payroll run started", "job": job,
+		})
+		return
+	}
 	res, err := h.svc.Run(r.Context(), rp)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "process_failed", err.Error())
 		return
 	}
-	// Synchronous run (no Celery): return a completed task envelope so the UI poller
-	// resolves immediately.
 	writeJSON(w, http.StatusOK, map[string]any{
 		"task_id": rp.Period.Format("2006-01"),
 		"status":  "completed",
@@ -473,17 +515,34 @@ func (h *PayrollHandler) Process(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// TaskStatus reports a completed status (payroll runs synchronously in erp-api;
-// there is no async task queue). Kept so the erp-ui poller resolves.
+// TaskStatus reports a run's progress (?task_id=<job id>) in the poller's envelope: state
+// PENDING | PROGRESS | SUCCESS | FAILURE. A task id that is not a job (older synchronous runs
+// returned the period) reports completed.
 func (h *PayrollHandler) TaskStatus(w http.ResponseWriter, r *http.Request) {
-	if _, ok := scopeFromRequest(w, r); !ok {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollProcess) {
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"state":    "SUCCESS",
-		"status":   "completed",
-		"progress": 100,
-	})
+	id, err := uuid.Parse(r.URL.Query().Get("task_id"))
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"state": "SUCCESS", "status": "completed", "progress": 100})
+		return
+	}
+	job, err := h.svc.GetRunJob(r.Context(), scope.TenantID, id)
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "payroll run not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to read the payroll run")
+		return
+	}
+	writeJSON(w, http.StatusOK, taskEnvelope(job))
+}
+
+func taskEnvelope(job payroll.RunJobView) map[string]any {
+	state := map[string]string{"queued": "PENDING", "running": "PROGRESS", "completed": "SUCCESS", "failed": "FAILURE"}[job.Status]
+	return map[string]any{"state": state, "status": job.Status, "progress": job.Percent, "job": job}
 }
 
 // ---- Command dispatcher (disburse) ----

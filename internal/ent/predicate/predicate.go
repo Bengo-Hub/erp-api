@@ -222,6 +222,9 @@ type PayrollFormulaItem func(*sql.Selector)
 // PayrollRelief is the predicate function for payrollrelief builders.
 type PayrollRelief func(*sql.Selector)
 
+// PayrollRunJob is the predicate function for payrollrunjob builders.
+type PayrollRunJob func(*sql.Selector)
+
 // PayrollSplitRatio is the predicate function for payrollsplitratio builders.
 type PayrollSplitRatio func(*sql.Selector)
 
