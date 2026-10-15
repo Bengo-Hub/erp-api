@@ -25,6 +25,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflow"
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflowstep"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancededuction"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
@@ -190,6 +191,7 @@ func checkColumn(t, c string) error {
 			approvalstepaction.Table:        approvalstepaction.ValidColumn,
 			approvalworkflow.Table:          approvalworkflow.ValidColumn,
 			approvalworkflowstep.Table:      approvalworkflowstep.ValidColumn,
+			attendancededuction.Table:       attendancededuction.ValidColumn,
 			attendancerecord.Table:          attendancerecord.ValidColumn,
 			attendancerule.Table:            attendancerule.ValidColumn,
 			authoutlet.Table:                authoutlet.ValidColumn,

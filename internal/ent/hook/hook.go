@@ -165,6 +165,18 @@ func (f ApprovalWorkflowStepFunc) Mutate(ctx context.Context, m ent.Mutation) (e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ApprovalWorkflowStepMutation", m)
 }
 
+// The AttendanceDeductionFunc type is an adapter to allow the use of ordinary
+// function as AttendanceDeduction mutator.
+type AttendanceDeductionFunc func(context.Context, *ent.AttendanceDeductionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AttendanceDeductionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AttendanceDeductionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttendanceDeductionMutation", m)
+}
+
 // The AttendanceRecordFunc type is an adapter to allow the use of ordinary
 // function as AttendanceRecord mutator.
 type AttendanceRecordFunc func(context.Context, *ent.AttendanceRecordMutation) (ent.Value, error)

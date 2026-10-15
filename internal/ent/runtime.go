@@ -18,6 +18,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflow"
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflowstep"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancededuction"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
@@ -372,6 +373,34 @@ func init() {
 	approvalworkflowstepDescID := approvalworkflowstepFields[0].Descriptor()
 	// approvalworkflowstep.DefaultID holds the default value on creation for the id field.
 	approvalworkflowstep.DefaultID = approvalworkflowstepDescID.Default.(func() uuid.UUID)
+	attendancedeductionFields := schema.AttendanceDeduction{}.Fields()
+	_ = attendancedeductionFields
+	// attendancedeductionDescOccurrences is the schema descriptor for occurrences field.
+	attendancedeductionDescOccurrences := attendancedeductionFields[5].Descriptor()
+	// attendancededuction.DefaultOccurrences holds the default value on creation for the occurrences field.
+	attendancededuction.DefaultOccurrences = attendancedeductionDescOccurrences.Default.(int)
+	// attendancedeductionDescMinutes is the schema descriptor for minutes field.
+	attendancedeductionDescMinutes := attendancedeductionFields[6].Descriptor()
+	// attendancededuction.DefaultMinutes holds the default value on creation for the minutes field.
+	attendancededuction.DefaultMinutes = attendancedeductionDescMinutes.Default.(int)
+	// attendancedeductionDescAmount is the schema descriptor for amount field.
+	attendancedeductionDescAmount := attendancedeductionFields[7].Descriptor()
+	// attendancededuction.DefaultAmount holds the default value on creation for the amount field.
+	attendancededuction.DefaultAmount = attendancedeductionDescAmount.Default.(decimal.Decimal)
+	// attendancedeductionDescCreatedAt is the schema descriptor for created_at field.
+	attendancedeductionDescCreatedAt := attendancedeductionFields[15].Descriptor()
+	// attendancededuction.DefaultCreatedAt holds the default value on creation for the created_at field.
+	attendancededuction.DefaultCreatedAt = attendancedeductionDescCreatedAt.Default.(func() time.Time)
+	// attendancedeductionDescUpdatedAt is the schema descriptor for updated_at field.
+	attendancedeductionDescUpdatedAt := attendancedeductionFields[16].Descriptor()
+	// attendancededuction.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	attendancededuction.DefaultUpdatedAt = attendancedeductionDescUpdatedAt.Default.(func() time.Time)
+	// attendancededuction.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	attendancededuction.UpdateDefaultUpdatedAt = attendancedeductionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// attendancedeductionDescID is the schema descriptor for id field.
+	attendancedeductionDescID := attendancedeductionFields[0].Descriptor()
+	// attendancededuction.DefaultID holds the default value on creation for the id field.
+	attendancededuction.DefaultID = attendancedeductionDescID.Default.(func() uuid.UUID)
 	attendancerecordFields := schema.AttendanceRecord{}.Fields()
 	_ = attendancerecordFields
 	// attendancerecordDescTotalSecondsWorked is the schema descriptor for total_seconds_worked field.

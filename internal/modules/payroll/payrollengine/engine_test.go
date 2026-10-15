@@ -36,6 +36,31 @@ func TestGoldenMaster_Gross100k(t *testing.T) {
 	}
 }
 
+// TestUnpaidTime: attendance deductions come off gross before statutory deductions and PAYE, so
+// 110,000 with 10,000 unpaid is taxed exactly like a 100,000 gross; and they never push gross
+// below zero.
+func TestUnpaidTime(t *testing.T) {
+	base, err := Compute(kra2025Config(), EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := Compute(kra2025Config(), EmployeeInput{GrossPay: d("110000"), UnpaidTime: d("10000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.UnpaidTime.Equal(d("10000")) || !res.GrossPay.Equal(d("100000")) || !res.PAYE.Equal(base.PAYE) ||
+		!res.NetPay.Equal(base.NetPay) || !res.DeductionsBeforeTax.Equal(base.DeductionsBeforeTax) {
+		t.Fatalf("unpaid time: %+v, want the 100k golden master", res)
+	}
+	capped, err := Compute(kra2025Config(), EmployeeInput{GrossPay: d("20000"), UnpaidTime: d("50000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !capped.UnpaidTime.Equal(d("20000")) || !capped.GrossPay.IsZero() || capped.NetPay.IsNegative() {
+		t.Fatalf("unpaid time above gross: %+v, want capped at gross", capped)
+	}
+}
+
 // TestFailLoud_MissingNSSF: a missing required statutory formula must abort, never zero.
 func TestFailLoud_MissingNSSF(t *testing.T) {
 	cfg := kra2025Config()

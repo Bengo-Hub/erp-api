@@ -43,6 +43,10 @@ type EmployeeItemized struct {
 	// Recoveries is the per-recoverable recovered amount for this period (all types), used to
 	// persist RecoveryLine snapshots for the disburse-time write-back.
 	Recoveries []RecoveryAlloc
+	// Attendance is the approved attendance deductions taken off gross this period, and
+	// AttendanceIDs their rows (marked applied once the payslip is written).
+	Attendance    []LabeledAmount
+	AttendanceIDs []uuid.UUID
 }
 
 // payslip_line sections (mirror schema).
@@ -101,6 +105,22 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 			sec = secBenefitNonCash
 		}
 		add(sec, "benefit", b.Label, b.Amount, b.Taxable, decimal.Zero, b.NonCash, true, "", b.ComponentID)
+	}
+	// Approved attendance deductions are pay not earned: negative cash earnings, so basic plus
+	// earnings still adds up to the payslip's gross. When the engine capped them at gross, one
+	// line carries the amount actually taken.
+	if res.UnpaidTime.IsPositive() {
+		listed := decimal.Zero
+		for _, a := range items.Attendance {
+			listed = listed.Add(a.Amount)
+		}
+		if listed.Equal(res.UnpaidTime) {
+			for _, a := range items.Attendance {
+				add(secEarningCash, "attendance_deduction", a.Label, a.Amount.Neg(), a.Amount.Neg(), decimal.Zero, false, true, "", nil)
+			}
+		} else {
+			add(secEarningCash, "attendance_deduction", "Unpaid time (attendance)", res.UnpaidTime.Neg(), res.UnpaidTime.Neg(), decimal.Zero, false, true, "", nil)
+		}
 	}
 
 	// Statutory (before-tax) — NSSF split into tiers + employer, SHIF, housing levy.

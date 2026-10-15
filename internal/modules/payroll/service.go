@@ -63,6 +63,9 @@ type RunParams struct {
 	RecoverAdvances bool
 	CreatedBy       uuid.UUID
 	Persist         bool // true = generate (write payslips); false = preview only
+	// OnProgress, when set, is called with (0, total) before the first employee and after each
+	// one, so a background run can report progress.
+	OnProgress func(done, total int)
 }
 
 // LineResult pairs an employee with their engine output.
@@ -85,12 +88,28 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Approved attendance deductions for the month, loaded once for the whole run.
+	attendance, err := s.approvedAttendanceDeductions(ctx, p.TenantID, p.Period)
+	if err != nil {
+		return nil, fmt.Errorf("payroll: attendance deductions: %w", err)
+	}
+	if p.OnProgress != nil {
+		p.OnProgress(0, len(emps))
+	}
 
 	out := make([]LineResult, 0, len(emps))
-	for _, emp := range emps {
+	for i, emp := range emps {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		in, items, ierr := s.buildEmployeeInput(ctx, p, emp)
 		if ierr != nil {
 			return nil, fmt.Errorf("payroll: employee %s: %w", emp.ID, ierr)
+		}
+		for _, d := range attendance[emp.ID] {
+			in.UnpaidTime = in.UnpaidTime.Add(d.Amount)
+			items.Attendance = append(items.Attendance, LabeledAmount{Label: attendanceLabel(d), Amount: d.Amount})
+			items.AttendanceIDs = append(items.AttendanceIDs, d.ID)
 		}
 		res, cerr := payrollengine.Compute(cfg, in)
 		if cerr != nil {
@@ -113,8 +132,14 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 			if rerr := s.writeRecoveryLines(ctx, p.TenantID, id, emp.ID, items.Recoveries); rerr != nil {
 				return nil, fmt.Errorf("payroll: recovery lines %s: %w", emp.ID, rerr)
 			}
+			if aerr := s.markAttendanceApplied(ctx, p.TenantID, id, items.AttendanceIDs); aerr != nil {
+				return nil, fmt.Errorf("payroll: attendance deductions %s: %w", emp.ID, aerr)
+			}
 		}
 		out = append(out, line)
+		if p.OnProgress != nil {
+			p.OnProgress(i+1, len(emps))
+		}
 	}
 	return out, nil
 }

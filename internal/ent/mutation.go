@@ -25,6 +25,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflow"
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflowstep"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancededuction"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
@@ -145,6 +146,7 @@ const (
 	TypeApprovalStepAction        = "ApprovalStepAction"
 	TypeApprovalWorkflow          = "ApprovalWorkflow"
 	TypeApprovalWorkflowStep      = "ApprovalWorkflowStep"
+	TypeAttendanceDeduction       = "AttendanceDeduction"
 	TypeAttendanceRecord          = "AttendanceRecord"
 	TypeAttendanceRule            = "AttendanceRule"
 	TypeAuthOutlet                = "AuthOutlet"
@@ -12143,6 +12145,1315 @@ func (m *ApprovalWorkflowStepMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown ApprovalWorkflowStep edge %s", name)
+}
+
+// AttendanceDeductionMutation represents an operation that mutates the AttendanceDeduction nodes in the graph.
+type AttendanceDeductionMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	tenant_id      *uuid.UUID
+	employee_id    *uuid.UUID
+	period         *time.Time
+	kind           *attendancededuction.Kind
+	occurrences    *int
+	addoccurrences *int
+	minutes        *int
+	addminutes     *int
+	amount         *decimal.Decimal
+	basis          *string
+	rule_id        *uuid.UUID
+	status         *attendancededuction.Status
+	reviewed_by    *uuid.UUID
+	reviewed_at    *time.Time
+	note           *string
+	payslip_id     *uuid.UUID
+	created_at     *time.Time
+	updated_at     *time.Time
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*AttendanceDeduction, error)
+	predicates     []predicate.AttendanceDeduction
+}
+
+var _ ent.Mutation = (*AttendanceDeductionMutation)(nil)
+
+// attendancedeductionOption allows management of the mutation configuration using functional options.
+type attendancedeductionOption func(*AttendanceDeductionMutation)
+
+// newAttendanceDeductionMutation creates new mutation for the AttendanceDeduction entity.
+func newAttendanceDeductionMutation(c config, op Op, opts ...attendancedeductionOption) *AttendanceDeductionMutation {
+	m := &AttendanceDeductionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAttendanceDeduction,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAttendanceDeductionID sets the ID field of the mutation.
+func withAttendanceDeductionID(id uuid.UUID) attendancedeductionOption {
+	return func(m *AttendanceDeductionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AttendanceDeduction
+		)
+		m.oldValue = func(ctx context.Context) (*AttendanceDeduction, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AttendanceDeduction.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAttendanceDeduction sets the old AttendanceDeduction of the mutation.
+func withAttendanceDeduction(node *AttendanceDeduction) attendancedeductionOption {
+	return func(m *AttendanceDeductionMutation) {
+		m.oldValue = func(context.Context) (*AttendanceDeduction, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AttendanceDeductionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AttendanceDeductionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AttendanceDeduction entities.
+func (m *AttendanceDeductionMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AttendanceDeductionMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AttendanceDeductionMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AttendanceDeduction.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *AttendanceDeductionMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *AttendanceDeductionMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *AttendanceDeductionMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetEmployeeID sets the "employee_id" field.
+func (m *AttendanceDeductionMutation) SetEmployeeID(u uuid.UUID) {
+	m.employee_id = &u
+}
+
+// EmployeeID returns the value of the "employee_id" field in the mutation.
+func (m *AttendanceDeductionMutation) EmployeeID() (r uuid.UUID, exists bool) {
+	v := m.employee_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployeeID returns the old "employee_id" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployeeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployeeID: %w", err)
+	}
+	return oldValue.EmployeeID, nil
+}
+
+// ResetEmployeeID resets all changes to the "employee_id" field.
+func (m *AttendanceDeductionMutation) ResetEmployeeID() {
+	m.employee_id = nil
+}
+
+// SetPeriod sets the "period" field.
+func (m *AttendanceDeductionMutation) SetPeriod(t time.Time) {
+	m.period = &t
+}
+
+// Period returns the value of the "period" field in the mutation.
+func (m *AttendanceDeductionMutation) Period() (r time.Time, exists bool) {
+	v := m.period
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPeriod returns the old "period" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldPeriod(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPeriod is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPeriod requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPeriod: %w", err)
+	}
+	return oldValue.Period, nil
+}
+
+// ResetPeriod resets all changes to the "period" field.
+func (m *AttendanceDeductionMutation) ResetPeriod() {
+	m.period = nil
+}
+
+// SetKind sets the "kind" field.
+func (m *AttendanceDeductionMutation) SetKind(a attendancededuction.Kind) {
+	m.kind = &a
+}
+
+// Kind returns the value of the "kind" field in the mutation.
+func (m *AttendanceDeductionMutation) Kind() (r attendancededuction.Kind, exists bool) {
+	v := m.kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKind returns the old "kind" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldKind(ctx context.Context) (v attendancededuction.Kind, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKind: %w", err)
+	}
+	return oldValue.Kind, nil
+}
+
+// ResetKind resets all changes to the "kind" field.
+func (m *AttendanceDeductionMutation) ResetKind() {
+	m.kind = nil
+}
+
+// SetOccurrences sets the "occurrences" field.
+func (m *AttendanceDeductionMutation) SetOccurrences(i int) {
+	m.occurrences = &i
+	m.addoccurrences = nil
+}
+
+// Occurrences returns the value of the "occurrences" field in the mutation.
+func (m *AttendanceDeductionMutation) Occurrences() (r int, exists bool) {
+	v := m.occurrences
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOccurrences returns the old "occurrences" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldOccurrences(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOccurrences is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOccurrences requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOccurrences: %w", err)
+	}
+	return oldValue.Occurrences, nil
+}
+
+// AddOccurrences adds i to the "occurrences" field.
+func (m *AttendanceDeductionMutation) AddOccurrences(i int) {
+	if m.addoccurrences != nil {
+		*m.addoccurrences += i
+	} else {
+		m.addoccurrences = &i
+	}
+}
+
+// AddedOccurrences returns the value that was added to the "occurrences" field in this mutation.
+func (m *AttendanceDeductionMutation) AddedOccurrences() (r int, exists bool) {
+	v := m.addoccurrences
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetOccurrences resets all changes to the "occurrences" field.
+func (m *AttendanceDeductionMutation) ResetOccurrences() {
+	m.occurrences = nil
+	m.addoccurrences = nil
+}
+
+// SetMinutes sets the "minutes" field.
+func (m *AttendanceDeductionMutation) SetMinutes(i int) {
+	m.minutes = &i
+	m.addminutes = nil
+}
+
+// Minutes returns the value of the "minutes" field in the mutation.
+func (m *AttendanceDeductionMutation) Minutes() (r int, exists bool) {
+	v := m.minutes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMinutes returns the old "minutes" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldMinutes(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMinutes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMinutes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMinutes: %w", err)
+	}
+	return oldValue.Minutes, nil
+}
+
+// AddMinutes adds i to the "minutes" field.
+func (m *AttendanceDeductionMutation) AddMinutes(i int) {
+	if m.addminutes != nil {
+		*m.addminutes += i
+	} else {
+		m.addminutes = &i
+	}
+}
+
+// AddedMinutes returns the value that was added to the "minutes" field in this mutation.
+func (m *AttendanceDeductionMutation) AddedMinutes() (r int, exists bool) {
+	v := m.addminutes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMinutes resets all changes to the "minutes" field.
+func (m *AttendanceDeductionMutation) ResetMinutes() {
+	m.minutes = nil
+	m.addminutes = nil
+}
+
+// SetAmount sets the "amount" field.
+func (m *AttendanceDeductionMutation) SetAmount(d decimal.Decimal) {
+	m.amount = &d
+}
+
+// Amount returns the value of the "amount" field in the mutation.
+func (m *AttendanceDeductionMutation) Amount() (r decimal.Decimal, exists bool) {
+	v := m.amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmount returns the old "amount" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldAmount(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmount: %w", err)
+	}
+	return oldValue.Amount, nil
+}
+
+// ResetAmount resets all changes to the "amount" field.
+func (m *AttendanceDeductionMutation) ResetAmount() {
+	m.amount = nil
+}
+
+// SetBasis sets the "basis" field.
+func (m *AttendanceDeductionMutation) SetBasis(s string) {
+	m.basis = &s
+}
+
+// Basis returns the value of the "basis" field in the mutation.
+func (m *AttendanceDeductionMutation) Basis() (r string, exists bool) {
+	v := m.basis
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBasis returns the old "basis" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldBasis(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBasis is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBasis requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBasis: %w", err)
+	}
+	return oldValue.Basis, nil
+}
+
+// ResetBasis resets all changes to the "basis" field.
+func (m *AttendanceDeductionMutation) ResetBasis() {
+	m.basis = nil
+}
+
+// SetRuleID sets the "rule_id" field.
+func (m *AttendanceDeductionMutation) SetRuleID(u uuid.UUID) {
+	m.rule_id = &u
+}
+
+// RuleID returns the value of the "rule_id" field in the mutation.
+func (m *AttendanceDeductionMutation) RuleID() (r uuid.UUID, exists bool) {
+	v := m.rule_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRuleID returns the old "rule_id" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldRuleID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRuleID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRuleID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRuleID: %w", err)
+	}
+	return oldValue.RuleID, nil
+}
+
+// ClearRuleID clears the value of the "rule_id" field.
+func (m *AttendanceDeductionMutation) ClearRuleID() {
+	m.rule_id = nil
+	m.clearedFields[attendancededuction.FieldRuleID] = struct{}{}
+}
+
+// RuleIDCleared returns if the "rule_id" field was cleared in this mutation.
+func (m *AttendanceDeductionMutation) RuleIDCleared() bool {
+	_, ok := m.clearedFields[attendancededuction.FieldRuleID]
+	return ok
+}
+
+// ResetRuleID resets all changes to the "rule_id" field.
+func (m *AttendanceDeductionMutation) ResetRuleID() {
+	m.rule_id = nil
+	delete(m.clearedFields, attendancededuction.FieldRuleID)
+}
+
+// SetStatus sets the "status" field.
+func (m *AttendanceDeductionMutation) SetStatus(a attendancededuction.Status) {
+	m.status = &a
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *AttendanceDeductionMutation) Status() (r attendancededuction.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldStatus(ctx context.Context) (v attendancededuction.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *AttendanceDeductionMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetReviewedBy sets the "reviewed_by" field.
+func (m *AttendanceDeductionMutation) SetReviewedBy(u uuid.UUID) {
+	m.reviewed_by = &u
+}
+
+// ReviewedBy returns the value of the "reviewed_by" field in the mutation.
+func (m *AttendanceDeductionMutation) ReviewedBy() (r uuid.UUID, exists bool) {
+	v := m.reviewed_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReviewedBy returns the old "reviewed_by" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldReviewedBy(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReviewedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReviewedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReviewedBy: %w", err)
+	}
+	return oldValue.ReviewedBy, nil
+}
+
+// ClearReviewedBy clears the value of the "reviewed_by" field.
+func (m *AttendanceDeductionMutation) ClearReviewedBy() {
+	m.reviewed_by = nil
+	m.clearedFields[attendancededuction.FieldReviewedBy] = struct{}{}
+}
+
+// ReviewedByCleared returns if the "reviewed_by" field was cleared in this mutation.
+func (m *AttendanceDeductionMutation) ReviewedByCleared() bool {
+	_, ok := m.clearedFields[attendancededuction.FieldReviewedBy]
+	return ok
+}
+
+// ResetReviewedBy resets all changes to the "reviewed_by" field.
+func (m *AttendanceDeductionMutation) ResetReviewedBy() {
+	m.reviewed_by = nil
+	delete(m.clearedFields, attendancededuction.FieldReviewedBy)
+}
+
+// SetReviewedAt sets the "reviewed_at" field.
+func (m *AttendanceDeductionMutation) SetReviewedAt(t time.Time) {
+	m.reviewed_at = &t
+}
+
+// ReviewedAt returns the value of the "reviewed_at" field in the mutation.
+func (m *AttendanceDeductionMutation) ReviewedAt() (r time.Time, exists bool) {
+	v := m.reviewed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReviewedAt returns the old "reviewed_at" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldReviewedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReviewedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReviewedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReviewedAt: %w", err)
+	}
+	return oldValue.ReviewedAt, nil
+}
+
+// ClearReviewedAt clears the value of the "reviewed_at" field.
+func (m *AttendanceDeductionMutation) ClearReviewedAt() {
+	m.reviewed_at = nil
+	m.clearedFields[attendancededuction.FieldReviewedAt] = struct{}{}
+}
+
+// ReviewedAtCleared returns if the "reviewed_at" field was cleared in this mutation.
+func (m *AttendanceDeductionMutation) ReviewedAtCleared() bool {
+	_, ok := m.clearedFields[attendancededuction.FieldReviewedAt]
+	return ok
+}
+
+// ResetReviewedAt resets all changes to the "reviewed_at" field.
+func (m *AttendanceDeductionMutation) ResetReviewedAt() {
+	m.reviewed_at = nil
+	delete(m.clearedFields, attendancededuction.FieldReviewedAt)
+}
+
+// SetNote sets the "note" field.
+func (m *AttendanceDeductionMutation) SetNote(s string) {
+	m.note = &s
+}
+
+// Note returns the value of the "note" field in the mutation.
+func (m *AttendanceDeductionMutation) Note() (r string, exists bool) {
+	v := m.note
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNote returns the old "note" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldNote(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNote is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNote requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNote: %w", err)
+	}
+	return oldValue.Note, nil
+}
+
+// ClearNote clears the value of the "note" field.
+func (m *AttendanceDeductionMutation) ClearNote() {
+	m.note = nil
+	m.clearedFields[attendancededuction.FieldNote] = struct{}{}
+}
+
+// NoteCleared returns if the "note" field was cleared in this mutation.
+func (m *AttendanceDeductionMutation) NoteCleared() bool {
+	_, ok := m.clearedFields[attendancededuction.FieldNote]
+	return ok
+}
+
+// ResetNote resets all changes to the "note" field.
+func (m *AttendanceDeductionMutation) ResetNote() {
+	m.note = nil
+	delete(m.clearedFields, attendancededuction.FieldNote)
+}
+
+// SetPayslipID sets the "payslip_id" field.
+func (m *AttendanceDeductionMutation) SetPayslipID(u uuid.UUID) {
+	m.payslip_id = &u
+}
+
+// PayslipID returns the value of the "payslip_id" field in the mutation.
+func (m *AttendanceDeductionMutation) PayslipID() (r uuid.UUID, exists bool) {
+	v := m.payslip_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayslipID returns the old "payslip_id" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldPayslipID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayslipID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayslipID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayslipID: %w", err)
+	}
+	return oldValue.PayslipID, nil
+}
+
+// ClearPayslipID clears the value of the "payslip_id" field.
+func (m *AttendanceDeductionMutation) ClearPayslipID() {
+	m.payslip_id = nil
+	m.clearedFields[attendancededuction.FieldPayslipID] = struct{}{}
+}
+
+// PayslipIDCleared returns if the "payslip_id" field was cleared in this mutation.
+func (m *AttendanceDeductionMutation) PayslipIDCleared() bool {
+	_, ok := m.clearedFields[attendancededuction.FieldPayslipID]
+	return ok
+}
+
+// ResetPayslipID resets all changes to the "payslip_id" field.
+func (m *AttendanceDeductionMutation) ResetPayslipID() {
+	m.payslip_id = nil
+	delete(m.clearedFields, attendancededuction.FieldPayslipID)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AttendanceDeductionMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AttendanceDeductionMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AttendanceDeductionMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AttendanceDeductionMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AttendanceDeductionMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AttendanceDeduction entity.
+// If the AttendanceDeduction object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttendanceDeductionMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AttendanceDeductionMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// Where appends a list predicates to the AttendanceDeductionMutation builder.
+func (m *AttendanceDeductionMutation) Where(ps ...predicate.AttendanceDeduction) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AttendanceDeductionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AttendanceDeductionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AttendanceDeduction, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AttendanceDeductionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AttendanceDeductionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AttendanceDeduction).
+func (m *AttendanceDeductionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AttendanceDeductionMutation) Fields() []string {
+	fields := make([]string, 0, 16)
+	if m.tenant_id != nil {
+		fields = append(fields, attendancededuction.FieldTenantID)
+	}
+	if m.employee_id != nil {
+		fields = append(fields, attendancededuction.FieldEmployeeID)
+	}
+	if m.period != nil {
+		fields = append(fields, attendancededuction.FieldPeriod)
+	}
+	if m.kind != nil {
+		fields = append(fields, attendancededuction.FieldKind)
+	}
+	if m.occurrences != nil {
+		fields = append(fields, attendancededuction.FieldOccurrences)
+	}
+	if m.minutes != nil {
+		fields = append(fields, attendancededuction.FieldMinutes)
+	}
+	if m.amount != nil {
+		fields = append(fields, attendancededuction.FieldAmount)
+	}
+	if m.basis != nil {
+		fields = append(fields, attendancededuction.FieldBasis)
+	}
+	if m.rule_id != nil {
+		fields = append(fields, attendancededuction.FieldRuleID)
+	}
+	if m.status != nil {
+		fields = append(fields, attendancededuction.FieldStatus)
+	}
+	if m.reviewed_by != nil {
+		fields = append(fields, attendancededuction.FieldReviewedBy)
+	}
+	if m.reviewed_at != nil {
+		fields = append(fields, attendancededuction.FieldReviewedAt)
+	}
+	if m.note != nil {
+		fields = append(fields, attendancededuction.FieldNote)
+	}
+	if m.payslip_id != nil {
+		fields = append(fields, attendancededuction.FieldPayslipID)
+	}
+	if m.created_at != nil {
+		fields = append(fields, attendancededuction.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, attendancededuction.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AttendanceDeductionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case attendancededuction.FieldTenantID:
+		return m.TenantID()
+	case attendancededuction.FieldEmployeeID:
+		return m.EmployeeID()
+	case attendancededuction.FieldPeriod:
+		return m.Period()
+	case attendancededuction.FieldKind:
+		return m.Kind()
+	case attendancededuction.FieldOccurrences:
+		return m.Occurrences()
+	case attendancededuction.FieldMinutes:
+		return m.Minutes()
+	case attendancededuction.FieldAmount:
+		return m.Amount()
+	case attendancededuction.FieldBasis:
+		return m.Basis()
+	case attendancededuction.FieldRuleID:
+		return m.RuleID()
+	case attendancededuction.FieldStatus:
+		return m.Status()
+	case attendancededuction.FieldReviewedBy:
+		return m.ReviewedBy()
+	case attendancededuction.FieldReviewedAt:
+		return m.ReviewedAt()
+	case attendancededuction.FieldNote:
+		return m.Note()
+	case attendancededuction.FieldPayslipID:
+		return m.PayslipID()
+	case attendancededuction.FieldCreatedAt:
+		return m.CreatedAt()
+	case attendancededuction.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AttendanceDeductionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case attendancededuction.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case attendancededuction.FieldEmployeeID:
+		return m.OldEmployeeID(ctx)
+	case attendancededuction.FieldPeriod:
+		return m.OldPeriod(ctx)
+	case attendancededuction.FieldKind:
+		return m.OldKind(ctx)
+	case attendancededuction.FieldOccurrences:
+		return m.OldOccurrences(ctx)
+	case attendancededuction.FieldMinutes:
+		return m.OldMinutes(ctx)
+	case attendancededuction.FieldAmount:
+		return m.OldAmount(ctx)
+	case attendancededuction.FieldBasis:
+		return m.OldBasis(ctx)
+	case attendancededuction.FieldRuleID:
+		return m.OldRuleID(ctx)
+	case attendancededuction.FieldStatus:
+		return m.OldStatus(ctx)
+	case attendancededuction.FieldReviewedBy:
+		return m.OldReviewedBy(ctx)
+	case attendancededuction.FieldReviewedAt:
+		return m.OldReviewedAt(ctx)
+	case attendancededuction.FieldNote:
+		return m.OldNote(ctx)
+	case attendancededuction.FieldPayslipID:
+		return m.OldPayslipID(ctx)
+	case attendancededuction.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case attendancededuction.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown AttendanceDeduction field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AttendanceDeductionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case attendancededuction.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case attendancededuction.FieldEmployeeID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployeeID(v)
+		return nil
+	case attendancededuction.FieldPeriod:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPeriod(v)
+		return nil
+	case attendancededuction.FieldKind:
+		v, ok := value.(attendancededuction.Kind)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKind(v)
+		return nil
+	case attendancededuction.FieldOccurrences:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOccurrences(v)
+		return nil
+	case attendancededuction.FieldMinutes:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMinutes(v)
+		return nil
+	case attendancededuction.FieldAmount:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmount(v)
+		return nil
+	case attendancededuction.FieldBasis:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBasis(v)
+		return nil
+	case attendancededuction.FieldRuleID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRuleID(v)
+		return nil
+	case attendancededuction.FieldStatus:
+		v, ok := value.(attendancededuction.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case attendancededuction.FieldReviewedBy:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReviewedBy(v)
+		return nil
+	case attendancededuction.FieldReviewedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReviewedAt(v)
+		return nil
+	case attendancededuction.FieldNote:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNote(v)
+		return nil
+	case attendancededuction.FieldPayslipID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayslipID(v)
+		return nil
+	case attendancededuction.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case attendancededuction.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AttendanceDeduction field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AttendanceDeductionMutation) AddedFields() []string {
+	var fields []string
+	if m.addoccurrences != nil {
+		fields = append(fields, attendancededuction.FieldOccurrences)
+	}
+	if m.addminutes != nil {
+		fields = append(fields, attendancededuction.FieldMinutes)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AttendanceDeductionMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case attendancededuction.FieldOccurrences:
+		return m.AddedOccurrences()
+	case attendancededuction.FieldMinutes:
+		return m.AddedMinutes()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AttendanceDeductionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case attendancededuction.FieldOccurrences:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOccurrences(v)
+		return nil
+	case attendancededuction.FieldMinutes:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMinutes(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AttendanceDeduction numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AttendanceDeductionMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(attendancededuction.FieldRuleID) {
+		fields = append(fields, attendancededuction.FieldRuleID)
+	}
+	if m.FieldCleared(attendancededuction.FieldReviewedBy) {
+		fields = append(fields, attendancededuction.FieldReviewedBy)
+	}
+	if m.FieldCleared(attendancededuction.FieldReviewedAt) {
+		fields = append(fields, attendancededuction.FieldReviewedAt)
+	}
+	if m.FieldCleared(attendancededuction.FieldNote) {
+		fields = append(fields, attendancededuction.FieldNote)
+	}
+	if m.FieldCleared(attendancededuction.FieldPayslipID) {
+		fields = append(fields, attendancededuction.FieldPayslipID)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AttendanceDeductionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AttendanceDeductionMutation) ClearField(name string) error {
+	switch name {
+	case attendancededuction.FieldRuleID:
+		m.ClearRuleID()
+		return nil
+	case attendancededuction.FieldReviewedBy:
+		m.ClearReviewedBy()
+		return nil
+	case attendancededuction.FieldReviewedAt:
+		m.ClearReviewedAt()
+		return nil
+	case attendancededuction.FieldNote:
+		m.ClearNote()
+		return nil
+	case attendancededuction.FieldPayslipID:
+		m.ClearPayslipID()
+		return nil
+	}
+	return fmt.Errorf("unknown AttendanceDeduction nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AttendanceDeductionMutation) ResetField(name string) error {
+	switch name {
+	case attendancededuction.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case attendancededuction.FieldEmployeeID:
+		m.ResetEmployeeID()
+		return nil
+	case attendancededuction.FieldPeriod:
+		m.ResetPeriod()
+		return nil
+	case attendancededuction.FieldKind:
+		m.ResetKind()
+		return nil
+	case attendancededuction.FieldOccurrences:
+		m.ResetOccurrences()
+		return nil
+	case attendancededuction.FieldMinutes:
+		m.ResetMinutes()
+		return nil
+	case attendancededuction.FieldAmount:
+		m.ResetAmount()
+		return nil
+	case attendancededuction.FieldBasis:
+		m.ResetBasis()
+		return nil
+	case attendancededuction.FieldRuleID:
+		m.ResetRuleID()
+		return nil
+	case attendancededuction.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case attendancededuction.FieldReviewedBy:
+		m.ResetReviewedBy()
+		return nil
+	case attendancededuction.FieldReviewedAt:
+		m.ResetReviewedAt()
+		return nil
+	case attendancededuction.FieldNote:
+		m.ResetNote()
+		return nil
+	case attendancededuction.FieldPayslipID:
+		m.ResetPayslipID()
+		return nil
+	case attendancededuction.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case attendancededuction.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown AttendanceDeduction field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AttendanceDeductionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AttendanceDeductionMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AttendanceDeductionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AttendanceDeductionMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AttendanceDeductionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AttendanceDeductionMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AttendanceDeductionMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown AttendanceDeduction unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AttendanceDeductionMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown AttendanceDeduction edge %s", name)
 }
 
 // AttendanceRecordMutation represents an operation that mutates the AttendanceRecord nodes in the graph.

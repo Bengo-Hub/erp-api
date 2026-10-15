@@ -45,6 +45,9 @@ type ApprovalWorkflow func(*sql.Selector)
 // ApprovalWorkflowStep is the predicate function for approvalworkflowstep builders.
 type ApprovalWorkflowStep func(*sql.Selector)
 
+// AttendanceDeduction is the predicate function for attendancededuction builders.
+type AttendanceDeduction func(*sql.Selector)
+
 // AttendanceRecord is the predicate function for attendancerecord builders.
 type AttendanceRecord func(*sql.Selector)
 

@@ -94,6 +94,8 @@ func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 		pr.Post("/claims/{id}/approve", h.ApproveClaim)
 		// Labour cost by project for a payroll month (the payroll event's allocation rules).
 		pr.Get("/labour-cost", h.LabourCost)
+		// Lateness and absence deductions, reviewed before the run applies them.
+		h.registerAttendanceDeductionRoutes(pr)
 		pr.Delete("/claims/{id}", h.DeleteClaim)
 		// Attachment upload (media store) + conditional line tables.
 		pr.Post("/claims/{id}/attachment", h.UploadClaimAttachment)

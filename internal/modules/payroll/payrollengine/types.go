@@ -49,9 +49,13 @@ type EmployeeInput struct {
 	// must NOT be put here — they are paid via AP (treasury), never through payroll gross, so they
 	// don't inflate PAYE. Additive: zero by default (no change to existing callers).
 	TaxableAllowances decimal.Decimal
-	Loans             []Recoverable
-	Advances          []Recoverable
-	LossDamages       []Recoverable
+	// UnpaidTime is pay withheld for approved attendance deductions (lateness, unexcused absence).
+	// It is loss of pay, not a recovery: it comes off gross BEFORE statutory deductions and PAYE,
+	// so the employee is not taxed on pay they did not earn. Capped at gross. Zero by default.
+	UnpaidTime  decimal.Decimal
+	Loans       []Recoverable
+	Advances    []Recoverable
+	LossDamages []Recoverable
 	// StaffPurchases are POS-origin staff credit/layaway balances funded from salary — recovered
 	// in the after-PAYE phase like loans/advances. Filtered/effective-dated by the caller.
 	StaffPurchases  []Recoverable
@@ -83,16 +87,16 @@ type Recoverable struct {
 // builds this from tenant-scoped, effective-dated Ent rows; a nil pointer for a required
 // statutory item makes the engine fail loud.
 type Config struct {
-	Income      *FormulaRates // PAYE bands + personal relief (required)
+	Income *FormulaRates // PAYE bands + personal relief (required)
 	// IncomeSecondary is the PAYE table for secondary employees (a second employer): income is
 	// taxed at the top marginal rate (a flat band, no personal relief) because the primary
 	// employer already consumed the lower bands + relief. Optional — when nil, secondary
 	// employees fall back to the primary bands with relief suppressed (legacy behaviour).
 	IncomeSecondary *FormulaRates
 	NSSF            *FormulaRates // tiered NSSF (required)
-	SHIF        *FormulaRates // SHIF (set when SHIF is effective)
-	NHIF        *FormulaRates // legacy NHIF (set when NHIF is effective)
-	HousingLevy *FormulaRates // housing levy (required)
+	SHIF            *FormulaRates // SHIF (set when SHIF is effective)
+	NHIF            *FormulaRates // legacy NHIF (set when NHIF is effective)
+	HousingLevy     *FormulaRates // housing levy (required)
 	// NITA is the industrial training levy (employer-only, flat per employee per month —
 	// KES 50). Optional: nil when the tenant has no NITA formula configured. Never affects
 	// employee deductions or net pay; surfaces as an employer contribution only.
@@ -146,7 +150,7 @@ const (
 	CompPAYE        = "paye"
 	// CompNITA is computed outside the phase loop (employer-only); the constant exists for
 	// Config.Disabled keying and payslip-line coding, not for DeductionOrder membership.
-	CompNITA = "nita"
+	CompNITA          = "nita"
 	CompLoans         = "loans"
 	CompAdvances      = "advances"
 	CompLossDamages   = "loss_damages"

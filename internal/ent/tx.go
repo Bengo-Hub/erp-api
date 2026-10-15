@@ -38,6 +38,8 @@ type Tx struct {
 	ApprovalWorkflow *ApprovalWorkflowClient
 	// ApprovalWorkflowStep is the client for interacting with the ApprovalWorkflowStep builders.
 	ApprovalWorkflowStep *ApprovalWorkflowStepClient
+	// AttendanceDeduction is the client for interacting with the AttendanceDeduction builders.
+	AttendanceDeduction *AttendanceDeductionClient
 	// AttendanceRecord is the client for interacting with the AttendanceRecord builders.
 	AttendanceRecord *AttendanceRecordClient
 	// AttendanceRule is the client for interacting with the AttendanceRule builders.
@@ -366,6 +368,7 @@ func (tx *Tx) init() {
 	tx.ApprovalStepAction = NewApprovalStepActionClient(tx.config)
 	tx.ApprovalWorkflow = NewApprovalWorkflowClient(tx.config)
 	tx.ApprovalWorkflowStep = NewApprovalWorkflowStepClient(tx.config)
+	tx.AttendanceDeduction = NewAttendanceDeductionClient(tx.config)
 	tx.AttendanceRecord = NewAttendanceRecordClient(tx.config)
 	tx.AttendanceRule = NewAttendanceRuleClient(tx.config)
 	tx.AuthOutlet = NewAuthOutletClient(tx.config)

@@ -29,6 +29,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflow"
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflowstep"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancededuction"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
@@ -154,6 +155,8 @@ type Client struct {
 	ApprovalWorkflow *ApprovalWorkflowClient
 	// ApprovalWorkflowStep is the client for interacting with the ApprovalWorkflowStep builders.
 	ApprovalWorkflowStep *ApprovalWorkflowStepClient
+	// AttendanceDeduction is the client for interacting with the AttendanceDeduction builders.
+	AttendanceDeduction *AttendanceDeductionClient
 	// AttendanceRecord is the client for interacting with the AttendanceRecord builders.
 	AttendanceRecord *AttendanceRecordClient
 	// AttendanceRule is the client for interacting with the AttendanceRule builders.
@@ -362,6 +365,7 @@ func (c *Client) init() {
 	c.ApprovalStepAction = NewApprovalStepActionClient(c.config)
 	c.ApprovalWorkflow = NewApprovalWorkflowClient(c.config)
 	c.ApprovalWorkflowStep = NewApprovalWorkflowStepClient(c.config)
+	c.AttendanceDeduction = NewAttendanceDeductionClient(c.config)
 	c.AttendanceRecord = NewAttendanceRecordClient(c.config)
 	c.AttendanceRule = NewAttendanceRuleClient(c.config)
 	c.AuthOutlet = NewAuthOutletClient(c.config)
@@ -559,6 +563,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ApprovalStepAction:        NewApprovalStepActionClient(cfg),
 		ApprovalWorkflow:          NewApprovalWorkflowClient(cfg),
 		ApprovalWorkflowStep:      NewApprovalWorkflowStepClient(cfg),
+		AttendanceDeduction:       NewAttendanceDeductionClient(cfg),
 		AttendanceRecord:          NewAttendanceRecordClient(cfg),
 		AttendanceRule:            NewAttendanceRuleClient(cfg),
 		AuthOutlet:                NewAuthOutletClient(cfg),
@@ -683,6 +688,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ApprovalStepAction:        NewApprovalStepActionClient(cfg),
 		ApprovalWorkflow:          NewApprovalWorkflowClient(cfg),
 		ApprovalWorkflowStep:      NewApprovalWorkflowStepClient(cfg),
+		AttendanceDeduction:       NewAttendanceDeductionClient(cfg),
 		AttendanceRecord:          NewAttendanceRecordClient(cfg),
 		AttendanceRule:            NewAttendanceRuleClient(cfg),
 		AuthOutlet:                NewAuthOutletClient(cfg),
@@ -807,21 +813,21 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Advance, c.ApiRequestMetric, c.AppSetting, c.Application, c.Appraisal,
 		c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
-		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
-		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BackupSetting,
-		c.BenefitTax, c.Candidate, c.CasualPayment, c.ClaimItem, c.CompanySettings,
-		c.ConsultantVoucher, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
-		c.DocumentSequence, c.ESSSettings, c.Employee, c.EmployeeBankAccount,
-		c.EmployeeBenefit, c.EmployeeDisciplinary, c.EmployeeDocument,
-		c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
-		c.EmployeeProjectAllocation, c.EmploymentHistory, c.ExchangeRate,
-		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
-		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
-		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
-		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory, c.MetricTarget,
-		c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
-		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
-		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
+		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceDeduction,
+		c.AttendanceRecord, c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup,
+		c.BackupSetting, c.BenefitTax, c.Candidate, c.CasualPayment, c.ClaimItem,
+		c.CompanySettings, c.ConsultantVoucher, c.ContactDetails, c.Contract,
+		c.CustomUser, c.Department, c.DocumentSequence, c.ESSSettings, c.Employee,
+		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
+		c.EmployeeDocument, c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric,
+		c.EmployeeOnboarding, c.EmployeeProjectAllocation, c.EmploymentHistory,
+		c.ExchangeRate, c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings,
+		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
+		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
+		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
+		c.MetricTarget, c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask,
+		c.OutboxEvent, c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem,
+		c.PayrollRelief, c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
 		c.PerformanceMetric, c.PerformanceReview, c.Permission, c.PublicHoliday,
 		c.RecoveryLine, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
 		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
@@ -842,21 +848,21 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Advance, c.ApiRequestMetric, c.AppSetting, c.Application, c.Appraisal,
 		c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
-		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceRecord,
-		c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup, c.BackupSetting,
-		c.BenefitTax, c.Candidate, c.CasualPayment, c.ClaimItem, c.CompanySettings,
-		c.ConsultantVoucher, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
-		c.DocumentSequence, c.ESSSettings, c.Employee, c.EmployeeBankAccount,
-		c.EmployeeBenefit, c.EmployeeDisciplinary, c.EmployeeDocument,
-		c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
-		c.EmployeeProjectAllocation, c.EmploymentHistory, c.ExchangeRate,
-		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
-		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
-		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
-		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory, c.MetricTarget,
-		c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
-		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
-		c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
+		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceDeduction,
+		c.AttendanceRecord, c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.Backup,
+		c.BackupSetting, c.BenefitTax, c.Candidate, c.CasualPayment, c.ClaimItem,
+		c.CompanySettings, c.ConsultantVoucher, c.ContactDetails, c.Contract,
+		c.CustomUser, c.Department, c.DocumentSequence, c.ESSSettings, c.Employee,
+		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
+		c.EmployeeDocument, c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric,
+		c.EmployeeOnboarding, c.EmployeeProjectAllocation, c.EmploymentHistory,
+		c.ExchangeRate, c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings,
+		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
+		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
+		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
+		c.MetricTarget, c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask,
+		c.OutboxEvent, c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem,
+		c.PayrollRelief, c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
 		c.PerformanceMetric, c.PerformanceReview, c.Permission, c.PublicHoliday,
 		c.RecoveryLine, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
 		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
@@ -899,6 +905,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ApprovalWorkflow.mutate(ctx, m)
 	case *ApprovalWorkflowStepMutation:
 		return c.ApprovalWorkflowStep.mutate(ctx, m)
+	case *AttendanceDeductionMutation:
+		return c.AttendanceDeduction.mutate(ctx, m)
 	case *AttendanceRecordMutation:
 		return c.AttendanceRecord.mutate(ctx, m)
 	case *AttendanceRuleMutation:
@@ -2878,6 +2886,139 @@ func (c *ApprovalWorkflowStepClient) mutate(ctx context.Context, m *ApprovalWork
 		return (&ApprovalWorkflowStepDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ApprovalWorkflowStep mutation op: %q", m.Op())
+	}
+}
+
+// AttendanceDeductionClient is a client for the AttendanceDeduction schema.
+type AttendanceDeductionClient struct {
+	config
+}
+
+// NewAttendanceDeductionClient returns a client for the AttendanceDeduction from the given config.
+func NewAttendanceDeductionClient(c config) *AttendanceDeductionClient {
+	return &AttendanceDeductionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `attendancededuction.Hooks(f(g(h())))`.
+func (c *AttendanceDeductionClient) Use(hooks ...Hook) {
+	c.hooks.AttendanceDeduction = append(c.hooks.AttendanceDeduction, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `attendancededuction.Intercept(f(g(h())))`.
+func (c *AttendanceDeductionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AttendanceDeduction = append(c.inters.AttendanceDeduction, interceptors...)
+}
+
+// Create returns a builder for creating a AttendanceDeduction entity.
+func (c *AttendanceDeductionClient) Create() *AttendanceDeductionCreate {
+	mutation := newAttendanceDeductionMutation(c.config, OpCreate)
+	return &AttendanceDeductionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AttendanceDeduction entities.
+func (c *AttendanceDeductionClient) CreateBulk(builders ...*AttendanceDeductionCreate) *AttendanceDeductionCreateBulk {
+	return &AttendanceDeductionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AttendanceDeductionClient) MapCreateBulk(slice any, setFunc func(*AttendanceDeductionCreate, int)) *AttendanceDeductionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AttendanceDeductionCreateBulk{err: fmt.Errorf("calling to AttendanceDeductionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AttendanceDeductionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AttendanceDeductionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AttendanceDeduction.
+func (c *AttendanceDeductionClient) Update() *AttendanceDeductionUpdate {
+	mutation := newAttendanceDeductionMutation(c.config, OpUpdate)
+	return &AttendanceDeductionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AttendanceDeductionClient) UpdateOne(_m *AttendanceDeduction) *AttendanceDeductionUpdateOne {
+	mutation := newAttendanceDeductionMutation(c.config, OpUpdateOne, withAttendanceDeduction(_m))
+	return &AttendanceDeductionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AttendanceDeductionClient) UpdateOneID(id uuid.UUID) *AttendanceDeductionUpdateOne {
+	mutation := newAttendanceDeductionMutation(c.config, OpUpdateOne, withAttendanceDeductionID(id))
+	return &AttendanceDeductionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AttendanceDeduction.
+func (c *AttendanceDeductionClient) Delete() *AttendanceDeductionDelete {
+	mutation := newAttendanceDeductionMutation(c.config, OpDelete)
+	return &AttendanceDeductionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AttendanceDeductionClient) DeleteOne(_m *AttendanceDeduction) *AttendanceDeductionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AttendanceDeductionClient) DeleteOneID(id uuid.UUID) *AttendanceDeductionDeleteOne {
+	builder := c.Delete().Where(attendancededuction.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AttendanceDeductionDeleteOne{builder}
+}
+
+// Query returns a query builder for AttendanceDeduction.
+func (c *AttendanceDeductionClient) Query() *AttendanceDeductionQuery {
+	return &AttendanceDeductionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAttendanceDeduction},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AttendanceDeduction entity by its id.
+func (c *AttendanceDeductionClient) Get(ctx context.Context, id uuid.UUID) (*AttendanceDeduction, error) {
+	return c.Query().Where(attendancededuction.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AttendanceDeductionClient) GetX(ctx context.Context, id uuid.UUID) *AttendanceDeduction {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AttendanceDeductionClient) Hooks() []Hook {
+	return c.hooks.AttendanceDeduction
+}
+
+// Interceptors returns the client interceptors.
+func (c *AttendanceDeductionClient) Interceptors() []Interceptor {
+	return c.inters.AttendanceDeduction
+}
+
+func (c *AttendanceDeductionClient) mutate(ctx context.Context, m *AttendanceDeductionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AttendanceDeductionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AttendanceDeductionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AttendanceDeductionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AttendanceDeductionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AttendanceDeduction mutation op: %q", m.Op())
 	}
 }
 
@@ -15378,13 +15519,13 @@ type (
 	hooks struct {
 		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
-		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
-		AttendanceRule, AuthOutlet, AuthTenant, Backup, BackupSetting, BenefitTax,
-		Candidate, CasualPayment, ClaimItem, CompanySettings, ConsultantVoucher,
-		ContactDetails, Contract, CustomUser, Department, DocumentSequence,
-		ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
-		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
-		EmployeeMetric, EmployeeOnboarding, EmployeeProjectAllocation,
+		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep,
+		AttendanceDeduction, AttendanceRecord, AttendanceRule, AuthOutlet, AuthTenant,
+		Backup, BackupSetting, BenefitTax, Candidate, CasualPayment, ClaimItem,
+		CompanySettings, ConsultantVoucher, ContactDetails, Contract, CustomUser,
+		Department, DocumentSequence, ESSSettings, Employee, EmployeeBankAccount,
+		EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument, EmployeeEducation,
+		EmployeeLoan, EmployeeMetric, EmployeeOnboarding, EmployeeProjectAllocation,
 		EmploymentHistory, ExchangeRate, ExchangeRateAPISettings, ExpenseClaim,
 		GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey, JobGroup,
 		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
@@ -15402,13 +15543,13 @@ type (
 	inters struct {
 		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
 		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
-		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep, AttendanceRecord,
-		AttendanceRule, AuthOutlet, AuthTenant, Backup, BackupSetting, BenefitTax,
-		Candidate, CasualPayment, ClaimItem, CompanySettings, ConsultantVoucher,
-		ContactDetails, Contract, CustomUser, Department, DocumentSequence,
-		ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
-		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
-		EmployeeMetric, EmployeeOnboarding, EmployeeProjectAllocation,
+		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep,
+		AttendanceDeduction, AttendanceRecord, AttendanceRule, AuthOutlet, AuthTenant,
+		Backup, BackupSetting, BenefitTax, Candidate, CasualPayment, ClaimItem,
+		CompanySettings, ConsultantVoucher, ContactDetails, Contract, CustomUser,
+		Department, DocumentSequence, ESSSettings, Employee, EmployeeBankAccount,
+		EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument, EmployeeEducation,
+		EmployeeLoan, EmployeeMetric, EmployeeOnboarding, EmployeeProjectAllocation,
 		EmploymentHistory, ExchangeRate, ExchangeRateAPISettings, ExpenseClaim,
 		GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey, JobGroup,
 		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,

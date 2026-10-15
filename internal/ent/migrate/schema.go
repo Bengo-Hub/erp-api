@@ -452,6 +452,44 @@ var (
 			},
 		},
 	}
+	// AttendanceDeductionsColumns holds the columns for the "attendance_deductions" table.
+	AttendanceDeductionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "period", Type: field.TypeTime},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"late", "absence"}},
+		{Name: "occurrences", Type: field.TypeInt, Default: 0},
+		{Name: "minutes", Type: field.TypeInt, Default: 0},
+		{Name: "amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "basis", Type: field.TypeString},
+		{Name: "rule_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "waived", "applied"}, Default: "pending"},
+		{Name: "reviewed_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "reviewed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "note", Type: field.TypeString, Nullable: true},
+		{Name: "payslip_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// AttendanceDeductionsTable holds the schema information for the "attendance_deductions" table.
+	AttendanceDeductionsTable = &schema.Table{
+		Name:       "attendance_deductions",
+		Columns:    AttendanceDeductionsColumns,
+		PrimaryKey: []*schema.Column{AttendanceDeductionsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "attendancededuction_tenant_id_employee_id_period_kind",
+				Unique:  true,
+				Columns: []*schema.Column{AttendanceDeductionsColumns[1], AttendanceDeductionsColumns[2], AttendanceDeductionsColumns[3], AttendanceDeductionsColumns[4]},
+			},
+			{
+				Name:    "attendancededuction_tenant_id_period_status",
+				Unique:  false,
+				Columns: []*schema.Column{AttendanceDeductionsColumns[1], AttendanceDeductionsColumns[3], AttendanceDeductionsColumns[10]},
+			},
+		},
+	}
 	// AttendanceRecordsColumns holds the columns for the "attendance_records" table.
 	AttendanceRecordsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -3750,6 +3788,7 @@ var (
 		ApprovalStepActionsTable,
 		ApprovalWorkflowsTable,
 		ApprovalWorkflowStepsTable,
+		AttendanceDeductionsTable,
 		AttendanceRecordsTable,
 		AttendanceRulesTable,
 		AuthOutletsTable,

@@ -9,10 +9,13 @@ import (
 // PayslipResult is the engine's deterministic output for one employee/period. All fields
 // are decimal; the service maps these straight onto the Payslip Ent row.
 type PayslipResult struct {
-	GrossPay          decimal.Decimal
-	TaxablePay        decimal.Decimal
-	PAYE              decimal.Decimal // after all reliefs, floored at 0
-	PersonalRelief    decimal.Decimal
+	GrossPay decimal.Decimal
+	// UnpaidTime is the attendance deduction actually taken off gross (EmployeeInput.UnpaidTime,
+	// capped at gross). GrossPay is already net of it.
+	UnpaidTime     decimal.Decimal
+	TaxablePay     decimal.Decimal
+	PAYE           decimal.Decimal // after all reliefs, floored at 0
+	PersonalRelief decimal.Decimal
 	// InsuranceRelief is the applied insurance-relief credit (min(rate*premium, cap)); it reduces
 	// PAYE alongside PersonalRelief. PensionDeduction/MortgageDeduction are the applied PRE-TAX
 	// allowable deductions, and DisabilityExemption the applied chargeable-pay exemption — all
@@ -22,11 +25,11 @@ type PayslipResult struct {
 	MortgageDeduction   decimal.Decimal
 	DisabilityExemption decimal.Decimal
 	GrossPayAfterTax    decimal.Decimal
-	SHIFOrNHIF        decimal.Decimal
-	HousingLevy       decimal.Decimal
-	NSSFEmployeeTier1 decimal.Decimal
-	NSSFEmployeeTier2 decimal.Decimal
-	NSSFEmployer      decimal.Decimal
+	SHIFOrNHIF          decimal.Decimal
+	HousingLevy         decimal.Decimal
+	NSSFEmployeeTier1   decimal.Decimal
+	NSSFEmployeeTier2   decimal.Decimal
+	NSSFEmployer        decimal.Decimal
 	// NITAEmployer is the employer-only industrial training levy (flat per employee/month).
 	// It never enters deductions or net pay.
 	NITAEmployer decimal.Decimal
@@ -61,7 +64,14 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 	// allowances). Non-taxable reimbursements are NEVER here (they go via AP). Statutory + PAYE +
 	// net pay all use this gross. Additive: TaxableAllowances defaults to zero.
 	gross := in.GrossPay.Add(in.TaxableAllowances)
-	res := PayslipResult{GrossPay: gross}
+	// Approved attendance deductions are unearned pay: they reduce gross before anything is
+	// charged on it, and never below zero.
+	unpaid := decimal.Zero
+	if in.UnpaidTime.IsPositive() {
+		unpaid = decimal.Min(in.UnpaidTime, gross)
+		gross = gross.Sub(unpaid)
+	}
+	res := PayslipResult{GrossPay: gross, UnpaidTime: unpaid}
 	var nssf NSSFResult
 
 	for _, phase := range order {
