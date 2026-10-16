@@ -274,6 +274,14 @@ transport problems (durably enqueued in the outbox).
 
 Treasury is the single source of truth for money + GL; the ERP never posts ledgers or moves cash.
 
+**Running payroll (Go, 2026-10-15).** `POST /hrm/payroll/process-with-formulas` queues a
+`PayrollRunJob` and answers 202 at once; the pod that took it computes the payslips in the
+background. erp-ui follows `GET /hrm/payroll/runs/{id}/events` (Server-Sent Events, read with
+fetch so the Authorization header is sent; each connection lasts 15s and the client reconnects
+until a `done` event). One active run per tenant (409 `run_in_progress` names it). Approved
+attendance deductions are taken off gross before statutory deductions and PAYE, so the gross on
+`erp.payroll.processed` is already net of them.
+
 ### Payroll → treasury sequence
 
 ```mermaid

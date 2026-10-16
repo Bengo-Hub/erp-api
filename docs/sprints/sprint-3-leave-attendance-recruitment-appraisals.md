@@ -71,7 +71,7 @@ All entities above with `tenant_id` + composite `(tenant_id, …)` indexes; per-
 
 ## Status: Done (re-verified on `main` 2026-09-27)
 
-The RBAC seed and resume upload from the deferred list below shipped in Sprint 4, and leave and appraisals now use the shared approval engine. Still open: attendance penalty deductions are not applied to payslips (`docs/backlog.md`).
+The RBAC seed and resume upload from the deferred list below shipped in Sprint 4, and leave and appraisals now use the shared approval engine. Attendance penalties reach payslips since 2026-10-15 (`f80e34f`): they are computed into reviewable `AttendanceDeduction` rows and only approved rows are deducted, as unpaid time before tax (`docs/backlog.md`, Done).
 
 All five domains implemented in Go, tenant-scoped, RBAC-enforced, building green
 (`go build ./...` + `go vet ./...`). Endpoints under `/api/v1/hrm/...`, all `data`-enveloped.
@@ -123,5 +123,5 @@ appraisal/review FSMs reject invalid transitions.
   follow-up (Sprint 4 config work). Platform owners/superusers/services bypass.
 - Candidate resume upload stores a relative media path only (no file-upload endpoint yet) —
   follows the per-tenant media convention; wiring the upload is a later task.
-- AttendanceRule late/absenteeism *penalty enforcement* (salary deduction wiring into
-  payroll) is modeled but not yet applied to payslips — payroll integration is a follow-up.
+- AttendanceRule late/absenteeism penalty enforcement: done 2026-10-15 (`f80e34f`), as
+  reviewable attendance deductions applied by the payroll run.
