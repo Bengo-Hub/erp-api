@@ -167,6 +167,16 @@ Public/health endpoints:
 > Revamp note: if other services later need HR data (e.g. employee directory), add a versioned
 > `/api/v1/s2s/{tenant}/...` surface guarded by `INTERNAL_SERVICE_KEY` (httpware API-key auth).
 
+#### Employee lookup for pickers (added 2026-10-16)
+
+`GET /api/v1/hrm/employees/lookup?q=&limit=` returns `{data: [{id, employee_number, name, email}]}`:
+the tenant's active employees (not deleted, not terminated) whose name, staff number or email
+contains `q`, by name, at most 50. Nothing else about the employee leaves erp. A service calls it
+with `X-API-Key` and `X-Tenant-ID` (the same tenant resolution as the staff-purchase endpoints); a
+signed-in user needs employee view and sees only their tenant. A service key passes erp's own plan
+gate, so the caller checks the tenant's plan first: maskani-api only calls it when the tenant has
+the ERP `hr_management` feature (its work order staff picker).
+
 #### External expense claims (added 2026-10-10)
 
 Other services raise employee claims here instead of keeping their own allowance logic. First

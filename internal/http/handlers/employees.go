@@ -62,6 +62,7 @@ func (h *EmployeesHandler) WithBranding(b *platformauth.BrandingClient) *Employe
 func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/hrm/employees", func(er chi.Router) {
 		er.Get("/", h.List)
+		er.Get("/lookup", h.Lookup) // active staff for other services' pickers (employees_lookup.go)
 		er.Post("/", h.Create)
 		er.Post("/renumber", h.Renumber) // re-issue SLUG/YYYY/### staff numbers to all employees
 		er.Post("/import", h.Import)      // bulk CSV import (handler in employees_import.go)
