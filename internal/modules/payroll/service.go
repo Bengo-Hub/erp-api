@@ -13,18 +13,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
-	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
-	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
-	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeprojectallocation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
-	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
-	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
-	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
-	"github.com/Bengo-Hub/erp-api/internal/ent/staffpurchasededuction"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
@@ -88,7 +81,12 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Approved attendance deductions for the month, loaded once for the whole run.
+	// Everything the engine input needs, and the month's approved attendance deductions, are
+	// loaded once for the whole run rather than per employee.
+	pre, err := s.loadRunInputs(ctx, p.TenantID, emps)
+	if err != nil {
+		return nil, fmt.Errorf("payroll: load inputs: %w", err)
+	}
 	attendance, err := s.approvedAttendanceDeductions(ctx, p.TenantID, p.Period)
 	if err != nil {
 		return nil, fmt.Errorf("payroll: attendance deductions: %w", err)
@@ -102,7 +100,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		in, items, ierr := s.buildEmployeeInput(ctx, p, emp)
+		in, items, ierr := s.buildEmployeeInput(p, emp, pre)
 		if ierr != nil {
 			return nil, fmt.Errorf("payroll: employee %s: %w", emp.ID, ierr)
 		}
@@ -260,143 +258,6 @@ func contractCovers(c *ent.Contract, period time.Time) bool {
 	return true
 }
 
-// buildEmployeeInput loads salary + active, effective-dated recoverables for the employee
-// and maps them to the pure engine input (no persistence — gaps §2.7).
-func (s *Service) buildEmployeeInput(ctx context.Context, p RunParams, emp *ent.Employee) (payrollengine.EmployeeInput, EmployeeItemized, error) {
-	var in payrollengine.EmployeeInput
-	var items EmployeeItemized
-
-	sal, err := s.orm.SalaryDetails.Query().
-		Where(salarydetails.TenantID(p.TenantID), salarydetails.EmployeeID(emp.ID), salarydetails.IsActive(true)).
-		First(ctx)
-	if ent.IsNotFound(err) {
-		return in, items, fmt.Errorf("no active salary details")
-	}
-	if err != nil {
-		return in, items, err
-	}
-	in.GrossPay = sal.MonthlySalary
-	in.TaxCategory = sal.IncomeTax
-	// Per-employee KRA relief inputs (actual monthly amounts; the engine applies the statutory caps).
-	in.InsurancePremium = sal.InsurancePremium
-	in.PensionContribution = sal.PensionContribution
-	in.MortgageInterest = sal.MortgageInterest
-	in.DisabilityExempt = sal.DisabilityExempt
-
-	// Loans: recover min(installment, outstanding) for active, period-effective loans.
-	loans, err := s.orm.EmployeeLoan.Query().
-		Where(employeeloan.TenantID(p.TenantID), employeeloan.EmployeeID(emp.ID), employeeloan.IsActive(true)).
-		All(ctx)
-	if err != nil {
-		return in, items, err
-	}
-	for _, l := range loans {
-		if !dateActive(l.StartDate, l.EndDate, p.Period) {
-			continue
-		}
-		outstanding := l.PrincipalAmount.Sub(l.AmountRepaid)
-		in.Loans = append(in.Loans, payrollengine.Recoverable{Installment: l.MonthlyInstallment, Outstanding: outstanding})
-		if rec := recovered(l.MonthlyInstallment, outstanding); rec.IsPositive() {
-			items.Loans = append(items.Loans, LabeledAmount{Label: "Loan", Amount: rec})
-			items.Recoveries = append(items.Recoveries, RecoveryAlloc{Type: "loan", ID: l.ID, Amount: rec})
-		}
-	}
-
-	// Advances.
-	advs, err := s.orm.Advance.Query().
-		Where(advance.TenantID(p.TenantID), advance.EmployeeID(emp.ID), advance.IsActive(true)).
-		All(ctx)
-	if err != nil {
-		return in, items, err
-	}
-	for _, a := range advs {
-		if a.IssueDate != nil && a.IssueDate.After(p.Period) {
-			continue
-		}
-		install, e := s.installmentFor(ctx, a.RepayOptionID)
-		if e != nil {
-			return in, items, e
-		}
-		outstanding := a.AmountIssued.Sub(a.AmountRepaid)
-		in.Advances = append(in.Advances, payrollengine.Recoverable{Installment: install, Outstanding: outstanding})
-		if p.RecoverAdvances {
-			if rec := recovered(install, outstanding); rec.IsPositive() {
-				items.Advances = append(items.Advances, LabeledAmount{Label: "Salary Advance", Amount: rec})
-				items.Recoveries = append(items.Recoveries, RecoveryAlloc{Type: "advance", ID: a.ID, Amount: rec})
-			}
-		}
-	}
-
-	// Loss/damages.
-	lds, err := s.orm.LossAndDamage.Query().
-		Where(lossanddamage.TenantID(p.TenantID), lossanddamage.EmployeeID(emp.ID), lossanddamage.IsActive(true)).
-		All(ctx)
-	if err != nil {
-		return in, items, err
-	}
-	for _, ld := range lds {
-		if ld.IssueDate != nil && ld.IssueDate.After(p.Period) {
-			continue
-		}
-		install, e := s.installmentFor(ctx, ld.RepayOptionID)
-		if e != nil {
-			return in, items, e
-		}
-		outstanding := ld.DamageAmount.Sub(ld.AmountRepaid)
-		in.LossDamages = append(in.LossDamages, payrollengine.Recoverable{Installment: install, Outstanding: outstanding})
-		if rec := recovered(install, outstanding); rec.IsPositive() {
-			items.LossDamages = append(items.LossDamages, LabeledAmount{Label: "Loss & Damage", Amount: rec})
-			items.Recoveries = append(items.Recoveries, RecoveryAlloc{Type: "loss_damage", ID: ld.ID, Amount: rec})
-		}
-	}
-
-	// Staff purchases (POS credit/layaway funded from salary) — recovered like other recoverables.
-	staffPurchases, err := s.orm.StaffPurchaseDeduction.Query().
-		Where(
-			staffpurchasededuction.TenantID(p.TenantID),
-			staffpurchasededuction.EmployeeID(emp.ID),
-			staffpurchasededuction.IsActive(true),
-		).All(ctx)
-	if err != nil {
-		return in, items, err
-	}
-	for _, sp := range staffPurchases {
-		outstanding := sp.Principal.Sub(sp.AmountRecovered)
-		in.StaffPurchases = append(in.StaffPurchases, payrollengine.Recoverable{Installment: sp.InstallmentAmount, Outstanding: outstanding})
-		if rec := recovered(sp.InstallmentAmount, outstanding); rec.IsPositive() {
-			items.StaffPurchases = append(items.StaffPurchases, LabeledAmount{Label: "Staff Purchase", Amount: rec})
-			items.Recoveries = append(items.Recoveries, RecoveryAlloc{Type: "staff_purchase", ID: sp.ID, Amount: rec})
-		}
-	}
-
-	// Non-cash benefits (fed to the engine as an aggregate; itemised for the payslip lines).
-	bens, err := s.orm.EmployeeBenefit.Query().
-		Where(employeebenefit.TenantID(p.TenantID), employeebenefit.EmployeeID(emp.ID), employeebenefit.IsActive(true), employeebenefit.NonCash(true)).
-		All(ctx)
-	if err != nil {
-		return in, items, err
-	}
-	total := decimal.Zero
-	titles := s.componentTitles(ctx, p.TenantID, bens)
-	for _, b := range bens {
-		if !dateActive(b.EffectiveDate, b.EndDate, p.Period) {
-			continue
-		}
-		total = total.Add(b.Amount)
-		label := "Benefit"
-		if b.ComponentID != nil {
-			if t, ok := titles[*b.ComponentID]; ok {
-				label = t
-			}
-		}
-		items.Benefits = append(items.Benefits, LabeledAmount{
-			ComponentID: b.ComponentID, Label: label, Amount: b.Amount, Taxable: b.Amount, NonCash: true,
-		})
-	}
-	in.NonCashBenefits = total
-	return in, items, nil
-}
-
 // recovered returns the amount actually recovered this period: min(installment, outstanding),
 // or zero when either is non-positive (mirrors payrollengine.sumRecoverables).
 func recovered(installment, outstanding decimal.Decimal) decimal.Decimal {
@@ -407,46 +268,6 @@ func recovered(installment, outstanding decimal.Decimal) decimal.Decimal {
 		return installment
 	}
 	return outstanding
-}
-
-// componentTitles batch-loads the titles for the benefit components referenced by bens.
-func (s *Service) componentTitles(ctx context.Context, tenantID uuid.UUID, bens []*ent.EmployeeBenefit) map[uuid.UUID]string {
-	ids := make([]uuid.UUID, 0, len(bens))
-	for _, b := range bens {
-		if b.ComponentID != nil {
-			ids = append(ids, *b.ComponentID)
-		}
-	}
-	out := map[uuid.UUID]string{}
-	if len(ids) == 0 {
-		return out
-	}
-	rows, err := s.orm.PayrollComponent.Query().Where(payrollcomponent.IDIn(ids...)).All(ctx)
-	if err != nil {
-		return out
-	}
-	for _, c := range rows {
-		out[c.ID] = c.Title
-	}
-	return out
-}
-
-// installmentFor resolves the per-period installment for a repay option (amount/installments).
-func (s *Service) installmentFor(ctx context.Context, repayOptionID *uuid.UUID) (decimal.Decimal, error) {
-	if repayOptionID == nil {
-		return decimal.Zero, nil
-	}
-	ro, err := s.orm.RepayOption.Get(ctx, *repayOptionID)
-	if ent.IsNotFound(err) {
-		return decimal.Zero, nil
-	}
-	if err != nil {
-		return decimal.Zero, err
-	}
-	if ro.NoOfInstallments <= 0 {
-		return decimal.Zero, nil
-	}
-	return ro.Amount.DivRound(decimal.NewFromInt(int64(ro.NoOfInstallments)), 4), nil
 }
 
 // persistPayslip upserts the payslip for (employee, period) and writes the engine output.
