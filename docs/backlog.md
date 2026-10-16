@@ -18,18 +18,18 @@
 
 ### Analytics and reports
 
-- `GET /reports/hrm-analytics`, all grouped in SQL: headcount by department, gender and employment type; new hires; exits and turnover (from `Employee.terminated_at`, set on terminate and cleared on reinstate); contracts expiring in 30, 60 and 90 days; 12-month payroll trend; payroll by department; overtime (attendance and timesheets reported apart); leave liability. Commits `4040b96`, `2685c76`.
-- `HeadcountSummary` grouped in SQL; statutory reports load only the employees on the month's payslips (chunked IN) instead of every employee ever. Commits `4040b96`, `ec83e67`.
-- `GET /hrm/attendance/timesheets/project-hours`: approved and submitted timesheet hours per project, grouped, read by projects-api for utilisation. Commit `44dfc89`.
-- `GET /hrm/payroll/labour-cost?month=YYYY-MM`: a payroll month's gross pay by project, split with the same allocation rules (`costAllocations`) the payroll event posts to treasury, so the figures match project costs there. Commit `4b1613e`.
+- `GET /reports/hrm-analytics`, all grouped in SQL: headcount by department, gender and employment type; new hires; exits and turnover (from `Employee.terminated_at`, set on terminate and cleared on reinstate); contracts expiring in 30, 60 and 90 days; 12-month payroll trend; payroll by department; overtime (attendance and timesheets reported apart); leave liability. Commits `f24a522`, `b8fedb5`.
+- `HeadcountSummary` grouped in SQL; statutory reports load only the employees on the month's payslips (chunked IN) instead of every employee ever. Commits `f24a522`, `a7f0c80`.
+- `GET /hrm/attendance/timesheets/project-hours`: approved and submitted timesheet hours per project, grouped, read by projects-api for utilisation. Commit `786ef39`.
+- `GET /hrm/payroll/labour-cost?month=YYYY-MM`: a payroll month's gross pay by project, split with the same allocation rules (`costAllocations`) the payroll event posts to treasury, so the figures match project costs there. Commit `bb49507`.
 
 ### Payroll and cost dimensions
 
-- `erp.payroll.processed` carries the real cost centre and `allocations[]` per employee from `EmployeeProjectAllocation` (fixed first, then percent, capped; the rest on the department cost centre). Commit `7c3fcd3`.
-- `Department.cost_center_id`, editable through the API and the erp-ui department form. Commit `7c3fcd3`.
-- `erp.expense_claim.created|updated|deleted` (one claim payload for every claim event) so treasury tracks claim commitments. Commit `64fb303`.
-- Claim approval runs treasury's `POST /s2s/{tenant}/budgets/claim-check`. A stop answers 409 `over_budget`; holders of `approvals.decide` can approve with the override. Commit `2685c76`.
+- `erp.payroll.processed` carries the real cost centre and `allocations[]` per employee from `EmployeeProjectAllocation` (fixed first, then percent, capped; the rest on the department cost centre). Commit `0f794f2`.
+- `Department.cost_center_id`, editable through the API and the erp-ui department form. Commit `0f794f2`.
+- `erp.expense_claim.created|updated|deleted` (one claim payload for every claim event) so treasury tracks claim commitments. Commit `da7c1f0`.
+- Claim approval runs treasury's `POST /s2s/{tenant}/budgets/claim-check`. A stop answers 409 `over_budget`; holders of `approvals.decide` can approve with the override. Commit `b8fedb5`.
 
 ### Platform
 
-- Projects lookup client sends `X-Tenant-ID`; the fallback is a bounded `SELECT DISTINCT ... LIMIT`. Commit `7c3fcd3`.
+- Projects lookup client sends `X-Tenant-ID`; the fallback is a bounded `SELECT DISTINCT ... LIMIT`. Commit `0f794f2`.
