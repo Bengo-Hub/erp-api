@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/recruitment"
 	"github.com/Bengo-Hub/erp-api/internal/platform/media"
 )
@@ -184,6 +185,9 @@ func (h *RecruitmentHandler) ListCandidates(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list candidates")
 		return
 	}
+	for _, c := range rows {
+		h.withResumeLink(c)
+	}
 	writePagedSlice(w, rows, pagination.Parse(r))
 }
 
@@ -211,17 +215,27 @@ func (h *RecruitmentHandler) CreateCandidate(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, row)
+	writeJSON(w, http.StatusCreated, h.withResumeLink(row))
 }
 
-// UploadResume accepts a multipart resume file for a candidate, stores it under the
-// per-tenant media path, and records the relative path on the candidate (deferred item).
+// withResumeLink swaps a stored resume key for a short-lived presigned link in a response (the
+// row itself keeps the key); an external link a candidate gave is left as is.
+func (h *RecruitmentHandler) withResumeLink(c *ent.Candidate) *ent.Candidate {
+	if c != nil && c.ResumeURL != nil && h.media != nil {
+		link := h.media.URL(*c.ResumeURL)
+		c.ResumeURL = &link
+	}
+	return c
+}
+
+// UploadResume accepts a multipart resume file for a candidate, stores it privately on the
+// media store, and records its key on the candidate; the replaced resume is deleted.
 func (h *RecruitmentHandler) UploadResume(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permRecruitmentManage) {
 		return
 	}
-	if h.media == nil {
+	if !h.media.Enabled() {
 		writeError(w, http.StatusServiceUnavailable, "media_unavailable", "media storage not configured")
 		return
 	}
@@ -230,7 +244,8 @@ func (h *RecruitmentHandler) UploadResume(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	if _, err := h.svc.GetCandidate(r.Context(), scope.TenantID, id); err != nil {
+	cand, err := h.svc.GetCandidate(r.Context(), scope.TenantID, id)
+	if err != nil {
 		writeError(w, http.StatusNotFound, "not_found", "candidate not found")
 		return
 	}
@@ -245,7 +260,7 @@ func (h *RecruitmentHandler) UploadResume(w http.ResponseWriter, r *http.Request
 	}
 	defer func() { _ = file.Close() }()
 
-	rel, err := h.media.SaveResume(scope.TenantID, id, header.Filename, file)
+	rel, err := h.media.SaveResume(r.Context(), scope.TenantID, id, header.Filename, file)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "upload_failed", err.Error())
 		return
@@ -255,7 +270,13 @@ func (h *RecruitmentHandler) UploadResume(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "save_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"candidate": row, "resume_url": h.media.URL(rel)})
+	// The replaced resume is deleted once the candidate points at the new one.
+	if cand.ResumeURL != nil {
+		if err := h.media.Release(r.Context(), *cand.ResumeURL, rel); err != nil {
+			h.log.Warn("replaced resume not deleted", zap.Error(err))
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"candidate": h.withResumeLink(row), "resume_url": h.media.URL(rel)})
 }
 
 // ---- Applications ----

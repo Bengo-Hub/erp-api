@@ -184,7 +184,7 @@ erDiagram
   TrainingEnrollment ||--o| TrainingEvaluation : evaluated
 
   JobPosting { uuid id PK; uuid tenant_id; string title; string status }
-  Candidate { uuid id PK; uuid tenant_id; string full_name; string email; string resume_url "relative media path" }
+  Candidate { uuid id PK; uuid tenant_id; string full_name; string email; string resume_url "media key or external link" }
   Application { uuid id PK; uuid tenant_id; uuid job_id FK; uuid candidate_id FK; string status; uuid hired_employee_id }
   EmployeeOnboarding { uuid id PK; uuid tenant_id; uuid employee_id FK; string status }
   OnboardingTask { uuid id PK; uuid tenant_id; uuid onboarding_id FK; string title; bool done }

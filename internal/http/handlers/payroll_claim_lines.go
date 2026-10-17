@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll"
@@ -246,7 +247,7 @@ func (h *PayrollHandler) UploadClaimAttachment(w http.ResponseWriter, r *http.Re
 	if !ok || !requirePermission(w, scope, permPayrollManage) {
 		return
 	}
-	if h.media == nil {
+	if !h.media.Enabled() {
 		writeError(w, http.StatusServiceUnavailable, "media_unavailable", "media storage not configured")
 		return
 	}
@@ -264,7 +265,12 @@ func (h *PayrollHandler) UploadClaimAttachment(w http.ResponseWriter, r *http.Re
 		return
 	}
 	defer func() { _ = file.Close() }()
-	rel, err := h.media.SaveClaimAttachment(scope.TenantID, id, header.Filename, file)
+	existing, err := h.svc.GetClaim(r.Context(), scope.TenantID, id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "claim not found")
+		return
+	}
+	rel, err := h.media.SaveClaimAttachment(r.Context(), scope.TenantID, id, header.Filename, file)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "upload_failed", err.Error())
 		return
@@ -272,6 +278,12 @@ func (h *PayrollHandler) UploadClaimAttachment(w http.ResponseWriter, r *http.Re
 	if _, err := h.svc.SetClaimAttachment(r.Context(), scope.TenantID, id, rel); err != nil {
 		writeError(w, http.StatusBadRequest, "save_failed", err.Error())
 		return
+	}
+	// The replaced receipt is deleted once the claim points at the new one.
+	if existing.AttachmentURL != nil {
+		if err := h.media.Release(r.Context(), *existing.AttachmentURL, rel); err != nil {
+			h.log.Warn("replaced claim attachment not deleted", zap.Error(err))
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"attachment_url": h.media.URL(rel), "attachment_path": rel})
 }

@@ -179,7 +179,8 @@ All settings are environment variables read by `internal/config/config.go`. The 
 | `EVENTS_ENABLED`, `EVENTS_NATS_URL`, `NATS_STREAM`, `OUTBOX_ENABLED` | on, local NATS | eventing |
 | `TREASURY_SERVICE_URL`, `PROJECTS_SERVICE_URL`, `SUBSCRIPTION_BASE_URL` | production URLs | downstream services |
 | `PAYROLL_SYSTEM_TENANT_ID` | `00000000-0000-0000-0000-0000000005ff` | owner of the global statutory rates |
-| `MEDIA_ROOT` | `./media` | local media storage |
+| `OBJECT_STORAGE_*` | from the `object-storage` Secret | HR files (resumes, claim receipts, employee documents) on the shared object storage, all private: keys `erp/<tenant>/<type>/<owner id>/<uuid>.<ext>`, read through the API or a presigned link; a replaced resume or receipt is deleted |
+| `MEDIA_ROOT` | `./media` | local development only: files on disk without object storage, and the folder of the per-service backup module (being removed; tenant backups move to SSO) |
 
 ---
 

@@ -165,9 +165,11 @@ type ServicesConfig struct {
 	SubscriptionsURL string `envconfig:"SUBSCRIPTION_BASE_URL" default:"https://pricingapi.codevertexafrica.com"`
 }
 
+// MediaConfig.Root is only the local folder of the per-service backup module (to be removed:
+// tenant backups move to SSO). HR files use the shared object storage (OBJECT_STORAGE_*), or
+// MEDIA_ROOT in local development.
 type MediaConfig struct {
-	Root    string `envconfig:"MEDIA_ROOT" default:"./media"`
-	URLBase string `envconfig:"MEDIA_URL_BASE" default:""`
+	Root string `envconfig:"MEDIA_ROOT" default:"./media"`
 }
 
 // Load gathers configuration from environment variables and an optional .env file.

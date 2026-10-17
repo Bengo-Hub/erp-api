@@ -27,6 +27,7 @@ import (
 
 	sharedcache "github.com/Bengo-Hub/cache"
 	httpware "github.com/Bengo-Hub/httpware"
+	"github.com/Bengo-Hub/httpware/objectstore"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	eventslib "github.com/Bengo-Hub/shared-events"
 	sharedratelimit "github.com/Bengo-Hub/shared-ratelimit"
@@ -242,7 +243,14 @@ func run() error {
 	subsGate := subs.NewClient(cfg.Services.SubscriptionsURL, cfg.Auth.APIKey, log)
 	staffPurchaseSvc := staffpurchase.NewService(orm, employeesSvc, subsGate, notifyPublisher, log)
 	staffPurchaseHandler := handlers.NewStaffPurchaseHandler(log, staffPurchaseSvc)
-	mediaStore := media.NewStore(cfg.Media.Root, cfg.Media.URLBase)
+	// HR files (resumes, claim receipts, employee documents) on the shared object storage, all
+	// private (httpware/objectstore).
+	media.RegisterMediaTypes()
+	objStore, err := objectstore.New("erp", objectstore.FromEnv())
+	if err != nil {
+		return fmt.Errorf("object storage: %w", err)
+	}
+	mediaStore := media.NewStore(objStore)
 	// HR document upload/streaming + branded employment-contract PDF (tenant letterhead).
 	employeesHandler.WithMedia(mediaStore).WithBranding(brandingClient)
 	// Cost-allocation lookups: proxy projects-service + treasury cost-centers (JWT-forwarded);

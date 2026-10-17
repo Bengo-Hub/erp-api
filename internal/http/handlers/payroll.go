@@ -1024,7 +1024,7 @@ func (b claimBody) toInput() (payroll.ClaimInput, error) {
 	return in, nil
 }
 
-func claimView(c *ent.ExpenseClaim, name string) map[string]any {
+func (h *PayrollHandler) claimView(c *ent.ExpenseClaim, name string) map[string]any {
 	v := map[string]any{
 		"id":            c.ID,
 		"employee":      c.EmployeeID,
@@ -1049,7 +1049,8 @@ func claimView(c *ent.ExpenseClaim, name string) map[string]any {
 		v["date"] = c.ApplicationDate.Format("2006-01-02")
 	}
 	if c.AttachmentURL != nil {
-		v["attachment_url"] = *c.AttachmentURL
+		// Receipts are private: a short-lived presigned link (an older external link is kept).
+		v["attachment_url"] = h.media.URL(*c.AttachmentURL)
 	}
 	// Claims raised by another service (POST /hrm/claims/external) say where they came from and
 	// what the trip was, so HR can see a logistics per diem next to the trip it pays for.
@@ -1094,7 +1095,7 @@ func (h *PayrollHandler) ListClaims(w http.ResponseWriter, r *http.Request) {
 	out := make([]map[string]any, 0, len(rows))
 	for _, c := range rows {
 		name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, c.EmployeeID)
-		out = append(out, claimView(c, name))
+		out = append(out, h.claimView(c, name))
 	}
 	writePaginated(w, out, total, p)
 }
@@ -1119,7 +1120,7 @@ func (h *PayrollHandler) GetClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, c.EmployeeID)
-	writeJSON(w, http.StatusOK, claimView(c, name))
+	writeJSON(w, http.StatusOK, h.claimView(c, name))
 }
 
 // ---- Casual labour ----
@@ -1378,7 +1379,7 @@ func (h *PayrollHandler) ApproveClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, c.EmployeeID)
-	writeJSON(w, http.StatusOK, claimView(c, name))
+	writeJSON(w, http.StatusOK, h.claimView(c, name))
 }
 
 func (h *PayrollHandler) CreateClaim(w http.ResponseWriter, r *http.Request) {
@@ -1402,7 +1403,7 @@ func (h *PayrollHandler) CreateClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, c.EmployeeID)
-	writeJSON(w, http.StatusCreated, claimView(c, name))
+	writeJSON(w, http.StatusCreated, h.claimView(c, name))
 }
 
 func (h *PayrollHandler) UpdateClaim(w http.ResponseWriter, r *http.Request) {
@@ -1435,7 +1436,7 @@ func (h *PayrollHandler) UpdateClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, c.EmployeeID)
-	writeJSON(w, http.StatusOK, claimView(c, name))
+	writeJSON(w, http.StatusOK, h.claimView(c, name))
 }
 
 func (h *PayrollHandler) DeleteClaim(w http.ResponseWriter, r *http.Request) {

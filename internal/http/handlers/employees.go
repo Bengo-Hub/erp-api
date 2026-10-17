@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"mime"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -720,7 +719,7 @@ func (h *EmployeesHandler) documentView(d *ent.EmployeeDocument) map[string]any 
 	}
 	if d.FileURL != nil {
 		v["file_url"] = *d.FileURL
-		if h.media != nil {
+		if h.media.Enabled() {
 			v["file_download_url"] = h.media.URL(*d.FileURL)
 		}
 	}
@@ -734,7 +733,7 @@ func (h *EmployeesHandler) UploadDocument(w http.ResponseWriter, r *http.Request
 	if !ok || !requirePermission(w, scope, permEmployeeManage) {
 		return
 	}
-	if h.media == nil {
+	if !h.media.Enabled() {
 		writeError(w, http.StatusServiceUnavailable, "media_unavailable", "media storage not configured")
 		return
 	}
@@ -763,7 +762,7 @@ func (h *EmployeesHandler) UploadDocument(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "bad_request", "failed to read file")
 		return
 	}
-	rel, err := h.media.SaveEmployeeDocument(scope.TenantID, id, header.Filename, data)
+	rel, err := h.media.SaveEmployeeDocument(r.Context(), scope.TenantID, id, header.Filename, data)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "upload_failed", err.Error())
 		return
@@ -810,7 +809,7 @@ func (h *EmployeesHandler) DownloadDocument(w http.ResponseWriter, r *http.Reque
 	if !ok || !requirePermission(w, scope, permEmployeeView) {
 		return
 	}
-	if h.media == nil {
+	if !h.media.Enabled() {
 		writeError(w, http.StatusServiceUnavailable, "media_unavailable", "media storage not configured")
 		return
 	}
@@ -833,12 +832,11 @@ func (h *EmployeesHandler) DownloadDocument(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusNotFound, "not_found", "document file not found")
 		return
 	}
-	body, err := h.media.ReadFile(*doc.FileURL)
+	body, mimeType, err := h.media.Get(r.Context(), *doc.FileURL)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "not_found", "document file not found")
 		return
 	}
-	mimeType := mime.TypeByExtension(filepath.Ext(*doc.FileURL))
 	if mimeType == "" {
 		mimeType = "application/octet-stream"
 	}
@@ -997,7 +995,7 @@ func (h *EmployeesHandler) GenerateContract(w http.ResponseWriter, r *http.Reque
 	if !ok || !requirePermission(w, scope, permEmployeeManage) {
 		return
 	}
-	if h.media == nil {
+	if !h.media.Enabled() {
 		writeError(w, http.StatusServiceUnavailable, "media_unavailable", "media storage not configured")
 		return
 	}
@@ -1016,7 +1014,7 @@ func (h *EmployeesHandler) GenerateContract(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to generate contract")
 		return
 	}
-	rel, err := h.media.SaveEmployeeDocument(scope.TenantID, id, filename, body)
+	rel, err := h.media.SaveEmployeeDocument(r.Context(), scope.TenantID, id, filename, body)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "save_failed", err.Error())
 		return

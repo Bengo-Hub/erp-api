@@ -116,7 +116,7 @@ func (h *PayrollHandler) CreateExternalClaim(w http.ResponseWriter, r *http.Requ
 		status = http.StatusCreated
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), tenantID, res.Claim.EmployeeID)
-	writeJSON(w, status, externalClaimView(res.Claim, name))
+	writeJSON(w, status, h.externalClaimView(res.Claim, name))
 }
 
 // GetExternalClaim returns the claim raised for ?source_key=, so the caller can show its status.
@@ -140,11 +140,11 @@ func (h *PayrollHandler) GetExternalClaim(w http.ResponseWriter, r *http.Request
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), tenantID, c.EmployeeID)
-	writeJSON(w, http.StatusOK, externalClaimView(c, name))
+	writeJSON(w, http.StatusOK, h.externalClaimView(c, name))
 }
 
-func externalClaimView(c *ent.ExpenseClaim, name string) map[string]any {
-	v := claimView(c, name)
+func (h *PayrollHandler) externalClaimView(c *ent.ExpenseClaim, name string) map[string]any {
+	v := h.claimView(c, name)
 	if c.Metadata != nil {
 		v["metadata"] = c.Metadata
 	}
