@@ -11,7 +11,7 @@ import (
 
 // BrandingHandler serves public branding for the login page (no auth). auth-api is the SoT
 // for branding; this is a Redis-cached read-through of GET /api/v1/tenants/by-slug/{slug}
-// (plan §0a-map). When the client is unconfigured it degrades to echoing the slug so the
+//. When the client is unconfigured it degrades to echoing the slug so the
 // public route contract still holds and the login page renders.
 type BrandingHandler struct {
 	log    *zap.Logger

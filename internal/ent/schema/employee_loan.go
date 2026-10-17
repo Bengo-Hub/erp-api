@@ -10,7 +10,7 @@ import (
 )
 
 // EmployeeLoan is a loan issued to an employee (legacy hrm.payroll.EmployeLoans).
-// Recovery is computed purely by the engine (no save() inside calc — gaps §2.7).
+// Recovery is computed purely by the engine (no save() inside calc).
 type EmployeeLoan struct {
 	ent.Schema
 }

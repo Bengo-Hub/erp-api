@@ -32,7 +32,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "ERP API",
-	Description:      "Codevertex ERP (HR/Ops) backend — employees, payroll, leave, attendance,\nrecruitment, training, appraisals, approvals, tasks, reports. Go rebuild of the\nlegacy Django ERP. OAuth via SSO, notifications via notifications-service.",
+	Description:      "Codevertex ERP (HR/Ops) backend — employees, payroll, leave, attendance,\nrecruitment, training, appraisals, approvals, tasks, reports. OAuth via SSO,\nnotifications via notifications-service.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

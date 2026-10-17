@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Codevertex ERP (HR/Ops) backend — employees, payroll, leave, attendance,\nrecruitment, training, appraisals, approvals, tasks, reports. Go rebuild of the\nlegacy Django ERP. OAuth via SSO, notifications via notifications-service.",
+        "description": "Codevertex ERP (HR/Ops) backend — employees, payroll, leave, attendance,\nrecruitment, training, appraisals, approvals, tasks, reports. OAuth via SSO,\nnotifications via notifications-service.",
         "title": "ERP API",
         "contact": {},
         "version": "1.0"

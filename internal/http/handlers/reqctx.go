@@ -50,7 +50,7 @@ func selfOrParamEmployeeID(r *http.Request, scope RequestScope) *uuid.UUID {
 }
 
 // RequestScope is the resolved tenant/outlet/identity for an authenticated request.
-// Every HRM handler derives one and filters all queries by TenantID (gaps §2 isolation).
+// Every HRM handler derives one and filters all queries by TenantID.
 type RequestScope struct {
 	Claims   *authclient.Claims
 	TenantID uuid.UUID

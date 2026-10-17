@@ -16,7 +16,7 @@ import (
 )
 
 // Service provides erp-api service-RBAC operations: JIT user provisioning, role
-// reconciliation on every login (add + remove — fixes gaps §1.5), and resolution
+// reconciliation on every login (add + remove), and resolution
 // of roles/permissions for GET /auth/me.
 type Service struct {
 	orm *ent.Client

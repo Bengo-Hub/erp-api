@@ -10,7 +10,7 @@ import (
 )
 
 // GeneralHRSettings is PER-TENANT payroll config (legacy GeneralHRSettings was a global
-// singleton — now tenant-scoped, gaps §2 isolation). One row per tenant.
+// singleton — now tenant-scoped, isolation). One row per tenant.
 type GeneralHRSettings struct {
 	ent.Schema
 }
@@ -32,7 +32,7 @@ func (GeneralHRSettings) Fields() []ent.Field {
 		// Statutory deduction toggles — a deliberate per-tenant opt-out (e.g. non-Kenya tenant,
 		// owner-only business with no payroll obligations). Default ON: disabling any of these
 		// for a normal Kenyan employer is non-compliant. The payroll engine skips disabled
-		// components silently; enabled-but-unconfigured formulas still fail loud (gaps §2.2).
+		// components silently; enabled-but-unconfigured formulas still fail loud.
 		field.Bool("paye_enabled").Default(true),
 		field.Bool("nssf_enabled").Default(true),
 		field.Bool("shif_enabled").Default(true).Comment("Health: disables both SHIF and legacy NHIF"),

@@ -18,7 +18,7 @@ import (
 )
 
 // Disburser publishes erp.payroll.processed (GL) atomically with the payroll mutation and
-// requests net-pay disbursement from treasury. Idempotent per batch (gaps §2.8).
+// requests net-pay disbursement from treasury. Idempotent per batch.
 type Disburser struct {
 	orm       *ent.Client
 	publisher *events.Publisher
@@ -53,7 +53,7 @@ type DisburseResult struct {
 
 // Disburse selects approved+complete payslips, publishes the GL event in a tx, persists
 // the batch_ref, then best-effort calls treasury. A per-batch idempotency guard prevents
-// a duplicate GL event / payout request on a re-sent POST (gaps §2.8).
+// a duplicate GL event / payout request on a re-sent POST.
 func (d *Disburser) Disburse(ctx context.Context, p DisburseParams) (DisburseResult, error) {
 	batchRef := buildBatchRef(p.TenantID, p.Period, p.OutletID)
 	idemKey := p.IdemKey
@@ -127,7 +127,7 @@ func (d *Disburser) Disburse(ctx context.Context, p DisburseParams) (DisburseRes
 		return DisburseResult{}, fmt.Errorf("disburse: idem write: %w", err)
 	}
 	// Persist repayment write-back for every recoverable this batch recovered (loans/advances/
-	// loss-damages/staff-purchases), atomically with the GL event + batch tag (gaps §2.7). For
+	// loss-damages/staff-purchases), atomically with the GL event + batch tag. For
 	// staff purchases, publish erp.staff_purchase.recovered in the SAME tx so POS pays down the
 	// linked layaway/credit balance.
 	settlements, err := applyRecoveries(ctx, tx, p.TenantID, ids, batchRef)

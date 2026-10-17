@@ -7,7 +7,7 @@ import (
 )
 
 // moneyField builds a fixed-precision decimal money column (numeric(18,4)) backed by
-// shopspring/decimal — NEVER float (gaps-and-bugs §2.1). 18,4 is the single internal
+// shopspring/decimal — NEVER float. 18,4 is the single internal
 // precision used across the payroll engine and persisted statutory/net amounts.
 //
 // All payroll/HRM money columns MUST go through this helper so the Postgres type, Go
@@ -36,7 +36,7 @@ func rateField(name string) ent.Field {
 }
 
 // daysField builds a decimal column for leave/work day quantities (numeric(7,2)) —
-// entitlements, balances, days requested/taken. Decimal (never float) per gaps §2.1.
+// entitlements, balances, days requested/taken. Decimal (never float).
 func daysField(name string) ent.Field {
 	return field.Other(name, decimal.Decimal{}).
 		SchemaType(map[string]string{"postgres": "numeric(7,2)"}).
@@ -52,7 +52,7 @@ func hoursField(name string) ent.Field {
 }
 
 // distanceField builds a decimal column for travel distance/km (numeric(10,2)) — used by
-// mileage expense routes. Decimal (never float) per gaps §2.1.
+// mileage expense routes. Decimal (never float).
 func distanceField(name string) ent.Field {
 	return field.Other(name, decimal.Decimal{}).
 		SchemaType(map[string]string{"postgres": "numeric(10,2)"}).
@@ -60,7 +60,7 @@ func distanceField(name string) ent.Field {
 }
 
 // ratingFieldOptional builds a nullable 0-5 rating decimal column (numeric(3,1)) used by
-// appraisals/performance reviews. Decimal (never float) per gaps §2.1.
+// appraisals/performance reviews. Decimal (never float).
 func ratingFieldOptional(name string) ent.Field {
 	return field.Other(name, decimal.Decimal{}).
 		SchemaType(map[string]string{"postgres": "numeric(3,1)"}).

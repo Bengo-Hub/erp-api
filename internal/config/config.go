@@ -14,7 +14,7 @@ import (
 const namespace = ""
 
 // Config aggregates runtime configuration for the erp service.
-// Mirrors the Django env vars documented in docs/architecture.md §5.
+// The settings are documented in docs/architecture.md section 6.
 type Config struct {
 	App       AppConfig
 	HTTP      HTTPConfig
@@ -59,7 +59,7 @@ type HTTPConfig struct {
 	IdleTimeout  time.Duration `envconfig:"HTTP_IDLE_TIMEOUT" default:"90s"`
 	TLSCertFile  string        `envconfig:"TLS_CERT_FILE"`
 	TLSKeyFile   string        `envconfig:"TLS_KEY_FILE"`
-	// AllowedOrigins is an explicit allow-list; never use a credentialed wildcard (fixes gaps §1.3).
+	// AllowedOrigins is an explicit allow-list; never use a credentialed wildcard.
 	AllowedOrigins []string `envconfig:"HTTP_ALLOWED_ORIGINS" default:"https://erp.codevertexafrica.com,https://accounts.codevertexafrica.com,http://localhost:3000"`
 }
 
@@ -70,10 +70,9 @@ type PostgresConfig struct {
 	ConnMaxLifetime          time.Duration `envconfig:"POSTGRES_CONN_MAX_LIFETIME" default:"5m"`
 	StatementTimeout         time.Duration `envconfig:"POSTGRES_STATEMENT_TIMEOUT" default:"30s"`
 	IdleInTransactionTimeout time.Duration `envconfig:"POSTGRES_IDLE_IN_TRANSACTION_TIMEOUT" default:"60s"`
-	// Schema is the Postgres schema the Go ERP lives in. It is "erp" (NOT public) so the new
-	// Ent tables are isolated from the legacy Django tables that still occupy the public schema
-	// of the SAME bengo_erp database during/after cutover (16 table names collide). See
-	// docs/data-migration-runbook.md.
+	// Schema is the Postgres schema the Go ERP lives in. It is "erp" (NOT public) so the Ent
+	// tables are isolated from the retired legacy system's tables that still occupy the public
+	// schema of the SAME bengo_erp database (16 table names collide).
 	// MigrateURL is the DIRECT postgresql connection (bypasses pgbouncer) for one-off migrate/seed
 	// commands. Platform convention: normal runtime connections go through pgbouncer (POSTGRES_URL);
 	// only migrate/seed connect directly. When empty, MigrateDSN() builds a direct DSN from the

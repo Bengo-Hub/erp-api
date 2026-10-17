@@ -26,7 +26,7 @@ func (MileageRoute) Fields() []ent.Field {
 		field.Time("route_date").Optional().Nillable().Comment("Date the trip was made"),
 		field.String("from_location").Optional().Comment("Origin"),
 		field.String("to_location").Optional().Comment("Destination"),
-		// distance (km) × rate (per km) = amount. All decimals, never float (gaps §2.1).
+		// distance (km) × rate (per km) = amount. All decimals, never float.
 		distanceField("distance"),
 		rateField("rate"),
 		moneyField("amount"),

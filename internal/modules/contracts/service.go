@@ -1,5 +1,5 @@
 // Package contracts implements tenant-isolated employment-contract CRUD
-// (/hrm/contracts). Duration is recomputed from start/end on write (data-migration §4).
+// (/hrm/contracts). Duration is recomputed from start/end on write.
 package contracts
 
 import (

@@ -66,7 +66,7 @@ func (s *Service) GetFormulaDetail(ctx context.Context, tenantID, formulaID uuid
 // UpsertFormula creates or updates a formula together with its bands and split ratio in one
 // transaction. When IsCurrent is set, any other current formula for the same (tenant, type,
 // category) is demoted first so the partial-unique "one current per (tenant,type,category)"
-// invariant holds (gaps §2.3). Bands are replaced wholesale; the split is replaced when provided.
+// invariant holds. Bands are replaced wholesale; the split is replaced when provided.
 func (s *Service) UpsertFormula(ctx context.Context, tenantID uuid.UUID, in FormulaInput) (*ent.PayrollFormula, error) {
 	if in.Type == "" || in.Title == "" {
 		return nil, fmt.Errorf("type and title are required")

@@ -1,7 +1,6 @@
-// Package fx implements FX (foreign-exchange) rate fetching + storage (Go replacement for
-// the Django integrations.tasks.fetch_exchange_rates Celery Beat job). Rates are written to
+// Package fx implements FX (foreign-exchange) rate fetching + storage. Rates are written to
 // the exchange_rates table; the provider API key is sourced from the secret store via the
-// ExchangeRateAPISettings.api_key_ref env-var name (NOT a DB ciphertext — fixes gaps §1.1/2).
+// ExchangeRateAPISettings.api_key_ref env-var name (NOT a DB ciphertext).
 package fx
 
 import (

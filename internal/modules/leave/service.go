@@ -1,6 +1,6 @@
 // Package leave implements tenant-isolated leave management: categories, entitlements,
 // requests with an approval state machine, balances, public holidays, and the accrual
-// cron (Go replacement for the Django accrue_leave management command).
+// cron.
 package leave
 
 import (

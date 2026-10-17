@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Role is an erp-api service role (mirrors inventory-api InventoryRole; replaces Django auth_group).
+// Role is an erp-api service role (mirrors inventory-api InventoryRole).
 type Role struct {
 	ent.Schema
 }

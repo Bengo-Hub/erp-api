@@ -1,9 +1,7 @@
 // Package approvals implements a generic, tenant-scoped approval-workflow engine reused
-// across HR/Ops modules (leave, appraisals, payroll, contracts, ...). It replaces the
-// Django approvals engine: typed module enum instead of GenericForeignKey (gaps §4),
-// tenant-scoped workflows/steps (were global — gaps §4), and approver resolution against
-// the ERP Employee/HRDetails model instead of the broken `from hrm.models import Employee`
-// import (gaps §8). Supports multi-step chains, approve/reject/escalate, and emits approval
+// across HR/Ops modules (leave, appraisals, payroll, contracts, ...). It uses a typed
+// module enum, tenant-scoped workflows and steps, and approver resolution against the ERP
+// Employee/HRDetails model. Supports multi-step chains, approve/reject/escalate, and emits approval
 // lifecycle events to the transactional outbox.
 package approvals
 

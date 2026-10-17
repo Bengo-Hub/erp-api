@@ -15,7 +15,7 @@ const (
 )
 
 // OutletContext resolves outlet scoping from JWT claims + X-Outlet-ID header.
-// Port of the Django TenantOutletContextMiddleware outlet rules:
+// Outlet rules:
 //   - service accounts bypass outlet filtering
 //   - HQ/admin (CanAccessAllOutlets): honour X-Outlet-ID for drill-down, empty = all outlets
 //   - non-HQ users: pinned to their JWT outlet claim; override header ignored

@@ -10,7 +10,7 @@ import (
 )
 
 // Payslip is a generated payroll line for one employee/period (legacy hrm.payroll.Payslip).
-// ALL money is decimal (gaps §2.1). Tenant + outlet scoped for isolation.
+// ALL money is decimal. Tenant + outlet scoped for isolation.
 type Payslip struct {
 	ent.Schema
 }

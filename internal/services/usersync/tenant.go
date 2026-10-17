@@ -13,9 +13,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
 )
 
-// TenantSyncer upserts AuthTenant / AuthOutlet shadows. It is the Go port of the Django
-// integrations/tenant_sync.py JIT shadow provisioning + the auth.tenant.* / auth.outlet.*
-// consumers. Auth-api is the source of truth; we only mirror the minimal reference.
+// TenantSyncer upserts AuthTenant / AuthOutlet shadows. It provides the just-in-time shadow
+// provisioning used by the auth.tenant.* / auth.outlet.* consumers. Auth-api is the source of truth; we only mirror the minimal reference.
 type TenantSyncer struct {
 	orm *ent.Client
 	log *zap.Logger

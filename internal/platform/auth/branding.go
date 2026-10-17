@@ -1,6 +1,6 @@
 // Package auth is a service-to-service client for auth-api. auth-api is the SoT for tenant
 // identity + branding; erp-api only READS branding through this Redis-cached read-through
-// (GET /api/v1/tenants/by-slug/{slug}, public per integrations.md / plan §0a-map). erp-api
+// (GET /api/v1/tenants/by-slug/{slug}, public). erp-api
 // never owns or mutates branding.
 package auth
 

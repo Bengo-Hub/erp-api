@@ -20,7 +20,7 @@ const authStream = "auth"
 // local AuthTenant / AuthOutlet shadows. Port of integrations/tenant_sync.py consumers.
 //
 // Uses an explicit consumer registry (durable per subject) + IdempotencyStore so a
-// missing module import can never silently drop handlers (fixes gaps §3), and redelivery
+// missing module import can never silently drop handlers, and redelivery
 // is deduped.
 type TenantSyncConsumer struct {
 	log    *zap.Logger

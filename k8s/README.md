@@ -4,15 +4,6 @@ This directory contains ERP-specific Kubernetes resources that are not part of t
 
 ## Files
 
-### Database Initialization
-- **`db-init-job.yaml`** - Database initialization job
-  - Creates Django superuser
-  - Runs migrations
-  - Collects static files
-  - Uses: `erp-api-env` secret for credentials
-  - **Note**: Migrations are now handled by Helm migration hook (charts/app/templates/migrate-hook.yaml)
-  - This file is kept for reference or manual initialization
-
 ### Monitoring
 - **`monitoring/servicemonitor.yaml`** - Prometheus ServiceMonitor
   - Scrapes metrics from `/api/v1/metrics` endpoint
@@ -38,15 +29,9 @@ kubectl apply -f k8s/monitoring/servicemonitor.yaml
 kubectl apply -f k8s/monitoring/alerts.yaml
 ```
 
-### Manual Database Initialization (if needed)
-```bash
-# Only use if Helm migration hook fails
-kubectl apply -f k8s/db-init-job.yaml
-
-# Check job status
-kubectl get jobs -n erp
-kubectl logs -n erp job/erp-db-init
-```
+### Database initialisation
+The container entrypoint runs `erp-migrate` and the idempotent seeders on every start
+(`scripts/entrypoint.sh`), so no separate init job is needed.
 
 ## Integration with ArgoCD
 
@@ -62,7 +47,6 @@ The main deployment uses:
 
 ## Notes
 
-- Migrations are handled by Helm migration hook (pre-install, pre-upgrade)
-- Seeding is handled by `scripts/run_seeding.sh` during deployment
+- Migrations and seeding run in the container entrypoint (`scripts/entrypoint.sh`)
 - These manifests are for manual operations and reference only
 

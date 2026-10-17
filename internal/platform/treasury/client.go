@@ -28,8 +28,8 @@ import (
 // published; the operator re-triggers disburse once the batch is approved (with OTP) in treasury.
 var ErrApprovalPending = errors.New("treasury: payroll disbursement pending finance approval")
 
-// Payout is one net-pay disbursement line. Amounts are decimal STRINGS (gaps §2.1 — no
-// float across the disburse boundary).
+// Payout is one net-pay disbursement line. Amounts are decimal STRINGS, never
+// float, across the disburse boundary.
 type Payout struct {
 	RecipientID   string `json:"recipient_id"`
 	Amount        string `json:"amount"`

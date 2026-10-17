@@ -74,7 +74,7 @@ var erpKnownRoles = map[string]bool{
 
 // MapGlobalRolesToERP maps SSO global role names to erp service-role codes.
 //
-//   - "superuser"/"superusers" (legacy Django group), or ANY role name containing "admin"
+//   - "superuser"/"superusers" (legacy group name), or ANY role name containing "admin"
 //     as a substring — "admin", "erp_admin", "isp_admin", "library_admin", a future
 //     "inventory_admin", etc. — map to erp_admin. Any tenant member holding an admin-tier
 //     role in ANY service should get full erp administrative access, not be silently

@@ -1,18 +1,22 @@
 # ERP API Backlog
 
-**Last updated:** 2026-10-16. Built by checking `docs/revamp-plan.md`, `docs/sprints/*.md` and `docs/integrations.md` against the code on `main`. Each item names the doc it came from. The budgets, planning, project costing and BI plan (`.claude/plans/budgets-planning-projects-bi-2026-09-27.md`) is complete for ERP; its items are listed under Done. UI gaps live in `erp/erp-ui/docs/backlog.md`.
+**Last updated:** 2026-10-16. Built by checking `docs/build-history.md` and `docs/integrations.md` against the code on `main`. Each item names the doc it came from. The budgets, planning, project costing and BI plan (`.claude/plans/budgets-planning-projects-bi-2026-09-27.md`) is complete for ERP; its items are listed under Done. UI gaps live in `erp/erp-ui/docs/backlog.md`.
 
 ## Open
 
 - Calculation preview (`POST /hrm/payroll/calculation-preview`) still runs inside the request. Since the run inputs are batched it costs a few grouped reads plus pure computation, so it fits the 20s write timeout for normal payrolls; move it to the background job too if a tenant with several thousand employees hits the limit. Source: 2026-10-16 review.
 - Per-employee writes in a persisted run (payslip upsert, payslip lines, recovery lines, attendance applied) are still one small batch per employee; acceptable now the run is a background job. Source: 2026-10-16 review.
 
+## Data clean-up (needs the database owner)
+
+- Drop the retired legacy system's tables from the `public` schema of the production database `bengo_erp`. The service uses schema `erp` and never reads them. Take a dump first.
+
 ## Done (2026-10-15 and 2026-10-16)
 
 - Payroll run inputs are loaded once per run (`loadRunInputs`, IN chunks of 1000) instead of seven or more queries per employee; the newest active salary row wins deterministically. Commit `1be3792`.
 
-- Attendance penalties reach payslips after review. `AttendanceDeduction` rows per employee, month and kind are computed from attendance records, the most specific active late, absenteeism and work-hours rules (department, then branch, then tenant-wide) and approved leave: late `fixed` per arrival, `percent_daily` of the daily rate, `per_minute` at the minute rate, `warning` nothing; unexcused absence at the daily rate unless the absenteeism action is not a deduction. Daily rate is salary over the month's weekdays. Minutes late are measured in the shift outlet's time zone (else the company's, else Africa/Nairobi). HR approves, waives or reopens rows (`/hrm/payroll/attendance-deductions`, `/compute`, `/review`); the run takes approved amounts off gross before statutory deductions and PAYE, writes negative earning lines and marks the rows applied. Commit `f80e34f`. Source: sprint-3 deferred notes.
-- Payroll runs in the background with live progress. `process-with-formulas` answers 202 with a `PayrollRunJob`; one active run per tenant across pods (unique `(tenant_id, active_lock)`, 409 `run_in_progress`); progress at most once a second plus a 15s heartbeat; `GET /hrm/payroll/runs`, `/runs/{id}`, `/runs/{id}/events` (Server-Sent Events in 15s windows inside the router and write timeouts); `task_status?task_id=` reports the real run. Runs stop with the server and are recorded as interrupted, and a sweeper on every pod marks stale runs. Commit `0a6350d`. This replaces the planned WebSocket. Source: erp-ui sprint-2 and sprint-5.
+- Attendance penalties reach payslips after review. `AttendanceDeduction` rows per employee, month and kind are computed from attendance records, the most specific active late, absenteeism and work-hours rules (department, then branch, then tenant-wide) and approved leave: late `fixed` per arrival, `percent_daily` of the daily rate, `per_minute` at the minute rate, `warning` nothing; unexcused absence at the daily rate unless the absenteeism action is not a deduction. Daily rate is salary over the month's weekdays. Minutes late are measured in the shift outlet's time zone (else the company's, else Africa/Nairobi). HR approves, waives or reopens rows (`/hrm/payroll/attendance-deductions`, `/compute`, `/review`); the run takes approved amounts off gross before statutory deductions and PAYE, writes negative earning lines and marks the rows applied. Commit `f80e34f`. Source: build history, attendance.
+- Payroll runs in the background with live progress. `process-with-formulas` answers 202 with a `PayrollRunJob`; one active run per tenant across pods (unique `(tenant_id, active_lock)`, 409 `run_in_progress`); progress at most once a second plus a 15s heartbeat; `GET /hrm/payroll/runs`, `/runs/{id}`, `/runs/{id}/events` (Server-Sent Events in 15s windows inside the router and write timeouts); `task_status?task_id=` reports the real run. Runs stop with the server and are recorded as interrupted, and a sweeper on every pod marks stale runs. Commit `0a6350d`. This replaces the planned WebSocket. Source: erp-ui backlog.
 
 ## Done (plan budgets-planning-projects-bi-2026-09-27)
 

@@ -3,8 +3,8 @@ info:
   contact: {}
   description: |-
     Codevertex ERP (HR/Ops) backend — employees, payroll, leave, attendance,
-    recruitment, training, appraisals, approvals, tasks, reports. Go rebuild of the
-    legacy Django ERP. OAuth via SSO, notifications via notifications-service.
+    recruitment, training, appraisals, approvals, tasks, reports. OAuth via SSO,
+    notifications via notifications-service.
   title: ERP API
   version: "1.0"
 paths: {}

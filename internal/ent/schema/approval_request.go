@@ -12,8 +12,8 @@ import (
 
 // ApprovalRequest is a live approval-workflow instance bound to a specific HR/Ops object
 // (leave request, appraisal, payroll batch, ...). Created when an object is submitted for
-// approval and a matching active ApprovalWorkflow with steps exists. Replaces the Django
-// GenericForeignKey with a typed (module, object_id) pair (gaps §4).
+// approval and a matching active ApprovalWorkflow with steps exists. It binds to the object
+// through a typed (module, object_id) pair.
 type ApprovalRequest struct {
 	ent.Schema
 }

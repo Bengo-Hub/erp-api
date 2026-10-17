@@ -43,7 +43,7 @@ type PayslipResult struct {
 }
 
 // Compute runs the phased deduction engine for one employee. It fails loud if a required
-// statutory formula is missing (gaps §2.2) — the caller aborts the whole run.
+// statutory formula is missing — the caller aborts the whole run.
 //
 // Phasing (port of dynamic_deduction_engine.calculate_deductions_in_order):
 //

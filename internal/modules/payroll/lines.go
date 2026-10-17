@@ -25,7 +25,7 @@ type LabeledAmount struct {
 
 // RecoveryAlloc is the frozen recovery of one recoverable in a run: which recoverable
 // (type + id) and how much was recovered this period. Persisted as a RecoveryLine so disburse
-// can write the amount back to the recoverable exactly once (gaps §2.7 write-back).
+// can write the amount back to the recoverable exactly once.
 type RecoveryAlloc struct {
 	Type   string // loan | advance | loss_damage | staff_purchase
 	ID     uuid.UUID

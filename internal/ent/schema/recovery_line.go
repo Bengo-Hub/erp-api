@@ -11,7 +11,7 @@ import (
 
 // RecoveryLine is the frozen snapshot of how much a payslip recovered against a specific
 // recoverable (loan / advance / loss-damage / staff-purchase). It closes the missing repayment
-// write-back (gaps §2.7): the payroll engine computes min(installment, outstanding) but never
+// write-back: the payroll engine computes min(installment, outstanding) but never
 // persisted it, so outstanding balances never decreased. A RecoveryLine is written at run time
 // (frozen against the installment/outstanding as-of the run) and APPLIED at disburse time —
 // incrementing the recoverable's amount_recovered exactly once, atomically with the batch.

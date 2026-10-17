@@ -10,7 +10,7 @@ import (
 // Notifications wraps the outbox Publisher to emit the two notification subjects the
 // notifications-api consumes (erp_handlers.go): erp.email.requested (supports attachments,
 // e.g. payslip PDFs) and erp.notification.requested. erp-api NEVER sends email/SMS directly
-// (plan §0a-map) — it only publishes these events.
+// — it only publishes these events.
 type Notifications struct {
 	pub *Publisher
 }

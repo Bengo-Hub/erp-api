@@ -9,9 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// EmployeeBankAccount is an employee's bank account (legacy hrm.employees.EmployeeBankAccount).
-// "Single primary per employee" is enforced in a tx by the service (port of the Django
-// EmployeeBankAccountViewSet behaviour).
+// EmployeeBankAccount is an employee's bank account.
+// "Single primary per employee" is enforced in a transaction by the service.
 type EmployeeBankAccount struct {
 	ent.Schema
 }

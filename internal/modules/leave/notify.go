@@ -11,7 +11,7 @@ import (
 )
 
 // outboxNotifier emits erp.notification.requested for leave decisions via the transactional
-// outbox (port of Django _notify_leave_decision). Payload shape follows integrations.md §1
+// outbox . Payload shape follows integrations.md §1
 // (notifications-api contract). Best-effort: callers ignore the error (logged upstream).
 type outboxNotifier struct {
 	pub *events.Publisher

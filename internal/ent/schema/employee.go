@@ -10,7 +10,7 @@ import (
 )
 
 // Employee is the HR FK hub (legacy hrm.employees.Employee). Tenant + outlet scoped
-// (gaps §2 no-isolation fix). Identity (user) lives in auth-api; this row references the
+//. Identity (user) lives in auth-api; this row references the
 // SSO user shadow by user_id and stores HR/statutory attributes.
 type Employee struct {
 	ent.Schema
@@ -61,7 +61,7 @@ func (Employee) Indexes() []ent.Index {
 		index.Fields("tenant_id", "outlet_id"),
 		index.Fields("tenant_id", "deleted"),
 		index.Fields("tenant_id", "terminated_at"),
-		// National ID unique within tenant (was globally unique in Django — tenant-scoping fixes isolation).
+		// National ID unique within a tenant, never globally.
 		index.Fields("tenant_id", "national_id").Unique(),
 		index.Fields("user_id"),
 	}

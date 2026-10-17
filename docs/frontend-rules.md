@@ -49,7 +49,7 @@ Define consistent, production-ready frontend rules for ERPUI that prevent duplic
 
 ### Backend Alignment
 
-- **Endpoint mapping**: Ensure services map to existing Django endpoints by module and version (prefer v1 where available).
+- **Endpoint mapping**: Ensure services map to the erp-api endpoints by module and version (prefer v1 where available).
 - **Shared data rules**: Reuse existing utilities for formatting, dates, and shared enums.
 
 ### Linting and Quality

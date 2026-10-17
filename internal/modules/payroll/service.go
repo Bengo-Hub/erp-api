@@ -70,7 +70,7 @@ type LineResult struct {
 
 // Run computes (and optionally persists) payslips for the matching employees. It builds
 // the tenant-scoped engine config ONCE and fails loud if a required statutory formula is
-// missing — aborting before any payslip is written (gaps §2.2).
+// missing — aborting before any payslip is written.
 func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 	cfg, err := s.settings.BuildEngineConfig(ctx, p.TenantID, p.Period, p.RecoverAdvances)
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 				return nil, fmt.Errorf("payroll: payslip lines %s: %w", emp.ID, lerr)
 			}
 			// Freeze this period's per-recoverable recoveries so disburse can write them back
-			// to each loan/advance/loss-damage/staff-purchase exactly once (gaps §2.7).
+			// to each loan/advance/loss-damage/staff-purchase exactly once.
 			if rerr := s.writeRecoveryLines(ctx, p.TenantID, id, emp.ID, items.Recoveries); rerr != nil {
 				return nil, fmt.Errorf("payroll: recovery lines %s: %w", emp.ID, rerr)
 			}

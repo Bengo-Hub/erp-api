@@ -32,7 +32,7 @@ func defaultEmployerPercentage(category string) decimal.Decimal {
 
 // BuildEngineConfig resolves the tenant-scoped, period-effective rate sets into a
 // payrollengine.Config. A missing required statutory formula (income/NSSF/housing, plus
-// at least one of SHIF/NHIF) is a fail-loud error — the run aborts (gaps §2.2/§2.4).
+// at least one of SHIF/NHIF) is a fail-loud error — the run aborts.
 // Statutory items the tenant has deliberately disabled (GeneralHRSettings toggles) are
 // not resolved at all and are marked in cfg.Disabled — the engine skips them silently.
 func (s *Service) BuildEngineConfig(ctx context.Context, tenantID uuid.UUID, period time.Time, recoverAdvances bool) (payrollengine.Config, error) {

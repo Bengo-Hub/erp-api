@@ -1,6 +1,6 @@
 // Package payrollsettings owns the ERP's tenant-scoped statutory rate tables (PAYE,
 // NSSF, SHIF/NHIF, housing, relief) and resolves them into a payrollengine.Config.
-// Rates are NEVER read from treasury (revamp-plan §5).
+// Rates are NEVER read from treasury.
 package payrollsettings
 
 import (
@@ -40,7 +40,7 @@ func (s *Service) ListFormulas(ctx context.Context, tenantID uuid.UUID) ([]*ent.
 
 // EffectiveFormula resolves the single current+effective formula for (type, category) at
 // the given period, preferring the tenant's own rows then the system defaults. Returns a
-// typed error if none is configured (fail-loud; gaps §2.2/§2.3).
+// typed error if none is configured (fail-loud).
 func (s *Service) EffectiveFormula(ctx context.Context, tenantID uuid.UUID, ftype, category string, period time.Time) (*ent.PayrollFormula, error) {
 	f, err := s.effectiveFor(ctx, tenantID, ftype, category, period)
 	if err == nil && f != nil {

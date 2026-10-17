@@ -13,8 +13,7 @@ import (
 )
 
 // Publisher writes domain events to the transactional outbox (outbox_events table).
-// The shared-events OutboxPoller drains PENDING rows to NATS — this replaces
-// the Django integrations.events.publish_event + drain_outbox path.
+// The shared-events OutboxPoller drains PENDING rows to NATS.
 //
 // Subject convention (docs/integrations.md §1): "{aggregate_type}.{event_type}",
 // e.g. aggregate_type="erp", event_type="payroll.processed" -> subject "erp.payroll.processed".

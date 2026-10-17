@@ -12,8 +12,8 @@ import (
 
 // PayrollFormula is the ERP-OWNED, tenant-scoped, effective-dated statutory rate table
 // (legacy hrm.payroll_settings.Formulas). Replaces global rates + the disabled save()
-// invariant (gaps §2.3): a DB partial unique index enforces ONE current formula per
-// (tenant, type, category). Rates are NEVER read from treasury (revamp-plan §5).
+// invariant: a DB partial unique index enforces ONE current formula per
+// (tenant, type, category). Rates are NEVER read from treasury.
 type PayrollFormula struct {
 	ent.Schema
 }
@@ -58,7 +58,7 @@ func (PayrollFormula) Indexes() []ent.Index {
 		index.Fields("tenant_id"),
 		index.Fields("tenant_id", "type", "category"),
 		index.Fields("tenant_id", "type", "category", "effective_from"),
-		// ONE current formula per (tenant, type, category) — partial unique (gaps §2.3).
+		// ONE current formula per (tenant, type, category) — partial unique.
 		index.Fields("tenant_id", "type", "category").
 			Unique().
 			StorageKey("uq_payroll_formula_current").

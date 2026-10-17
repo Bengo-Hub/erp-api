@@ -175,7 +175,7 @@ func (in *runInputs) installment(repayOptionID *uuid.UUID) decimal.Decimal {
 }
 
 // buildEmployeeInput maps an employee's salary and active, effective-dated recoverables and
-// benefits (preloaded for the run) to the pure engine input. No persistence (gaps §2.7).
+// benefits (preloaded for the run) to the pure engine input. No persistence.
 func (s *Service) buildEmployeeInput(p RunParams, emp *ent.Employee, pre *runInputs) (payrollengine.EmployeeInput, EmployeeItemized, error) {
 	var in payrollengine.EmployeeInput
 	var items EmployeeItemized

@@ -11,7 +11,7 @@ import (
 
 // SalaryDetails holds an employee's pay setup (legacy hrm.employees.SalaryDetails).
 // Derived rates (hourly/daily) are recomputed on write by the service, never trusted
-// from stored values (data-migration §4 stale-derived fix). Money is decimal.
+// from stored values. Money is decimal.
 type SalaryDetails struct {
 	ent.Schema
 }

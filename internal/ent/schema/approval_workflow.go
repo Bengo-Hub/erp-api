@@ -11,8 +11,8 @@ import (
 )
 
 // approvalModules is the typed set of HR/Ops workflow types the ERP approval engine
-// governs. It replaces the Django GenericForeignKey (content_type_id+object_id) with a
-// typed module enum (gaps §4). Decomposed workflow types (purchase_order|expense|invoice|
+// governs. Objects are referenced by a typed module enum
+// plus an object id. Decomposed workflow types (purchase_order|expense|invoice|
 // requisition) are intentionally ABSENT — those domains live in other services.
 var approvalModules = []string{
 	"payroll",
@@ -25,7 +25,7 @@ var approvalModules = []string{
 }
 
 // ApprovalWorkflow defines, per tenant and module, a named multi-step approval chain.
-// It is tenant-scoped (the Django version was global — gaps §4). When a domain object is
+// It is tenant-scoped. When a domain object is
 // submitted for approval, the active workflow for its module drives the approval steps.
 type ApprovalWorkflow struct {
 	ent.Schema

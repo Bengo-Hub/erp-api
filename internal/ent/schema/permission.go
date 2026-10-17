@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Permission is a fine-grained erp-api permission (replaces Django auth_permission).
+// Permission is a fine-grained erp-api permission .
 type Permission struct {
 	ent.Schema
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // Contract is an employment contract (legacy hrm.employees.Contract). Duration is
-// recomputed on write (data-migration §4 stale-derived fix).
+// recomputed on write.
 type Contract struct {
 	ent.Schema
 }

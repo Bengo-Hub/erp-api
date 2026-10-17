@@ -34,7 +34,7 @@ type StaffNumberer interface {
 }
 
 // Service holds employee CRUD + derived-field recomputation. Every query is filtered by
-// tenant_id; callers pass the tenant from the request scope (gaps §2 isolation).
+// tenant_id; callers pass the tenant from the request scope.
 type Service struct {
 	orm *ent.Client
 	seq StaffNumberer // optional; when set, blank staff numbers are auto-issued as SLUG/YYYY/###
@@ -68,7 +68,7 @@ func (s *Service) nextStaffNumber(ctx context.Context, tenantID uuid.UUID) strin
 }
 
 // hoursPerMonth / daysPerMonth are the divisors for derived rate recomputation
-// (recompute on write — never trust stored values; data-migration §4).
+// (recompute on write — never trust stored values;.
 var (
 	hoursPerMonth = decimal.NewFromInt(208) // 26 days * 8h
 	daysPerMonth  = decimal.NewFromInt(26)

@@ -1,13 +1,12 @@
 // Package payrollengine is the ERP-OWNED, pure, deterministic payroll tax engine
-// (port of hrm/payroll/services/core_calculations.py + dynamic_deduction_engine.py).
 //
-// Design rules (sprint-2 spec / gaps-and-bugs §2):
-//   - decimal throughout (shopspring/decimal); NEVER float (§2.1).
-//   - fail loud: an unresolved/missing formula returns a typed error and aborts the run;
-//     there is NO `except -> return 0` silent miscalc (§2.2).
-//   - tier detection is data-driven from the rate set, not a hardcoded 8000 literal (§2.4).
+// Design rules:
+//   - decimal throughout (shopspring/decimal); NEVER float.
+//   - fail loud: an unresolved or missing formula returns a typed error and aborts the run;
+//     there is no silent zero.
+//   - tier detection is data-driven from the rate set, not a hardcoded 8000 literal.
 //   - SHIF/NHIF cutover is config-driven (which formula is effective), not a hardcoded date.
-//   - pure functions only: no persistence here (loan.save() is a separate atomic step, §2.7).
+//   - pure functions only: no persistence here (persistence is a separate atomic step).
 package payrollengine
 
 import (
@@ -104,7 +103,7 @@ type Config struct {
 	// Disabled marks components (Comp* codes) a tenant has DELIBERATELY switched off via
 	// statutory settings — the engine skips them silently. This is distinct from a missing
 	// formula on an ENABLED component, which still fails loud (ErrFormulaNotConfigured,
-	// gaps §2.2). A nil map means everything is enabled (zero-value Config unchanged).
+	//). A nil map means everything is enabled (zero-value Config unchanged).
 	Disabled map[string]bool
 	// DeductionOrder drives phasing. Empty => DefaultDeductionOrder().
 	DeductionOrder []Phase

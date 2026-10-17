@@ -65,9 +65,8 @@ func (d *Disburser) loadEmployees(ctx context.Context, tenantID uuid.UUID, slips
 	return m, nil
 }
 
-// buildPayrollEvent constructs the erp.payroll.processed payload, byte-compatible with the
-// Django publish_and_disburse shape (integrations.md §1). Money is sent as decimal STRINGS
-// (gaps §2.1). Returns the payload + net total.
+// buildPayrollEvent constructs the erp.payroll.processed payload, as documented in
+// integrations.md section 1. Money is sent as decimal STRINGS. Returns the payload + net total.
 func buildPayrollEvent(slips []*ent.Payslip, empByID map[uuid.UUID]*ent.Employee, prefs map[uuid.UUID]payoutPref, p DisburseParams, batchRef string) (map[string]any, decimal.Decimal) {
 	lines := make([]map[string]any, 0, len(slips))
 	gross := decimal.Zero

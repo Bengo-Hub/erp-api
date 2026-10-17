@@ -9,8 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// CompanySettings is slim per-tenant ERP business config (renamed from the misspelled
-// Django "Bussiness"; fixes the "finacial_year_start_month" typo too). It deliberately
+// CompanySettings is slim per-tenant ERP business config business config. It deliberately
 // EXCLUDES branding (auth-api is the SoT — read via the branding S2S cache), tax rates
 // (the ERP payroll-tax tables own those), and pickup/address/service-type (ordering-service).
 type CompanySettings struct {

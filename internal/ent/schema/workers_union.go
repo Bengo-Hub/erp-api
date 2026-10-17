@@ -33,7 +33,7 @@ func (WorkersUnion) Fields() []ent.Field {
 func (WorkersUnion) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_id"),
-		// Union code unique within a tenant (was globally unique in Django; tenant-scoped fixes isolation).
+		// Union code unique within a tenant, never globally.
 		index.Fields("tenant_id", "code").Unique(),
 	}
 }

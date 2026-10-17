@@ -241,7 +241,7 @@ erDiagram
   ApprovalStepAction { uuid id PK; uuid tenant_id; uuid request_id FK; int sequence; enum approver_type; string approver_role; uuid approver_employee_id; enum status "pending|approved|rejected|skipped|escalated"; uuid acted_by; text comment }
 ```
 
-Typed `module` enum (no Django GenericForeignKey); tenant-scoped; manager/department_head
+Typed `module` enum; tenant-scoped; manager/department_head
 approvers resolve against `HRDetails`. Decomposed workflow types
 (purchase_order/expense/invoice/requisition) are intentionally absent.
 

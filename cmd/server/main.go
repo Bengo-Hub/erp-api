@@ -1,8 +1,6 @@
 // Command server is the erp-api HTTP entrypoint. It wires the Sprint 1 foundation:
 // config, Ent ORM (Postgres), Redis cache, NATS + transactional outbox, SSO/JWKS auth,
 // tenant/outlet context, the tenant-sync consumers, and the public + authenticated routes.
-//
-// This is the Go replacement for the Django ProcureProKEAPI WSGI app (docs/revamp-plan.md).
 package main
 
 import (
@@ -77,8 +75,8 @@ import (
 // @title           ERP API
 // @version         1.0
 // @description     Codevertex ERP (HR/Ops) backend — employees, payroll, leave, attendance,
-// @description     recruitment, training, appraisals, approvals, tasks, reports. Go rebuild of the
-// @description     legacy Django ERP. OAuth via SSO, notifications via notifications-service.
+// @description     recruitment, training, appraisals, approvals, tasks, reports. OAuth via SSO,
+// @description     notifications via notifications-service.
 // @BasePath        /api/v1
 // @securityDefinitions.apikey BearerAuth
 // @in              header
@@ -217,7 +215,7 @@ func run() error {
 		RetentionDays: cfg.Backup.RetentionDays,
 	}, log).WithRedis(redisClient).Start(ctx)
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
-	// Branding read-through: auth-api SoT, Redis-cached (plan §0a-map).
+	// Branding read-through: auth-api SoT, Redis-cached.
 	brandingClient := platformauth.NewBrandingClient(cfg.Auth.ServiceURL, cacheAside, log)
 	brandingHandler := handlers.NewBrandingHandler(log, brandingClient)
 
@@ -270,8 +268,8 @@ func run() error {
 	appraisalsHandler := handlers.NewAppraisalsHandler(log, appraisalsSvc)
 	performanceHandler := handlers.NewPerformanceHandler(log, performance.NewService(orm))
 
-	// Sprint 4: generic approvals engine wired into leave + appraisals (replaces their
-	// Sprint-3 direct approve/reject when a tenant configures a workflow).
+	// Generic approvals engine wired into leave and appraisals (replaces their direct
+	// approve/reject when a tenant configures a workflow).
 	approvalsSvc := approvals.NewService(orm, approvals.NewOutboxEmitter(notifyPublisher))
 	approvalsHandler := handlers.NewApprovalsHandler(log, approvalsSvc)
 	leaveSvc.SetApprovals(approvalsSvc)

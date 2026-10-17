@@ -74,7 +74,7 @@ func (s *Service) DeleteShift(ctx context.Context, tenantID, id uuid.UUID) error
 }
 
 // EnsureDefaultShift seeds a single default "Regular" shift per tenant if none exists. This
-// replaces the per-request DefaultShiftMiddleware (gaps §5) — call once per tenant (on first
+// replaces the per-request DefaultShiftMiddleware — call once per tenant (on first
 // shift access / tenant onboarding), not per request.
 func (s *Service) EnsureDefaultShift(ctx context.Context, tenantID uuid.UUID) (*ent.WorkShift, error) {
 	existing, err := s.orm.WorkShift.Query().

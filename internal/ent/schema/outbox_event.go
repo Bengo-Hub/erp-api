@@ -11,7 +11,6 @@ import (
 )
 
 // OutboxEvent is the transactional outbox table drained by shared-events OutboxPoller.
-// Replaces the Django integrations.EventOutbox model + drain_outbox command.
 type OutboxEvent struct {
 	ent.Schema
 }

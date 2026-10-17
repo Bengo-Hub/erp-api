@@ -11,7 +11,7 @@ import (
 
 // ExchangeRateAPISettings configures the FX provider per tenant (legacy
 // integrations.ExchangeRateAPISettings). The provider API key is NOT stored here as
-// ciphertext (fixes gaps §1.1/§1.2 — the Django version kept a Fernet ciphertext in the DB);
+// ciphertext;
 // instead it holds a secret REFERENCE (env var name) resolved from the secret store at fetch.
 type ExchangeRateAPISettings struct {
 	ent.Schema

@@ -12,7 +12,7 @@ const moneyScale = 2
 
 // CalculateIncomeTax computes progressive PAYE on taxablePay using the income bands.
 // Port of core_calculations.calculate_income_tax — but fails loud when bands are missing
-// instead of returning 0 (gaps §2.2). Returns gross PAYE before personal relief.
+// instead of returning 0. Returns gross PAYE before personal relief.
 func CalculateIncomeTax(rates *FormulaRates, taxablePay decimal.Decimal) (decimal.Decimal, error) {
 	if rates == nil || len(rates.Bands) == 0 {
 		return decimal.Zero, fmt.Errorf("%w: income/PAYE bands", ErrFormulaNotConfigured)
@@ -49,7 +49,7 @@ type NSSFResult struct {
 
 // CalculateNSSF computes tiered NSSF. Tier detection is data-driven: the FIRST band
 // (lowest From) is Tier 1, the SECOND distinct band is Tier 2 — NOT a hardcoded 8000
-// literal (gaps §2.4). Fails loud when no bands are configured.
+// literal. Fails loud when no bands are configured.
 func CalculateNSSF(rates *FormulaRates, salary decimal.Decimal) (NSSFResult, error) {
 	if rates == nil || len(rates.Bands) == 0 {
 		return NSSFResult{}, fmt.Errorf("%w: NSSF tiers", ErrFormulaNotConfigured)
@@ -120,7 +120,7 @@ func CalculateHousingLevy(rates *FormulaRates, salary decimal.Decimal) (Contribu
 }
 
 // CalculateNHIF computes legacy NHIF from a configured banded fixed-amount table.
-// There is NO silent hardcoded-2017 fallback (gaps §2.2): missing config => error.
+// There is NO silent hardcoded-2017 fallback: missing config => error.
 func CalculateNHIF(rates *FormulaRates, salary decimal.Decimal) (ContributionResult, error) {
 	if rates == nil || len(rates.Bands) == 0 {
 		return ContributionResult{}, fmt.Errorf("%w: NHIF table", ErrFormulaNotConfigured)

@@ -12,7 +12,7 @@ import (
 
 // approverTypes is the set of approver-resolution strategies a workflow step supports.
 // These resolve against the ERP Employee model (NOT the broken legacy `from hrm.models
-// import Employee` — gaps §8): department_head/manager are read from the requester's
+// import Employee`): department_head/manager are read from the requester's
 // HRDetails; role checks the requester's RBAC roles; user is a fixed approver employee.
 var approverTypes = []string{
 	"user",            // a specific approver (approver_employee_id)

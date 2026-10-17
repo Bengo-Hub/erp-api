@@ -11,7 +11,7 @@ import (
 )
 
 // TaskLog is an audit trail entry for a Task (status changes, assignment, progress).
-// Tenant-scoped. Replaces the Django task_management.TaskLog.
+// Tenant-scoped.
 type TaskLog struct {
 	ent.Schema
 }
