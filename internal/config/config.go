@@ -23,8 +23,6 @@ type Config struct {
 	Events    EventsConfig
 	Auth      AuthConfig
 	Services  ServicesConfig
-	Media     MediaConfig
-	Backup    BackupConfig
 	RateLimit mw.RateLimitConfig
 	Payroll   PayrollConfig
 }
@@ -35,13 +33,6 @@ type Config struct {
 // (payrollsettings.Service.EffectiveFormula fallback). cmd/seed-payroll seeds under this id.
 type PayrollConfig struct {
 	SystemTenantID string `envconfig:"PAYROLL_SYSTEM_TENANT_ID" default:"00000000-0000-0000-0000-0000000005ff"`
-}
-
-// BackupConfig controls the tenant-scoped backup scheduler + retention churn.
-type BackupConfig struct {
-	ScheduleEnabled bool `envconfig:"BACKUP_SCHEDULE_ENABLED" default:"true"`
-	ScheduleHour    int  `envconfig:"BACKUP_SCHEDULE_HOUR" default:"2"`
-	RetentionDays   int  `envconfig:"BACKUP_RETENTION_DAYS" default:"4"`
 }
 
 type AppConfig struct {
@@ -163,13 +154,6 @@ type ServicesConfig struct {
 	// SubscriptionsURL is the subscriptions-api base URL (pricingapi per reference hosts) for the
 	// per-feature entitlement check that gates premium features (e.g. staff_fund_from_salary).
 	SubscriptionsURL string `envconfig:"SUBSCRIPTION_BASE_URL" default:"https://pricingapi.codevertexafrica.com"`
-}
-
-// MediaConfig.Root is only the local folder of the per-service backup module (to be removed:
-// tenant backups move to SSO). HR files use the shared object storage (OBJECT_STORAGE_*), or
-// MEDIA_ROOT in local development.
-type MediaConfig struct {
-	Root string `envconfig:"MEDIA_ROOT" default:"./media"`
 }
 
 // Load gathers configuration from environment variables and an optional .env file.

@@ -40,8 +40,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/appraisals"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
-	"github.com/Bengo-Hub/erp-api/internal/modules/backup"
-	"github.com/Bengo-Hub/erp-api/internal/modules/backup/destination"
 	"github.com/Bengo-Hub/erp-api/internal/modules/business"
 	"github.com/Bengo-Hub/erp-api/internal/modules/consumers"
 	"github.com/Bengo-Hub/erp-api/internal/modules/contracts"
@@ -198,24 +196,8 @@ func run() error {
 	handlers.SetRBACService(rbacService) // enable local erp-permission enforcement in requirePermission
 	authHandler := handlers.NewAuthHandler(log, rbacService)
 	rbacHandler := handlers.NewRBACHandler(log, rbacService)
-	// Pluggable backup destination (OneDrive/GDrive/S3/WebDAV/SFTP/SMB) — encrypted
-	// at rest with a SECRET_KEY-derived AES-256 key. The Store is shared between the
-	// management handler and the backup service's Mirrorer so every PVC backup is
-	// additionally mirrored best-effort to the configured remote.
-	backupDestStore := destination.NewStore(orm, destination.NewSecretKeyCipher(), log)
-	backupDestUploader := destination.NewUploader(backupDestStore, log)
-	backupDestHandler := handlers.NewBackupDestinationHandler(backupDestStore, backupDestUploader, log)
-
-	backupSvc := backup.NewService(sqlDB, orm, cfg.Media.Root, log).
-		WithMirrorer(backupDestUploader)
-	backupsHandler := handlers.NewBackupsHandler(log, backupSvc, cfg.Backup.RetentionDays)
-	// Daily tenant-scoped auto-backup (02:00) + retention churn (file + DB row). Multi-replica
-	// safe via a Redis once-per-hour lease so only one replica runs each tick.
-	backup.NewScheduler(backupSvc, backup.SchedulerConfig{
-		Enabled:       cfg.Backup.ScheduleEnabled,
-		Hour:          cfg.Backup.ScheduleHour,
-		RetentionDays: cfg.Backup.RetentionDays,
-	}, log).WithRedis(redisClient).Start(ctx)
+	// Tenant backups are made from the SSO client area (auth-api collects this service's
+	// /api/v1/s2s/tenant-export); the platform pg_dumpall covers disaster recovery.
 	healthHandler := handlers.NewHealthHandler(log, dbPool, redisClient, natsConn)
 	// Branding read-through: auth-api SoT, Redis-cached.
 	brandingClient := platformauth.NewBrandingClient(cfg.Auth.ServiceURL, cacheAside, log)
@@ -428,10 +410,9 @@ func run() error {
 				reportsHandler.RegisterRoutes(erp)
 				documentsHandler.RegisterRoutes(erp)
 				businessHandler.RegisterRoutes(erp)
-				rbacHandler.RegisterRoutes(erp)               // service-level role/permission management
-				backupDestHandler.RegisterPlatformRoutes(erp) // platform-default backup destination (platform-owner gated)
+				rbacHandler.RegisterRoutes(erp) // service-level role/permission management
 
-				// Sensitive surfaces (money paths + external fetches + bulk backup operations) get
+				// Sensitive surfaces (money paths + external fetches) get
 				// an ADDITIONAL stricter per-endpoint+IP limiter on top of the per-tenant budget.
 				sensitiveLimit := cfg.RateLimit.PaymentRequestsPerMinute
 				erp.Group(func(s chi.Router) {
@@ -441,11 +422,6 @@ func run() error {
 				erp.Group(func(s chi.Router) {
 					s.Use(rateLimiter.EndpointRateLimiter("fx", sensitiveLimit, time.Minute))
 					fxHandler.RegisterRoutes(s)
-				})
-				erp.Group(func(s chi.Router) {
-					s.Use(rateLimiter.EndpointRateLimiter("backups", sensitiveLimit, time.Minute))
-					backupsHandler.RegisterRoutes(s)    // tenant-scoped backups (this tenant's data only)
-					backupDestHandler.RegisterRoutes(s) // per-tenant backup-destination override (backups.view/manage)
 				})
 			})
 		})
