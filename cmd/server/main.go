@@ -28,6 +28,7 @@ import (
 	sharedcache "github.com/Bengo-Hub/cache"
 	httpware "github.com/Bengo-Hub/httpware"
 	"github.com/Bengo-Hub/httpware/objectstore"
+	"github.com/Bengo-Hub/httpware/tenantexport"
 	authclient "github.com/Bengo-Hub/shared-auth-client"
 	eventslib "github.com/Bengo-Hub/shared-events"
 	sharedratelimit "github.com/Bengo-Hub/shared-ratelimit"
@@ -329,11 +330,11 @@ func run() error {
 	r.Use(httpware.RequestID)
 	r.Use(httpware.Logging(log))
 	r.Use(httpware.Recover(log))
-	// gzip JSON responses and bound per-request duration — parity with the other 3 Go services
-	// (pos-api/inventory-api/treasury-api all wire these two). erp-api has no WebSocket/hijack
-	// endpoints today, so neither needs the bypassForWebsocket wrapper those services require.
-	r.Use(chimw.Compress(5))
-	r.Use(chimw.Timeout(30 * time.Second))
+	// gzip JSON responses and bound per-request duration, like the other Go services. Streams
+	// (SSE, and the tenant export auth-api reads for SSO tenant backups, which may run for
+	// minutes and is gzipped already) skip both (httpware.BypassForStreaming).
+	r.Use(httpware.BypassForStreaming(chimw.Compress(5)))
+	r.Use(httpware.BypassForStreaming(chimw.Timeout(30 * time.Second)))
 	// Guard against a credentialed wildcard CORS misconfiguration: AllowCredentials:true with
 	// Origin "*" lets any site make authenticated cross-origin calls. Fail fast at boot.
 	for _, o := range cfg.HTTP.AllowedOrigins {
@@ -353,6 +354,12 @@ func run() error {
 	r.Get("/healthz", healthHandler.Liveness)
 	r.Get("/readyz", healthHandler.Readiness)
 	r.Get("/metrics", healthHandler.Metrics)
+	// Tenant export for auth-api's SSO tenant backups; the handler checks INTERNAL_SERVICE_KEY
+	// itself (httpware/tenantexport). Not mounted without a key.
+	if cfg.Auth.APIKey != "" {
+		r.Get("/api/v1/s2s/tenant-export", tenantexport.Handler(sqlDB,
+			tenantexport.Options{Service: "erp", InternalKey: cfg.Auth.APIKey}).ServeHTTP)
+	}
 	// API docs at the platform-standard /v1/docs/ (like all Go services); base URL redirects there.
 	r.Get("/v1/docs/*", httpSwagger.Handler(httpSwagger.URL("/v1/docs/doc.json")))
 	r.Get("/", func(w http.ResponseWriter, req *http.Request) {
