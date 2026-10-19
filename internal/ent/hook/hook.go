@@ -225,30 +225,6 @@ func (f AuthTenantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AuthTenantMutation", m)
 }
 
-// The BackupFunc type is an adapter to allow the use of ordinary
-// function as Backup mutator.
-type BackupFunc func(context.Context, *ent.BackupMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f BackupFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.BackupMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BackupMutation", m)
-}
-
-// The BackupSettingFunc type is an adapter to allow the use of ordinary
-// function as BackupSetting mutator.
-type BackupSettingFunc func(context.Context, *ent.BackupSettingMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f BackupSettingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.BackupSettingMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BackupSettingMutation", m)
-}
-
 // The BenefitTaxFunc type is an adapter to allow the use of ordinary
 // function as BenefitTax mutator.
 type BenefitTaxFunc func(context.Context, *ent.BenefitTaxMutation) (ent.Value, error)

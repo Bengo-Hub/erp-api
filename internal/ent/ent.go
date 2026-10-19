@@ -30,8 +30,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
-	"github.com/Bengo-Hub/erp-api/internal/ent/backup"
-	"github.com/Bengo-Hub/erp-api/internal/ent/backupsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/benefittax"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/casualpayment"
@@ -197,8 +195,6 @@ func checkColumn(t, c string) error {
 			attendancerule.Table:            attendancerule.ValidColumn,
 			authoutlet.Table:                authoutlet.ValidColumn,
 			authtenant.Table:                authtenant.ValidColumn,
-			backup.Table:                    backup.ValidColumn,
-			backupsetting.Table:             backupsetting.ValidColumn,
 			benefittax.Table:                benefittax.ValidColumn,
 			candidate.Table:                 candidate.ValidColumn,
 			casualpayment.Table:             casualpayment.ValidColumn,

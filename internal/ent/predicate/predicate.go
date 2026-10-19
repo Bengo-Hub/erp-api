@@ -60,12 +60,6 @@ type AuthOutlet func(*sql.Selector)
 // AuthTenant is the predicate function for authtenant builders.
 type AuthTenant func(*sql.Selector)
 
-// Backup is the predicate function for backup builders.
-type Backup func(*sql.Selector)
-
-// BackupSetting is the predicate function for backupsetting builders.
-type BackupSetting func(*sql.Selector)
-
 // BenefitTax is the predicate function for benefittax builders.
 type BenefitTax func(*sql.Selector)
 
