@@ -26,6 +26,13 @@ type TenantSyncConsumer struct {
 	log    *zap.Logger
 	syncer *usersync.TenantSyncer
 	idem   *sharedevents.IdempotencyStore
+	// Entitled reports whether the tenant's plan includes the erp service. Tenants outside it get
+	// no AuthTenant or AuthOutlet shadow. Nil lets every tenant through (local development).
+	Entitled func(ctx context.Context, tenantID uuid.UUID) bool
+}
+
+func (c *TenantSyncConsumer) entitled(ctx context.Context, tenantID uuid.UUID) bool {
+	return c.Entitled == nil || c.Entitled(ctx, tenantID)
 }
 
 func NewTenantSyncConsumer(log *zap.Logger, syncer *usersync.TenantSyncer, idem *sharedevents.IdempotencyStore) *TenantSyncConsumer {
@@ -114,6 +121,9 @@ func (c *TenantSyncConsumer) handleTenantEvent(ctx context.Context, evt *sharede
 	if id == uuid.Nil {
 		return fmt.Errorf("auth.tenant event missing tenant id")
 	}
+	if !c.entitled(ctx, id) {
+		return nil // not in the erp plan: no shadow row
+	}
 	in := usersync.TenantInput{
 		ID:         id,
 		Slug:       str(evt.Payload, "slug"),
@@ -144,6 +154,9 @@ func (c *TenantSyncConsumer) handleOutletEvent(ctx context.Context, evt *sharede
 	tenantID := tenantIDFromEvent(evt)
 	if tenantID == uuid.Nil {
 		return fmt.Errorf("auth.outlet event missing tenant id")
+	}
+	if !c.entitled(ctx, tenantID) {
+		return nil // not in the erp plan: no outlet shadow
 	}
 	in := usersync.OutletInput{
 		ID:       outletID,

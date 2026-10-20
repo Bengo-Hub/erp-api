@@ -25,7 +25,9 @@ func EnsureServiceUser(svc *rbac.Service, syncer *usersync.TenantSyncer, log *za
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			claims, ok := authclient.ClaimsFromContext(ctx)
-			if ok && claims != nil && !claims.IsService && claims.Subject != "" {
+			// A tenant whose plan has no erp entitlement is not provisioned (no CustomUser, no tenant
+			// shadow); the module gate that follows answers 403. Exempt tokens always pass.
+			if ok && claims != nil && !claims.IsService && claims.Subject != "" && claims.HasServiceAccess("erp") {
 				if tenantPtr, err := claims.TenantUUID(); err == nil && tenantPtr != nil && *tenantPtr != uuid.Nil {
 					if svc != nil {
 						mapped := MapGlobalRolesToERP(claims.Roles)

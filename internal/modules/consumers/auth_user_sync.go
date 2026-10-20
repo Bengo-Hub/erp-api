@@ -28,6 +28,9 @@ type AuthUserSyncConsumer struct {
 	log  *zap.Logger
 	svc  *employees.Service
 	idem *sharedevents.IdempotencyStore
+	// Entitled reports whether the tenant's plan includes the erp service. Tenants outside it get
+	// no employee projection. Nil lets every tenant through (local development).
+	Entitled func(ctx context.Context, tenantID uuid.UUID) bool
 }
 
 func NewAuthUserSyncConsumer(log *zap.Logger, svc *employees.Service, idem *sharedevents.IdempotencyStore) *AuthUserSyncConsumer {
@@ -115,6 +118,9 @@ func (c *AuthUserSyncConsumer) handleUserEvent(ctx context.Context, evt *sharede
 	tenantID := tenantIDFromEvent(evt)
 	if tenantID == uuid.Nil {
 		return fmt.Errorf("auth.user event missing tenant id")
+	}
+	if c.Entitled != nil && !c.Entitled(ctx, tenantID) {
+		return nil // not in the erp plan: no CustomUser or Employee is created
 	}
 	authUserID := parseUUID(str(evt.Payload, "user_id"))
 	if authUserID == uuid.Nil {
