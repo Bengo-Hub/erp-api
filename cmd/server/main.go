@@ -332,13 +332,7 @@ func run() error {
 			return fmt.Errorf("config: HTTP_ALLOWED_ORIGINS must not contain \"*\" with credentialed CORS")
 		}
 	}
-	r.Use(httpware.CORS(httpware.CORSConfig{
-		AllowedOrigins:   cfg.HTTP.AllowedOrigins,
-		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type", "X-API-Key", "X-Tenant-ID", "X-Tenant-Slug", "X-Outlet-ID", "X-Request-ID", "X-Requested-With"},
-		AllowCredentials: true,
-		MaxAge:           600,
-	}))
+	r.Use(httpware.CORS(httpware.StandardCORS(cfg.HTTP.AllowedOrigins)))
 
 	// Public (no auth): health/metrics + login-page branding.
 	r.Get("/healthz", healthHandler.Liveness)
