@@ -197,6 +197,14 @@ func run() error {
 		if err := authUserConsumer.Start(ctx, natsConn); err != nil {
 			log.Warn("auth-user-sync consumer start failed", zap.Error(err))
 		}
+		// tenant.purge (dormancy, a deleted tenant, a declined registration): delete every row
+		// erp holds for the tenant (auth_tenants included), by the shared schema-driven purger.
+		if js, err := natsConn.JetStream(); err == nil {
+			purger := &eventslib.TenantPurger{DB: sqlDB, Log: log.Named("tenant-purge"), Service: "erp"}
+			if err := purger.Subscribe(js); err != nil {
+				log.Warn("tenant purge consumer not started", zap.Error(err))
+			}
+		}
 	}
 
 	// --- RBAC + handlers ---
