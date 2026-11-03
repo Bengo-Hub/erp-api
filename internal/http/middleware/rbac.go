@@ -29,7 +29,10 @@ func EnsureServiceUser(svc *rbac.Service, syncer *usersync.TenantSyncer, log *za
 			// shadow); the module gate that follows answers 403. Exempt tokens always pass.
 			if ok && claims != nil && !claims.IsService && claims.Subject != "" && claims.HasServiceAccess("erp") {
 				if tenantPtr, err := claims.TenantUUID(); err == nil && tenantPtr != nil && *tenantPtr != uuid.Nil {
-					if svc != nil {
+					// The login shadow follows auth-api's member services (user_services claim): a member
+					// without erp is not provisioned here. Employee records are not affected (every
+					// staff member stays on the HR roster, user decision 2026-11-03).
+					if svc != nil && claims.AllowsUserService("erp") {
 						mapped := MapGlobalRolesToERP(claims.Roles)
 						if _, err := svc.EnsureUserFromToken(ctx, *tenantPtr, claims.Subject, claims.Email, mapped...); err != nil && log != nil {
 							log.Debug("rbac JIT provisioning failed (non-fatal)", zap.Error(err))
