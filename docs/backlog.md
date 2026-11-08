@@ -2,6 +2,10 @@
 
 **Last updated:** 2026-10-16. Built by checking `docs/build-history.md` and `docs/integrations.md` against the code on `main`. Each item names the doc it came from. The budgets, planning, project costing and BI plan (`.claude/plans/budgets-planning-projects-bi-2026-09-27.md`) is complete for ERP; its items are listed under Done. UI gaps live in `erp/erp-ui/docs/backlog.md`.
 
+## Find, Flip, Fix
+
+Before planning or building any item here, research the products people already pay for in this area: how they sell, what they charge and what their customers complain about. Change the angle for our market and turn the top complaints into requirements a test can prove. Record the findings, with sources and dates, in the plan or sprint file. Research that names a client stays in the private docs repo. Persuasive copy and flows need a true fact behind every claim.
+
 ## Open
 
 - Calculation preview (`POST /hrm/payroll/calculation-preview`) still runs inside the request. Since the run inputs are batched it costs a few grouped reads plus pure computation, so it fits the 20s write timeout for normal payrolls; move it to the background job too if a tenant with several thousand employees hits the limit. Source: 2026-10-16 review.
