@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"path/filepath"
 	"strings"
 
@@ -98,17 +99,22 @@ func (m *Store) save(ctx context.Context, mediaType string, tenantID, ownerID uu
 		return "", fmt.Errorf("media: the file must be at most 10 MB")
 	}
 	ct := contentTypes[ext]
-	// JPEG and PNG are re-encoded (EXIF location removed, appended payloads dropped) with the
-	// shared image rules; the bytes must really be the image the name claims.
+	// JPEG and PNG must really be the image the name claims (checked on the bytes as uploaded),
+	// then go through the shared upload rules (httpware objectstore.Prepare: malware scan, EXIF and
+	// appended payloads dropped, downscaled). Since httpware v0.20.0 an opaque photo is stored as
+	// WebP, so the stored type and extension are what Prepare returns, not the uploaded name's.
 	if ct == "image/jpeg" || ct == "image/png" {
+		if http.DetectContentType(data) != ct {
+			return "", fmt.Errorf("media: the file is not a %s image", strings.TrimPrefix(ext, "."))
+		}
 		up, err := objectstore.Prepare(data, mediaType)
 		if err != nil {
 			return "", fmt.Errorf("media: %w", err)
 		}
-		if up.ContentType != ct {
-			return "", fmt.Errorf("media: the file is not a %s image", strings.TrimPrefix(ext, "."))
+		data, ct = up.Data, up.ContentType
+		if up.Ext != "" {
+			ext = up.Ext
 		}
-		data = up.Data
 	}
 	key, err := m.s.Key(objectstore.Owner{TenantID: tenantID.String()}, mediaType, ownerID.String(), uuid.NewString()+ext)
 	if err != nil {
