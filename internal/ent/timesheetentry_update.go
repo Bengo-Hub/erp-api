@@ -78,6 +78,40 @@ func (_u *TimesheetEntryUpdate) ClearProjectID() *TimesheetEntryUpdate {
 	return _u
 }
 
+// SetTaskID sets the "task_id" field.
+func (_u *TimesheetEntryUpdate) SetTaskID(v uuid.UUID) *TimesheetEntryUpdate {
+	_u.mutation.SetTaskID(v)
+	return _u
+}
+
+// SetNillableTaskID sets the "task_id" field if the given value is not nil.
+func (_u *TimesheetEntryUpdate) SetNillableTaskID(v *uuid.UUID) *TimesheetEntryUpdate {
+	if v != nil {
+		_u.SetTaskID(*v)
+	}
+	return _u
+}
+
+// ClearTaskID clears the value of the "task_id" field.
+func (_u *TimesheetEntryUpdate) ClearTaskID() *TimesheetEntryUpdate {
+	_u.mutation.ClearTaskID()
+	return _u
+}
+
+// SetBillable sets the "billable" field.
+func (_u *TimesheetEntryUpdate) SetBillable(v bool) *TimesheetEntryUpdate {
+	_u.mutation.SetBillable(v)
+	return _u
+}
+
+// SetNillableBillable sets the "billable" field if the given value is not nil.
+func (_u *TimesheetEntryUpdate) SetNillableBillable(v *bool) *TimesheetEntryUpdate {
+	if v != nil {
+		_u.SetBillable(*v)
+	}
+	return _u
+}
+
 // SetDate sets the "date" field.
 func (_u *TimesheetEntryUpdate) SetDate(v time.Time) *TimesheetEntryUpdate {
 	_u.mutation.SetDate(v)
@@ -227,6 +261,15 @@ func (_u *TimesheetEntryUpdate) sqlSave(ctx context.Context) (_node int, err err
 	if _u.mutation.ProjectIDCleared() {
 		_spec.ClearField(timesheetentry.FieldProjectID, field.TypeUUID)
 	}
+	if value, ok := _u.mutation.TaskID(); ok {
+		_spec.SetField(timesheetentry.FieldTaskID, field.TypeUUID, value)
+	}
+	if _u.mutation.TaskIDCleared() {
+		_spec.ClearField(timesheetentry.FieldTaskID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.Billable(); ok {
+		_spec.SetField(timesheetentry.FieldBillable, field.TypeBool, value)
+	}
 	if value, ok := _u.mutation.Date(); ok {
 		_spec.SetField(timesheetentry.FieldDate, field.TypeTime, value)
 	}
@@ -316,6 +359,40 @@ func (_u *TimesheetEntryUpdateOne) SetNillableProjectID(v *uuid.UUID) *Timesheet
 // ClearProjectID clears the value of the "project_id" field.
 func (_u *TimesheetEntryUpdateOne) ClearProjectID() *TimesheetEntryUpdateOne {
 	_u.mutation.ClearProjectID()
+	return _u
+}
+
+// SetTaskID sets the "task_id" field.
+func (_u *TimesheetEntryUpdateOne) SetTaskID(v uuid.UUID) *TimesheetEntryUpdateOne {
+	_u.mutation.SetTaskID(v)
+	return _u
+}
+
+// SetNillableTaskID sets the "task_id" field if the given value is not nil.
+func (_u *TimesheetEntryUpdateOne) SetNillableTaskID(v *uuid.UUID) *TimesheetEntryUpdateOne {
+	if v != nil {
+		_u.SetTaskID(*v)
+	}
+	return _u
+}
+
+// ClearTaskID clears the value of the "task_id" field.
+func (_u *TimesheetEntryUpdateOne) ClearTaskID() *TimesheetEntryUpdateOne {
+	_u.mutation.ClearTaskID()
+	return _u
+}
+
+// SetBillable sets the "billable" field.
+func (_u *TimesheetEntryUpdateOne) SetBillable(v bool) *TimesheetEntryUpdateOne {
+	_u.mutation.SetBillable(v)
+	return _u
+}
+
+// SetNillableBillable sets the "billable" field if the given value is not nil.
+func (_u *TimesheetEntryUpdateOne) SetNillableBillable(v *bool) *TimesheetEntryUpdateOne {
+	if v != nil {
+		_u.SetBillable(*v)
+	}
 	return _u
 }
 
@@ -497,6 +574,15 @@ func (_u *TimesheetEntryUpdateOne) sqlSave(ctx context.Context) (_node *Timeshee
 	}
 	if _u.mutation.ProjectIDCleared() {
 		_spec.ClearField(timesheetentry.FieldProjectID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.TaskID(); ok {
+		_spec.SetField(timesheetentry.FieldTaskID, field.TypeUUID, value)
+	}
+	if _u.mutation.TaskIDCleared() {
+		_spec.ClearField(timesheetentry.FieldTaskID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.Billable(); ok {
+		_spec.SetField(timesheetentry.FieldBillable, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Date(); ok {
 		_spec.SetField(timesheetentry.FieldDate, field.TypeTime, value)

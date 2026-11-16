@@ -3478,6 +3478,8 @@ var (
 		{Name: "tenant_id", Type: field.TypeUUID},
 		{Name: "timesheet_id", Type: field.TypeUUID},
 		{Name: "project_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "task_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "billable", Type: field.TypeBool, Default: false},
 		{Name: "date", Type: field.TypeTime},
 		{Name: "task_description", Type: field.TypeString, Nullable: true},
 		{Name: "regular_hours", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(8,2)"}},
@@ -3498,9 +3500,9 @@ var (
 				Columns: []*schema.Column{TimesheetEntriesColumns[1]},
 			},
 			{
-				Name:    "timesheetentry_tenant_id_timesheet_id_date",
+				Name:    "timesheetentry_tenant_id_timesheet_id_date_project_id_task_id",
 				Unique:  true,
-				Columns: []*schema.Column{TimesheetEntriesColumns[1], TimesheetEntriesColumns[2], TimesheetEntriesColumns[4]},
+				Columns: []*schema.Column{TimesheetEntriesColumns[1], TimesheetEntriesColumns[2], TimesheetEntriesColumns[6], TimesheetEntriesColumns[3], TimesheetEntriesColumns[4]},
 			},
 		},
 	}

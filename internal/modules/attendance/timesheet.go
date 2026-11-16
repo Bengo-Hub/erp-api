@@ -9,6 +9,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/timesheet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/timesheetentry"
 )
@@ -40,10 +41,13 @@ func (s *Service) CreateTimesheet(ctx context.Context, tenantID, employeeID uuid
 	return row, nil
 }
 
-// EntryInput upserts a daily timesheet entry.
+// EntryInput upserts the entry of one date, project and task. Billable nil keeps the stored flag
+// (false on a new entry).
 type EntryInput struct {
 	TimesheetID   uuid.UUID
 	ProjectID     *uuid.UUID
+	TaskID        *uuid.UUID
+	Billable      *bool
 	Date          time.Time
 	Task          string
 	RegularHours  string
@@ -51,8 +55,72 @@ type EntryInput struct {
 	BreakHours    string
 }
 
-// UpsertEntry creates/updates a daily entry and rolls up the timesheet totals.
+// entryKey matches the entry of (timesheet, date, project, task), a missing project or task
+// matching only rows without one.
+func entryKey(tenantID uuid.UUID, in EntryInput) []predicate.TimesheetEntry {
+	ps := []predicate.TimesheetEntry{
+		timesheetentry.TenantID(tenantID),
+		timesheetentry.TimesheetID(in.TimesheetID),
+		timesheetentry.Date(in.Date),
+	}
+	if in.ProjectID != nil {
+		ps = append(ps, timesheetentry.ProjectID(*in.ProjectID))
+	} else {
+		ps = append(ps, timesheetentry.ProjectIDIsNil())
+	}
+	if in.TaskID != nil {
+		ps = append(ps, timesheetentry.TaskID(*in.TaskID))
+	} else {
+		ps = append(ps, timesheetentry.TaskIDIsNil())
+	}
+	return ps
+}
+
+// withSheetLock runs fn in one transaction holding the timesheet row lock (SELECT ... FOR UPDATE).
+// Every write to a timesheet's entries and totals goes through it, so concurrent writes to the same
+// timesheet queue: a missing project or task (NULL, which the unique index cannot compare) never
+// yields twin entries, an add never loses a concurrent add, and a status change (a plain UPDATE of
+// the same row) waits for the write in progress.
+func (s *Service) withSheetLock(ctx context.Context, tenantID, timesheetID uuid.UUID, fn func(tx *ent.Tx, ts *ent.Timesheet) error) error {
+	tx, err := s.orm.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("attendance: begin: %w", err)
+	}
+	ts, err := tx.Timesheet.Query().
+		Where(timesheet.TenantID(tenantID), timesheet.ID(timesheetID)).
+		ForUpdate().Only(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("attendance: lock timesheet: %w", err)
+	}
+	if err := fn(tx, ts); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("attendance: commit: %w", err)
+	}
+	return nil
+}
+
+// UpsertEntry creates or updates the entry of one date, project and task and rolls up the
+// timesheet totals, under the timesheet lock.
 func (s *Service) UpsertEntry(ctx context.Context, tenantID uuid.UUID, in EntryInput) (*ent.TimesheetEntry, error) {
+	var row *ent.TimesheetEntry
+	err := s.withSheetLock(ctx, tenantID, in.TimesheetID, func(tx *ent.Tx, _ *ent.Timesheet) error {
+		var err error
+		row, err = upsertEntryTx(ctx, tx.Client(), tenantID, in)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return row, nil
+}
+
+// upsertEntryTx writes one entry and the totals with c, the client of a transaction that holds
+// the timesheet lock.
+func upsertEntryTx(ctx context.Context, c *ent.Client, tenantID uuid.UUID, in EntryInput) (*ent.TimesheetEntry, error) {
 	reg, err := parseDecimalDefault(in.RegularHours)
 	if err != nil {
 		return nil, fmt.Errorf("attendance: regular_hours: %w", err)
@@ -66,40 +134,32 @@ func (s *Service) UpsertEntry(ctx context.Context, tenantID uuid.UUID, in EntryI
 		return nil, fmt.Errorf("attendance: break_hours: %w", err)
 	}
 
-	existing, err := s.orm.TimesheetEntry.Query().Where(
-		timesheetentry.TenantID(tenantID),
-		timesheetentry.TimesheetID(in.TimesheetID),
-		timesheetentry.Date(in.Date),
-	).First(ctx)
+	existing, err := c.TimesheetEntry.Query().Where(entryKey(tenantID, in)...).First(ctx)
 	var row *ent.TimesheetEntry
 	if ent.IsNotFound(err) {
-		b := s.orm.TimesheetEntry.Create().
+		b := c.TimesheetEntry.Create().
 			SetTenantID(tenantID).SetTimesheetID(in.TimesheetID).SetDate(in.Date).
+			SetNillableProjectID(in.ProjectID).SetNillableTaskID(in.TaskID).SetNillableBillable(in.Billable).
 			SetTaskDescription(in.Task).SetRegularHours(reg).SetOvertimeHours(ot).SetBreakHours(brk)
-		if in.ProjectID != nil {
-			b = b.SetProjectID(*in.ProjectID)
-		}
 		row, err = b.Save(ctx)
 	} else if err == nil {
 		u := existing.Update().SetTaskDescription(in.Task).
-			SetRegularHours(reg).SetOvertimeHours(ot).SetBreakHours(brk)
-		if in.ProjectID != nil {
-			u = u.SetProjectID(*in.ProjectID)
-		}
+			SetRegularHours(reg).SetOvertimeHours(ot).SetBreakHours(brk).SetNillableBillable(in.Billable)
 		row, err = u.Save(ctx)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("attendance: upsert entry: %w", err)
 	}
-	if rerr := s.recalcTotals(ctx, tenantID, in.TimesheetID); rerr != nil {
+	if rerr := recalcTotals(ctx, c, tenantID, in.TimesheetID); rerr != nil {
 		return nil, rerr
 	}
 	return row, nil
 }
 
-// recalcTotals recomputes a timesheet's total/overtime hours from its entries.
-func (s *Service) recalcTotals(ctx context.Context, tenantID, timesheetID uuid.UUID) error {
-	entries, err := s.orm.TimesheetEntry.Query().Where(
+// recalcTotals recomputes a timesheet's total/overtime hours from its entries, with c the client
+// of the transaction holding the timesheet lock.
+func recalcTotals(ctx context.Context, c *ent.Client, tenantID, timesheetID uuid.UUID) error {
+	entries, err := c.TimesheetEntry.Query().Where(
 		timesheetentry.TenantID(tenantID),
 		timesheetentry.TimesheetID(timesheetID),
 	).All(ctx)
@@ -112,7 +172,7 @@ func (s *Service) recalcTotals(ctx context.Context, tenantID, timesheetID uuid.U
 		total = total.Add(e.RegularHours)
 		ot = ot.Add(e.OvertimeHours)
 	}
-	if _, uerr := s.orm.Timesheet.Update().
+	if _, uerr := c.Timesheet.Update().
 		Where(timesheet.TenantID(tenantID), timesheet.ID(timesheetID)).
 		SetTotalHours(total).SetTotalOvertimeHours(ot).Save(ctx); uerr != nil {
 		return fmt.Errorf("attendance: update totals: %w", uerr)

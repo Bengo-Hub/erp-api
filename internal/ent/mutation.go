@@ -95632,6 +95632,8 @@ type TimesheetEntryMutation struct {
 	tenant_id        *uuid.UUID
 	timesheet_id     *uuid.UUID
 	project_id       *uuid.UUID
+	task_id          *uuid.UUID
+	billable         *bool
 	date             *time.Time
 	task_description *string
 	regular_hours    *decimal.Decimal
@@ -95868,6 +95870,91 @@ func (m *TimesheetEntryMutation) ProjectIDCleared() bool {
 func (m *TimesheetEntryMutation) ResetProjectID() {
 	m.project_id = nil
 	delete(m.clearedFields, timesheetentry.FieldProjectID)
+}
+
+// SetTaskID sets the "task_id" field.
+func (m *TimesheetEntryMutation) SetTaskID(u uuid.UUID) {
+	m.task_id = &u
+}
+
+// TaskID returns the value of the "task_id" field in the mutation.
+func (m *TimesheetEntryMutation) TaskID() (r uuid.UUID, exists bool) {
+	v := m.task_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaskID returns the old "task_id" field's value of the TimesheetEntry entity.
+// If the TimesheetEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TimesheetEntryMutation) OldTaskID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaskID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaskID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaskID: %w", err)
+	}
+	return oldValue.TaskID, nil
+}
+
+// ClearTaskID clears the value of the "task_id" field.
+func (m *TimesheetEntryMutation) ClearTaskID() {
+	m.task_id = nil
+	m.clearedFields[timesheetentry.FieldTaskID] = struct{}{}
+}
+
+// TaskIDCleared returns if the "task_id" field was cleared in this mutation.
+func (m *TimesheetEntryMutation) TaskIDCleared() bool {
+	_, ok := m.clearedFields[timesheetentry.FieldTaskID]
+	return ok
+}
+
+// ResetTaskID resets all changes to the "task_id" field.
+func (m *TimesheetEntryMutation) ResetTaskID() {
+	m.task_id = nil
+	delete(m.clearedFields, timesheetentry.FieldTaskID)
+}
+
+// SetBillable sets the "billable" field.
+func (m *TimesheetEntryMutation) SetBillable(b bool) {
+	m.billable = &b
+}
+
+// Billable returns the value of the "billable" field in the mutation.
+func (m *TimesheetEntryMutation) Billable() (r bool, exists bool) {
+	v := m.billable
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBillable returns the old "billable" field's value of the TimesheetEntry entity.
+// If the TimesheetEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TimesheetEntryMutation) OldBillable(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBillable is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBillable requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBillable: %w", err)
+	}
+	return oldValue.Billable, nil
+}
+
+// ResetBillable resets all changes to the "billable" field.
+func (m *TimesheetEntryMutation) ResetBillable() {
+	m.billable = nil
 }
 
 // SetDate sets the "date" field.
@@ -96182,7 +96269,7 @@ func (m *TimesheetEntryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TimesheetEntryMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 12)
 	if m.tenant_id != nil {
 		fields = append(fields, timesheetentry.FieldTenantID)
 	}
@@ -96191,6 +96278,12 @@ func (m *TimesheetEntryMutation) Fields() []string {
 	}
 	if m.project_id != nil {
 		fields = append(fields, timesheetentry.FieldProjectID)
+	}
+	if m.task_id != nil {
+		fields = append(fields, timesheetentry.FieldTaskID)
+	}
+	if m.billable != nil {
+		fields = append(fields, timesheetentry.FieldBillable)
 	}
 	if m.date != nil {
 		fields = append(fields, timesheetentry.FieldDate)
@@ -96227,6 +96320,10 @@ func (m *TimesheetEntryMutation) Field(name string) (ent.Value, bool) {
 		return m.TimesheetID()
 	case timesheetentry.FieldProjectID:
 		return m.ProjectID()
+	case timesheetentry.FieldTaskID:
+		return m.TaskID()
+	case timesheetentry.FieldBillable:
+		return m.Billable()
 	case timesheetentry.FieldDate:
 		return m.Date()
 	case timesheetentry.FieldTaskDescription:
@@ -96256,6 +96353,10 @@ func (m *TimesheetEntryMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldTimesheetID(ctx)
 	case timesheetentry.FieldProjectID:
 		return m.OldProjectID(ctx)
+	case timesheetentry.FieldTaskID:
+		return m.OldTaskID(ctx)
+	case timesheetentry.FieldBillable:
+		return m.OldBillable(ctx)
 	case timesheetentry.FieldDate:
 		return m.OldDate(ctx)
 	case timesheetentry.FieldTaskDescription:
@@ -96299,6 +96400,20 @@ func (m *TimesheetEntryMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetProjectID(v)
+		return nil
+	case timesheetentry.FieldTaskID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaskID(v)
+		return nil
+	case timesheetentry.FieldBillable:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBillable(v)
 		return nil
 	case timesheetentry.FieldDate:
 		v, ok := value.(time.Time)
@@ -96382,6 +96497,9 @@ func (m *TimesheetEntryMutation) ClearedFields() []string {
 	if m.FieldCleared(timesheetentry.FieldProjectID) {
 		fields = append(fields, timesheetentry.FieldProjectID)
 	}
+	if m.FieldCleared(timesheetentry.FieldTaskID) {
+		fields = append(fields, timesheetentry.FieldTaskID)
+	}
 	if m.FieldCleared(timesheetentry.FieldTaskDescription) {
 		fields = append(fields, timesheetentry.FieldTaskDescription)
 	}
@@ -96405,6 +96523,9 @@ func (m *TimesheetEntryMutation) ClearField(name string) error {
 	case timesheetentry.FieldProjectID:
 		m.ClearProjectID()
 		return nil
+	case timesheetentry.FieldTaskID:
+		m.ClearTaskID()
+		return nil
 	case timesheetentry.FieldTaskDescription:
 		m.ClearTaskDescription()
 		return nil
@@ -96427,6 +96548,12 @@ func (m *TimesheetEntryMutation) ResetField(name string) error {
 		return nil
 	case timesheetentry.FieldProjectID:
 		m.ResetProjectID()
+		return nil
+	case timesheetentry.FieldTaskID:
+		m.ResetTaskID()
+		return nil
+	case timesheetentry.FieldBillable:
+		m.ResetBillable()
 		return nil
 	case timesheetentry.FieldDate:
 		m.ResetDate()

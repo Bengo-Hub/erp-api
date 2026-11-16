@@ -21,6 +21,10 @@ const (
 	FieldTimesheetID = "timesheet_id"
 	// FieldProjectID holds the string denoting the project_id field in the database.
 	FieldProjectID = "project_id"
+	// FieldTaskID holds the string denoting the task_id field in the database.
+	FieldTaskID = "task_id"
+	// FieldBillable holds the string denoting the billable field in the database.
+	FieldBillable = "billable"
 	// FieldDate holds the string denoting the date field in the database.
 	FieldDate = "date"
 	// FieldTaskDescription holds the string denoting the task_description field in the database.
@@ -45,6 +49,8 @@ var Columns = []string{
 	FieldTenantID,
 	FieldTimesheetID,
 	FieldProjectID,
+	FieldTaskID,
+	FieldBillable,
 	FieldDate,
 	FieldTaskDescription,
 	FieldRegularHours,
@@ -65,6 +71,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultBillable holds the default value on creation for the "billable" field.
+	DefaultBillable bool
 	// DefaultRegularHours holds the default value on creation for the "regular_hours" field.
 	DefaultRegularHours decimal.Decimal
 	// DefaultOvertimeHours holds the default value on creation for the "overtime_hours" field.
@@ -98,6 +106,16 @@ func ByTimesheetID(opts ...sql.OrderTermOption) OrderOption {
 // ByProjectID orders the results by the project_id field.
 func ByProjectID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProjectID, opts...).ToFunc()
+}
+
+// ByTaskID orders the results by the task_id field.
+func ByTaskID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTaskID, opts...).ToFunc()
+}
+
+// ByBillable orders the results by the billable field.
+func ByBillable(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBillable, opts...).ToFunc()
 }
 
 // ByDate orders the results by the date field.

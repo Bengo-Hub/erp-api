@@ -9,8 +9,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// TimesheetEntry is a daily entry within a Timesheet (legacy
-// hrm.attendance.TimesheetEntry). Tenant-scoped; unique per (tenant, timesheet, date).
+// TimesheetEntry is the time an employee logged on one date of a Timesheet (legacy
+// hrm.attendance.TimesheetEntry), per project and, when projects-api logs it, per task. Tenant
+// scoped; one row per (tenant, timesheet, date, project, task), which the service keeps for rows
+// without a project or task too (Postgres treats NULLs as distinct in the unique index).
 type TimesheetEntry struct {
 	ent.Schema
 }
@@ -21,6 +23,10 @@ func (TimesheetEntry) Fields() []ent.Field {
 		field.UUID("tenant_id", uuid.UUID{}).Comment("Owning tenant"),
 		field.UUID("timesheet_id", uuid.UUID{}).Comment("FK -> timesheets.id"),
 		field.UUID("project_id", uuid.UUID{}).Optional().Nillable(),
+		field.UUID("task_id", uuid.UUID{}).Optional().Nillable().
+			Comment("projects-api task the time was logged on"),
+		field.Bool("billable").Default(false).
+			Comment("Billable to the project's client (projects-api decides from the project's billing terms)"),
 		field.Time("date"),
 		field.String("task_description").Optional(),
 		hoursField("regular_hours"),
@@ -34,6 +40,6 @@ func (TimesheetEntry) Fields() []ent.Field {
 func (TimesheetEntry) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_id"),
-		index.Fields("tenant_id", "timesheet_id", "date").Unique(),
+		index.Fields("tenant_id", "timesheet_id", "date", "project_id", "task_id").Unique(),
 	}
 }

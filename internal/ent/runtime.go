@@ -2744,20 +2744,24 @@ func init() {
 	timesheet.DefaultID = timesheetDescID.Default.(func() uuid.UUID)
 	timesheetentryFields := schema.TimesheetEntry{}.Fields()
 	_ = timesheetentryFields
+	// timesheetentryDescBillable is the schema descriptor for billable field.
+	timesheetentryDescBillable := timesheetentryFields[5].Descriptor()
+	// timesheetentry.DefaultBillable holds the default value on creation for the billable field.
+	timesheetentry.DefaultBillable = timesheetentryDescBillable.Default.(bool)
 	// timesheetentryDescRegularHours is the schema descriptor for regular_hours field.
-	timesheetentryDescRegularHours := timesheetentryFields[6].Descriptor()
+	timesheetentryDescRegularHours := timesheetentryFields[8].Descriptor()
 	// timesheetentry.DefaultRegularHours holds the default value on creation for the regular_hours field.
 	timesheetentry.DefaultRegularHours = timesheetentryDescRegularHours.Default.(decimal.Decimal)
 	// timesheetentryDescOvertimeHours is the schema descriptor for overtime_hours field.
-	timesheetentryDescOvertimeHours := timesheetentryFields[7].Descriptor()
+	timesheetentryDescOvertimeHours := timesheetentryFields[9].Descriptor()
 	// timesheetentry.DefaultOvertimeHours holds the default value on creation for the overtime_hours field.
 	timesheetentry.DefaultOvertimeHours = timesheetentryDescOvertimeHours.Default.(decimal.Decimal)
 	// timesheetentryDescBreakHours is the schema descriptor for break_hours field.
-	timesheetentryDescBreakHours := timesheetentryFields[8].Descriptor()
+	timesheetentryDescBreakHours := timesheetentryFields[10].Descriptor()
 	// timesheetentry.DefaultBreakHours holds the default value on creation for the break_hours field.
 	timesheetentry.DefaultBreakHours = timesheetentryDescBreakHours.Default.(decimal.Decimal)
 	// timesheetentryDescCreatedAt is the schema descriptor for created_at field.
-	timesheetentryDescCreatedAt := timesheetentryFields[10].Descriptor()
+	timesheetentryDescCreatedAt := timesheetentryFields[12].Descriptor()
 	// timesheetentry.DefaultCreatedAt holds the default value on creation for the created_at field.
 	timesheetentry.DefaultCreatedAt = timesheetentryDescCreatedAt.Default.(func() time.Time)
 	// timesheetentryDescID is the schema descriptor for id field.

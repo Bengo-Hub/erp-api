@@ -51,6 +51,34 @@ func (_c *TimesheetEntryCreate) SetNillableProjectID(v *uuid.UUID) *TimesheetEnt
 	return _c
 }
 
+// SetTaskID sets the "task_id" field.
+func (_c *TimesheetEntryCreate) SetTaskID(v uuid.UUID) *TimesheetEntryCreate {
+	_c.mutation.SetTaskID(v)
+	return _c
+}
+
+// SetNillableTaskID sets the "task_id" field if the given value is not nil.
+func (_c *TimesheetEntryCreate) SetNillableTaskID(v *uuid.UUID) *TimesheetEntryCreate {
+	if v != nil {
+		_c.SetTaskID(*v)
+	}
+	return _c
+}
+
+// SetBillable sets the "billable" field.
+func (_c *TimesheetEntryCreate) SetBillable(v bool) *TimesheetEntryCreate {
+	_c.mutation.SetBillable(v)
+	return _c
+}
+
+// SetNillableBillable sets the "billable" field if the given value is not nil.
+func (_c *TimesheetEntryCreate) SetNillableBillable(v *bool) *TimesheetEntryCreate {
+	if v != nil {
+		_c.SetBillable(*v)
+	}
+	return _c
+}
+
 // SetDate sets the "date" field.
 func (_c *TimesheetEntryCreate) SetDate(v time.Time) *TimesheetEntryCreate {
 	_c.mutation.SetDate(v)
@@ -190,6 +218,10 @@ func (_c *TimesheetEntryCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *TimesheetEntryCreate) defaults() {
+	if _, ok := _c.mutation.Billable(); !ok {
+		v := timesheetentry.DefaultBillable
+		_c.mutation.SetBillable(v)
+	}
 	if _, ok := _c.mutation.RegularHours(); !ok {
 		v := timesheetentry.DefaultRegularHours
 		_c.mutation.SetRegularHours(v)
@@ -219,6 +251,9 @@ func (_c *TimesheetEntryCreate) check() error {
 	}
 	if _, ok := _c.mutation.TimesheetID(); !ok {
 		return &ValidationError{Name: "timesheet_id", err: errors.New(`ent: missing required field "TimesheetEntry.timesheet_id"`)}
+	}
+	if _, ok := _c.mutation.Billable(); !ok {
+		return &ValidationError{Name: "billable", err: errors.New(`ent: missing required field "TimesheetEntry.billable"`)}
 	}
 	if _, ok := _c.mutation.Date(); !ok {
 		return &ValidationError{Name: "date", err: errors.New(`ent: missing required field "TimesheetEntry.date"`)}
@@ -282,6 +317,14 @@ func (_c *TimesheetEntryCreate) createSpec() (*TimesheetEntry, *sqlgraph.CreateS
 	if value, ok := _c.mutation.ProjectID(); ok {
 		_spec.SetField(timesheetentry.FieldProjectID, field.TypeUUID, value)
 		_node.ProjectID = &value
+	}
+	if value, ok := _c.mutation.TaskID(); ok {
+		_spec.SetField(timesheetentry.FieldTaskID, field.TypeUUID, value)
+		_node.TaskID = &value
+	}
+	if value, ok := _c.mutation.Billable(); ok {
+		_spec.SetField(timesheetentry.FieldBillable, field.TypeBool, value)
+		_node.Billable = value
 	}
 	if value, ok := _c.mutation.Date(); ok {
 		_spec.SetField(timesheetentry.FieldDate, field.TypeTime, value)
@@ -402,6 +445,36 @@ func (u *TimesheetEntryUpsert) UpdateProjectID() *TimesheetEntryUpsert {
 // ClearProjectID clears the value of the "project_id" field.
 func (u *TimesheetEntryUpsert) ClearProjectID() *TimesheetEntryUpsert {
 	u.SetNull(timesheetentry.FieldProjectID)
+	return u
+}
+
+// SetTaskID sets the "task_id" field.
+func (u *TimesheetEntryUpsert) SetTaskID(v uuid.UUID) *TimesheetEntryUpsert {
+	u.Set(timesheetentry.FieldTaskID, v)
+	return u
+}
+
+// UpdateTaskID sets the "task_id" field to the value that was provided on create.
+func (u *TimesheetEntryUpsert) UpdateTaskID() *TimesheetEntryUpsert {
+	u.SetExcluded(timesheetentry.FieldTaskID)
+	return u
+}
+
+// ClearTaskID clears the value of the "task_id" field.
+func (u *TimesheetEntryUpsert) ClearTaskID() *TimesheetEntryUpsert {
+	u.SetNull(timesheetentry.FieldTaskID)
+	return u
+}
+
+// SetBillable sets the "billable" field.
+func (u *TimesheetEntryUpsert) SetBillable(v bool) *TimesheetEntryUpsert {
+	u.Set(timesheetentry.FieldBillable, v)
+	return u
+}
+
+// UpdateBillable sets the "billable" field to the value that was provided on create.
+func (u *TimesheetEntryUpsert) UpdateBillable() *TimesheetEntryUpsert {
+	u.SetExcluded(timesheetentry.FieldBillable)
 	return u
 }
 
@@ -586,6 +659,41 @@ func (u *TimesheetEntryUpsertOne) UpdateProjectID() *TimesheetEntryUpsertOne {
 func (u *TimesheetEntryUpsertOne) ClearProjectID() *TimesheetEntryUpsertOne {
 	return u.Update(func(s *TimesheetEntryUpsert) {
 		s.ClearProjectID()
+	})
+}
+
+// SetTaskID sets the "task_id" field.
+func (u *TimesheetEntryUpsertOne) SetTaskID(v uuid.UUID) *TimesheetEntryUpsertOne {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.SetTaskID(v)
+	})
+}
+
+// UpdateTaskID sets the "task_id" field to the value that was provided on create.
+func (u *TimesheetEntryUpsertOne) UpdateTaskID() *TimesheetEntryUpsertOne {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.UpdateTaskID()
+	})
+}
+
+// ClearTaskID clears the value of the "task_id" field.
+func (u *TimesheetEntryUpsertOne) ClearTaskID() *TimesheetEntryUpsertOne {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.ClearTaskID()
+	})
+}
+
+// SetBillable sets the "billable" field.
+func (u *TimesheetEntryUpsertOne) SetBillable(v bool) *TimesheetEntryUpsertOne {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.SetBillable(v)
+	})
+}
+
+// UpdateBillable sets the "billable" field to the value that was provided on create.
+func (u *TimesheetEntryUpsertOne) UpdateBillable() *TimesheetEntryUpsertOne {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.UpdateBillable()
 	})
 }
 
@@ -951,6 +1059,41 @@ func (u *TimesheetEntryUpsertBulk) UpdateProjectID() *TimesheetEntryUpsertBulk {
 func (u *TimesheetEntryUpsertBulk) ClearProjectID() *TimesheetEntryUpsertBulk {
 	return u.Update(func(s *TimesheetEntryUpsert) {
 		s.ClearProjectID()
+	})
+}
+
+// SetTaskID sets the "task_id" field.
+func (u *TimesheetEntryUpsertBulk) SetTaskID(v uuid.UUID) *TimesheetEntryUpsertBulk {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.SetTaskID(v)
+	})
+}
+
+// UpdateTaskID sets the "task_id" field to the value that was provided on create.
+func (u *TimesheetEntryUpsertBulk) UpdateTaskID() *TimesheetEntryUpsertBulk {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.UpdateTaskID()
+	})
+}
+
+// ClearTaskID clears the value of the "task_id" field.
+func (u *TimesheetEntryUpsertBulk) ClearTaskID() *TimesheetEntryUpsertBulk {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.ClearTaskID()
+	})
+}
+
+// SetBillable sets the "billable" field.
+func (u *TimesheetEntryUpsertBulk) SetBillable(v bool) *TimesheetEntryUpsertBulk {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.SetBillable(v)
+	})
+}
+
+// UpdateBillable sets the "billable" field to the value that was provided on create.
+func (u *TimesheetEntryUpsertBulk) UpdateBillable() *TimesheetEntryUpsertBulk {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.UpdateBillable()
 	})
 }
 

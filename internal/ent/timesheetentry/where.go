@@ -71,6 +71,16 @@ func ProjectID(v uuid.UUID) predicate.TimesheetEntry {
 	return predicate.TimesheetEntry(sql.FieldEQ(FieldProjectID, v))
 }
 
+// TaskID applies equality check predicate on the "task_id" field. It's identical to TaskIDEQ.
+func TaskID(v uuid.UUID) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldEQ(FieldTaskID, v))
+}
+
+// Billable applies equality check predicate on the "billable" field. It's identical to BillableEQ.
+func Billable(v bool) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldEQ(FieldBillable, v))
+}
+
 // Date applies equality check predicate on the "date" field. It's identical to DateEQ.
 func Date(v time.Time) predicate.TimesheetEntry {
 	return predicate.TimesheetEntry(sql.FieldEQ(FieldDate, v))
@@ -234,6 +244,66 @@ func ProjectIDIsNil() predicate.TimesheetEntry {
 // ProjectIDNotNil applies the NotNil predicate on the "project_id" field.
 func ProjectIDNotNil() predicate.TimesheetEntry {
 	return predicate.TimesheetEntry(sql.FieldNotNull(FieldProjectID))
+}
+
+// TaskIDEQ applies the EQ predicate on the "task_id" field.
+func TaskIDEQ(v uuid.UUID) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldEQ(FieldTaskID, v))
+}
+
+// TaskIDNEQ applies the NEQ predicate on the "task_id" field.
+func TaskIDNEQ(v uuid.UUID) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldNEQ(FieldTaskID, v))
+}
+
+// TaskIDIn applies the In predicate on the "task_id" field.
+func TaskIDIn(vs ...uuid.UUID) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldIn(FieldTaskID, vs...))
+}
+
+// TaskIDNotIn applies the NotIn predicate on the "task_id" field.
+func TaskIDNotIn(vs ...uuid.UUID) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldNotIn(FieldTaskID, vs...))
+}
+
+// TaskIDGT applies the GT predicate on the "task_id" field.
+func TaskIDGT(v uuid.UUID) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldGT(FieldTaskID, v))
+}
+
+// TaskIDGTE applies the GTE predicate on the "task_id" field.
+func TaskIDGTE(v uuid.UUID) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldGTE(FieldTaskID, v))
+}
+
+// TaskIDLT applies the LT predicate on the "task_id" field.
+func TaskIDLT(v uuid.UUID) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldLT(FieldTaskID, v))
+}
+
+// TaskIDLTE applies the LTE predicate on the "task_id" field.
+func TaskIDLTE(v uuid.UUID) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldLTE(FieldTaskID, v))
+}
+
+// TaskIDIsNil applies the IsNil predicate on the "task_id" field.
+func TaskIDIsNil() predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldIsNull(FieldTaskID))
+}
+
+// TaskIDNotNil applies the NotNil predicate on the "task_id" field.
+func TaskIDNotNil() predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldNotNull(FieldTaskID))
+}
+
+// BillableEQ applies the EQ predicate on the "billable" field.
+func BillableEQ(v bool) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldEQ(FieldBillable, v))
+}
+
+// BillableNEQ applies the NEQ predicate on the "billable" field.
+func BillableNEQ(v bool) predicate.TimesheetEntry {
+	return predicate.TimesheetEntry(sql.FieldNEQ(FieldBillable, v))
 }
 
 // DateEQ applies the EQ predicate on the "date" field.

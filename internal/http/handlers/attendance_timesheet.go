@@ -19,6 +19,7 @@ func (h *AttendanceHandler) registerTimesheetRoutes(ar chi.Router) {
 	ar.Post("/timesheets/{id}/submit", h.SubmitTimesheet)
 	ar.Post("/timesheets/{id}/approve", h.ApproveTimesheet)
 	ar.Post("/timesheets/{id}/reject", h.RejectTimesheet)
+	h.registerSelfTimesheetRoutes(ar)
 }
 
 func (h *AttendanceHandler) ListTimesheets(w http.ResponseWriter, r *http.Request) {
@@ -75,8 +76,11 @@ func (h *AttendanceHandler) CreateTimesheet(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusCreated, row)
 }
 
+// entryBody upserts the entry of one date, project and task. Billable omitted keeps the stored flag.
 type entryBody struct {
 	ProjectID     string `json:"project_id"`
+	TaskID        string `json:"task_id"`
+	Billable      *bool  `json:"billable"`
 	Date          string `json:"date"`
 	Task          string `json:"task_description"`
 	RegularHours  string `json:"regular_hours"`
@@ -105,13 +109,16 @@ func (h *AttendanceHandler) UpsertEntry(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	in := attendance.EntryInput{
-		TimesheetID: tsID, Date: date, Task: b.Task,
+		TimesheetID: tsID, Date: date, Task: b.Task, Billable: b.Billable,
 		RegularHours: b.RegularHours, OvertimeHours: b.OvertimeHours, BreakHours: b.BreakHours,
 	}
-	if b.ProjectID != "" {
-		if pid, perr := uuid.Parse(b.ProjectID); perr == nil {
-			in.ProjectID = &pid
-		}
+	if in.ProjectID, err = optionalUUID(b.ProjectID); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid project_id")
+		return
+	}
+	if in.TaskID, err = optionalUUID(b.TaskID); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid task_id")
+		return
 	}
 	row, err := h.svc.UpsertEntry(r.Context(), scope.TenantID, in)
 	if err != nil {

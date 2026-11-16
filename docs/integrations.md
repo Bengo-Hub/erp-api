@@ -158,6 +158,36 @@ signed-in user needs employee view and sees only their tenant. A service key pas
 gate, so the caller checks the tenant's plan first: maskani-api only calls it when the tenant has
 the ERP `hr_management` feature (its work order staff picker).
 
+#### Timesheets for projects-api (project hours 2026-09-28, time logging 2026-11-16)
+
+projects-api reads project hours for utilisation and earned value, and logs its users' time (task
+timer and week grid) into their ERP timesheets. ERP owns the hours; projects-api stores none.
+
+| Path | Auth | Purpose |
+|---|---|---|
+| `GET /api/v1/hrm/attendance/timesheets/project-hours?project_ids=&from=&to=` | X-API-Key + X-Tenant-ID, or JWT `hrm.attendance.view` | `{data:[{project_id, approved_hours, submitted_hours}]}`, decimal strings |
+| `GET /api/v1/hrm/attendance/timesheets/for-user?auth_user_id=&from=&to=` | X-API-Key + X-Tenant-ID, or the employee's own JWT | `{employee_id, timesheets:[...], entries:[...]}`: the employee's timesheets overlapping the range and their entries in it |
+| `POST /api/v1/hrm/attendance/timesheets/for-user/entries` | same | set or add hours on one entry; body below |
+| `POST /api/v1/hrm/attendance/timesheets/for-user/submit` | same | `{auth_user_id, from, to}`: submit every draft or rejected timesheet overlapping the range; `{data:[timesheet]}` |
+
+Entry body: `auth_user_id`, `period_start`, `period_end` (the period to open as a draft when no
+timesheet covers `date`; projects-api sends the Monday to Sunday week), `date`, `project_id`,
+`task_id` (needs a project), `billable` (omitted keeps the stored flag), `task_description`
+(empty keeps it), `regular_hours` (decimal string), `mode` (`set`, the default, or `add` for a
+stopped timer). It answers `{employee_id, timesheet, entry}`. An entry is one per date, project
+and task, at most 24 hours. It is a POST so the shared client never retries an `add` twice.
+
+Errors: 404 `no_employee_record` (the auth user has no employee in the tenant; HR adds them),
+409 `timesheet_locked` (the covering timesheet is submitted or approved), 409 `nothing_to_submit`,
+400 `invalid_entry`. The employee is found by the auth user id through `custom_users.external_id`
+(the ESS `?mine=true` resolver). A service key carries no plan features, so projects-api checks
+the user's token for ERP's `attendance` feature before it calls; a signed-in employee calling for
+themselves is checked here and gets the standard `feature_not_available` 403. Approval and
+rejection stay in ERP's own timesheet screens.
+
+`PUT /api/v1/hrm/attendance/timesheets/{id}/entries` (ERP's own screens) takes the same
+`task_id` and `billable` and keys entries the same way, so two projects on one day are two rows.
+
 #### External expense claims (added 2026-10-10)
 
 Other services raise employee claims here instead of keeping their own allowance logic. First
@@ -295,5 +325,7 @@ rows for the forward and reverse pairs. This is the only finance-adjacent config
 |---|---|---|
 | logistics-api | `POST /api/v1/hrm/claims/external` | staff rider per diem claims |
 | maskani-api | `GET /api/v1/hrm/employees/lookup` | staff picker for work orders |
+| projects-api | `GET /api/v1/hrm/attendance/timesheets/project-hours` | project utilisation and earned value |
+| projects-api | `GET\|POST /api/v1/hrm/attendance/timesheets/for-user[/entries\|/submit]` | timer, week grid and submit for the signed-in user |
 
 Keep subjects, payload shapes and S2S paths stable so downstream services need no change.

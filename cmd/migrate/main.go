@@ -68,6 +68,10 @@ func main() {
 	client := ent.NewClient(ent.Driver(drv))
 	defer func() { _ = client.Close() }()
 
+	if err := dropRetiredIndexes(ctx, sqlDB); err != nil {
+		unlock()
+		log.Fatalf("drop retired indexes: %v", err)
+	}
 	if err := client.Schema.Create(ctx, schema.WithDir(migrate.Dir)); err != nil {
 		unlock()
 		log.Fatalf("apply migrations: %v", err)
@@ -75,4 +79,20 @@ func main() {
 	unlock()
 
 	fmt.Println("erp-api migrations applied successfully")
+}
+
+// retiredIndexes are unique indexes the schema no longer declares. The online diff never drops an
+// index (WithDropIndex is off), so one that would now reject valid rows is dropped here first.
+//
+//   - timesheetentry_tenant_id_timesheet_id_date: one entry per date allowed a single project a
+//     day. Entries are now unique per (date, project, task), the index Schema.Create adds below.
+var retiredIndexes = []string{"timesheetentry_tenant_id_timesheet_id_date"}
+
+func dropRetiredIndexes(ctx context.Context, db *sql.DB) error {
+	for _, name := range retiredIndexes {
+		if _, err := db.ExecContext(ctx, `DROP INDEX IF EXISTS "`+name+`"`); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	}
+	return nil
 }

@@ -25,6 +25,10 @@ type TimesheetEntry struct {
 	TimesheetID uuid.UUID `json:"timesheet_id,omitempty"`
 	// ProjectID holds the value of the "project_id" field.
 	ProjectID *uuid.UUID `json:"project_id,omitempty"`
+	// projects-api task the time was logged on
+	TaskID *uuid.UUID `json:"task_id,omitempty"`
+	// Billable to the project's client (projects-api decides from the project's billing terms)
+	Billable bool `json:"billable,omitempty"`
 	// Date holds the value of the "date" field.
 	Date time.Time `json:"date,omitempty"`
 	// TaskDescription holds the value of the "task_description" field.
@@ -47,10 +51,12 @@ func (*TimesheetEntry) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case timesheetentry.FieldProjectID:
+		case timesheetentry.FieldProjectID, timesheetentry.FieldTaskID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case timesheetentry.FieldRegularHours, timesheetentry.FieldOvertimeHours, timesheetentry.FieldBreakHours:
 			values[i] = new(decimal.Decimal)
+		case timesheetentry.FieldBillable:
+			values[i] = new(sql.NullBool)
 		case timesheetentry.FieldTaskDescription, timesheetentry.FieldNotes:
 			values[i] = new(sql.NullString)
 		case timesheetentry.FieldDate, timesheetentry.FieldCreatedAt:
@@ -96,6 +102,19 @@ func (_m *TimesheetEntry) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ProjectID = new(uuid.UUID)
 				*_m.ProjectID = *value.S.(*uuid.UUID)
+			}
+		case timesheetentry.FieldTaskID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field task_id", values[i])
+			} else if value.Valid {
+				_m.TaskID = new(uuid.UUID)
+				*_m.TaskID = *value.S.(*uuid.UUID)
+			}
+		case timesheetentry.FieldBillable:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field billable", values[i])
+			} else if value.Valid {
+				_m.Billable = value.Bool
 			}
 		case timesheetentry.FieldDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -186,6 +205,14 @@ func (_m *TimesheetEntry) String() string {
 		builder.WriteString("project_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
+	builder.WriteString(", ")
+	if v := _m.TaskID; v != nil {
+		builder.WriteString("task_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("billable=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Billable))
 	builder.WriteString(", ")
 	builder.WriteString("date=")
 	builder.WriteString(_m.Date.Format(time.ANSIC))
