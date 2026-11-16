@@ -1,0 +1,13 @@
+# Reviewed 2026-11-17: placeholders in old docs and a removed file, no real credential.
+# Truncated JWT header shown as an example ("eyJh..." with no payload or signature).
+634926adcb4aa0d6d56ca23e7058c0e8d5030848:docs/tests/06_API_ENDPOINTS.md:generic-api-key:45
+dbc3b5379eae02de28f993b8cde87c98436ef849:docs/tests/06_API_ENDPOINTS.md:generic-api-key:45
+fd875f42ee9e22eb01e8790c575465a0f845ad18:docs/tests/06_API_ENDPOINTS.md:generic-api-key:45
+e116c6d9fc6cc500b0c20abe987c4b72a2922687:docs/tests/06_API_ENDPOINTS.md:generic-api-key:45
+# curl example with "Authorization: Bearer YOUR_..." placeholder.
+6554c0d8424b4794efc450c3d1a02a3c7eaee38d:docs/tests/authmanagement/m2m-fix-implementation.md:curl-auth-header:645
+b5036c4b5916156fa6aa59070b123532606c47d1:docs/tests/authmanagement/m2m-fix-implementation.md:curl-auth-header:645
+8db67b590db926969f3f94662fb4f1e322d52f92:docs/tests/authmanagement/m2m-fix-implementation.md:curl-auth-header:645
+cbc536deab6f6349db9ce30a2fd6e41d1de1bccc:docs/tests/authmanagement/m2m-fix-implementation.md:curl-auth-header:645
+# Stripe test-key placeholder ("sk_test_your...") in a payments file from the Django era.
+5f18e73c84ff953b0dc137303a2a8749c1b540b7:integrations/payments/card_payment.py:stripe-access-token:12
