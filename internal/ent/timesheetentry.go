@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -41,6 +42,8 @@ type TimesheetEntry struct {
 	BreakHours decimal.Decimal `json:"break_hours,omitempty"`
 	// Notes holds the value of the "notes" field.
 	Notes *string `json:"notes,omitempty"`
+	// billing_ref (uuid) while projects-api bills the entry; billed_invoice_id (uuid) once the invoice is confirmed
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt    time.Time `json:"created_at,omitempty"`
 	selectValues sql.SelectValues
@@ -53,6 +56,8 @@ func (*TimesheetEntry) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case timesheetentry.FieldProjectID, timesheetentry.FieldTaskID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case timesheetentry.FieldMetadata:
+			values[i] = new([]byte)
 		case timesheetentry.FieldRegularHours, timesheetentry.FieldOvertimeHours, timesheetentry.FieldBreakHours:
 			values[i] = new(decimal.Decimal)
 		case timesheetentry.FieldBillable:
@@ -153,6 +158,14 @@ func (_m *TimesheetEntry) assignValues(columns []string, values []any) error {
 				_m.Notes = new(string)
 				*_m.Notes = value.String
 			}
+		case timesheetentry.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
+			}
 		case timesheetentry.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -233,6 +246,9 @@ func (_m *TimesheetEntry) String() string {
 		builder.WriteString("notes=")
 		builder.WriteString(*v)
 	}
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

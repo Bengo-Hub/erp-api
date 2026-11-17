@@ -2760,8 +2760,12 @@ func init() {
 	timesheetentryDescBreakHours := timesheetentryFields[10].Descriptor()
 	// timesheetentry.DefaultBreakHours holds the default value on creation for the break_hours field.
 	timesheetentry.DefaultBreakHours = timesheetentryDescBreakHours.Default.(decimal.Decimal)
+	// timesheetentryDescMetadata is the schema descriptor for metadata field.
+	timesheetentryDescMetadata := timesheetentryFields[12].Descriptor()
+	// timesheetentry.DefaultMetadata holds the default value on creation for the metadata field.
+	timesheetentry.DefaultMetadata = timesheetentryDescMetadata.Default.(map[string]interface{})
 	// timesheetentryDescCreatedAt is the schema descriptor for created_at field.
-	timesheetentryDescCreatedAt := timesheetentryFields[12].Descriptor()
+	timesheetentryDescCreatedAt := timesheetentryFields[13].Descriptor()
 	// timesheetentry.DefaultCreatedAt holds the default value on creation for the created_at field.
 	timesheetentry.DefaultCreatedAt = timesheetentryDescCreatedAt.Default.(func() time.Time)
 	// timesheetentryDescID is the schema descriptor for id field.

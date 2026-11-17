@@ -95640,6 +95640,7 @@ type TimesheetEntryMutation struct {
 	overtime_hours   *decimal.Decimal
 	break_hours      *decimal.Decimal
 	notes            *string
+	metadata         *map[string]interface{}
 	created_at       *time.Time
 	clearedFields    map[string]struct{}
 	done             bool
@@ -96199,6 +96200,42 @@ func (m *TimesheetEntryMutation) ResetNotes() {
 	delete(m.clearedFields, timesheetentry.FieldNotes)
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *TimesheetEntryMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *TimesheetEntryMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the TimesheetEntry entity.
+// If the TimesheetEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TimesheetEntryMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *TimesheetEntryMutation) ResetMetadata() {
+	m.metadata = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *TimesheetEntryMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -96269,7 +96306,7 @@ func (m *TimesheetEntryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TimesheetEntryMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 13)
 	if m.tenant_id != nil {
 		fields = append(fields, timesheetentry.FieldTenantID)
 	}
@@ -96302,6 +96339,9 @@ func (m *TimesheetEntryMutation) Fields() []string {
 	}
 	if m.notes != nil {
 		fields = append(fields, timesheetentry.FieldNotes)
+	}
+	if m.metadata != nil {
+		fields = append(fields, timesheetentry.FieldMetadata)
 	}
 	if m.created_at != nil {
 		fields = append(fields, timesheetentry.FieldCreatedAt)
@@ -96336,6 +96376,8 @@ func (m *TimesheetEntryMutation) Field(name string) (ent.Value, bool) {
 		return m.BreakHours()
 	case timesheetentry.FieldNotes:
 		return m.Notes()
+	case timesheetentry.FieldMetadata:
+		return m.Metadata()
 	case timesheetentry.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -96369,6 +96411,8 @@ func (m *TimesheetEntryMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldBreakHours(ctx)
 	case timesheetentry.FieldNotes:
 		return m.OldNotes(ctx)
+	case timesheetentry.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case timesheetentry.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -96456,6 +96500,13 @@ func (m *TimesheetEntryMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetNotes(v)
+		return nil
+	case timesheetentry.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case timesheetentry.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -96572,6 +96623,9 @@ func (m *TimesheetEntryMutation) ResetField(name string) error {
 		return nil
 	case timesheetentry.FieldNotes:
 		m.ResetNotes()
+		return nil
+	case timesheetentry.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case timesheetentry.FieldCreatedAt:
 		m.ResetCreatedAt()

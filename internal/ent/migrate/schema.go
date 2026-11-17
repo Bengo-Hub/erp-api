@@ -3486,6 +3486,7 @@ var (
 		{Name: "overtime_hours", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(8,2)"}},
 		{Name: "break_hours", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(8,2)"}},
 		{Name: "notes", Type: field.TypeString, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON, Default: "{}"},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// TimesheetEntriesTable holds the schema information for the "timesheet_entries" table.

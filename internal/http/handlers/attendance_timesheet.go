@@ -14,6 +14,7 @@ import (
 func (h *AttendanceHandler) registerTimesheetRoutes(ar chi.Router) {
 	ar.Get("/timesheets", h.ListTimesheets)
 	ar.Get("/timesheets/project-hours", h.ProjectHours)
+	h.registerTimesheetBillingRoutes(ar)
 	ar.Post("/timesheets", h.CreateTimesheet)
 	ar.Put("/timesheets/{id}/entries", h.UpsertEntry)
 	ar.Post("/timesheets/{id}/submit", h.SubmitTimesheet)

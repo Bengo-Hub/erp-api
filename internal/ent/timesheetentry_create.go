@@ -155,6 +155,12 @@ func (_c *TimesheetEntryCreate) SetNillableNotes(v *string) *TimesheetEntryCreat
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *TimesheetEntryCreate) SetMetadata(v map[string]interface{}) *TimesheetEntryCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *TimesheetEntryCreate) SetCreatedAt(v time.Time) *TimesheetEntryCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -234,6 +240,10 @@ func (_c *TimesheetEntryCreate) defaults() {
 		v := timesheetentry.DefaultBreakHours
 		_c.mutation.SetBreakHours(v)
 	}
+	if _, ok := _c.mutation.Metadata(); !ok {
+		v := timesheetentry.DefaultMetadata
+		_c.mutation.SetMetadata(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := timesheetentry.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -266,6 +276,9 @@ func (_c *TimesheetEntryCreate) check() error {
 	}
 	if _, ok := _c.mutation.BreakHours(); !ok {
 		return &ValidationError{Name: "break_hours", err: errors.New(`ent: missing required field "TimesheetEntry.break_hours"`)}
+	}
+	if _, ok := _c.mutation.Metadata(); !ok {
+		return &ValidationError{Name: "metadata", err: errors.New(`ent: missing required field "TimesheetEntry.metadata"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "TimesheetEntry.created_at"`)}
@@ -349,6 +362,10 @@ func (_c *TimesheetEntryCreate) createSpec() (*TimesheetEntry, *sqlgraph.CreateS
 	if value, ok := _c.mutation.Notes(); ok {
 		_spec.SetField(timesheetentry.FieldNotes, field.TypeString, value)
 		_node.Notes = &value
+	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(timesheetentry.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(timesheetentry.FieldCreatedAt, field.TypeTime, value)
@@ -559,6 +576,18 @@ func (u *TimesheetEntryUpsert) UpdateNotes() *TimesheetEntryUpsert {
 // ClearNotes clears the value of the "notes" field.
 func (u *TimesheetEntryUpsert) ClearNotes() *TimesheetEntryUpsert {
 	u.SetNull(timesheetentry.FieldNotes)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *TimesheetEntryUpsert) SetMetadata(v map[string]interface{}) *TimesheetEntryUpsert {
+	u.Set(timesheetentry.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *TimesheetEntryUpsert) UpdateMetadata() *TimesheetEntryUpsert {
+	u.SetExcluded(timesheetentry.FieldMetadata)
 	return u
 }
 
@@ -792,6 +821,20 @@ func (u *TimesheetEntryUpsertOne) UpdateNotes() *TimesheetEntryUpsertOne {
 func (u *TimesheetEntryUpsertOne) ClearNotes() *TimesheetEntryUpsertOne {
 	return u.Update(func(s *TimesheetEntryUpsert) {
 		s.ClearNotes()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *TimesheetEntryUpsertOne) SetMetadata(v map[string]interface{}) *TimesheetEntryUpsertOne {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *TimesheetEntryUpsertOne) UpdateMetadata() *TimesheetEntryUpsertOne {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.UpdateMetadata()
 	})
 }
 
@@ -1192,6 +1235,20 @@ func (u *TimesheetEntryUpsertBulk) UpdateNotes() *TimesheetEntryUpsertBulk {
 func (u *TimesheetEntryUpsertBulk) ClearNotes() *TimesheetEntryUpsertBulk {
 	return u.Update(func(s *TimesheetEntryUpsert) {
 		s.ClearNotes()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *TimesheetEntryUpsertBulk) SetMetadata(v map[string]interface{}) *TimesheetEntryUpsertBulk {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *TimesheetEntryUpsertBulk) UpdateMetadata() *TimesheetEntryUpsertBulk {
+	return u.Update(func(s *TimesheetEntryUpsert) {
+		s.UpdateMetadata()
 	})
 }
 

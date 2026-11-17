@@ -208,6 +208,12 @@ func (_u *TimesheetEntryUpdate) ClearNotes() *TimesheetEntryUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *TimesheetEntryUpdate) SetMetadata(v map[string]interface{}) *TimesheetEntryUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
 // Mutation returns the TimesheetEntryMutation object of the builder.
 func (_u *TimesheetEntryUpdate) Mutation() *TimesheetEntryMutation {
 	return _u.mutation
@@ -293,6 +299,9 @@ func (_u *TimesheetEntryUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if _u.mutation.NotesCleared() {
 		_spec.ClearField(timesheetentry.FieldNotes, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(timesheetentry.FieldMetadata, field.TypeJSON, value)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -492,6 +501,12 @@ func (_u *TimesheetEntryUpdateOne) ClearNotes() *TimesheetEntryUpdateOne {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *TimesheetEntryUpdateOne) SetMetadata(v map[string]interface{}) *TimesheetEntryUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
 // Mutation returns the TimesheetEntryMutation object of the builder.
 func (_u *TimesheetEntryUpdateOne) Mutation() *TimesheetEntryMutation {
 	return _u.mutation
@@ -607,6 +622,9 @@ func (_u *TimesheetEntryUpdateOne) sqlSave(ctx context.Context) (_node *Timeshee
 	}
 	if _u.mutation.NotesCleared() {
 		_spec.ClearField(timesheetentry.FieldNotes, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(timesheetentry.FieldMetadata, field.TypeJSON, value)
 	}
 	_node = &TimesheetEntry{config: _u.config}
 	_spec.Assign = _node.assignValues

@@ -37,6 +37,8 @@ const (
 	FieldBreakHours = "break_hours"
 	// FieldNotes holds the string denoting the notes field in the database.
 	FieldNotes = "notes"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// Table holds the table name of the timesheetentry in the database.
@@ -57,6 +59,7 @@ var Columns = []string{
 	FieldOvertimeHours,
 	FieldBreakHours,
 	FieldNotes,
+	FieldMetadata,
 	FieldCreatedAt,
 }
 
@@ -79,6 +82,8 @@ var (
 	DefaultOvertimeHours decimal.Decimal
 	// DefaultBreakHours holds the default value on creation for the "break_hours" field.
 	DefaultBreakHours decimal.Decimal
+	// DefaultMetadata holds the default value on creation for the "metadata" field.
+	DefaultMetadata map[string]interface{}
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.

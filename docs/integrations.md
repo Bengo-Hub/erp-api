@@ -165,7 +165,10 @@ timer and week grid) into their ERP timesheets. ERP owns the hours; projects-api
 
 | Path | Auth | Purpose |
 |---|---|---|
-| `GET /api/v1/hrm/attendance/timesheets/project-hours?project_ids=&from=&to=` | X-API-Key + X-Tenant-ID, or JWT `hrm.attendance.view` | `{data:[{project_id, approved_hours, submitted_hours}]}`, decimal strings |
+| `GET /api/v1/hrm/attendance/timesheets/project-hours?project_ids=&from=&to=` | X-API-Key + X-Tenant-ID, or JWT `hrm.attendance.view` | `{data:[{project_id, approved_hours, submitted_hours, labour_cost, unbilled_billable_hours}]}`, decimal strings; `labour_cost` is the approved hours times each employee's salary details `hourly_rate` (0 without one), `unbilled_billable_hours` the approved, billable hours no billing run has reserved |
+| `POST /api/v1/hrm/attendance/timesheets/billing/reserve` | X-API-Key + X-Tenant-ID only | body `{project_id, from, to, billing_ref}`; reserves the approved, billable entries of the project dated from to to (inclusive, at most 366 days) that carry no `billing_ref`, then answers every entry carrying this `billing_ref`: `{data:[{id, date, task_id, employee_id, employee_name, hours, description}], billed_invoice_id}` |
+| `POST /api/v1/hrm/attendance/timesheets/billing/confirm` | same | body `{billing_ref, invoice_id}`; sets `billed_invoice_id` on every entry with the ref, replacing an earlier one; `{updated: n}` |
+| `POST /api/v1/hrm/attendance/timesheets/billing/release` | same | body `{billing_ref, include_confirmed}`; clears the ref from entries not yet confirmed, or with `include_confirmed: true` from every entry with the ref and their `billed_invoice_id` too; `{released: n}` |
 | `GET /api/v1/hrm/attendance/timesheets/for-user?auth_user_id=&from=&to=` | X-API-Key + X-Tenant-ID, or the employee's own JWT | `{employee_id, timesheets:[...], entries:[...]}`: the employee's timesheets overlapping the range and their entries in it |
 | `POST /api/v1/hrm/attendance/timesheets/for-user/entries` | same | set or add hours on one entry; body below |
 | `POST /api/v1/hrm/attendance/timesheets/for-user/submit` | same | `{auth_user_id, from, to}`: submit every draft or rejected timesheet overlapping the range; `{data:[timesheet]}` |
@@ -184,6 +187,15 @@ Errors: 404 `no_employee_record` (the auth user has no employee in the tenant; H
 the user's token for ERP's `attendance` feature before it calls; a signed-in employee calling for
 themselves is checked here and gets the standard `feature_not_available` 403. Approval and
 rejection stay in ERP's own timesheet screens.
+
+Billing project time: projects-api picks a `billing_ref` for an invoice run, reserves the entries,
+creates the treasury invoice and confirms the ref with the invoice id. When the invoice cannot be
+created it releases the ref; when treasury later shows the invoice void or cancelled it releases
+with `include_confirmed: true`, so the time can be billed again. A retry with the same ref answers
+the entries the earlier attempt reserved, and `billed_invoice_id` tells it the run was already
+confirmed. Both keys live in `timesheet_entries.metadata`. The reservation is one `UPDATE`, so two
+runs at once never reserve the same entry. A user token gets 403 on these routes; time is billed
+only through projects-api.
 
 `PUT /api/v1/hrm/attendance/timesheets/{id}/entries` (ERP's own screens) takes the same
 `task_id` and `billable` and keys entries the same way, so two projects on one day are two rows.
@@ -325,7 +337,8 @@ rows for the forward and reverse pairs. This is the only finance-adjacent config
 |---|---|---|
 | logistics-api | `POST /api/v1/hrm/claims/external` | staff rider per diem claims |
 | maskani-api | `GET /api/v1/hrm/employees/lookup` | staff picker for work orders |
-| projects-api | `GET /api/v1/hrm/attendance/timesheets/project-hours` | project utilisation and earned value |
+| projects-api | `GET /api/v1/hrm/attendance/timesheets/project-hours` | project utilisation, earned value, labour cost and unbilled time |
+| projects-api | `POST /api/v1/hrm/attendance/timesheets/billing/reserve\|confirm\|release` | bills approved project time on a treasury invoice, once |
 | projects-api | `GET\|POST /api/v1/hrm/attendance/timesheets/for-user[/entries\|/submit]` | timer, week grid and submit for the signed-in user |
 
 Keep subjects, payload shapes and S2S paths stable so downstream services need no change.
