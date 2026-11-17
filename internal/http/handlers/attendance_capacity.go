@@ -14,7 +14,7 @@ import (
 
 // Capacity godoc
 // @Summary Working hours per person and ISO week
-// @Description Each auth user's capacity per ISO week from the Monday of from to the week holding to (whole weeks): the weekly hours of the employee's standard work shift minus approved leave and national public holidays. ?auth_user_ids=a,b (at most 500) &from=&to= (YYYY-MM-DD, at most 366 days apart). has_employee is false for a user ERP has no live employee for; configured is false when that employee has no work shift with hours, and then weekly_hours is 0 and weeks is empty. projects-api calls it S2S with X-API-Key and X-Tenant-ID for its workload.
+// @Description Each auth user's capacity per ISO week from the Monday of from to the week holding to (whole weeks): the weekly hours of the employee's standard work shift minus approved leave and public holidays (national, plus the county of the employee's HR region or its parent). Each week also reports pending_leave_hours (leave awaiting approval), which is not taken off. ?auth_user_ids=a,b (at most 500) &from=&to= (YYYY-MM-DD, at most 366 days apart). has_employee is false for a user ERP has no live employee for; configured is false when that employee has no work shift with hours, and then weekly_hours is 0 and weeks is empty. projects-api calls it S2S with X-API-Key and X-Tenant-ID for its workload.
 // @Tags attendance
 // @Produce json
 // @Success 200 {object} map[string][]attendance.PersonCapacity

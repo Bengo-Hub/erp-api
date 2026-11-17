@@ -214,20 +214,26 @@ plus X-Tenant-ID (or a JWT with `hrm.attendance.view`), at most 500 ids and 366 
 
 ```json
 {"data": [{"auth_user_id": "...", "has_employee": true, "configured": true, "work_shift": "Office",
-  "weekly_hours": "40", "weeks": [{"week_start": "2026-11-16", "hours": "16", "leave_hours": "16", "holiday_hours": "8"}]}]}
+  "weekly_hours": "40", "weeks": [{"week_start": "2026-11-16", "hours": "16", "leave_hours": "16", "holiday_hours": "8",
+  "pending_leave_hours": "0"}]}]}
 ```
 
 one row per id in the order asked, with every ISO week from the Monday of `from` to the week
-holding `to` (whole weeks). `hours` is the weekly hours minus approved leave and the tenant's
-national public holidays on working days; a day that is both counts once as holiday, and a leave
-request whose `days_requested` is below its working days (a half day) takes that share of each day.
+holding `to` (whole weeks). `hours` is the weekly hours minus approved leave and the public
+holidays on working days that apply to the person: the tenant's national holidays plus those of
+their county (a non-national holiday's `county` matched, in any case, against the name or code of
+the employee's HR region, `hr_details.region_id`, or of that region's parent). A day that is both
+leave and holiday counts once as holiday, and a leave request whose `days_requested` is below its
+working days (a half day) takes that share of each day. `pending_leave_hours` is leave still
+waiting for approval on the part of a working day not already off; it is reported for planning and
+not taken off `hours`.
 `has_employee` is false when the user has no live employee in the tenant (found through
 `custom_users.external_id`, terminated and deleted employees left out); `configured` is false when
 the employee has no shift with hours, and then `weekly_hours` is `"0"` and `weeks` is empty, so
 the caller falls back to its own setting for that person. Hours are decimal strings. The read is
-six batched queries (users, employees, shifts, schedules, leave, holidays) whatever the number of
-people. Pending leave, county holidays and the roster planner's day overrides do not
-count yet.
+at most nine batched queries (users, employees, shifts, schedules, leave, HR details, regions, their
+parents, holidays) whatever the number of people. The roster planner's day overrides do not count
+yet.
 
 #### External expense claims (added 2026-10-10)
 

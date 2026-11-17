@@ -51,6 +51,15 @@ func TestIntegration_Capacity(t *testing.T) {
 	leave(tenant, ana.ID, "2026-11-23", "2026-11-23", "1", leaverequest.StatusPending)  // not approved
 	client.PublicHoliday.Create().SetTenantID(tenant).SetName("Holiday").SetDate(day("2026-11-17")).ExecX(ctx)
 	client.PublicHoliday.Create().SetTenantID(other).SetName("Elsewhere").SetDate(day("2026-11-24")).ExecX(ctx)
+	// Ana works in a sub-region of the Mombasa county region: Mombasa's own holiday (written in
+	// another case) counts for her, Nairobi's does not.
+	coast := client.Region.Create().SetTenantID(tenant).SetName("Mombasa").SetCode("001").SaveX(ctx)
+	branch := client.Region.Create().SetTenantID(tenant).SetName("Nyali branch").SetParentRegionID(coast.ID).SaveX(ctx)
+	client.HRDetails.Create().SetTenantID(tenant).SetEmployeeID(ana.ID).SetRegionID(branch.ID).ExecX(ctx)
+	client.PublicHoliday.Create().SetTenantID(tenant).SetName("Mombasa day").SetDate(day("2026-11-25")).
+		SetIsNational(false).SetCounty("MOMBASA").ExecX(ctx)
+	client.PublicHoliday.Create().SetTenantID(tenant).SetName("Nairobi day").SetDate(day("2026-11-26")).
+		SetIsNational(false).SetCounty("Nairobi").ExecX(ctx)
 
 	unknown := uuid.NewString()
 	ids := []string{strings.ToUpper(worker), noShift, gone, noEmployee, elsewhere, unknown}
@@ -69,8 +78,9 @@ func TestIntegration_Capacity(t *testing.T) {
 		!w.Weeks[0].LeaveHours.Equal(dec("16")) || !w.Weeks[0].HolidayHours.Equal(dec("8")) {
 		t.Errorf("week of the 16th = %+v, want 16 h after 16 h leave and 8 h holiday", w.Weeks[0])
 	}
-	if w.Weeks[1].WeekStart != "2026-11-23" || !w.Weeks[1].Hours.Equal(dec("40")) {
-		t.Errorf("week of the 23rd = %+v, want 40 h (pending leave and another tenant's holiday do not count)", w.Weeks[1])
+	if w.Weeks[1].WeekStart != "2026-11-23" || !w.Weeks[1].Hours.Equal(dec("32")) || !w.Weeks[1].HolidayHours.Equal(dec("8")) ||
+		!w.Weeks[1].PendingLeaveHours.Equal(dec("8")) || !w.Weeks[1].LeaveHours.IsZero() {
+		t.Errorf("week of the 23rd = %+v, want 32 h: the Mombasa holiday counts, Nairobi's and another tenant's do not, pending leave is reported (8 h) but not taken off", w.Weeks[1])
 	}
 	for i, wantEmployee := range map[int]bool{1: true, 2: false, 3: false, 4: false, 5: false} {
 		p := got[i]

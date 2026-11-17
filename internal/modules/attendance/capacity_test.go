@@ -63,21 +63,50 @@ func TestCapacityWeeks(t *testing.T) {
 		{StartDate: day("2026-12-19"), EndDate: day("2026-12-20"), DaysRequested: dec("0")}, // a weekend: nothing to take off
 	}
 	spans := leaveSpans(w, leave, holidays)
-	got := capacityWeeks(w, day("2026-11-30"), day("2026-12-27"), spans, holidays)
-	want := []struct{ start, hours, leave, holiday string }{
-		{"2026-11-30", "16", "16", "8"},
-		{"2026-12-07", "36", "4", "0"},
-		{"2026-12-14", "40", "0", "0"},
-		{"2026-12-21", "40", "0", "0"},
+	// Pending leave: the Monday half day already approved leaves half the day free, so a pending
+	// full day there counts 4 h; a pending day on the holiday counts nothing; a pending Thursday 8 h.
+	pendingLeave := []*ent.LeaveRequest{
+		{StartDate: day("2026-12-07"), EndDate: day("2026-12-07"), DaysRequested: dec("1")},
+		{StartDate: day("2026-12-01"), EndDate: day("2026-12-01"), DaysRequested: dec("1")},
+		{StartDate: day("2026-12-17"), EndDate: day("2026-12-17"), DaysRequested: dec("1")},
+	}
+	pendingSpans := leaveSpans(w, pendingLeave, holidays)
+	got := capacityWeeks(w, day("2026-11-30"), day("2026-12-27"), spans, pendingSpans, holidays)
+	want := []struct{ start, hours, leave, holiday, pending string }{
+		{"2026-11-30", "16", "16", "8", "0"},
+		{"2026-12-07", "36", "4", "0", "4"},
+		{"2026-12-14", "40", "0", "0", "8"},
+		{"2026-12-21", "40", "0", "0", "0"},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("weeks %+v", got)
 	}
 	for i, wk := range want {
 		g := got[i]
-		if g.WeekStart != wk.start || !g.Hours.Equal(dec(wk.hours)) || !g.LeaveHours.Equal(dec(wk.leave)) || !g.HolidayHours.Equal(dec(wk.holiday)) {
-			t.Errorf("week %d = %s %s/%s/%s, want %+v", i, g.WeekStart, g.Hours, g.LeaveHours, g.HolidayHours, wk)
+		if g.WeekStart != wk.start || !g.Hours.Equal(dec(wk.hours)) || !g.LeaveHours.Equal(dec(wk.leave)) ||
+			!g.HolidayHours.Equal(dec(wk.holiday)) || !g.PendingLeaveHours.Equal(dec(wk.pending)) {
+			t.Errorf("week %d = %s %s/%s/%s pending %s, want %+v", i, g.WeekStart, g.Hours, g.LeaveHours, g.HolidayHours, g.PendingLeaveHours, wk)
 		}
+	}
+}
+
+// A county holiday applies to people whose region (or its parent) carries that county's name or
+// code, in any case; national holidays apply to everyone.
+func TestHolidaysFor(t *testing.T) {
+	national := map[time.Time]bool{day("2026-12-12"): true}
+	byCounty := map[string][]time.Time{"mombasa": {day("2026-11-25")}, "047": {day("2026-11-26")}}
+	if got := holidaysFor(national, byCounty, nil); len(got) != 1 || !got[day("2026-12-12")] {
+		t.Fatalf("no county = %v, want national only", got)
+	}
+	got := holidaysFor(national, byCounty, []string{"mombasa", "coast"})
+	if len(got) != 2 || !got[day("2026-11-25")] || got[day("2026-11-26")] {
+		t.Fatalf("mombasa = %v", got)
+	}
+	if got := holidaysFor(national, byCounty, []string{countyKey(" 047 ")}); !got[day("2026-11-26")] {
+		t.Fatalf("county by code = %v", got)
+	}
+	if len(national) != 1 {
+		t.Fatal("holidaysFor must not change the national map")
 	}
 }
 

@@ -14,8 +14,10 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
+	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
+	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshiftschedule"
 )
@@ -24,12 +26,16 @@ import (
 // workload. The weekly hours come from the employee's standard work shift (employees.work_shift_id):
 // its total_hours_per_week spread evenly over its working days, or, when that is zero, the hours of
 // its working-day schedule (end minus start minus break). Without a schedule the working days are
-// Monday to Friday. Approved leave and national public holidays on a working day take that day's
-// hours off; a day that is both counts once. A leave request whose days_requested is less than its
-// working days (a half day) takes off that share of each day.
+// Monday to Friday. Approved leave and public holidays on a working day take that day's hours off;
+// a day that is both counts once. The holidays are the national ones plus those of the person's
+// county: a non-national holiday's county is matched (any case) against the name or code of the
+// person's region (hr_details.region_id) or that region's parent. A leave request whose
+// days_requested is less than its working days (a half day) takes off that share of each day.
+// Pending leave does not lower capacity; it is reported as PendingLeaveHours so a planner sees what
+// may be coming.
 //
-// The read is batched: at most six queries whatever the number of people (users, employees, shifts,
-// their schedules, approved leave, holidays), never one per person.
+// The read is batched: at most nine queries whatever the number of people (users, employees, shifts,
+// their schedules, leave, HR details, regions and their parents, holidays), never one per person.
 
 const (
 	// MaxCapacityUsers caps one capacity read (projects-api shows at most 500 people).
@@ -42,12 +48,14 @@ const (
 var ErrCapacityRange = errors.New("attendance: capacity range must have from on or before to and span at most 366 days")
 
 // CapacityWeek is one ISO week of a person's capacity. Hours is the shift's weekly hours minus
-// LeaveHours and HolidayHours.
+// LeaveHours (approved) and HolidayHours. PendingLeaveHours is leave still waiting for approval on
+// days not already off; it is not taken off Hours.
 type CapacityWeek struct {
-	WeekStart    string          `json:"week_start"`
-	Hours        decimal.Decimal `json:"hours"`
-	LeaveHours   decimal.Decimal `json:"leave_hours"`
-	HolidayHours decimal.Decimal `json:"holiday_hours"`
+	WeekStart         string          `json:"week_start"`
+	Hours             decimal.Decimal `json:"hours"`
+	LeaveHours        decimal.Decimal `json:"leave_hours"`
+	HolidayHours      decimal.Decimal `json:"holiday_hours"`
+	PendingLeaveHours decimal.Decimal `json:"pending_leave_hours"`
 }
 
 // PersonCapacity is one auth user's capacity. HasEmployee says ERP has an active employee for the
@@ -266,21 +274,26 @@ func (s *Service) Capacity(ctx context.Context, tenantID uuid.UUID, authUserIDs 
 		}
 	}
 	leave := map[uuid.UUID][]*ent.LeaveRequest{}
+	pending := map[uuid.UUID][]*ent.LeaveRequest{}
 	lo, hi := start, end
-	if len(configured) > 0 {
-		empIDs := make([]uuid.UUID, 0, len(configured))
-		for id := range configured {
-			empIDs = append(empIDs, id)
-		}
+	empIDs := make([]uuid.UUID, 0, len(configured))
+	for id := range configured {
+		empIDs = append(empIDs, id)
+	}
+	if len(empIDs) > 0 {
 		rows, err := s.orm.LeaveRequest.Query().
 			Where(leaverequest.TenantID(tenantID), leaverequest.EmployeeIDIn(empIDs...),
-				leaverequest.StatusEQ(leaverequest.StatusApproved),
+				leaverequest.StatusIn(leaverequest.StatusApproved, leaverequest.StatusPending),
 				leaverequest.StartDateLTE(end.AddDate(0, 0, 1)), leaverequest.EndDateGTE(start)).All(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("attendance: capacity leave: %w", err)
 		}
 		for _, r := range rows {
-			leave[r.EmployeeID] = append(leave[r.EmployeeID], r)
+			if r.Status == leaverequest.StatusPending {
+				pending[r.EmployeeID] = append(pending[r.EmployeeID], r)
+			} else {
+				leave[r.EmployeeID] = append(leave[r.EmployeeID], r)
+			}
 			if d := dateOnly(r.StartDate); d.Before(lo) {
 				lo = d
 			}
@@ -290,17 +303,35 @@ func (s *Service) Capacity(ctx context.Context, tenantID uuid.UUID, authUserIDs 
 		}
 	}
 
-	// 4. National public holidays over the weeks and the leave requests' own ranges.
-	holidays := map[time.Time]bool{}
-	if len(configured) > 0 {
+	// 4. Each configured employee's county keys: the name and code of their region and its parent.
+	countyKeys, err := s.employeeCounties(ctx, tenantID, empIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. Public holidays over the weeks and the leave requests' own ranges: national ones for
+	// everyone, county ones by county (matched in any case).
+	national := map[time.Time]bool{}
+	byCounty := map[string][]time.Time{}
+	if len(empIDs) > 0 {
 		rows, err := s.orm.PublicHoliday.Query().
-			Where(publicholiday.TenantID(tenantID), publicholiday.IsNational(true),
+			Where(publicholiday.TenantID(tenantID),
+				publicholiday.Or(publicholiday.IsNational(true), publicholiday.CountyNotNil()),
 				publicholiday.DateGTE(lo), publicholiday.DateLT(hi.AddDate(0, 0, 1))).All(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("attendance: capacity holidays: %w", err)
 		}
 		for _, h := range rows {
-			holidays[dateOnly(h.Date)] = true
+			d := dateOnly(h.Date)
+			if h.IsNational {
+				national[d] = true
+				continue
+			}
+			if h.County != nil {
+				if k := countyKey(*h.County); k != "" {
+					byCounty[k] = append(byCounty[k], d)
+				}
+			}
 		}
 	}
 
@@ -314,10 +345,101 @@ func (s *Service) Capacity(ctx context.Context, tenantID uuid.UUID, authUserIDs 
 		if !ok {
 			continue
 		}
+		holidays := holidaysFor(national, byCounty, countyKeys[e.ID])
 		out[i].Configured = true
 		out[i].WorkShift = w.name
 		out[i].WeeklyHours = w.total().Round(2)
-		out[i].Weeks = capacityWeeks(w, start, end, leaveSpans(w, leave[e.ID], holidays), holidays)
+		out[i].Weeks = capacityWeeks(w, start, end, leaveSpans(w, leave[e.ID], holidays), leaveSpans(w, pending[e.ID], holidays), holidays)
+	}
+	return out, nil
+}
+
+// countyKey normalises a county or region name or code for matching.
+func countyKey(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
+
+// holidaysFor is the national holidays plus those of any of the person's county keys.
+func holidaysFor(national map[time.Time]bool, byCounty map[string][]time.Time, keys []string) map[time.Time]bool {
+	if len(keys) == 0 {
+		return national
+	}
+	out := make(map[time.Time]bool, len(national))
+	for d := range national {
+		out[d] = true
+	}
+	for _, k := range keys {
+		for _, d := range byCounty[k] {
+			out[d] = true
+		}
+	}
+	return out
+}
+
+// employeeCounties answers each employee's county keys (the name and code of their HR region and of
+// that region's parent) in at most three queries: HR details, their regions, the parents.
+func (s *Service) employeeCounties(ctx context.Context, tenantID uuid.UUID, empIDs []uuid.UUID) (map[uuid.UUID][]string, error) {
+	out := map[uuid.UUID][]string{}
+	if len(empIDs) == 0 {
+		return out, nil
+	}
+	details, err := s.orm.HRDetails.Query().
+		Where(hrdetails.TenantID(tenantID), hrdetails.EmployeeIDIn(empIDs...), hrdetails.RegionIDNotNil()).
+		Select(hrdetails.FieldEmployeeID, hrdetails.FieldRegionID).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("attendance: capacity hr details: %w", err)
+	}
+	regionOf := map[uuid.UUID]uuid.UUID{}
+	ids := make([]uuid.UUID, 0, len(details))
+	for _, d := range details {
+		if d.RegionID != nil {
+			regionOf[d.EmployeeID] = *d.RegionID
+			ids = append(ids, *d.RegionID)
+		}
+	}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	regions := map[uuid.UUID]*ent.Region{}
+	rows, err := s.orm.Region.Query().Where(region.Or(region.TenantID(tenantID), region.TenantIDIsNil()), region.IDIn(ids...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("attendance: capacity regions: %w", err)
+	}
+	var parents []uuid.UUID
+	for _, r := range rows {
+		regions[r.ID] = r
+		if r.ParentRegionID != nil {
+			parents = append(parents, *r.ParentRegionID)
+		}
+	}
+	if len(parents) > 0 {
+		prows, err := s.orm.Region.Query().Where(region.Or(region.TenantID(tenantID), region.TenantIDIsNil()), region.IDIn(parents...)).All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("attendance: capacity parent regions: %w", err)
+		}
+		for _, r := range prows {
+			regions[r.ID] = r
+		}
+	}
+	keysOf := func(r *ent.Region) []string {
+		var ks []string
+		for _, v := range []string{r.Name, r.Code} {
+			if k := countyKey(v); k != "" {
+				ks = append(ks, k)
+			}
+		}
+		return ks
+	}
+	for emp, rid := range regionOf {
+		r, ok := regions[rid]
+		if !ok {
+			continue
+		}
+		ks := keysOf(r)
+		if r.ParentRegionID != nil {
+			if p, ok := regions[*r.ParentRegionID]; ok {
+				ks = append(ks, keysOf(p)...)
+			}
+		}
+		out[emp] = ks
 	}
 	return out, nil
 }
@@ -348,13 +470,26 @@ func leaveSpans(w shiftWeek, rows []*ent.LeaveRequest, holidays map[time.Time]bo
 	return out
 }
 
+// spanShare is the largest share of day d that the spans take off.
+func spanShare(spans []leaveSpan, d time.Time) decimal.Decimal {
+	share := decimal.Zero
+	for _, sp := range spans {
+		if !d.Before(sp.from) && !d.After(sp.to) && sp.share.GreaterThan(share) {
+			share = sp.share
+		}
+	}
+	return share
+}
+
 // capacityWeeks walks every day of [start, end] (whole ISO weeks): a holiday on a working day takes
-// the day's hours off, else the largest leave share covering the day does.
-func capacityWeeks(w shiftWeek, start, end time.Time, spans []leaveSpan, holidays map[time.Time]bool) []CapacityWeek {
+// the day's hours off, else the largest approved leave share covering the day does. Pending leave is
+// counted on the part of a working day that is still free, without lowering Hours.
+func capacityWeeks(w shiftWeek, start, end time.Time, spans, pendingSpans []leaveSpan, holidays map[time.Time]bool) []CapacityWeek {
 	weekly := w.total()
+	one := decimal.NewFromInt(1)
 	var out []CapacityWeek
 	for ws := start; !ws.After(end); ws = ws.AddDate(0, 0, 7) {
-		cw := CapacityWeek{WeekStart: ws.Format(time.DateOnly), LeaveHours: decimal.Zero, HolidayHours: decimal.Zero}
+		cw := CapacityWeek{WeekStart: ws.Format(time.DateOnly), LeaveHours: decimal.Zero, HolidayHours: decimal.Zero, PendingLeaveHours: decimal.Zero}
 		for i := 0; i < 7; i++ {
 			d := ws.AddDate(0, 0, i)
 			h := w.daily[d.Weekday()]
@@ -365,15 +500,14 @@ func capacityWeeks(w shiftWeek, start, end time.Time, spans []leaveSpan, holiday
 				cw.HolidayHours = cw.HolidayHours.Add(h)
 				continue
 			}
-			share := decimal.Zero
-			for _, sp := range spans {
-				if !d.Before(sp.from) && !d.After(sp.to) && sp.share.GreaterThan(share) {
-					share = sp.share
-				}
-			}
+			share := spanShare(spans, d)
 			cw.LeaveHours = cw.LeaveHours.Add(h.Mul(share))
+			if p := decimal.Min(spanShare(pendingSpans, d), one.Sub(share)); p.IsPositive() {
+				cw.PendingLeaveHours = cw.PendingLeaveHours.Add(h.Mul(p))
+			}
 		}
 		cw.LeaveHours, cw.HolidayHours = cw.LeaveHours.Round(2), cw.HolidayHours.Round(2)
+		cw.PendingLeaveHours = cw.PendingLeaveHours.Round(2)
 		cw.Hours = weekly.Sub(cw.LeaveHours).Sub(cw.HolidayHours).Round(2)
 		if cw.Hours.IsNegative() {
 			cw.Hours = decimal.Zero
