@@ -268,6 +268,20 @@ func (_c *EmployeeCreate) SetNillableTerminatedAt(v *time.Time) *EmployeeCreate 
 	return _c
 }
 
+// SetWorkShiftID sets the "work_shift_id" field.
+func (_c *EmployeeCreate) SetWorkShiftID(v uuid.UUID) *EmployeeCreate {
+	_c.mutation.SetWorkShiftID(v)
+	return _c
+}
+
+// SetNillableWorkShiftID sets the "work_shift_id" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableWorkShiftID(v *uuid.UUID) *EmployeeCreate {
+	if v != nil {
+		_c.SetWorkShiftID(*v)
+	}
+	return _c
+}
+
 // SetDeleted sets the "deleted" field.
 func (_c *EmployeeCreate) SetDeleted(v bool) *EmployeeCreate {
 	_c.mutation.SetDeleted(v)
@@ -519,6 +533,10 @@ func (_c *EmployeeCreate) createSpec() (*Employee, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TerminatedAt(); ok {
 		_spec.SetField(employee.FieldTerminatedAt, field.TypeTime, value)
 		_node.TerminatedAt = &value
+	}
+	if value, ok := _c.mutation.WorkShiftID(); ok {
+		_spec.SetField(employee.FieldWorkShiftID, field.TypeUUID, value)
+		_node.WorkShiftID = &value
 	}
 	if value, ok := _c.mutation.Deleted(); ok {
 		_spec.SetField(employee.FieldDeleted, field.TypeBool, value)
@@ -881,6 +899,24 @@ func (u *EmployeeUpsert) UpdateTerminatedAt() *EmployeeUpsert {
 // ClearTerminatedAt clears the value of the "terminated_at" field.
 func (u *EmployeeUpsert) ClearTerminatedAt() *EmployeeUpsert {
 	u.SetNull(employee.FieldTerminatedAt)
+	return u
+}
+
+// SetWorkShiftID sets the "work_shift_id" field.
+func (u *EmployeeUpsert) SetWorkShiftID(v uuid.UUID) *EmployeeUpsert {
+	u.Set(employee.FieldWorkShiftID, v)
+	return u
+}
+
+// UpdateWorkShiftID sets the "work_shift_id" field to the value that was provided on create.
+func (u *EmployeeUpsert) UpdateWorkShiftID() *EmployeeUpsert {
+	u.SetExcluded(employee.FieldWorkShiftID)
+	return u
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (u *EmployeeUpsert) ClearWorkShiftID() *EmployeeUpsert {
+	u.SetNull(employee.FieldWorkShiftID)
 	return u
 }
 
@@ -1306,6 +1342,27 @@ func (u *EmployeeUpsertOne) UpdateTerminatedAt() *EmployeeUpsertOne {
 func (u *EmployeeUpsertOne) ClearTerminatedAt() *EmployeeUpsertOne {
 	return u.Update(func(s *EmployeeUpsert) {
 		s.ClearTerminatedAt()
+	})
+}
+
+// SetWorkShiftID sets the "work_shift_id" field.
+func (u *EmployeeUpsertOne) SetWorkShiftID(v uuid.UUID) *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetWorkShiftID(v)
+	})
+}
+
+// UpdateWorkShiftID sets the "work_shift_id" field to the value that was provided on create.
+func (u *EmployeeUpsertOne) UpdateWorkShiftID() *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateWorkShiftID()
+	})
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (u *EmployeeUpsertOne) ClearWorkShiftID() *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.ClearWorkShiftID()
 	})
 }
 
@@ -1902,6 +1959,27 @@ func (u *EmployeeUpsertBulk) UpdateTerminatedAt() *EmployeeUpsertBulk {
 func (u *EmployeeUpsertBulk) ClearTerminatedAt() *EmployeeUpsertBulk {
 	return u.Update(func(s *EmployeeUpsert) {
 		s.ClearTerminatedAt()
+	})
+}
+
+// SetWorkShiftID sets the "work_shift_id" field.
+func (u *EmployeeUpsertBulk) SetWorkShiftID(v uuid.UUID) *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetWorkShiftID(v)
+	})
+}
+
+// UpdateWorkShiftID sets the "work_shift_id" field to the value that was provided on create.
+func (u *EmployeeUpsertBulk) UpdateWorkShiftID() *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateWorkShiftID()
+	})
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (u *EmployeeUpsertBulk) ClearWorkShiftID() *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.ClearWorkShiftID()
 	})
 }
 

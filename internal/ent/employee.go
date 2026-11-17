@@ -54,6 +54,8 @@ type Employee struct {
 	Terminated bool `json:"terminated,omitempty"`
 	// TerminatedAt holds the value of the "terminated_at" field.
 	TerminatedAt *time.Time `json:"terminated_at,omitempty"`
+	// Standard work shift (FK -> work_shifts.id): weekly working hours
+	WorkShiftID *uuid.UUID `json:"work_shift_id,omitempty"`
 	// Soft delete (delete_status)
 	Deleted bool `json:"deleted,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -68,7 +70,7 @@ func (*Employee) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case employee.FieldOutletID, employee.FieldUserID:
+		case employee.FieldOutletID, employee.FieldUserID, employee.FieldWorkShiftID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case employee.FieldIsDirector, employee.FieldIsShareholder, employee.FieldTerminated, employee.FieldDeleted:
 			values[i] = new(sql.NullBool)
@@ -213,6 +215,13 @@ func (_m *Employee) assignValues(columns []string, values []any) error {
 				_m.TerminatedAt = new(time.Time)
 				*_m.TerminatedAt = value.Time
 			}
+		case employee.FieldWorkShiftID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field work_shift_id", values[i])
+			} else if value.Valid {
+				_m.WorkShiftID = new(uuid.UUID)
+				*_m.WorkShiftID = *value.S.(*uuid.UUID)
+			}
 		case employee.FieldDeleted:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field deleted", values[i])
@@ -331,6 +340,11 @@ func (_m *Employee) String() string {
 	if v := _m.TerminatedAt; v != nil {
 		builder.WriteString("terminated_at=")
 		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.WorkShiftID; v != nil {
+		builder.WriteString("work_shift_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("deleted=")

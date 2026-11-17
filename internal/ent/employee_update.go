@@ -365,6 +365,26 @@ func (_u *EmployeeUpdate) ClearTerminatedAt() *EmployeeUpdate {
 	return _u
 }
 
+// SetWorkShiftID sets the "work_shift_id" field.
+func (_u *EmployeeUpdate) SetWorkShiftID(v uuid.UUID) *EmployeeUpdate {
+	_u.mutation.SetWorkShiftID(v)
+	return _u
+}
+
+// SetNillableWorkShiftID sets the "work_shift_id" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableWorkShiftID(v *uuid.UUID) *EmployeeUpdate {
+	if v != nil {
+		_u.SetWorkShiftID(*v)
+	}
+	return _u
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (_u *EmployeeUpdate) ClearWorkShiftID() *EmployeeUpdate {
+	_u.mutation.ClearWorkShiftID()
+	return _u
+}
+
 // SetDeleted sets the "deleted" field.
 func (_u *EmployeeUpdate) SetDeleted(v bool) *EmployeeUpdate {
 	_u.mutation.SetDeleted(v)
@@ -530,6 +550,12 @@ func (_u *EmployeeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.TerminatedAtCleared() {
 		_spec.ClearField(employee.FieldTerminatedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.WorkShiftID(); ok {
+		_spec.SetField(employee.FieldWorkShiftID, field.TypeUUID, value)
+	}
+	if _u.mutation.WorkShiftIDCleared() {
+		_spec.ClearField(employee.FieldWorkShiftID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Deleted(); ok {
 		_spec.SetField(employee.FieldDeleted, field.TypeBool, value)
@@ -893,6 +919,26 @@ func (_u *EmployeeUpdateOne) ClearTerminatedAt() *EmployeeUpdateOne {
 	return _u
 }
 
+// SetWorkShiftID sets the "work_shift_id" field.
+func (_u *EmployeeUpdateOne) SetWorkShiftID(v uuid.UUID) *EmployeeUpdateOne {
+	_u.mutation.SetWorkShiftID(v)
+	return _u
+}
+
+// SetNillableWorkShiftID sets the "work_shift_id" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableWorkShiftID(v *uuid.UUID) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetWorkShiftID(*v)
+	}
+	return _u
+}
+
+// ClearWorkShiftID clears the value of the "work_shift_id" field.
+func (_u *EmployeeUpdateOne) ClearWorkShiftID() *EmployeeUpdateOne {
+	_u.mutation.ClearWorkShiftID()
+	return _u
+}
+
 // SetDeleted sets the "deleted" field.
 func (_u *EmployeeUpdateOne) SetDeleted(v bool) *EmployeeUpdateOne {
 	_u.mutation.SetDeleted(v)
@@ -1088,6 +1134,12 @@ func (_u *EmployeeUpdateOne) sqlSave(ctx context.Context) (_node *Employee, err 
 	}
 	if _u.mutation.TerminatedAtCleared() {
 		_spec.ClearField(employee.FieldTerminatedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.WorkShiftID(); ok {
+		_spec.SetField(employee.FieldWorkShiftID, field.TypeUUID, value)
+	}
+	if _u.mutation.WorkShiftIDCleared() {
+		_spec.ClearField(employee.FieldWorkShiftID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Deleted(); ok {
 		_spec.SetField(employee.FieldDeleted, field.TypeBool, value)

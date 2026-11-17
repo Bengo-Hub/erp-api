@@ -48,6 +48,10 @@ func (Employee) Fields() []ent.Field {
 		// TerminatedAt is when the employee was terminated (set on the change to terminated,
 		// cleared on reinstatement); exits and turnover are counted from it.
 		field.Time("terminated_at").Optional().Nillable(),
+		// WorkShiftID is the employee's standard work shift: its weekly hours (total_hours_per_week,
+		// else its working-day schedule) are the person's capacity that projects-api reads for
+		// workload (owner, 17 November 2026). Unset means ERP holds no working hours for them.
+		field.UUID("work_shift_id", uuid.UUID{}).Optional().Nillable().Comment("Standard work shift (FK -> work_shifts.id): weekly working hours"),
 		field.Bool("deleted").Default(false).Comment("Soft delete (delete_status)"),
 
 		field.Time("created_at").Default(time.Now).Immutable(),

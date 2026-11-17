@@ -200,6 +200,35 @@ only through projects-api.
 `PUT /api/v1/hrm/attendance/timesheets/{id}/entries` (ERP's own screens) takes the same
 `task_id` and `billable` and keys entries the same way, so two projects on one day are two rows.
 
+#### Capacity for projects-api workload (2026-11-17)
+
+ERP now holds each person's working hours, so projects-api's workload reads capacity from here
+instead of its own tenant setting. HR gives an employee a standard work shift
+(`PUT /api/v1/hrm/employees/{id}` with `work_shift_id`, `""` clears it; it must be one of the
+tenant's shifts). The shift's `total_hours_per_week` is spread evenly over its working days (its
+schedule's working days, Monday to Friday without a schedule); a shift with no total uses its
+schedule's own hours (end minus start minus break, past midnight for a night shift).
+
+`GET /api/v1/hrm/attendance/capacity?auth_user_ids=a,b&from=YYYY-MM-DD&to=YYYY-MM-DD`, X-API-Key
+plus X-Tenant-ID (or a JWT with `hrm.attendance.view`), at most 500 ids and 366 days, answers
+
+```json
+{"data": [{"auth_user_id": "...", "has_employee": true, "configured": true, "work_shift": "Office",
+  "weekly_hours": "40", "weeks": [{"week_start": "2026-11-16", "hours": "16", "leave_hours": "16", "holiday_hours": "8"}]}]}
+```
+
+one row per id in the order asked, with every ISO week from the Monday of `from` to the week
+holding `to` (whole weeks). `hours` is the weekly hours minus approved leave and the tenant's
+national public holidays on working days; a day that is both counts once as holiday, and a leave
+request whose `days_requested` is below its working days (a half day) takes that share of each day.
+`has_employee` is false when the user has no live employee in the tenant (found through
+`custom_users.external_id`, terminated and deleted employees left out); `configured` is false when
+the employee has no shift with hours, and then `weekly_hours` is `"0"` and `weeks` is empty, so
+the caller falls back to its own setting for that person. Hours are decimal strings. The read is
+six batched queries (users, employees, shifts, schedules, leave, holidays) whatever the number of
+people. Pending leave, county holidays and the roster planner's day overrides do not
+count yet.
+
 #### External expense claims (added 2026-10-10)
 
 Other services raise employee claims here instead of keeping their own allowance logic. First
@@ -340,5 +369,6 @@ rows for the forward and reverse pairs. This is the only finance-adjacent config
 | projects-api | `GET /api/v1/hrm/attendance/timesheets/project-hours` | project utilisation, earned value, labour cost and unbilled time |
 | projects-api | `POST /api/v1/hrm/attendance/timesheets/billing/reserve\|confirm\|release` | bills approved project time on a treasury invoice, once |
 | projects-api | `GET\|POST /api/v1/hrm/attendance/timesheets/for-user[/entries\|/submit]` | timer, week grid and submit for the signed-in user |
+| projects-api | `GET /api/v1/hrm/attendance/capacity` | workload capacity per person and week (work shift minus leave and holidays) |
 
 Keep subjects, payload shapes and S2S paths stable so downstream services need no change.

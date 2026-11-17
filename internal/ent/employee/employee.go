@@ -50,6 +50,8 @@ const (
 	FieldTerminated = "terminated"
 	// FieldTerminatedAt holds the string denoting the terminated_at field in the database.
 	FieldTerminatedAt = "terminated_at"
+	// FieldWorkShiftID holds the string denoting the work_shift_id field in the database.
+	FieldWorkShiftID = "work_shift_id"
 	// FieldDeleted holds the string denoting the deleted field in the database.
 	FieldDeleted = "deleted"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -81,6 +83,7 @@ var Columns = []string{
 	FieldIsShareholder,
 	FieldTerminated,
 	FieldTerminatedAt,
+	FieldWorkShiftID,
 	FieldDeleted,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -211,6 +214,11 @@ func ByTerminated(opts ...sql.OrderTermOption) OrderOption {
 // ByTerminatedAt orders the results by the terminated_at field.
 func ByTerminatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTerminatedAt, opts...).ToFunc()
+}
+
+// ByWorkShiftID orders the results by the work_shift_id field.
+func ByWorkShiftID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWorkShiftID, opts...).ToFunc()
 }
 
 // ByDeleted orders the results by the deleted field.

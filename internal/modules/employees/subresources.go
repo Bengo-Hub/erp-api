@@ -11,6 +11,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
 	"github.com/Bengo-Hub/erp-api/internal/ent/nextofkin"
+	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 )
 
 // This file adds employee edit + bank-account/next-of-kin management on top of the
@@ -31,6 +32,9 @@ type UpdateInput struct {
 	Terminated        *bool
 	IsDirector        *bool
 	IsShareholder     *bool
+	// WorkShiftID sets the standard work shift (the person's weekly working hours); a pointer to
+	// uuid.Nil clears it. It must be one of the tenant's shifts.
+	WorkShiftID *uuid.UUID
 }
 
 // Update edits a tenant-scoped employee. Only non-nil fields are applied.
@@ -85,6 +89,20 @@ func (s *Service) Update(ctx context.Context, tenantID, id uuid.UUID, in UpdateI
 	}
 	if in.IsShareholder != nil {
 		u = u.SetIsShareholder(*in.IsShareholder)
+	}
+	if in.WorkShiftID != nil {
+		if *in.WorkShiftID == uuid.Nil {
+			u = u.ClearWorkShiftID()
+		} else {
+			ok, err := s.orm.WorkShift.Query().Where(workshift.ID(*in.WorkShiftID), workshift.TenantID(tenantID)).Exist(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("employees: work shift check: %w", err)
+			}
+			if !ok {
+				return nil, fmt.Errorf("employees: work shift not found for tenant")
+			}
+			u = u.SetWorkShiftID(*in.WorkShiftID)
+		}
 	}
 	row, err := u.Save(ctx)
 	if err != nil {

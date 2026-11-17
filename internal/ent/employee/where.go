@@ -145,6 +145,11 @@ func TerminatedAt(v time.Time) predicate.Employee {
 	return predicate.Employee(sql.FieldEQ(FieldTerminatedAt, v))
 }
 
+// WorkShiftID applies equality check predicate on the "work_shift_id" field. It's identical to WorkShiftIDEQ.
+func WorkShiftID(v uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldWorkShiftID, v))
+}
+
 // Deleted applies equality check predicate on the "deleted" field. It's identical to DeletedEQ.
 func Deleted(v bool) predicate.Employee {
 	return predicate.Employee(sql.FieldEQ(FieldDeleted, v))
@@ -1178,6 +1183,56 @@ func TerminatedAtIsNil() predicate.Employee {
 // TerminatedAtNotNil applies the NotNil predicate on the "terminated_at" field.
 func TerminatedAtNotNil() predicate.Employee {
 	return predicate.Employee(sql.FieldNotNull(FieldTerminatedAt))
+}
+
+// WorkShiftIDEQ applies the EQ predicate on the "work_shift_id" field.
+func WorkShiftIDEQ(v uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDNEQ applies the NEQ predicate on the "work_shift_id" field.
+func WorkShiftIDNEQ(v uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldNEQ(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDIn applies the In predicate on the "work_shift_id" field.
+func WorkShiftIDIn(vs ...uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldIn(FieldWorkShiftID, vs...))
+}
+
+// WorkShiftIDNotIn applies the NotIn predicate on the "work_shift_id" field.
+func WorkShiftIDNotIn(vs ...uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldNotIn(FieldWorkShiftID, vs...))
+}
+
+// WorkShiftIDGT applies the GT predicate on the "work_shift_id" field.
+func WorkShiftIDGT(v uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldGT(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDGTE applies the GTE predicate on the "work_shift_id" field.
+func WorkShiftIDGTE(v uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldGTE(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDLT applies the LT predicate on the "work_shift_id" field.
+func WorkShiftIDLT(v uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldLT(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDLTE applies the LTE predicate on the "work_shift_id" field.
+func WorkShiftIDLTE(v uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldLTE(FieldWorkShiftID, v))
+}
+
+// WorkShiftIDIsNil applies the IsNil predicate on the "work_shift_id" field.
+func WorkShiftIDIsNil() predicate.Employee {
+	return predicate.Employee(sql.FieldIsNull(FieldWorkShiftID))
+}
+
+// WorkShiftIDNotNil applies the NotNil predicate on the "work_shift_id" field.
+func WorkShiftIDNotNil() predicate.Employee {
+	return predicate.Employee(sql.FieldNotNull(FieldWorkShiftID))
 }
 
 // DeletedEQ applies the EQ predicate on the "deleted" field.

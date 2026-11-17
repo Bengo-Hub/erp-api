@@ -66,6 +66,9 @@ func (h *AttendanceHandler) RegisterRoutes(r chi.Router) {
 		// Roster + timesheets (registered in attendance_roster.go).
 		h.registerRosterRoutes(ar)
 		h.registerTimesheetRoutes(ar)
+
+		// Capacity per person and week for projects-api's workload (S2S, attendance_capacity.go).
+		ar.Get("/capacity", h.Capacity)
 	})
 }
 

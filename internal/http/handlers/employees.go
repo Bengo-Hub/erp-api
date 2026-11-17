@@ -64,7 +64,7 @@ func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 		er.Get("/lookup", h.Lookup) // active staff for other services' pickers (employees_lookup.go)
 		er.Post("/", h.Create)
 		er.Post("/renumber", h.Renumber) // re-issue SLUG/YYYY/### staff numbers to all employees
-		er.Post("/import", h.Import)      // bulk CSV import (handler in employees_import.go)
+		er.Post("/import", h.Import)     // bulk CSV import (handler in employees_import.go)
 		er.Get("/{id}", h.Get)
 		er.Put("/{id}", h.Update)
 		er.Patch("/{id}", h.Update)
@@ -141,6 +141,8 @@ type updateEmployeeBody struct {
 	Terminated        *bool   `json:"terminated"`
 	IsDirector        *bool   `json:"is_director"`
 	IsShareholder     *bool   `json:"is_shareholder"`
+	// WorkShiftID is the standard work shift (weekly working hours); "" clears it.
+	WorkShiftID *string `json:"work_shift_id"`
 }
 
 // Update edits a tenant-scoped employee (PUT/PATCH /hrm/employees/{id}).
@@ -159,7 +161,19 @@ func (h *EmployeesHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
+	var workShiftID *uuid.UUID
+	if body.WorkShiftID != nil {
+		shift := uuid.Nil
+		if raw := strings.TrimSpace(*body.WorkShiftID); raw != "" {
+			if shift, err = uuid.Parse(raw); err != nil {
+				writeError(w, http.StatusBadRequest, "bad_request", "work_shift_id must be a UUID or empty")
+				return
+			}
+		}
+		workShiftID = &shift
+	}
 	row, err := h.svc.Update(r.Context(), scope.TenantID, id, employees.UpdateInput{
+		WorkShiftID:       workShiftID,
 		FirstName:         body.FirstName,
 		LastName:          body.LastName,
 		Email:             body.Email,
