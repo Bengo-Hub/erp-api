@@ -85,6 +85,9 @@ func (h *ReportsHandler) RegisterRoutes(r chi.Router) {
 		// Dashboard analytics (headcount breakdowns, contracts expiring, payroll trend).
 		rr.Get("/hrm-analytics", h.HRMAnalytics)
 
+		// Attendance reports (from/to ranges) and the attendance dashboard (reports_attendance.go).
+		h.registerAttendanceReports(rr)
+
 		// Export: run the report then render it as a tenant-branded PDF/Excel.
 		rr.Get("/{type}/export", h.Export)
 	})
@@ -99,6 +102,10 @@ func (h *ReportsHandler) Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	reportType := chi.URLParam(r, "type")
+	if afn, ok := h.attendanceProducers()[reportType]; ok {
+		h.exportAttendance(w, r, scope, reportType, afn)
+		return
+	}
 	fn, found := h.producers()[reportType]
 	if !found {
 		writeError(w, http.StatusNotFound, "not_found", "unknown report type: "+reportType)
