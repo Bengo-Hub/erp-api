@@ -60,6 +60,9 @@ type AttendancePunch func(*sql.Selector)
 // AttendanceRecord is the predicate function for attendancerecord builders.
 type AttendanceRecord func(*sql.Selector)
 
+// AttendanceRegularisation is the predicate function for attendanceregularisation builders.
+type AttendanceRegularisation func(*sql.Selector)
+
 // AttendanceRule is the predicate function for attendancerule builders.
 type AttendanceRule func(*sql.Selector)
 
@@ -216,6 +219,9 @@ type OnboardingTask func(*sql.Selector)
 // OutboxEvent is the predicate function for outboxevent builders.
 type OutboxEvent func(*sql.Selector)
 
+// OvertimeRequest is the predicate function for overtimerequest builders.
+type OvertimeRequest func(*sql.Selector)
+
 // PayrollComponent is the predicate function for payrollcomponent builders.
 type PayrollComponent func(*sql.Selector)
 
@@ -251,6 +257,12 @@ type PerformanceReview func(*sql.Selector)
 
 // Permission is the predicate function for permission builders.
 type Permission func(*sql.Selector)
+
+// PieceOutput is the predicate function for pieceoutput builders.
+type PieceOutput func(*sql.Selector)
+
+// PieceRate is the predicate function for piecerate builders.
+type PieceRate func(*sql.Selector)
 
 // PublicHoliday is the predicate function for publicholiday builders.
 type PublicHoliday func(*sql.Selector)

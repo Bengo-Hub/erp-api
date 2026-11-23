@@ -23,6 +23,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancedevice"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancepunch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendanceregularisation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
@@ -75,6 +76,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/onboardingtask"
 	"github.com/Bengo-Hub/erp-api/internal/ent/outboxevent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/overtimerequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
@@ -87,6 +89,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
+	"github.com/Bengo-Hub/erp-api/internal/ent/pieceoutput"
+	"github.com/Bengo-Hub/erp-api/internal/ent/piecerate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/recoveryline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
@@ -525,6 +529,22 @@ func init() {
 	attendancerecordDescID := attendancerecordFields[0].Descriptor()
 	// attendancerecord.DefaultID holds the default value on creation for the id field.
 	attendancerecord.DefaultID = attendancerecordDescID.Default.(func() uuid.UUID)
+	attendanceregularisationFields := schema.AttendanceRegularisation{}.Fields()
+	_ = attendanceregularisationFields
+	// attendanceregularisationDescCreatedAt is the schema descriptor for created_at field.
+	attendanceregularisationDescCreatedAt := attendanceregularisationFields[13].Descriptor()
+	// attendanceregularisation.DefaultCreatedAt holds the default value on creation for the created_at field.
+	attendanceregularisation.DefaultCreatedAt = attendanceregularisationDescCreatedAt.Default.(func() time.Time)
+	// attendanceregularisationDescUpdatedAt is the schema descriptor for updated_at field.
+	attendanceregularisationDescUpdatedAt := attendanceregularisationFields[14].Descriptor()
+	// attendanceregularisation.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	attendanceregularisation.DefaultUpdatedAt = attendanceregularisationDescUpdatedAt.Default.(func() time.Time)
+	// attendanceregularisation.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	attendanceregularisation.UpdateDefaultUpdatedAt = attendanceregularisationDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// attendanceregularisationDescID is the schema descriptor for id field.
+	attendanceregularisationDescID := attendanceregularisationFields[0].Descriptor()
+	// attendanceregularisation.DefaultID holds the default value on creation for the id field.
+	attendanceregularisation.DefaultID = attendanceregularisationDescID.Default.(func() uuid.UUID)
 	attendanceruleFields := schema.AttendanceRule{}.Fields()
 	_ = attendanceruleFields
 	// attendanceruleDescIsActive is the schema descriptor for is_active field.
@@ -1979,6 +1999,26 @@ func init() {
 	outboxeventDescID := outboxeventFields[0].Descriptor()
 	// outboxevent.DefaultID holds the default value on creation for the id field.
 	outboxevent.DefaultID = outboxeventDescID.Default.(func() uuid.UUID)
+	overtimerequestFields := schema.OvertimeRequest{}.Fields()
+	_ = overtimerequestFields
+	// overtimerequestDescHours is the schema descriptor for hours field.
+	overtimerequestDescHours := overtimerequestFields[4].Descriptor()
+	// overtimerequest.DefaultHours holds the default value on creation for the hours field.
+	overtimerequest.DefaultHours = overtimerequestDescHours.Default.(decimal.Decimal)
+	// overtimerequestDescCreatedAt is the schema descriptor for created_at field.
+	overtimerequestDescCreatedAt := overtimerequestFields[10].Descriptor()
+	// overtimerequest.DefaultCreatedAt holds the default value on creation for the created_at field.
+	overtimerequest.DefaultCreatedAt = overtimerequestDescCreatedAt.Default.(func() time.Time)
+	// overtimerequestDescUpdatedAt is the schema descriptor for updated_at field.
+	overtimerequestDescUpdatedAt := overtimerequestFields[11].Descriptor()
+	// overtimerequest.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	overtimerequest.DefaultUpdatedAt = overtimerequestDescUpdatedAt.Default.(func() time.Time)
+	// overtimerequest.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	overtimerequest.UpdateDefaultUpdatedAt = overtimerequestDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// overtimerequestDescID is the schema descriptor for id field.
+	overtimerequestDescID := overtimerequestFields[0].Descriptor()
+	// overtimerequest.DefaultID holds the default value on creation for the id field.
+	overtimerequest.DefaultID = overtimerequestDescID.Default.(func() uuid.UUID)
 	payrollcomponentFields := schema.PayrollComponent{}.Fields()
 	_ = payrollcomponentFields
 	// payrollcomponentDescTitle is the schema descriptor for title field.
@@ -2445,6 +2485,62 @@ func init() {
 	permissionDescID := permissionFields[0].Descriptor()
 	// permission.DefaultID holds the default value on creation for the id field.
 	permission.DefaultID = permissionDescID.Default.(func() uuid.UUID)
+	pieceoutputFields := schema.PieceOutput{}.Fields()
+	_ = pieceoutputFields
+	// pieceoutputDescQuantity is the schema descriptor for quantity field.
+	pieceoutputDescQuantity := pieceoutputFields[5].Descriptor()
+	// pieceoutput.DefaultQuantity holds the default value on creation for the quantity field.
+	pieceoutput.DefaultQuantity = pieceoutputDescQuantity.Default.(decimal.Decimal)
+	// pieceoutputDescRejectedQuantity is the schema descriptor for rejected_quantity field.
+	pieceoutputDescRejectedQuantity := pieceoutputFields[6].Descriptor()
+	// pieceoutput.DefaultRejectedQuantity holds the default value on creation for the rejected_quantity field.
+	pieceoutput.DefaultRejectedQuantity = pieceoutputDescRejectedQuantity.Default.(decimal.Decimal)
+	// pieceoutputDescRate is the schema descriptor for rate field.
+	pieceoutputDescRate := pieceoutputFields[7].Descriptor()
+	// pieceoutput.DefaultRate holds the default value on creation for the rate field.
+	pieceoutput.DefaultRate = pieceoutputDescRate.Default.(decimal.Decimal)
+	// pieceoutputDescAmount is the schema descriptor for amount field.
+	pieceoutputDescAmount := pieceoutputFields[8].Descriptor()
+	// pieceoutput.DefaultAmount holds the default value on creation for the amount field.
+	pieceoutput.DefaultAmount = pieceoutputDescAmount.Default.(decimal.Decimal)
+	// pieceoutputDescCreatedAt is the schema descriptor for created_at field.
+	pieceoutputDescCreatedAt := pieceoutputFields[16].Descriptor()
+	// pieceoutput.DefaultCreatedAt holds the default value on creation for the created_at field.
+	pieceoutput.DefaultCreatedAt = pieceoutputDescCreatedAt.Default.(func() time.Time)
+	// pieceoutputDescUpdatedAt is the schema descriptor for updated_at field.
+	pieceoutputDescUpdatedAt := pieceoutputFields[17].Descriptor()
+	// pieceoutput.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	pieceoutput.DefaultUpdatedAt = pieceoutputDescUpdatedAt.Default.(func() time.Time)
+	// pieceoutput.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	pieceoutput.UpdateDefaultUpdatedAt = pieceoutputDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// pieceoutputDescID is the schema descriptor for id field.
+	pieceoutputDescID := pieceoutputFields[0].Descriptor()
+	// pieceoutput.DefaultID holds the default value on creation for the id field.
+	pieceoutput.DefaultID = pieceoutputDescID.Default.(func() uuid.UUID)
+	piecerateFields := schema.PieceRate{}.Fields()
+	_ = piecerateFields
+	// piecerateDescRate is the schema descriptor for rate field.
+	piecerateDescRate := piecerateFields[5].Descriptor()
+	// piecerate.DefaultRate holds the default value on creation for the rate field.
+	piecerate.DefaultRate = piecerateDescRate.Default.(decimal.Decimal)
+	// piecerateDescActive is the schema descriptor for active field.
+	piecerateDescActive := piecerateFields[10].Descriptor()
+	// piecerate.DefaultActive holds the default value on creation for the active field.
+	piecerate.DefaultActive = piecerateDescActive.Default.(bool)
+	// piecerateDescCreatedAt is the schema descriptor for created_at field.
+	piecerateDescCreatedAt := piecerateFields[11].Descriptor()
+	// piecerate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	piecerate.DefaultCreatedAt = piecerateDescCreatedAt.Default.(func() time.Time)
+	// piecerateDescUpdatedAt is the schema descriptor for updated_at field.
+	piecerateDescUpdatedAt := piecerateFields[12].Descriptor()
+	// piecerate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	piecerate.DefaultUpdatedAt = piecerateDescUpdatedAt.Default.(func() time.Time)
+	// piecerate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	piecerate.UpdateDefaultUpdatedAt = piecerateDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// piecerateDescID is the schema descriptor for id field.
+	piecerateDescID := piecerateFields[0].Descriptor()
+	// piecerate.DefaultID holds the default value on creation for the id field.
+	piecerate.DefaultID = piecerateDescID.Default.(func() uuid.UUID)
 	publicholidayFields := schema.PublicHoliday{}.Fields()
 	_ = publicholidayFields
 	// publicholidayDescIsNational is the schema descriptor for is_national field.

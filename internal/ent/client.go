@@ -34,6 +34,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancedevice"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancepunch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendanceregularisation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
@@ -86,6 +87,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/onboardingtask"
 	"github.com/Bengo-Hub/erp-api/internal/ent/outboxevent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/overtimerequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
@@ -98,6 +100,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
+	"github.com/Bengo-Hub/erp-api/internal/ent/pieceoutput"
+	"github.com/Bengo-Hub/erp-api/internal/ent/piecerate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/recoveryline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
@@ -171,6 +175,8 @@ type Client struct {
 	AttendancePunch *AttendancePunchClient
 	// AttendanceRecord is the client for interacting with the AttendanceRecord builders.
 	AttendanceRecord *AttendanceRecordClient
+	// AttendanceRegularisation is the client for interacting with the AttendanceRegularisation builders.
+	AttendanceRegularisation *AttendanceRegularisationClient
 	// AttendanceRule is the client for interacting with the AttendanceRule builders.
 	AttendanceRule *AttendanceRuleClient
 	// AuthOutlet is the client for interacting with the AuthOutlet builders.
@@ -275,6 +281,8 @@ type Client struct {
 	OnboardingTask *OnboardingTaskClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
+	// OvertimeRequest is the client for interacting with the OvertimeRequest builders.
+	OvertimeRequest *OvertimeRequestClient
 	// PayrollComponent is the client for interacting with the PayrollComponent builders.
 	PayrollComponent *PayrollComponentClient
 	// PayrollFormula is the client for interacting with the PayrollFormula builders.
@@ -299,6 +307,10 @@ type Client struct {
 	PerformanceReview *PerformanceReviewClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
+	// PieceOutput is the client for interacting with the PieceOutput builders.
+	PieceOutput *PieceOutputClient
+	// PieceRate is the client for interacting with the PieceRate builders.
+	PieceRate *PieceRateClient
 	// PublicHoliday is the client for interacting with the PublicHoliday builders.
 	PublicHoliday *PublicHolidayClient
 	// RecoveryLine is the client for interacting with the RecoveryLine builders.
@@ -384,6 +396,7 @@ func (c *Client) init() {
 	c.AttendanceDevice = NewAttendanceDeviceClient(c.config)
 	c.AttendancePunch = NewAttendancePunchClient(c.config)
 	c.AttendanceRecord = NewAttendanceRecordClient(c.config)
+	c.AttendanceRegularisation = NewAttendanceRegularisationClient(c.config)
 	c.AttendanceRule = NewAttendanceRuleClient(c.config)
 	c.AuthOutlet = NewAuthOutletClient(c.config)
 	c.AuthTenant = NewAuthTenantClient(c.config)
@@ -436,6 +449,7 @@ func (c *Client) init() {
 	c.OffDay = NewOffDayClient(c.config)
 	c.OnboardingTask = NewOnboardingTaskClient(c.config)
 	c.OutboxEvent = NewOutboxEventClient(c.config)
+	c.OvertimeRequest = NewOvertimeRequestClient(c.config)
 	c.PayrollComponent = NewPayrollComponentClient(c.config)
 	c.PayrollFormula = NewPayrollFormulaClient(c.config)
 	c.PayrollFormulaItem = NewPayrollFormulaItemClient(c.config)
@@ -448,6 +462,8 @@ func (c *Client) init() {
 	c.PerformanceMetric = NewPerformanceMetricClient(c.config)
 	c.PerformanceReview = NewPerformanceReviewClient(c.config)
 	c.Permission = NewPermissionClient(c.config)
+	c.PieceOutput = NewPieceOutputClient(c.config)
+	c.PieceRate = NewPieceRateClient(c.config)
 	c.PublicHoliday = NewPublicHolidayClient(c.config)
 	c.RecoveryLine = NewRecoveryLineClient(c.config)
 	c.Region = NewRegionClient(c.config)
@@ -586,6 +602,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		AttendanceDevice:          NewAttendanceDeviceClient(cfg),
 		AttendancePunch:           NewAttendancePunchClient(cfg),
 		AttendanceRecord:          NewAttendanceRecordClient(cfg),
+		AttendanceRegularisation:  NewAttendanceRegularisationClient(cfg),
 		AttendanceRule:            NewAttendanceRuleClient(cfg),
 		AuthOutlet:                NewAuthOutletClient(cfg),
 		AuthTenant:                NewAuthTenantClient(cfg),
@@ -638,6 +655,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		OffDay:                    NewOffDayClient(cfg),
 		OnboardingTask:            NewOnboardingTaskClient(cfg),
 		OutboxEvent:               NewOutboxEventClient(cfg),
+		OvertimeRequest:           NewOvertimeRequestClient(cfg),
 		PayrollComponent:          NewPayrollComponentClient(cfg),
 		PayrollFormula:            NewPayrollFormulaClient(cfg),
 		PayrollFormulaItem:        NewPayrollFormulaItemClient(cfg),
@@ -650,6 +668,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PerformanceMetric:         NewPerformanceMetricClient(cfg),
 		PerformanceReview:         NewPerformanceReviewClient(cfg),
 		Permission:                NewPermissionClient(cfg),
+		PieceOutput:               NewPieceOutputClient(cfg),
+		PieceRate:                 NewPieceRateClient(cfg),
 		PublicHoliday:             NewPublicHolidayClient(cfg),
 		RecoveryLine:              NewRecoveryLineClient(cfg),
 		Region:                    NewRegionClient(cfg),
@@ -715,6 +735,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		AttendanceDevice:          NewAttendanceDeviceClient(cfg),
 		AttendancePunch:           NewAttendancePunchClient(cfg),
 		AttendanceRecord:          NewAttendanceRecordClient(cfg),
+		AttendanceRegularisation:  NewAttendanceRegularisationClient(cfg),
 		AttendanceRule:            NewAttendanceRuleClient(cfg),
 		AuthOutlet:                NewAuthOutletClient(cfg),
 		AuthTenant:                NewAuthTenantClient(cfg),
@@ -767,6 +788,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		OffDay:                    NewOffDayClient(cfg),
 		OnboardingTask:            NewOnboardingTaskClient(cfg),
 		OutboxEvent:               NewOutboxEventClient(cfg),
+		OvertimeRequest:           NewOvertimeRequestClient(cfg),
 		PayrollComponent:          NewPayrollComponentClient(cfg),
 		PayrollFormula:            NewPayrollFormulaClient(cfg),
 		PayrollFormulaItem:        NewPayrollFormulaItemClient(cfg),
@@ -779,6 +801,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PerformanceMetric:         NewPerformanceMetricClient(cfg),
 		PerformanceReview:         NewPerformanceReviewClient(cfg),
 		Permission:                NewPermissionClient(cfg),
+		PieceOutput:               NewPieceOutputClient(cfg),
+		PieceRate:                 NewPieceRateClient(cfg),
 		PublicHoliday:             NewPublicHolidayClient(cfg),
 		RecoveryLine:              NewRecoveryLineClient(cfg),
 		Region:                    NewRegionClient(cfg),
@@ -840,22 +864,23 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Appraisal, c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceDeduction,
-		c.AttendanceDevice, c.AttendancePunch, c.AttendanceRecord, c.AttendanceRule,
-		c.AuthOutlet, c.AuthTenant, c.BenefitTax, c.Candidate, c.CasualPayment,
-		c.ClaimItem, c.CompanySettings, c.ConsultantVoucher, c.ContactDetails,
-		c.Contract, c.CustomUser, c.Department, c.DeviceCommand, c.DocumentSequence,
-		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
-		c.EmployeeDisciplinary, c.EmployeeDocument, c.EmployeeEducation,
-		c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
-		c.EmployeeProjectAllocation, c.EmploymentHistory, c.ExchangeRate,
-		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
-		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
-		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
-		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory, c.MetricTarget,
-		c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
-		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
-		c.PayrollRunJob, c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
-		c.PerformanceMetric, c.PerformanceReview, c.Permission, c.PublicHoliday,
+		c.AttendanceDevice, c.AttendancePunch, c.AttendanceRecord,
+		c.AttendanceRegularisation, c.AttendanceRule, c.AuthOutlet, c.AuthTenant,
+		c.BenefitTax, c.Candidate, c.CasualPayment, c.ClaimItem, c.CompanySettings,
+		c.ConsultantVoucher, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
+		c.DeviceCommand, c.DocumentSequence, c.ESSSettings, c.Employee,
+		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
+		c.EmployeeDocument, c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric,
+		c.EmployeeOnboarding, c.EmployeeProjectAllocation, c.EmploymentHistory,
+		c.ExchangeRate, c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings,
+		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
+		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
+		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
+		c.MetricTarget, c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask,
+		c.OutboxEvent, c.OvertimeRequest, c.PayrollComponent, c.PayrollFormula,
+		c.PayrollFormulaItem, c.PayrollRelief, c.PayrollRunJob, c.PayrollSplitRatio,
+		c.Payslip, c.PayslipAudit, c.PayslipLine, c.PerformanceMetric,
+		c.PerformanceReview, c.Permission, c.PieceOutput, c.PieceRate, c.PublicHoliday,
 		c.RecoveryLine, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
 		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
 		c.ShiftRosterSlot, c.ShiftRotation, c.StaffPurchaseDeduction,
@@ -876,22 +901,23 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Appraisal, c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceDeduction,
-		c.AttendanceDevice, c.AttendancePunch, c.AttendanceRecord, c.AttendanceRule,
-		c.AuthOutlet, c.AuthTenant, c.BenefitTax, c.Candidate, c.CasualPayment,
-		c.ClaimItem, c.CompanySettings, c.ConsultantVoucher, c.ContactDetails,
-		c.Contract, c.CustomUser, c.Department, c.DeviceCommand, c.DocumentSequence,
-		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
-		c.EmployeeDisciplinary, c.EmployeeDocument, c.EmployeeEducation,
-		c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
-		c.EmployeeProjectAllocation, c.EmploymentHistory, c.ExchangeRate,
-		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
-		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
-		c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement, c.LeaveLog,
-		c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory, c.MetricTarget,
-		c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask, c.OutboxEvent,
-		c.PayrollComponent, c.PayrollFormula, c.PayrollFormulaItem, c.PayrollRelief,
-		c.PayrollRunJob, c.PayrollSplitRatio, c.Payslip, c.PayslipAudit, c.PayslipLine,
-		c.PerformanceMetric, c.PerformanceReview, c.Permission, c.PublicHoliday,
+		c.AttendanceDevice, c.AttendancePunch, c.AttendanceRecord,
+		c.AttendanceRegularisation, c.AttendanceRule, c.AuthOutlet, c.AuthTenant,
+		c.BenefitTax, c.Candidate, c.CasualPayment, c.ClaimItem, c.CompanySettings,
+		c.ConsultantVoucher, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
+		c.DeviceCommand, c.DocumentSequence, c.ESSSettings, c.Employee,
+		c.EmployeeBankAccount, c.EmployeeBenefit, c.EmployeeDisciplinary,
+		c.EmployeeDocument, c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric,
+		c.EmployeeOnboarding, c.EmployeeProjectAllocation, c.EmploymentHistory,
+		c.ExchangeRate, c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings,
+		c.Goal, c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup,
+		c.JobPosting, c.JobTitle, c.LeaveBalance, c.LeaveCategory, c.LeaveEntitlement,
+		c.LeaveLog, c.LeaveRequest, c.LoanType, c.LossAndDamage, c.MetricCategory,
+		c.MetricTarget, c.MileageRoute, c.NextOfKin, c.OffDay, c.OnboardingTask,
+		c.OutboxEvent, c.OvertimeRequest, c.PayrollComponent, c.PayrollFormula,
+		c.PayrollFormulaItem, c.PayrollRelief, c.PayrollRunJob, c.PayrollSplitRatio,
+		c.Payslip, c.PayslipAudit, c.PayslipLine, c.PerformanceMetric,
+		c.PerformanceReview, c.Permission, c.PieceOutput, c.PieceRate, c.PublicHoliday,
 		c.RecoveryLine, c.Region, c.RepayOption, c.ReviewMetric, c.Role,
 		c.RolePermission, c.SalaryDetails, c.ShiftAssignment, c.ShiftRoster,
 		c.ShiftRosterSlot, c.ShiftRotation, c.StaffPurchaseDeduction,
@@ -943,6 +969,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.AttendancePunch.mutate(ctx, m)
 	case *AttendanceRecordMutation:
 		return c.AttendanceRecord.mutate(ctx, m)
+	case *AttendanceRegularisationMutation:
+		return c.AttendanceRegularisation.mutate(ctx, m)
 	case *AttendanceRuleMutation:
 		return c.AttendanceRule.mutate(ctx, m)
 	case *AuthOutletMutation:
@@ -1047,6 +1075,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.OnboardingTask.mutate(ctx, m)
 	case *OutboxEventMutation:
 		return c.OutboxEvent.mutate(ctx, m)
+	case *OvertimeRequestMutation:
+		return c.OvertimeRequest.mutate(ctx, m)
 	case *PayrollComponentMutation:
 		return c.PayrollComponent.mutate(ctx, m)
 	case *PayrollFormulaMutation:
@@ -1071,6 +1101,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PerformanceReview.mutate(ctx, m)
 	case *PermissionMutation:
 		return c.Permission.mutate(ctx, m)
+	case *PieceOutputMutation:
+		return c.PieceOutput.mutate(ctx, m)
+	case *PieceRateMutation:
+		return c.PieceRate.mutate(ctx, m)
 	case *PublicHolidayMutation:
 		return c.PublicHoliday.mutate(ctx, m)
 	case *RecoveryLineMutation:
@@ -3587,6 +3621,139 @@ func (c *AttendanceRecordClient) mutate(ctx context.Context, m *AttendanceRecord
 		return (&AttendanceRecordDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown AttendanceRecord mutation op: %q", m.Op())
+	}
+}
+
+// AttendanceRegularisationClient is a client for the AttendanceRegularisation schema.
+type AttendanceRegularisationClient struct {
+	config
+}
+
+// NewAttendanceRegularisationClient returns a client for the AttendanceRegularisation from the given config.
+func NewAttendanceRegularisationClient(c config) *AttendanceRegularisationClient {
+	return &AttendanceRegularisationClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `attendanceregularisation.Hooks(f(g(h())))`.
+func (c *AttendanceRegularisationClient) Use(hooks ...Hook) {
+	c.hooks.AttendanceRegularisation = append(c.hooks.AttendanceRegularisation, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `attendanceregularisation.Intercept(f(g(h())))`.
+func (c *AttendanceRegularisationClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AttendanceRegularisation = append(c.inters.AttendanceRegularisation, interceptors...)
+}
+
+// Create returns a builder for creating a AttendanceRegularisation entity.
+func (c *AttendanceRegularisationClient) Create() *AttendanceRegularisationCreate {
+	mutation := newAttendanceRegularisationMutation(c.config, OpCreate)
+	return &AttendanceRegularisationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AttendanceRegularisation entities.
+func (c *AttendanceRegularisationClient) CreateBulk(builders ...*AttendanceRegularisationCreate) *AttendanceRegularisationCreateBulk {
+	return &AttendanceRegularisationCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AttendanceRegularisationClient) MapCreateBulk(slice any, setFunc func(*AttendanceRegularisationCreate, int)) *AttendanceRegularisationCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AttendanceRegularisationCreateBulk{err: fmt.Errorf("calling to AttendanceRegularisationClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AttendanceRegularisationCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AttendanceRegularisationCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AttendanceRegularisation.
+func (c *AttendanceRegularisationClient) Update() *AttendanceRegularisationUpdate {
+	mutation := newAttendanceRegularisationMutation(c.config, OpUpdate)
+	return &AttendanceRegularisationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AttendanceRegularisationClient) UpdateOne(_m *AttendanceRegularisation) *AttendanceRegularisationUpdateOne {
+	mutation := newAttendanceRegularisationMutation(c.config, OpUpdateOne, withAttendanceRegularisation(_m))
+	return &AttendanceRegularisationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AttendanceRegularisationClient) UpdateOneID(id uuid.UUID) *AttendanceRegularisationUpdateOne {
+	mutation := newAttendanceRegularisationMutation(c.config, OpUpdateOne, withAttendanceRegularisationID(id))
+	return &AttendanceRegularisationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AttendanceRegularisation.
+func (c *AttendanceRegularisationClient) Delete() *AttendanceRegularisationDelete {
+	mutation := newAttendanceRegularisationMutation(c.config, OpDelete)
+	return &AttendanceRegularisationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AttendanceRegularisationClient) DeleteOne(_m *AttendanceRegularisation) *AttendanceRegularisationDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AttendanceRegularisationClient) DeleteOneID(id uuid.UUID) *AttendanceRegularisationDeleteOne {
+	builder := c.Delete().Where(attendanceregularisation.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AttendanceRegularisationDeleteOne{builder}
+}
+
+// Query returns a query builder for AttendanceRegularisation.
+func (c *AttendanceRegularisationClient) Query() *AttendanceRegularisationQuery {
+	return &AttendanceRegularisationQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAttendanceRegularisation},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AttendanceRegularisation entity by its id.
+func (c *AttendanceRegularisationClient) Get(ctx context.Context, id uuid.UUID) (*AttendanceRegularisation, error) {
+	return c.Query().Where(attendanceregularisation.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AttendanceRegularisationClient) GetX(ctx context.Context, id uuid.UUID) *AttendanceRegularisation {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AttendanceRegularisationClient) Hooks() []Hook {
+	return c.hooks.AttendanceRegularisation
+}
+
+// Interceptors returns the client interceptors.
+func (c *AttendanceRegularisationClient) Interceptors() []Interceptor {
+	return c.inters.AttendanceRegularisation
+}
+
+func (c *AttendanceRegularisationClient) mutate(ctx context.Context, m *AttendanceRegularisationMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AttendanceRegularisationCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AttendanceRegularisationUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AttendanceRegularisationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AttendanceRegularisationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AttendanceRegularisation mutation op: %q", m.Op())
 	}
 }
 
@@ -10554,6 +10721,139 @@ func (c *OutboxEventClient) mutate(ctx context.Context, m *OutboxEventMutation) 
 	}
 }
 
+// OvertimeRequestClient is a client for the OvertimeRequest schema.
+type OvertimeRequestClient struct {
+	config
+}
+
+// NewOvertimeRequestClient returns a client for the OvertimeRequest from the given config.
+func NewOvertimeRequestClient(c config) *OvertimeRequestClient {
+	return &OvertimeRequestClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `overtimerequest.Hooks(f(g(h())))`.
+func (c *OvertimeRequestClient) Use(hooks ...Hook) {
+	c.hooks.OvertimeRequest = append(c.hooks.OvertimeRequest, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `overtimerequest.Intercept(f(g(h())))`.
+func (c *OvertimeRequestClient) Intercept(interceptors ...Interceptor) {
+	c.inters.OvertimeRequest = append(c.inters.OvertimeRequest, interceptors...)
+}
+
+// Create returns a builder for creating a OvertimeRequest entity.
+func (c *OvertimeRequestClient) Create() *OvertimeRequestCreate {
+	mutation := newOvertimeRequestMutation(c.config, OpCreate)
+	return &OvertimeRequestCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OvertimeRequest entities.
+func (c *OvertimeRequestClient) CreateBulk(builders ...*OvertimeRequestCreate) *OvertimeRequestCreateBulk {
+	return &OvertimeRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OvertimeRequestClient) MapCreateBulk(slice any, setFunc func(*OvertimeRequestCreate, int)) *OvertimeRequestCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OvertimeRequestCreateBulk{err: fmt.Errorf("calling to OvertimeRequestClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OvertimeRequestCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OvertimeRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OvertimeRequest.
+func (c *OvertimeRequestClient) Update() *OvertimeRequestUpdate {
+	mutation := newOvertimeRequestMutation(c.config, OpUpdate)
+	return &OvertimeRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OvertimeRequestClient) UpdateOne(_m *OvertimeRequest) *OvertimeRequestUpdateOne {
+	mutation := newOvertimeRequestMutation(c.config, OpUpdateOne, withOvertimeRequest(_m))
+	return &OvertimeRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OvertimeRequestClient) UpdateOneID(id uuid.UUID) *OvertimeRequestUpdateOne {
+	mutation := newOvertimeRequestMutation(c.config, OpUpdateOne, withOvertimeRequestID(id))
+	return &OvertimeRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OvertimeRequest.
+func (c *OvertimeRequestClient) Delete() *OvertimeRequestDelete {
+	mutation := newOvertimeRequestMutation(c.config, OpDelete)
+	return &OvertimeRequestDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OvertimeRequestClient) DeleteOne(_m *OvertimeRequest) *OvertimeRequestDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OvertimeRequestClient) DeleteOneID(id uuid.UUID) *OvertimeRequestDeleteOne {
+	builder := c.Delete().Where(overtimerequest.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OvertimeRequestDeleteOne{builder}
+}
+
+// Query returns a query builder for OvertimeRequest.
+func (c *OvertimeRequestClient) Query() *OvertimeRequestQuery {
+	return &OvertimeRequestQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOvertimeRequest},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a OvertimeRequest entity by its id.
+func (c *OvertimeRequestClient) Get(ctx context.Context, id uuid.UUID) (*OvertimeRequest, error) {
+	return c.Query().Where(overtimerequest.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OvertimeRequestClient) GetX(ctx context.Context, id uuid.UUID) *OvertimeRequest {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *OvertimeRequestClient) Hooks() []Hook {
+	return c.hooks.OvertimeRequest
+}
+
+// Interceptors returns the client interceptors.
+func (c *OvertimeRequestClient) Interceptors() []Interceptor {
+	return c.inters.OvertimeRequest
+}
+
+func (c *OvertimeRequestClient) mutate(ctx context.Context, m *OvertimeRequestMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OvertimeRequestCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OvertimeRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OvertimeRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OvertimeRequestDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown OvertimeRequest mutation op: %q", m.Op())
+	}
+}
+
 // PayrollComponentClient is a client for the PayrollComponent schema.
 type PayrollComponentClient struct {
 	config
@@ -12179,6 +12479,272 @@ func (c *PermissionClient) mutate(ctx context.Context, m *PermissionMutation) (V
 		return (&PermissionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Permission mutation op: %q", m.Op())
+	}
+}
+
+// PieceOutputClient is a client for the PieceOutput schema.
+type PieceOutputClient struct {
+	config
+}
+
+// NewPieceOutputClient returns a client for the PieceOutput from the given config.
+func NewPieceOutputClient(c config) *PieceOutputClient {
+	return &PieceOutputClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `pieceoutput.Hooks(f(g(h())))`.
+func (c *PieceOutputClient) Use(hooks ...Hook) {
+	c.hooks.PieceOutput = append(c.hooks.PieceOutput, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `pieceoutput.Intercept(f(g(h())))`.
+func (c *PieceOutputClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PieceOutput = append(c.inters.PieceOutput, interceptors...)
+}
+
+// Create returns a builder for creating a PieceOutput entity.
+func (c *PieceOutputClient) Create() *PieceOutputCreate {
+	mutation := newPieceOutputMutation(c.config, OpCreate)
+	return &PieceOutputCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PieceOutput entities.
+func (c *PieceOutputClient) CreateBulk(builders ...*PieceOutputCreate) *PieceOutputCreateBulk {
+	return &PieceOutputCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PieceOutputClient) MapCreateBulk(slice any, setFunc func(*PieceOutputCreate, int)) *PieceOutputCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PieceOutputCreateBulk{err: fmt.Errorf("calling to PieceOutputClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PieceOutputCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PieceOutputCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PieceOutput.
+func (c *PieceOutputClient) Update() *PieceOutputUpdate {
+	mutation := newPieceOutputMutation(c.config, OpUpdate)
+	return &PieceOutputUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PieceOutputClient) UpdateOne(_m *PieceOutput) *PieceOutputUpdateOne {
+	mutation := newPieceOutputMutation(c.config, OpUpdateOne, withPieceOutput(_m))
+	return &PieceOutputUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PieceOutputClient) UpdateOneID(id uuid.UUID) *PieceOutputUpdateOne {
+	mutation := newPieceOutputMutation(c.config, OpUpdateOne, withPieceOutputID(id))
+	return &PieceOutputUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PieceOutput.
+func (c *PieceOutputClient) Delete() *PieceOutputDelete {
+	mutation := newPieceOutputMutation(c.config, OpDelete)
+	return &PieceOutputDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PieceOutputClient) DeleteOne(_m *PieceOutput) *PieceOutputDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PieceOutputClient) DeleteOneID(id uuid.UUID) *PieceOutputDeleteOne {
+	builder := c.Delete().Where(pieceoutput.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PieceOutputDeleteOne{builder}
+}
+
+// Query returns a query builder for PieceOutput.
+func (c *PieceOutputClient) Query() *PieceOutputQuery {
+	return &PieceOutputQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePieceOutput},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PieceOutput entity by its id.
+func (c *PieceOutputClient) Get(ctx context.Context, id uuid.UUID) (*PieceOutput, error) {
+	return c.Query().Where(pieceoutput.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PieceOutputClient) GetX(ctx context.Context, id uuid.UUID) *PieceOutput {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PieceOutputClient) Hooks() []Hook {
+	return c.hooks.PieceOutput
+}
+
+// Interceptors returns the client interceptors.
+func (c *PieceOutputClient) Interceptors() []Interceptor {
+	return c.inters.PieceOutput
+}
+
+func (c *PieceOutputClient) mutate(ctx context.Context, m *PieceOutputMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PieceOutputCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PieceOutputUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PieceOutputUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PieceOutputDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PieceOutput mutation op: %q", m.Op())
+	}
+}
+
+// PieceRateClient is a client for the PieceRate schema.
+type PieceRateClient struct {
+	config
+}
+
+// NewPieceRateClient returns a client for the PieceRate from the given config.
+func NewPieceRateClient(c config) *PieceRateClient {
+	return &PieceRateClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `piecerate.Hooks(f(g(h())))`.
+func (c *PieceRateClient) Use(hooks ...Hook) {
+	c.hooks.PieceRate = append(c.hooks.PieceRate, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `piecerate.Intercept(f(g(h())))`.
+func (c *PieceRateClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PieceRate = append(c.inters.PieceRate, interceptors...)
+}
+
+// Create returns a builder for creating a PieceRate entity.
+func (c *PieceRateClient) Create() *PieceRateCreate {
+	mutation := newPieceRateMutation(c.config, OpCreate)
+	return &PieceRateCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PieceRate entities.
+func (c *PieceRateClient) CreateBulk(builders ...*PieceRateCreate) *PieceRateCreateBulk {
+	return &PieceRateCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PieceRateClient) MapCreateBulk(slice any, setFunc func(*PieceRateCreate, int)) *PieceRateCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PieceRateCreateBulk{err: fmt.Errorf("calling to PieceRateClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PieceRateCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PieceRateCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PieceRate.
+func (c *PieceRateClient) Update() *PieceRateUpdate {
+	mutation := newPieceRateMutation(c.config, OpUpdate)
+	return &PieceRateUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PieceRateClient) UpdateOne(_m *PieceRate) *PieceRateUpdateOne {
+	mutation := newPieceRateMutation(c.config, OpUpdateOne, withPieceRate(_m))
+	return &PieceRateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PieceRateClient) UpdateOneID(id uuid.UUID) *PieceRateUpdateOne {
+	mutation := newPieceRateMutation(c.config, OpUpdateOne, withPieceRateID(id))
+	return &PieceRateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PieceRate.
+func (c *PieceRateClient) Delete() *PieceRateDelete {
+	mutation := newPieceRateMutation(c.config, OpDelete)
+	return &PieceRateDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PieceRateClient) DeleteOne(_m *PieceRate) *PieceRateDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PieceRateClient) DeleteOneID(id uuid.UUID) *PieceRateDeleteOne {
+	builder := c.Delete().Where(piecerate.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PieceRateDeleteOne{builder}
+}
+
+// Query returns a query builder for PieceRate.
+func (c *PieceRateClient) Query() *PieceRateQuery {
+	return &PieceRateQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePieceRate},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PieceRate entity by its id.
+func (c *PieceRateClient) Get(ctx context.Context, id uuid.UUID) (*PieceRate, error) {
+	return c.Query().Where(piecerate.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PieceRateClient) GetX(ctx context.Context, id uuid.UUID) *PieceRate {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PieceRateClient) Hooks() []Hook {
+	return c.hooks.PieceRate
+}
+
+// Interceptors returns the client interceptors.
+func (c *PieceRateClient) Interceptors() []Interceptor {
+	return c.inters.PieceRate
+}
+
+func (c *PieceRateClient) mutate(ctx context.Context, m *PieceRateMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PieceRateCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PieceRateUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PieceRateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PieceRateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PieceRate mutation op: %q", m.Op())
 	}
 }
 
@@ -16089,19 +16655,20 @@ type (
 		AppraisalCycle, AppraisalQuestion, AppraisalResponse, AppraisalTemplate,
 		ApprovalRequest, ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep,
 		AttendanceDeduction, AttendanceDevice, AttendancePunch, AttendanceRecord,
-		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, CasualPayment,
-		ClaimItem, CompanySettings, ConsultantVoucher, ContactDetails, Contract,
-		CustomUser, Department, DeviceCommand, DocumentSequence, ESSSettings, Employee,
-		EmployeeBankAccount, EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument,
-		EmployeeEducation, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
-		EmployeeProjectAllocation, EmploymentHistory, ExchangeRate,
-		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
-		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
-		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
-		LossAndDamage, MetricCategory, MetricTarget, MileageRoute, NextOfKin, OffDay,
-		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
-		PayrollFormulaItem, PayrollRelief, PayrollRunJob, PayrollSplitRatio, Payslip,
-		PayslipAudit, PayslipLine, PerformanceMetric, PerformanceReview, Permission,
+		AttendanceRegularisation, AttendanceRule, AuthOutlet, AuthTenant, BenefitTax,
+		Candidate, CasualPayment, ClaimItem, CompanySettings, ConsultantVoucher,
+		ContactDetails, Contract, CustomUser, Department, DeviceCommand,
+		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
+		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
+		EmployeeMetric, EmployeeOnboarding, EmployeeProjectAllocation,
+		EmploymentHistory, ExchangeRate, ExchangeRateAPISettings, ExpenseClaim,
+		GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey, JobGroup,
+		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
+		LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
+		MileageRoute, NextOfKin, OffDay, OnboardingTask, OutboxEvent, OvertimeRequest,
+		PayrollComponent, PayrollFormula, PayrollFormulaItem, PayrollRelief,
+		PayrollRunJob, PayrollSplitRatio, Payslip, PayslipAudit, PayslipLine,
+		PerformanceMetric, PerformanceReview, Permission, PieceOutput, PieceRate,
 		PublicHoliday, RecoveryLine, Region, RepayOption, ReviewMetric, Role,
 		RolePermission, SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot,
 		ShiftRotation, StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment,
@@ -16114,19 +16681,20 @@ type (
 		AppraisalCycle, AppraisalQuestion, AppraisalResponse, AppraisalTemplate,
 		ApprovalRequest, ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep,
 		AttendanceDeduction, AttendanceDevice, AttendancePunch, AttendanceRecord,
-		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, CasualPayment,
-		ClaimItem, CompanySettings, ConsultantVoucher, ContactDetails, Contract,
-		CustomUser, Department, DeviceCommand, DocumentSequence, ESSSettings, Employee,
-		EmployeeBankAccount, EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument,
-		EmployeeEducation, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
-		EmployeeProjectAllocation, EmploymentHistory, ExchangeRate,
-		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
-		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
-		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
-		LossAndDamage, MetricCategory, MetricTarget, MileageRoute, NextOfKin, OffDay,
-		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
-		PayrollFormulaItem, PayrollRelief, PayrollRunJob, PayrollSplitRatio, Payslip,
-		PayslipAudit, PayslipLine, PerformanceMetric, PerformanceReview, Permission,
+		AttendanceRegularisation, AttendanceRule, AuthOutlet, AuthTenant, BenefitTax,
+		Candidate, CasualPayment, ClaimItem, CompanySettings, ConsultantVoucher,
+		ContactDetails, Contract, CustomUser, Department, DeviceCommand,
+		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
+		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
+		EmployeeMetric, EmployeeOnboarding, EmployeeProjectAllocation,
+		EmploymentHistory, ExchangeRate, ExchangeRateAPISettings, ExpenseClaim,
+		GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey, JobGroup,
+		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
+		LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
+		MileageRoute, NextOfKin, OffDay, OnboardingTask, OutboxEvent, OvertimeRequest,
+		PayrollComponent, PayrollFormula, PayrollFormulaItem, PayrollRelief,
+		PayrollRunJob, PayrollSplitRatio, Payslip, PayslipAudit, PayslipLine,
+		PerformanceMetric, PerformanceReview, Permission, PieceOutput, PieceRate,
 		PublicHoliday, RecoveryLine, Region, RepayOption, ReviewMetric, Role,
 		RolePermission, SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot,
 		ShiftRotation, StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment,

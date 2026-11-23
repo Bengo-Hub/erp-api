@@ -21,6 +21,8 @@ var approvalModules = []string{
 	"appraisal",
 	"performance_review",
 	"recruitment_offer",
+	"attendance_regularisation",
+	"overtime_request",
 	"general",
 }
 

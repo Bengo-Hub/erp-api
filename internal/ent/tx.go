@@ -50,6 +50,8 @@ type Tx struct {
 	AttendancePunch *AttendancePunchClient
 	// AttendanceRecord is the client for interacting with the AttendanceRecord builders.
 	AttendanceRecord *AttendanceRecordClient
+	// AttendanceRegularisation is the client for interacting with the AttendanceRegularisation builders.
+	AttendanceRegularisation *AttendanceRegularisationClient
 	// AttendanceRule is the client for interacting with the AttendanceRule builders.
 	AttendanceRule *AttendanceRuleClient
 	// AuthOutlet is the client for interacting with the AuthOutlet builders.
@@ -154,6 +156,8 @@ type Tx struct {
 	OnboardingTask *OnboardingTaskClient
 	// OutboxEvent is the client for interacting with the OutboxEvent builders.
 	OutboxEvent *OutboxEventClient
+	// OvertimeRequest is the client for interacting with the OvertimeRequest builders.
+	OvertimeRequest *OvertimeRequestClient
 	// PayrollComponent is the client for interacting with the PayrollComponent builders.
 	PayrollComponent *PayrollComponentClient
 	// PayrollFormula is the client for interacting with the PayrollFormula builders.
@@ -178,6 +182,10 @@ type Tx struct {
 	PerformanceReview *PerformanceReviewClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
+	// PieceOutput is the client for interacting with the PieceOutput builders.
+	PieceOutput *PieceOutputClient
+	// PieceRate is the client for interacting with the PieceRate builders.
+	PieceRate *PieceRateClient
 	// PublicHoliday is the client for interacting with the PublicHoliday builders.
 	PublicHoliday *PublicHolidayClient
 	// RecoveryLine is the client for interacting with the RecoveryLine builders.
@@ -383,6 +391,7 @@ func (tx *Tx) init() {
 	tx.AttendanceDevice = NewAttendanceDeviceClient(tx.config)
 	tx.AttendancePunch = NewAttendancePunchClient(tx.config)
 	tx.AttendanceRecord = NewAttendanceRecordClient(tx.config)
+	tx.AttendanceRegularisation = NewAttendanceRegularisationClient(tx.config)
 	tx.AttendanceRule = NewAttendanceRuleClient(tx.config)
 	tx.AuthOutlet = NewAuthOutletClient(tx.config)
 	tx.AuthTenant = NewAuthTenantClient(tx.config)
@@ -435,6 +444,7 @@ func (tx *Tx) init() {
 	tx.OffDay = NewOffDayClient(tx.config)
 	tx.OnboardingTask = NewOnboardingTaskClient(tx.config)
 	tx.OutboxEvent = NewOutboxEventClient(tx.config)
+	tx.OvertimeRequest = NewOvertimeRequestClient(tx.config)
 	tx.PayrollComponent = NewPayrollComponentClient(tx.config)
 	tx.PayrollFormula = NewPayrollFormulaClient(tx.config)
 	tx.PayrollFormulaItem = NewPayrollFormulaItemClient(tx.config)
@@ -447,6 +457,8 @@ func (tx *Tx) init() {
 	tx.PerformanceMetric = NewPerformanceMetricClient(tx.config)
 	tx.PerformanceReview = NewPerformanceReviewClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
+	tx.PieceOutput = NewPieceOutputClient(tx.config)
+	tx.PieceRate = NewPieceRateClient(tx.config)
 	tx.PublicHoliday = NewPublicHolidayClient(tx.config)
 	tx.RecoveryLine = NewRecoveryLineClient(tx.config)
 	tx.Region = NewRegionClient(tx.config)

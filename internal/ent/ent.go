@@ -30,6 +30,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancedevice"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancepunch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendanceregularisation"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authtenant"
@@ -82,6 +83,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/offday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/onboardingtask"
 	"github.com/Bengo-Hub/erp-api/internal/ent/outboxevent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/overtimerequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
@@ -94,6 +96,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
+	"github.com/Bengo-Hub/erp-api/internal/ent/pieceoutput"
+	"github.com/Bengo-Hub/erp-api/internal/ent/piecerate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/recoveryline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
@@ -200,6 +204,7 @@ func checkColumn(t, c string) error {
 			attendancedevice.Table:          attendancedevice.ValidColumn,
 			attendancepunch.Table:           attendancepunch.ValidColumn,
 			attendancerecord.Table:          attendancerecord.ValidColumn,
+			attendanceregularisation.Table:  attendanceregularisation.ValidColumn,
 			attendancerule.Table:            attendancerule.ValidColumn,
 			authoutlet.Table:                authoutlet.ValidColumn,
 			authtenant.Table:                authtenant.ValidColumn,
@@ -252,6 +257,7 @@ func checkColumn(t, c string) error {
 			offday.Table:                    offday.ValidColumn,
 			onboardingtask.Table:            onboardingtask.ValidColumn,
 			outboxevent.Table:               outboxevent.ValidColumn,
+			overtimerequest.Table:           overtimerequest.ValidColumn,
 			payrollcomponent.Table:          payrollcomponent.ValidColumn,
 			payrollformula.Table:            payrollformula.ValidColumn,
 			payrollformulaitem.Table:        payrollformulaitem.ValidColumn,
@@ -264,6 +270,8 @@ func checkColumn(t, c string) error {
 			performancemetric.Table:         performancemetric.ValidColumn,
 			performancereview.Table:         performancereview.ValidColumn,
 			permission.Table:                permission.ValidColumn,
+			pieceoutput.Table:               pieceoutput.ValidColumn,
+			piecerate.Table:                 piecerate.ValidColumn,
 			publicholiday.Table:             publicholiday.ValidColumn,
 			recoveryline.Table:              recoveryline.ValidColumn,
 			region.Table:                    region.ValidColumn,

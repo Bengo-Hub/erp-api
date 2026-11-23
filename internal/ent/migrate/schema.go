@@ -357,7 +357,7 @@ var (
 	ApprovalRequestsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "tenant_id", Type: field.TypeUUID},
-		{Name: "module", Type: field.TypeEnum, Enums: []string{"payroll", "leave_request", "contract", "appraisal", "performance_review", "recruitment_offer", "general"}},
+		{Name: "module", Type: field.TypeEnum, Enums: []string{"payroll", "leave_request", "contract", "appraisal", "performance_review", "recruitment_offer", "attendance_regularisation", "overtime_request", "general"}},
 		{Name: "object_id", Type: field.TypeUUID},
 		{Name: "object_reference", Type: field.TypeString, Nullable: true},
 		{Name: "workflow_id", Type: field.TypeUUID, Nullable: true},
@@ -433,7 +433,7 @@ var (
 	ApprovalWorkflowsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "tenant_id", Type: field.TypeUUID},
-		{Name: "module", Type: field.TypeEnum, Enums: []string{"payroll", "leave_request", "contract", "appraisal", "performance_review", "recruitment_offer", "general"}},
+		{Name: "module", Type: field.TypeEnum, Enums: []string{"payroll", "leave_request", "contract", "appraisal", "performance_review", "recruitment_offer", "attendance_regularisation", "overtime_request", "general"}},
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
@@ -663,6 +663,42 @@ var (
 				Name:    "attendancerecord_tenant_id_status",
 				Unique:  false,
 				Columns: []*schema.Column{AttendanceRecordsColumns[1], AttendanceRecordsColumns[11]},
+			},
+		},
+	}
+	// AttendanceRegularisationsColumns holds the columns for the "attendance_regularisations" table.
+	AttendanceRegularisationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "record_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "date", Type: field.TypeTime},
+		{Name: "check_in", Type: field.TypeTime, Nullable: true},
+		{Name: "check_out", Type: field.TypeTime, Nullable: true},
+		{Name: "reason", Type: field.TypeString, Size: 2147483647},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "rejected", "cancelled"}, Default: "pending"},
+		{Name: "approval_request_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "before", Type: field.TypeJSON, Nullable: true},
+		{Name: "requested_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "decided_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// AttendanceRegularisationsTable holds the schema information for the "attendance_regularisations" table.
+	AttendanceRegularisationsTable = &schema.Table{
+		Name:       "attendance_regularisations",
+		Columns:    AttendanceRegularisationsColumns,
+		PrimaryKey: []*schema.Column{AttendanceRegularisationsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "attendanceregularisation_tenant_id_employee_id_date",
+				Unique:  false,
+				Columns: []*schema.Column{AttendanceRegularisationsColumns[1], AttendanceRegularisationsColumns[2], AttendanceRegularisationsColumns[4]},
+			},
+			{
+				Name:    "attendanceregularisation_tenant_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{AttendanceRegularisationsColumns[1], AttendanceRegularisationsColumns[8]},
 			},
 		},
 	}
@@ -2500,6 +2536,39 @@ var (
 			},
 		},
 	}
+	// OvertimeRequestsColumns holds the columns for the "overtime_requests" table.
+	OvertimeRequestsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "date", Type: field.TypeTime},
+		{Name: "hours", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(8,2)"}},
+		{Name: "reason", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "rejected", "cancelled"}, Default: "pending"},
+		{Name: "approval_request_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "requested_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "decided_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// OvertimeRequestsTable holds the schema information for the "overtime_requests" table.
+	OvertimeRequestsTable = &schema.Table{
+		Name:       "overtime_requests",
+		Columns:    OvertimeRequestsColumns,
+		PrimaryKey: []*schema.Column{OvertimeRequestsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "overtimerequest_tenant_id_employee_id_date",
+				Unique:  false,
+				Columns: []*schema.Column{OvertimeRequestsColumns[1], OvertimeRequestsColumns[2], OvertimeRequestsColumns[3]},
+			},
+			{
+				Name:    "overtimerequest_tenant_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{OvertimeRequestsColumns[1], OvertimeRequestsColumns[6]},
+			},
+		},
+	}
 	// PayrollComponentsColumns holds the columns for the "payroll_components" table.
 	PayrollComponentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -2995,6 +3064,84 @@ var (
 				Name:    "permission_module_action",
 				Unique:  false,
 				Columns: []*schema.Column{PermissionsColumns[3], PermissionsColumns[4]},
+			},
+		},
+	}
+	// PieceOutputsColumns holds the columns for the "piece_outputs" table.
+	PieceOutputsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "piece_rate_id", Type: field.TypeUUID},
+		{Name: "date", Type: field.TypeTime},
+		{Name: "quantity", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(14,3)"}},
+		{Name: "rejected_quantity", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(14,3)"}},
+		{Name: "rate", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "currency", Type: field.TypeString},
+		{Name: "note", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "rejected", "paid"}, Default: "pending"},
+		{Name: "recorded_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "reviewed_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "reviewed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "payslip_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// PieceOutputsTable holds the schema information for the "piece_outputs" table.
+	PieceOutputsTable = &schema.Table{
+		Name:       "piece_outputs",
+		Columns:    PieceOutputsColumns,
+		PrimaryKey: []*schema.Column{PieceOutputsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "pieceoutput_tenant_id_date",
+				Unique:  false,
+				Columns: []*schema.Column{PieceOutputsColumns[1], PieceOutputsColumns[4]},
+			},
+			{
+				Name:    "pieceoutput_tenant_id_employee_id_date",
+				Unique:  false,
+				Columns: []*schema.Column{PieceOutputsColumns[1], PieceOutputsColumns[2], PieceOutputsColumns[4]},
+			},
+			{
+				Name:    "pieceoutput_tenant_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{PieceOutputsColumns[1], PieceOutputsColumns[11]},
+			},
+		},
+	}
+	// PieceRatesColumns holds the columns for the "piece_rates" table.
+	PieceRatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "unit", Type: field.TypeString},
+		{Name: "rate", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "currency", Type: field.TypeString},
+		{Name: "department_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "effective_from", Type: field.TypeTime},
+		{Name: "effective_to", Type: field.TypeTime, Nullable: true},
+		{Name: "active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// PieceRatesTable holds the schema information for the "piece_rates" table.
+	PieceRatesTable = &schema.Table{
+		Name:       "piece_rates",
+		Columns:    PieceRatesColumns,
+		PrimaryKey: []*schema.Column{PieceRatesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "piecerate_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{PieceRatesColumns[1]},
+			},
+			{
+				Name:    "piecerate_tenant_id_code",
+				Unique:  false,
+				Columns: []*schema.Column{PieceRatesColumns[1], PieceRatesColumns[2]},
 			},
 		},
 	}
@@ -4002,6 +4149,7 @@ var (
 		AttendanceDevicesTable,
 		AttendancePunchesTable,
 		AttendanceRecordsTable,
+		AttendanceRegularisationsTable,
 		AttendanceRulesTable,
 		AuthOutletsTable,
 		AuthTenantsTable,
@@ -4054,6 +4202,7 @@ var (
 		OffDaysTable,
 		OnboardingTasksTable,
 		OutboxEventsTable,
+		OvertimeRequestsTable,
 		PayrollComponentsTable,
 		PayrollFormulasTable,
 		PayrollFormulaItemsTable,
@@ -4066,6 +4215,8 @@ var (
 		PerformanceMetricsTable,
 		PerformanceReviewsTable,
 		PermissionsTable,
+		PieceOutputsTable,
+		PieceRatesTable,
 		PublicHolidaysTable,
 		RecoveryLinesTable,
 		RegionsTable,

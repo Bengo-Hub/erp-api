@@ -225,6 +225,18 @@ func (f AttendanceRecordFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.V
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttendanceRecordMutation", m)
 }
 
+// The AttendanceRegularisationFunc type is an adapter to allow the use of ordinary
+// function as AttendanceRegularisation mutator.
+type AttendanceRegularisationFunc func(context.Context, *ent.AttendanceRegularisationMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AttendanceRegularisationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AttendanceRegularisationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttendanceRegularisationMutation", m)
+}
+
 // The AttendanceRuleFunc type is an adapter to allow the use of ordinary
 // function as AttendanceRule mutator.
 type AttendanceRuleFunc func(context.Context, *ent.AttendanceRuleMutation) (ent.Value, error)
@@ -849,6 +861,18 @@ func (f OutboxEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OutboxEventMutation", m)
 }
 
+// The OvertimeRequestFunc type is an adapter to allow the use of ordinary
+// function as OvertimeRequest mutator.
+type OvertimeRequestFunc func(context.Context, *ent.OvertimeRequestMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f OvertimeRequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.OvertimeRequestMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OvertimeRequestMutation", m)
+}
+
 // The PayrollComponentFunc type is an adapter to allow the use of ordinary
 // function as PayrollComponent mutator.
 type PayrollComponentFunc func(context.Context, *ent.PayrollComponentMutation) (ent.Value, error)
@@ -991,6 +1015,30 @@ func (f PermissionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PermissionMutation", m)
+}
+
+// The PieceOutputFunc type is an adapter to allow the use of ordinary
+// function as PieceOutput mutator.
+type PieceOutputFunc func(context.Context, *ent.PieceOutputMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PieceOutputFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PieceOutputMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PieceOutputMutation", m)
+}
+
+// The PieceRateFunc type is an adapter to allow the use of ordinary
+// function as PieceRate mutator.
+type PieceRateFunc func(context.Context, *ent.PieceRateMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PieceRateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PieceRateMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PieceRateMutation", m)
 }
 
 // The PublicHolidayFunc type is an adapter to allow the use of ordinary
