@@ -45,6 +45,13 @@ type Settings struct {
 	OvernightCutoffHours int `json:"overnight_cutoff_hours"`
 	// DefaultWorkingDays applies to a shift that has no per-day schedule.
 	DefaultWorkingDays []string `json:"default_working_days"`
+	// PayrollOvertimeEnabled pays overtime and holiday work as earnings in the payroll run.
+	PayrollOvertimeEnabled bool `json:"payroll_overtime_enabled"`
+	// OvertimeRequiresApproval pays at most the approved overtime request hours for a day.
+	OvertimeRequiresApproval bool `json:"overtime_requires_approval"`
+	// StandardMonthlyHours turns a monthly salary into an hourly rate when the employee's
+	// shift does not give weekly hours.
+	StandardMonthlyHours decimal.Decimal `json:"standard_monthly_hours"`
 }
 
 // DefaultSettings is what a tenant gets until HR saves its own.
@@ -63,6 +70,7 @@ func DefaultSettings() Settings {
 		PunchPairWindowMinutes: 2,
 		OvernightCutoffHours:   4,
 		DefaultWorkingDays:     []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday"},
+		StandardMonthlyHours:   decimal.NewFromInt(195), // 45 hours a week, 52 weeks over 12 months
 	}
 }
 
@@ -78,6 +86,9 @@ func (st Settings) Validate() error {
 	}
 	if _, err := time.Parse("15:04", st.AutoAbsentTime); err != nil {
 		return errors.New("auto_absent_time must be HH:MM")
+	}
+	if !st.StandardMonthlyHours.IsPositive() {
+		return errors.New("standard_monthly_hours must be above 0")
 	}
 	for _, d := range []decimal.Decimal{st.OTThresholdHours, st.OTMaxHours, st.MinWorkHours, st.OTMultiplier, st.HolidayMultiplier} {
 		if d.IsNegative() {

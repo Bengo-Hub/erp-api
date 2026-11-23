@@ -47,6 +47,10 @@ type EmployeeItemized struct {
 	// AttendanceIDs their rows (marked applied once the payslip is written).
 	Attendance    []LabeledAmount
 	AttendanceIDs []uuid.UUID
+	// Earnings is overtime, holiday work and piece pay added to taxable gross this period, and
+	// PieceOutputIDs the piece output rows (marked paid once the payslip is written).
+	Earnings       []EarningLine
+	PieceOutputIDs []uuid.UUID
 }
 
 // payslip_line sections (mirror schema).
@@ -105,6 +109,10 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 			sec = secBenefitNonCash
 		}
 		add(sec, "benefit", b.Label, b.Amount, b.Taxable, decimal.Zero, b.NonCash, true, "", b.ComponentID)
+	}
+	// Overtime, holiday work and piece pay are taxable cash earnings.
+	for _, e := range items.Earnings {
+		add(secEarningCash, e.Code, e.Label, e.Amount, e.Amount, decimal.Zero, false, true, "", nil)
 	}
 	// Approved attendance deductions are pay not earned: negative cash earnings, so basic plus
 	// earnings still adds up to the payslip's gross. When the engine capped them at gross, one

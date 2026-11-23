@@ -91,6 +91,11 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("payroll: attendance deductions: %w", err)
 	}
+	// Overtime, holiday work and approved piece output are paid as taxable cash earnings.
+	earnings, err := s.loadAttendanceEarnings(ctx, p, emps)
+	if err != nil {
+		return nil, fmt.Errorf("payroll: attendance earnings: %w", err)
+	}
 	if p.OnProgress != nil {
 		p.OnProgress(0, len(emps))
 	}
@@ -109,6 +114,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 			items.Attendance = append(items.Attendance, LabeledAmount{Label: attendanceLabel(d), Amount: d.Amount})
 			items.AttendanceIDs = append(items.AttendanceIDs, d.ID)
 		}
+		earnings.apply(emp.ID, &in, &items)
 		res, cerr := payrollengine.Compute(cfg, in)
 		if cerr != nil {
 			return nil, fmt.Errorf("payroll: employee %s: %w", emp.ID, cerr)
@@ -132,6 +138,9 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 			}
 			if aerr := s.markAttendanceApplied(ctx, p.TenantID, id, items.AttendanceIDs); aerr != nil {
 				return nil, fmt.Errorf("payroll: attendance deductions %s: %w", emp.ID, aerr)
+			}
+			if perr := s.markPieceOutputsPaid(ctx, p.TenantID, id, items.PieceOutputIDs); perr != nil {
+				return nil, fmt.Errorf("payroll: piece output %s: %w", emp.ID, perr)
 			}
 		}
 		out = append(out, line)

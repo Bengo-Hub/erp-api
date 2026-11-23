@@ -59,6 +59,7 @@ func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 	h.registerExternalClaimRoutes(r)
 	r.Route("/hrm/payroll", func(pr chi.Router) {
 		// Runs / payslips collection (erp-ui calls /hrm/payroll/payroll/...).
+		h.registerPieceWorkRoutes(pr) // piece rates + output (payroll_piece_work.go)
 		pr.Get("/payroll", h.ListPayslips)
 		pr.Post("/payroll", h.Command) // command dispatcher (disburse/...)
 		pr.Get("/payroll/employees", h.PayrollEmployees)
