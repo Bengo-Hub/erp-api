@@ -3,13 +3,11 @@ package attendance
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
-	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftassignment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftroster"
 	"github.com/Bengo-Hub/erp-api/internal/ent/shiftrosterslot"
@@ -319,17 +317,7 @@ func (s *Service) ResolvePlanner(ctx context.Context, tenantID uuid.UUID, from, 
 			}
 		}
 	}
-	names := map[uuid.UUID]string{}
-	if len(empIDs) > 0 {
-		es, eerr := s.orm.Employee.Query().Where(
-			employee.TenantID(tenantID), employee.IDIn(empIDs...),
-		).All(ctx)
-		if eerr == nil {
-			for _, e := range es {
-				names[e.ID] = strings.TrimSpace(e.FirstName + " " + e.LastName)
-			}
-		}
-	}
+	names := s.employeeNames(ctx, tenantID, empIDs)
 
 	out := make([]ResolvedCell, 0, len(rows))
 	for _, r := range rows {

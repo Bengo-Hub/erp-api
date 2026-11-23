@@ -151,6 +151,18 @@ func optionalUUIDParam(r *http.Request, key string) *uuid.UUID {
 	return &id
 }
 
+// optionalUUIDString parses a body string as a UUID, returning nil when empty or invalid.
+func optionalUUIDString(v string) *uuid.UUID {
+	if v == "" {
+		return nil
+	}
+	id, err := uuid.Parse(v)
+	if err != nil {
+		return nil
+	}
+	return &id
+}
+
 // appendUniqueStr appends s to slice only if not already present.
 func appendUniqueStr(slice []string, s string) []string {
 	for _, v := range slice {

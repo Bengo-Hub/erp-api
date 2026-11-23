@@ -21,6 +21,7 @@ const (
 	TypeResumes           = "resumes"
 	TypeClaimAttachments  = "claim-attachments"
 	TypeEmployeeDocuments = "employee-documents"
+	TypeAttendancePhotos  = "attendance-photos"
 )
 
 // maxFileBytes is the upload limit for every ERP file.
@@ -46,6 +47,7 @@ var allowedExt = map[string][]string{
 	TypeResumes:           documentExt,
 	TypeClaimAttachments:  append(append([]string{}, documentExt...), ".png", ".jpg", ".jpeg", ".webp", ".gif"),
 	TypeEmployeeDocuments: append(append([]string{}, documentExt...), ".png", ".jpg", ".jpeg", ".webp", ".gif"),
+	TypeAttendancePhotos:  {".png", ".jpg", ".jpeg", ".webp"},
 }
 
 // RegisterMediaTypes sets the ERP's media rules on the shared registry. Call once at startup.
@@ -81,6 +83,11 @@ func (m *Store) SaveClaimAttachment(ctx context.Context, tenantID, claimID uuid.
 // returns its key.
 func (m *Store) SaveEmployeeDocument(ctx context.Context, tenantID, employeeID uuid.UUID, filename string, data []byte) (string, error) {
 	return m.save(ctx, TypeEmployeeDocuments, tenantID, employeeID, filename, bytes.NewReader(data))
+}
+
+// SaveAttendancePhoto stores a clock-in or clock-out selfie (images only) and returns its key.
+func (m *Store) SaveAttendancePhoto(ctx context.Context, tenantID, employeeID uuid.UUID, filename string, r io.Reader) (string, error) {
+	return m.save(ctx, TypeAttendancePhotos, tenantID, employeeID, filename, r)
 }
 
 func (m *Store) save(ctx context.Context, mediaType string, tenantID, ownerID uuid.UUID, name string, r io.Reader) (string, error) {

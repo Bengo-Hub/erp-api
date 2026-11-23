@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
+	"github.com/Bengo-Hub/erp-api/internal/platform/media"
 )
 
 // Attendance RBAC permission codes.
@@ -21,8 +22,15 @@ const (
 
 // AttendanceHandler serves /api/v1/hrm/attendance/*.
 type AttendanceHandler struct {
-	log *zap.Logger
-	svc *attendance.Service
+	log   *zap.Logger
+	svc   *attendance.Service
+	media *media.Store // clock-in selfies (attendance_self.go)
+}
+
+// WithMedia enables ESS clock-in photo uploads.
+func (h *AttendanceHandler) WithMedia(m *media.Store) *AttendanceHandler {
+	h.media = m
+	return h
 }
 
 func NewAttendanceHandler(log *zap.Logger, svc *attendance.Service) *AttendanceHandler {
@@ -66,6 +74,11 @@ func (h *AttendanceHandler) RegisterRoutes(r chi.Router) {
 		// Roster + timesheets (registered in attendance_roster.go).
 		h.registerRosterRoutes(ar)
 		h.registerTimesheetRoutes(ar)
+		// Settings, devices, punches, access events, work sites and ESS clock-in.
+		h.registerSettingsRoutes(ar)
+		h.registerDeviceRoutes(ar)
+		h.registerWorkSiteRoutes(ar)
+		h.registerSelfClockRoutes(ar)
 
 		// Capacity per person and week for projects-api's workload (S2S, attendance_capacity.go).
 		ar.Get("/capacity", h.Capacity)
@@ -205,25 +218,30 @@ func (h *AttendanceHandler) ListRecords(w http.ResponseWriter, r *http.Request) 
 	if !ok || !requirePermission(w, scope, permAttendanceView) {
 		return
 	}
-	empID := optionalUUIDParam(r, "employee_id")
-	var from, to *time.Time
+	f := attendance.RecordFilter{
+		EmployeeID: selfOrParamEmployeeID(r, scope),
+		OutletID:   optionalUUIDParam(r, "outlet_id"),
+		Status:     r.URL.Query().Get("status"),
+	}
 	if d, err := parseDate(r.URL.Query().Get("from")); err == nil {
-		from = &d
+		f.From = &d
 	}
 	if d, err := parseDate(r.URL.Query().Get("to")); err == nil {
-		to = &d
+		f.To = &d
 	}
-	rows, err := h.svc.ListRecords(r.Context(), scope.TenantID, empID, from, to)
+	p := pagination.Parse(r)
+	rows, total, err := h.svc.ListRecords(r.Context(), scope.TenantID, f, p.Limit, p.Offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list records")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	writePaginated(w, rows, total, p)
 }
 
 type checkInBody struct {
 	EmployeeID  string `json:"employee_id"`
 	WorkShiftID string `json:"work_shift_id"`
+	OutletID    string `json:"outlet_id"`
 	Date        string `json:"date"`
 	CheckIn     string `json:"check_in"`
 	BiometricID string `json:"biometric_id"`
@@ -246,10 +264,8 @@ func (h *AttendanceHandler) CheckIn(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
 		return
 	}
-	date, err := parseDate(b.Date)
-	if err != nil {
-		date = time.Now().UTC().Truncate(24 * time.Hour)
-	}
+	// No date means the service derives the work day from the check-in in the outlet's zone.
+	date, _ := parseDate(b.Date)
 	checkIn := time.Now().UTC()
 	if b.CheckIn != "" {
 		if t, perr := time.Parse(time.RFC3339, b.CheckIn); perr == nil {
@@ -257,7 +273,8 @@ func (h *AttendanceHandler) CheckIn(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	in := attendance.CheckInInput{
-		EmployeeID: empID, Date: date, CheckIn: checkIn,
+		EmployeeID: empID, Date: date, CheckIn: checkIn, Source: "manual",
+		OutletID:    optionalUUIDString(b.OutletID),
 		BiometricID: b.BiometricID, GPSLat: b.GPSLat, GPSLng: b.GPSLng,
 	}
 	if b.WorkShiftID != "" {
@@ -319,19 +336,27 @@ func (h *AttendanceHandler) ListRules(w http.ResponseWriter, r *http.Request) {
 }
 
 type ruleBody struct {
-	Name                   string `json:"name"`
-	RuleType               string `json:"rule_type"`
-	Description            string `json:"description"`
-	IsActive               *bool  `json:"is_active"`
-	Priority               int    `json:"priority"`
-	LateThresholdMinutes   int    `json:"late_threshold_minutes"`
-	LatePenaltyType        string `json:"late_penalty_type"`
-	OvertimeThresholdHours string `json:"overtime_threshold_hours"`
-	OvertimeRateMultiplier string `json:"overtime_rate_multiplier"`
-	MaxOvertimeHours       string `json:"max_overtime_hours"`
-	StandardWorkHours      string `json:"standard_work_hours"`
-	MinWorkHours           string `json:"min_work_hours"`
-	MaxWorkHours           string `json:"max_work_hours"`
+	Name                       string `json:"name"`
+	RuleType                   string `json:"rule_type"`
+	Description                string `json:"description"`
+	IsActive                   *bool  `json:"is_active"`
+	Priority                   int    `json:"priority"`
+	BranchID                   string `json:"branch_id"`
+	DepartmentID               string `json:"department_id"`
+	LateThresholdMinutes       int    `json:"late_threshold_minutes"`
+	LatePenaltyType            string `json:"late_penalty_type"`
+	LatePenaltyValue           string `json:"late_penalty_value"`
+	OvertimeThresholdHours     string `json:"overtime_threshold_hours"`
+	OvertimeRateMultiplier     string `json:"overtime_rate_multiplier"`
+	MaxOvertimeHours           string `json:"max_overtime_hours"`
+	StandardWorkHours          string `json:"standard_work_hours"`
+	MinWorkHours               string `json:"min_work_hours"`
+	MaxWorkHours               string `json:"max_work_hours"`
+	ConsecutiveAbsentThreshold *int   `json:"consecutive_absent_threshold"`
+	MonthlyAbsentThreshold     *int   `json:"monthly_absent_threshold"`
+	AbsenteeismAction          string `json:"absenteeism_action"`
+	BreakDurationMinutes       *int   `json:"break_duration_minutes"`
+	HolidayPayMultiplier       string `json:"holiday_pay_multiplier"`
 }
 
 func (h *AttendanceHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
@@ -350,10 +375,15 @@ func (h *AttendanceHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	row, err := h.svc.CreateRule(r.Context(), scope.TenantID, attendance.RuleInput{
 		Name: b.Name, RuleType: b.RuleType, Description: b.Description,
 		IsActive: b.IsActive == nil || *b.IsActive, Priority: b.Priority,
+		BranchID: optionalUUIDString(b.BranchID), DepartmentID: optionalUUIDString(b.DepartmentID),
 		LateThresholdMinutes: b.LateThresholdMinutes, LatePenaltyType: b.LatePenaltyType,
+		LatePenaltyValue:       b.LatePenaltyValue,
 		OvertimeThresholdHours: b.OvertimeThresholdHours, OvertimeRateMultiplier: b.OvertimeRateMultiplier,
 		MaxOvertimeHours: b.MaxOvertimeHours, StandardWorkHours: b.StandardWorkHours,
 		MinWorkHours: b.MinWorkHours, MaxWorkHours: b.MaxWorkHours,
+		ConsecutiveAbsentThreshold: b.ConsecutiveAbsentThreshold, MonthlyAbsentThreshold: b.MonthlyAbsentThreshold,
+		AbsenteeismAction: b.AbsenteeismAction, BreakDurationMinutes: b.BreakDurationMinutes,
+		HolidayPayMultiplier: b.HolidayPayMultiplier,
 	})
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())

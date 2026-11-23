@@ -372,14 +372,23 @@ func (h *LeaveHandler) ListRequests(w http.ResponseWriter, r *http.Request) {
 	if !ok || !requirePermission(w, scope, permLeaveView) {
 		return
 	}
-	empID := optionalUUIDParam(r, "employee_id")
-	status := r.URL.Query().Get("status")
-	rows, err := h.svc.ListRequests(r.Context(), scope.TenantID, empID, status)
+	f := leave.RequestFilter{
+		EmployeeID: optionalUUIDParam(r, "employee_id"),
+		Status:     r.URL.Query().Get("status"),
+	}
+	if d, err := parseDate(r.URL.Query().Get("from")); err == nil {
+		f.From = &d
+	}
+	if d, err := parseDate(r.URL.Query().Get("to")); err == nil {
+		f.To = &d
+	}
+	p := pagination.Parse(r)
+	rows, total, err := h.svc.ListRequests(r.Context(), scope.TenantID, f, p.Limit, p.Offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list requests")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	writePaginated(w, rows, total, p)
 }
 
 func (h *LeaveHandler) GetRequest(w http.ResponseWriter, r *http.Request) {

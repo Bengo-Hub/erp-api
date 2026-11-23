@@ -5,20 +5,46 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshiftschedule"
+	"github.com/Bengo-Hub/erp-api/internal/platform/events"
 )
 
 // Service holds attendance CRUD + late/overtime computation. All queries are tenant-scoped.
 type Service struct {
 	orm *ent.Client
+	pub *events.Publisher
+	log *zap.Logger
 }
 
-func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
+func NewService(orm *ent.Client) *Service { return &Service{orm: orm, log: zap.NewNop()} }
+
+// WithPublisher enables attendance events (punch received, record updated) via the outbox.
+func (s *Service) WithPublisher(p *events.Publisher) *Service { s.pub = p; return s }
+
+// WithLogger sets the logger used by the device ingest and the background jobs.
+func (s *Service) WithLogger(l *zap.Logger) *Service {
+	if l != nil {
+		s.log = l
+	}
+	return s
+}
+
+// publish writes an attendance event to the outbox; failures are logged, never fatal, because
+// the attendance write already happened and the event is informational.
+func (s *Service) publish(ctx context.Context, tenantID, aggregateID uuid.UUID, eventType string, payload map[string]any) {
+	if s.pub == nil {
+		return
+	}
+	if err := s.pub.Publish(ctx, tenantID, aggregateID, eventType, payload); err != nil {
+		s.log.Warn("attendance event not written", zap.String("event", eventType), zap.Error(err))
+	}
+}
 
 // ---- Work shifts ----
 
@@ -148,22 +174,6 @@ func (s *Service) ListRules(ctx context.Context, tenantID uuid.UUID) ([]*ent.Att
 		Order(ent.Desc(attendancerule.FieldPriority)).All(ctx)
 }
 
-// activeOvertimeRule returns the highest-priority active overtime_policy rule for a tenant.
-func (s *Service) activeOvertimeRule(ctx context.Context, tenantID uuid.UUID) (*ent.AttendanceRule, error) {
-	rule, err := s.orm.AttendanceRule.Query().Where(
-		attendancerule.TenantID(tenantID),
-		attendancerule.IsActive(true),
-		attendancerule.RuleTypeEQ(attendancerule.RuleTypeOvertimePolicy),
-	).Order(ent.Desc(attendancerule.FieldPriority)).First(ctx)
-	if ent.IsNotFound(err) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("attendance: overtime rule: %w", err)
-	}
-	return rule, nil
-}
-
 // ---- ESS settings (per-tenant) ----
 
 // GetESSSettings returns the tenant's ESS settings, creating defaults on first access
@@ -195,7 +205,7 @@ func (s *Service) UpdateESSSettings(ctx context.Context, tenantID uuid.UUID, pat
 		"allow_overtime_application":             u.SetAllowOvertimeApplication,
 		"allow_advance_salary_application":       u.SetAllowAdvanceSalaryApplication,
 		"allow_losses_damage_submission":         u.SetAllowLossesDamageSubmission,
-		"allow_expense_claims_application":        u.SetAllowExpenseClaimsApplication,
+		"allow_expense_claims_application":       u.SetAllowExpenseClaimsApplication,
 		"require_password_change_on_first_login": u.SetRequirePasswordChangeOnFirstLogin,
 		"allow_weekend_login":                    u.SetAllowWeekendLogin,
 	}

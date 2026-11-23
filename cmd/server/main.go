@@ -266,7 +266,13 @@ func run() error {
 	payrollSettingsHandler := handlers.NewPayrollSettingsHandler(log, payrollSettingsSvc, orm)
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher)).WithSystemTenant(systemTenant)
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
-	attendanceHandler := handlers.NewAttendanceHandler(log, attendance.NewService(orm))
+	attendanceSvc := attendance.NewService(orm).WithPublisher(notifyPublisher).WithLogger(log.Named("attendance"))
+	attendanceHandler := handlers.NewAttendanceHandler(log, attendanceSvc).WithMedia(mediaStore)
+	// Rotation advance, auto-absent per tenant and day, and the punch processor sweep.
+	attendance.NewCron(attendanceSvc, redisClient, log, 0).Start(ctx)
+	employeesHandler.WithAttendance(attendanceSvc) // PUT /hrm/employees/{id}/device-pin
+	// ZKTeco PUSH (ADMS) endpoints for biometric terminals: public, keyed by device serial.
+	iclockHandler := handlers.NewICLockHandler(log, attendanceSvc)
 	recruitmentSvc := recruitment.NewService(orm).WithNotifier(events.NewNotifications(notifyPublisher))
 	recruitmentHandler := handlers.NewRecruitmentHandler(log, recruitmentSvc, mediaStore)
 	careersHandler := handlers.NewCareersHandler(log, recruitmentSvc) // PUBLIC careers portal
@@ -346,6 +352,17 @@ func run() error {
 	r.Get("/healthz", healthHandler.Liveness)
 	r.Get("/readyz", healthHandler.Readiness)
 	r.Get("/metrics", healthHandler.Metrics)
+	// Biometric devices push to /iclock/* (their server address is usually set without a path);
+	// the same routes are also served under /api/v1. No JWT: the handler admits registered,
+	// active serials only, and each serial plus IP has its own rate budget.
+	deviceLimit := rateLimiter.Middleware(handlers.DeviceKey, cfg.RateLimit.RequestsPerMinute, time.Minute)
+	// A per-address ceiling in front, so rotating made-up serials cannot dodge the per-serial
+	// budget. Sized for a site with several terminals behind one NAT address.
+	deviceIPLimit := rateLimiter.Middleware(handlers.DeviceIPKey, 10*cfg.RateLimit.RequestsPerMinute, time.Minute)
+	r.Group(func(dr chi.Router) {
+		dr.Use(deviceIPLimit, deviceLimit)
+		iclockHandler.RegisterRoutes(dr)
+	})
 	// Tenant export for auth-api's SSO tenant backups; the handler checks INTERNAL_SERVICE_KEY
 	// itself (httpware/tenantexport). Not mounted without a key.
 	if cfg.Auth.APIKey != "" {
@@ -359,6 +376,10 @@ func run() error {
 	})
 	r.Route("/api/v1", func(api chi.Router) {
 		brandingHandler.RegisterRoutes(api) // public branding
+		api.Group(func(dr chi.Router) {
+			dr.Use(deviceIPLimit, deviceLimit)
+			iclockHandler.RegisterRoutes(dr)
+		})
 		// Public careers portal (no auth): open postings + applications. The apply (write) route is
 		// IP-rate-limited (10/hour) to deter spam; reads are unthrottled.
 		careersHandler.RegisterRoutes(api, rateLimiter.IPRateLimiter(10, time.Hour))

@@ -18,16 +18,49 @@ import (
 // moduleLeaveRequest is the approvals-engine module key for leave requests.
 const moduleLeaveRequest = "leave_request"
 
-// ListRequests returns leave requests filtered by tenant (+ optional employee/status).
-func (s *Service) ListRequests(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, status string) ([]*ent.LeaveRequest, error) {
-	q := s.orm.LeaveRequest.Query().Where(leaverequest.TenantID(tenantID))
-	if employeeID != nil {
-		q = q.Where(leaverequest.EmployeeID(*employeeID))
+// DefaultRequestRangeDays bounds a leave request list without dates: requests overlapping the
+// year before and the year after today.
+const DefaultRequestRangeDays = 365
+
+// RequestFilter narrows a leave request list. From/To select requests overlapping the range.
+type RequestFilter struct {
+	EmployeeID *uuid.UUID
+	Status     string
+	From, To   *time.Time
+}
+
+// ListRequests returns one page of tenant leave requests, newest first, paged in SQL over a
+// bounded date range, with the total.
+func (s *Service) ListRequests(ctx context.Context, tenantID uuid.UUID, f RequestFilter, limit, offset int) ([]*ent.LeaveRequest, int, error) {
+	now := time.Now().UTC()
+	lo := now.AddDate(0, 0, -DefaultRequestRangeDays)
+	hi := now.AddDate(0, 0, DefaultRequestRangeDays)
+	if f.From != nil {
+		lo = *f.From
 	}
-	if status != "" {
-		q = q.Where(leaverequest.StatusEQ(leaverequest.Status(status)))
+	if f.To != nil {
+		hi = *f.To
 	}
-	return q.Order(ent.Desc(leaverequest.FieldCreatedAt)).All(ctx)
+	q := s.orm.LeaveRequest.Query().Where(
+		leaverequest.TenantID(tenantID),
+		leaverequest.EndDateGTE(lo),
+		leaverequest.StartDateLT(hi.AddDate(0, 0, 1)),
+	)
+	if f.EmployeeID != nil {
+		q = q.Where(leaverequest.EmployeeID(*f.EmployeeID))
+	}
+	if f.Status != "" {
+		q = q.Where(leaverequest.StatusEQ(leaverequest.Status(f.Status)))
+	}
+	total, err := q.Clone().Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("leave: count requests: %w", err)
+	}
+	rows, err := q.Order(ent.Desc(leaverequest.FieldCreatedAt)).Limit(limit).Offset(offset).All(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("leave: list requests: %w", err)
+	}
+	return rows, total, nil
 }
 
 // Get fetches one tenant-scoped leave request.

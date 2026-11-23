@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	platformauth "github.com/Bengo-Hub/erp-api/internal/platform/auth"
 	"github.com/Bengo-Hub/erp-api/internal/platform/media"
@@ -34,6 +35,8 @@ type EmployeesHandler struct {
 	treasury *treasury.Client
 	media    *media.Store
 	branding *platformauth.BrandingClient
+	// attendance serves the employee device PIN (employees_device_pin.go).
+	attendance *attendance.Service
 }
 
 func NewEmployeesHandler(log *zap.Logger, svc *employees.Service) *EmployeesHandler {
@@ -70,6 +73,7 @@ func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 		er.Patch("/{id}", h.Update)
 		er.Delete("/{id}", h.Delete)
 		er.Put("/{id}/salary", h.UpsertSalary)
+		er.Put("/{id}/device-pin", h.SetDevicePIN) // biometric user PIN (employees_device_pin.go)
 		er.Put("/{id}/bank-accounts/{accountID}/primary", h.SetPrimaryBank)
 		// HR documents (upload / list / stream).
 		er.Post("/{id}/documents", h.UploadDocument)

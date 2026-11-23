@@ -77,13 +77,14 @@ func LateMinutes(ctx context.Context, orm *ent.Client, tenantID uuid.UUID, recor
 		if shift == nil {
 			continue
 		}
-		checkIn := r.CheckIn.In(zoneOf(shift))
-		// The record's date is the calendar day of the check-in in the business's zone.
-		start := starts[dayKey{shift.ID, scheduleDayFor(checkIn)}]
+		// The record's date is its work day (a night shift's check-in may fall after midnight),
+		// and the shift start is wall-clock time in the shift's zone.
+		workDate := dateOnly(r.Date)
+		start := starts[dayKey{shift.ID, scheduleDayFor(workDate)}]
 		if start == "" && shift.StartTime != nil {
 			start = *shift.StartTime
 		}
-		if m := minutesLate(checkIn, start, shift.GraceMinutes); m > 0 {
+		if m := lateMinutesAt(*r.CheckIn, workDate, start, shift.GraceMinutes, zoneOf(shift)); m > 0 {
 			out[r.ID] = m
 		}
 	}
@@ -134,16 +135,4 @@ func shiftZones(ctx context.Context, orm *ent.Client, tenantID uuid.UUID, shifts
 		}
 		return fallback
 	}, nil
-}
-
-// minutesLate is the minutes between the shift start and check-in when the check-in falls after
-// the grace window, else 0. Lateness is counted from the start, not from the end of the grace,
-// because the grace only decides whether an arrival counts as late.
-func minutesLate(checkIn time.Time, startTime string, graceMinutes int) int {
-	if !isLate(checkIn, startTime, graceMinutes) {
-		return 0
-	}
-	t, _ := time.Parse("15:04", startTime)
-	start := time.Date(checkIn.Year(), checkIn.Month(), checkIn.Day(), t.Hour(), t.Minute(), 0, 0, checkIn.Location())
-	return int(checkIn.Sub(start).Minutes())
 }
