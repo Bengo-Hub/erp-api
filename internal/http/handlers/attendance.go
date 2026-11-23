@@ -79,6 +79,7 @@ func (h *AttendanceHandler) RegisterRoutes(r chi.Router) {
 		h.registerDeviceRoutes(ar)
 		h.registerWorkSiteRoutes(ar)
 		h.registerSelfClockRoutes(ar)
+		h.registerCorrectionRoutes(ar) // regularisations + overtime requests (S5)
 
 		// Capacity per person and week for projects-api's workload (S2S, attendance_capacity.go).
 		ar.Get("/capacity", h.Capacity)

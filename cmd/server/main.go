@@ -287,6 +287,9 @@ func run() error {
 	approvalsHandler := handlers.NewApprovalsHandler(log, approvalsSvc)
 	leaveSvc.SetApprovals(approvalsSvc)
 	appraisalsSvc.SetApprovals(approvalsSvc)
+	// Attendance regularisations and overtime requests decide through the approvals engine;
+	// their hooks apply the change when /approvals finishes a request.
+	attendanceSvc.SetApprovals(approvalsSvc)
 
 	// Sprint 4: internal task tracker (distinct from projects-service).
 	tasksHandler := handlers.NewTasksHandler(log, tasks.NewService(orm))

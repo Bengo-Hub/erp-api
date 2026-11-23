@@ -27,8 +27,9 @@ type Emitter interface {
 
 // Service is the approval engine. Every query is tenant-scoped.
 type Service struct {
-	orm  *ent.Client
-	emit Emitter
+	orm   *ent.Client
+	emit  Emitter
+	hooks hookRegistry // per-module apply functions run when a request finishes (hooks.go)
 }
 
 func NewService(orm *ent.Client, emit Emitter) *Service {
@@ -40,6 +41,8 @@ type Decision struct {
 	Request  *ent.ApprovalRequest
 	Action   *ent.ApprovalStepAction
 	Finished bool // true when the request reached a terminal state (approved/rejected)
+	// ApplyErr is set by DecideAndApply when the module hook failed after the decision.
+	ApplyErr error
 }
 
 // SubmitInput requests the creation of an approval workflow instance for an object.

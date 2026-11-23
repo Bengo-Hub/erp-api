@@ -231,14 +231,21 @@ func (h *ApprovalsHandler) decide(w http.ResponseWriter, r *http.Request, approv
 	var body decisionBody
 	_ = json.NewDecoder(r.Body).Decode(&body)
 	uid := scope.UserID
-	dec, err := h.svc.Decide(r.Context(), scope.TenantID, approvals.DecisionInput{
+	// DecideAndApply also runs the module's hook (attendance corrections, overtime) once the
+	// request finishes.
+	dec, err := h.svc.DecideAndApply(r.Context(), scope.TenantID, approvals.DecisionInput{
 		RequestID: id, Approve: approve, Escalate: escalate, Comment: body.Comment, ActedBy: &uid,
 	})
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "decision_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"request": dec.Request, "finished": dec.Finished})
+	resp := map[string]any{"request": dec.Request, "finished": dec.Finished}
+	if dec.ApplyErr != nil {
+		h.log.Error("approval decided but its change was not applied", zap.Error(dec.ApplyErr))
+		resp["apply_error"] = dec.ApplyErr.Error()
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *ApprovalsHandler) Approve(w http.ResponseWriter, r *http.Request) {

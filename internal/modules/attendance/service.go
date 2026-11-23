@@ -20,6 +20,8 @@ type Service struct {
 	orm *ent.Client
 	pub *events.Publisher
 	log *zap.Logger
+	// approvals routes regularisations and overtime requests (corrections.go); nil until wired.
+	approvals ApprovalEngine
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm, log: zap.NewNop()} }
