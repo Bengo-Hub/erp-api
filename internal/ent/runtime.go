@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"github.com/Bengo-Hub/erp-api/internal/ent/accessevent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/apirequestmetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/application"
@@ -19,6 +20,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflowstep"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancededuction"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancedevice"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancepunch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
@@ -33,6 +36,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
+	"github.com/Bengo-Hub/erp-api/internal/ent/devicecommand"
 	"github.com/Bengo-Hub/erp-api/internal/ent/documentsequence"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
@@ -110,6 +114,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/workersunion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshiftschedule"
+	"github.com/Bengo-Hub/erp-api/internal/ent/worksite"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
@@ -118,6 +123,36 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	accesseventFields := schema.AccessEvent{}.Fields()
+	_ = accesseventFields
+	// accesseventDescDevicePin is the schema descriptor for device_pin field.
+	accesseventDescDevicePin := accesseventFields[4].Descriptor()
+	// accessevent.DefaultDevicePin holds the default value on creation for the device_pin field.
+	accessevent.DefaultDevicePin = accesseventDescDevicePin.Default.(string)
+	// accesseventDescDoor is the schema descriptor for door field.
+	accesseventDescDoor := accesseventFields[7].Descriptor()
+	// accessevent.DefaultDoor holds the default value on creation for the door field.
+	accessevent.DefaultDoor = accesseventDescDoor.Default.(int)
+	// accesseventDescEventCode is the schema descriptor for event_code field.
+	accesseventDescEventCode := accesseventFields[9].Descriptor()
+	// accessevent.DefaultEventCode holds the default value on creation for the event_code field.
+	accessevent.DefaultEventCode = accesseventDescEventCode.Default.(int)
+	// accesseventDescVerifyMode is the schema descriptor for verify_mode field.
+	accesseventDescVerifyMode := accesseventFields[10].Descriptor()
+	// accessevent.DefaultVerifyMode holds the default value on creation for the verify_mode field.
+	accessevent.DefaultVerifyMode = accesseventDescVerifyMode.Default.(int)
+	// accesseventDescInOut is the schema descriptor for in_out field.
+	accesseventDescInOut := accesseventFields[11].Descriptor()
+	// accessevent.DefaultInOut holds the default value on creation for the in_out field.
+	accessevent.DefaultInOut = accesseventDescInOut.Default.(int)
+	// accesseventDescCreatedAt is the schema descriptor for created_at field.
+	accesseventDescCreatedAt := accesseventFields[13].Descriptor()
+	// accessevent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	accessevent.DefaultCreatedAt = accesseventDescCreatedAt.Default.(func() time.Time)
+	// accesseventDescID is the schema descriptor for id field.
+	accesseventDescID := accesseventFields[0].Descriptor()
+	// accessevent.DefaultID holds the default value on creation for the id field.
+	accessevent.DefaultID = accesseventDescID.Default.(func() uuid.UUID)
 	advanceFields := schema.Advance{}.Fields()
 	_ = advanceFields
 	// advanceDescApproved is the schema descriptor for approved field.
@@ -400,6 +435,68 @@ func init() {
 	attendancedeductionDescID := attendancedeductionFields[0].Descriptor()
 	// attendancededuction.DefaultID holds the default value on creation for the id field.
 	attendancededuction.DefaultID = attendancedeductionDescID.Default.(func() uuid.UUID)
+	attendancedeviceFields := schema.AttendanceDevice{}.Fields()
+	_ = attendancedeviceFields
+	// attendancedeviceDescSerialNumber is the schema descriptor for serial_number field.
+	attendancedeviceDescSerialNumber := attendancedeviceFields[4].Descriptor()
+	// attendancedevice.SerialNumberValidator is a validator for the "serial_number" field. It is called by the builders before save.
+	attendancedevice.SerialNumberValidator = attendancedeviceDescSerialNumber.Validators[0].(func(string) error)
+	// attendancedeviceDescActive is the schema descriptor for active field.
+	attendancedeviceDescActive := attendancedeviceFields[7].Descriptor()
+	// attendancedevice.DefaultActive holds the default value on creation for the active field.
+	attendancedevice.DefaultActive = attendancedeviceDescActive.Default.(bool)
+	// attendancedeviceDescUserCount is the schema descriptor for user_count field.
+	attendancedeviceDescUserCount := attendancedeviceFields[13].Descriptor()
+	// attendancedevice.DefaultUserCount holds the default value on creation for the user_count field.
+	attendancedevice.DefaultUserCount = attendancedeviceDescUserCount.Default.(int)
+	// attendancedeviceDescPunchCount is the schema descriptor for punch_count field.
+	attendancedeviceDescPunchCount := attendancedeviceFields[14].Descriptor()
+	// attendancedevice.DefaultPunchCount holds the default value on creation for the punch_count field.
+	attendancedevice.DefaultPunchCount = attendancedeviceDescPunchCount.Default.(int)
+	// attendancedeviceDescCreatedAt is the schema descriptor for created_at field.
+	attendancedeviceDescCreatedAt := attendancedeviceFields[16].Descriptor()
+	// attendancedevice.DefaultCreatedAt holds the default value on creation for the created_at field.
+	attendancedevice.DefaultCreatedAt = attendancedeviceDescCreatedAt.Default.(func() time.Time)
+	// attendancedeviceDescUpdatedAt is the schema descriptor for updated_at field.
+	attendancedeviceDescUpdatedAt := attendancedeviceFields[17].Descriptor()
+	// attendancedevice.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	attendancedevice.DefaultUpdatedAt = attendancedeviceDescUpdatedAt.Default.(func() time.Time)
+	// attendancedevice.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	attendancedevice.UpdateDefaultUpdatedAt = attendancedeviceDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// attendancedeviceDescID is the schema descriptor for id field.
+	attendancedeviceDescID := attendancedeviceFields[0].Descriptor()
+	// attendancedevice.DefaultID holds the default value on creation for the id field.
+	attendancedevice.DefaultID = attendancedeviceDescID.Default.(func() uuid.UUID)
+	attendancepunchFields := schema.AttendancePunch{}.Fields()
+	_ = attendancepunchFields
+	// attendancepunchDescDeviceSn is the schema descriptor for device_sn field.
+	attendancepunchDescDeviceSn := attendancepunchFields[3].Descriptor()
+	// attendancepunch.DefaultDeviceSn holds the default value on creation for the device_sn field.
+	attendancepunch.DefaultDeviceSn = attendancepunchDescDeviceSn.Default.(string)
+	// attendancepunchDescStatus is the schema descriptor for status field.
+	attendancepunchDescStatus := attendancepunchFields[7].Descriptor()
+	// attendancepunch.DefaultStatus holds the default value on creation for the status field.
+	attendancepunch.DefaultStatus = attendancepunchDescStatus.Default.(int)
+	// attendancepunchDescVerifyMode is the schema descriptor for verify_mode field.
+	attendancepunchDescVerifyMode := attendancepunchFields[8].Descriptor()
+	// attendancepunch.DefaultVerifyMode holds the default value on creation for the verify_mode field.
+	attendancepunch.DefaultVerifyMode = attendancepunchDescVerifyMode.Default.(int)
+	// attendancepunchDescProcessed is the schema descriptor for processed field.
+	attendancepunchDescProcessed := attendancepunchFields[11].Descriptor()
+	// attendancepunch.DefaultProcessed holds the default value on creation for the processed field.
+	attendancepunch.DefaultProcessed = attendancepunchDescProcessed.Default.(bool)
+	// attendancepunchDescFlagged is the schema descriptor for flagged field.
+	attendancepunchDescFlagged := attendancepunchFields[13].Descriptor()
+	// attendancepunch.DefaultFlagged holds the default value on creation for the flagged field.
+	attendancepunch.DefaultFlagged = attendancepunchDescFlagged.Default.(bool)
+	// attendancepunchDescCreatedAt is the schema descriptor for created_at field.
+	attendancepunchDescCreatedAt := attendancepunchFields[15].Descriptor()
+	// attendancepunch.DefaultCreatedAt holds the default value on creation for the created_at field.
+	attendancepunch.DefaultCreatedAt = attendancepunchDescCreatedAt.Default.(func() time.Time)
+	// attendancepunchDescID is the schema descriptor for id field.
+	attendancepunchDescID := attendancepunchFields[0].Descriptor()
+	// attendancepunch.DefaultID holds the default value on creation for the id field.
+	attendancepunch.DefaultID = attendancepunchDescID.Default.(func() uuid.UUID)
 	attendancerecordFields := schema.AttendanceRecord{}.Fields()
 	_ = attendancerecordFields
 	// attendancerecordDescTotalSecondsWorked is the schema descriptor for total_seconds_worked field.
@@ -415,11 +512,11 @@ func init() {
 	// attendancerecord.DefaultOvertimeHours holds the default value on creation for the overtime_hours field.
 	attendancerecord.DefaultOvertimeHours = attendancerecordDescOvertimeHours.Default.(decimal.Decimal)
 	// attendancerecordDescCreatedAt is the schema descriptor for created_at field.
-	attendancerecordDescCreatedAt := attendancerecordFields[16].Descriptor()
+	attendancerecordDescCreatedAt := attendancerecordFields[17].Descriptor()
 	// attendancerecord.DefaultCreatedAt holds the default value on creation for the created_at field.
 	attendancerecord.DefaultCreatedAt = attendancerecordDescCreatedAt.Default.(func() time.Time)
 	// attendancerecordDescUpdatedAt is the schema descriptor for updated_at field.
-	attendancerecordDescUpdatedAt := attendancerecordFields[17].Descriptor()
+	attendancerecordDescUpdatedAt := attendancerecordFields[18].Descriptor()
 	// attendancerecord.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	attendancerecord.DefaultUpdatedAt = attendancerecordDescUpdatedAt.Default.(func() time.Time)
 	// attendancerecord.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -848,6 +945,22 @@ func init() {
 	departmentDescID := departmentFields[0].Descriptor()
 	// department.DefaultID holds the default value on creation for the id field.
 	department.DefaultID = departmentDescID.Default.(func() uuid.UUID)
+	devicecommandFields := schema.DeviceCommand{}.Fields()
+	_ = devicecommandFields
+	// devicecommandDescCreatedAt is the schema descriptor for created_at field.
+	devicecommandDescCreatedAt := devicecommandFields[12].Descriptor()
+	// devicecommand.DefaultCreatedAt holds the default value on creation for the created_at field.
+	devicecommand.DefaultCreatedAt = devicecommandDescCreatedAt.Default.(func() time.Time)
+	// devicecommandDescUpdatedAt is the schema descriptor for updated_at field.
+	devicecommandDescUpdatedAt := devicecommandFields[13].Descriptor()
+	// devicecommand.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	devicecommand.DefaultUpdatedAt = devicecommandDescUpdatedAt.Default.(func() time.Time)
+	// devicecommand.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	devicecommand.UpdateDefaultUpdatedAt = devicecommandDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// devicecommandDescID is the schema descriptor for id field.
+	devicecommandDescID := devicecommandFields[0].Descriptor()
+	// devicecommand.DefaultID holds the default value on creation for the id field.
+	devicecommand.DefaultID = devicecommandDescID.Default.(func() uuid.UUID)
 	documentsequenceFields := schema.DocumentSequence{}.Fields()
 	_ = documentsequenceFields
 	// documentsequenceDescDocType is the schema descriptor for doc_type field.
@@ -971,11 +1084,11 @@ func init() {
 	// employee.DefaultDeleted holds the default value on creation for the deleted field.
 	employee.DefaultDeleted = employeeDescDeleted.Default.(bool)
 	// employeeDescCreatedAt is the schema descriptor for created_at field.
-	employeeDescCreatedAt := employeeFields[21].Descriptor()
+	employeeDescCreatedAt := employeeFields[23].Descriptor()
 	// employee.DefaultCreatedAt holds the default value on creation for the created_at field.
 	employee.DefaultCreatedAt = employeeDescCreatedAt.Default.(func() time.Time)
 	// employeeDescUpdatedAt is the schema descriptor for updated_at field.
-	employeeDescUpdatedAt := employeeFields[22].Descriptor()
+	employeeDescUpdatedAt := employeeFields[24].Descriptor()
 	// employee.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	employee.DefaultUpdatedAt = employeeDescUpdatedAt.Default.(func() time.Time)
 	// employee.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -2910,6 +3023,38 @@ func init() {
 	workshiftscheduleDescID := workshiftscheduleFields[0].Descriptor()
 	// workshiftschedule.DefaultID holds the default value on creation for the id field.
 	workshiftschedule.DefaultID = workshiftscheduleDescID.Default.(func() uuid.UUID)
+	worksiteFields := schema.WorkSite{}.Fields()
+	_ = worksiteFields
+	// worksiteDescCenterLat is the schema descriptor for center_lat field.
+	worksiteDescCenterLat := worksiteFields[4].Descriptor()
+	// worksite.DefaultCenterLat holds the default value on creation for the center_lat field.
+	worksite.DefaultCenterLat = worksiteDescCenterLat.Default.(float64)
+	// worksiteDescCenterLng is the schema descriptor for center_lng field.
+	worksiteDescCenterLng := worksiteFields[5].Descriptor()
+	// worksite.DefaultCenterLng holds the default value on creation for the center_lng field.
+	worksite.DefaultCenterLng = worksiteDescCenterLng.Default.(float64)
+	// worksiteDescRadiusM is the schema descriptor for radius_m field.
+	worksiteDescRadiusM := worksiteFields[6].Descriptor()
+	// worksite.DefaultRadiusM holds the default value on creation for the radius_m field.
+	worksite.DefaultRadiusM = worksiteDescRadiusM.Default.(float64)
+	// worksiteDescActive is the schema descriptor for active field.
+	worksiteDescActive := worksiteFields[9].Descriptor()
+	// worksite.DefaultActive holds the default value on creation for the active field.
+	worksite.DefaultActive = worksiteDescActive.Default.(bool)
+	// worksiteDescCreatedAt is the schema descriptor for created_at field.
+	worksiteDescCreatedAt := worksiteFields[10].Descriptor()
+	// worksite.DefaultCreatedAt holds the default value on creation for the created_at field.
+	worksite.DefaultCreatedAt = worksiteDescCreatedAt.Default.(func() time.Time)
+	// worksiteDescUpdatedAt is the schema descriptor for updated_at field.
+	worksiteDescUpdatedAt := worksiteFields[11].Descriptor()
+	// worksite.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	worksite.DefaultUpdatedAt = worksiteDescUpdatedAt.Default.(func() time.Time)
+	// worksite.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	worksite.UpdateDefaultUpdatedAt = worksiteDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// worksiteDescID is the schema descriptor for id field.
+	worksiteDescID := worksiteFields[0].Descriptor()
+	// worksite.DefaultID holds the default value on creation for the id field.
+	worksite.DefaultID = worksiteDescID.Default.(func() uuid.UUID)
 	workersunionFields := schema.WorkersUnion{}.Fields()
 	_ = workersunionFields
 	// workersunionDescName is the schema descriptor for name field.

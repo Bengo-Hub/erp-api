@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -58,6 +59,10 @@ type Employee struct {
 	WorkShiftID *uuid.UUID `json:"work_shift_id,omitempty"`
 	// Soft delete (delete_status)
 	Deleted bool `json:"deleted,omitempty"`
+	// DevicePin holds the value of the "device_pin" field.
+	DevicePin *string `json:"device_pin,omitempty"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -72,9 +77,11 @@ func (*Employee) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case employee.FieldOutletID, employee.FieldUserID, employee.FieldWorkShiftID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case employee.FieldMetadata:
+			values[i] = new([]byte)
 		case employee.FieldIsDirector, employee.FieldIsShareholder, employee.FieldTerminated, employee.FieldDeleted:
 			values[i] = new(sql.NullBool)
-		case employee.FieldEmployeeNumber, employee.FieldFirstName, employee.FieldLastName, employee.FieldEmail, employee.FieldGender, employee.FieldResidentialStatus, employee.FieldNationalID, employee.FieldPinNo, employee.FieldShifOrNhifNumber, employee.FieldNssfNo:
+		case employee.FieldEmployeeNumber, employee.FieldFirstName, employee.FieldLastName, employee.FieldEmail, employee.FieldGender, employee.FieldResidentialStatus, employee.FieldNationalID, employee.FieldPinNo, employee.FieldShifOrNhifNumber, employee.FieldNssfNo, employee.FieldDevicePin:
 			values[i] = new(sql.NullString)
 		case employee.FieldDateOfBirth, employee.FieldTerminatedAt, employee.FieldCreatedAt, employee.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -228,6 +235,21 @@ func (_m *Employee) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Deleted = value.Bool
 			}
+		case employee.FieldDevicePin:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field device_pin", values[i])
+			} else if value.Valid {
+				_m.DevicePin = new(string)
+				*_m.DevicePin = value.String
+			}
+		case employee.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
+			}
 		case employee.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -349,6 +371,14 @@ func (_m *Employee) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("deleted=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Deleted))
+	builder.WriteString(", ")
+	if v := _m.DevicePin; v != nil {
+		builder.WriteString("device_pin=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

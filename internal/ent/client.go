@@ -16,6 +16,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/Bengo-Hub/erp-api/internal/ent/accessevent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/apirequestmetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/application"
@@ -30,6 +31,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflowstep"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancededuction"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancedevice"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancepunch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
@@ -44,6 +47,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
+	"github.com/Bengo-Hub/erp-api/internal/ent/devicecommand"
 	"github.com/Bengo-Hub/erp-api/internal/ent/documentsequence"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
@@ -121,6 +125,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/workersunion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshiftschedule"
+	"github.com/Bengo-Hub/erp-api/internal/ent/worksite"
 
 	stdsql "database/sql"
 )
@@ -130,6 +135,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// AccessEvent is the client for interacting with the AccessEvent builders.
+	AccessEvent *AccessEventClient
 	// Advance is the client for interacting with the Advance builders.
 	Advance *AdvanceClient
 	// ApiRequestMetric is the client for interacting with the ApiRequestMetric builders.
@@ -158,6 +165,10 @@ type Client struct {
 	ApprovalWorkflowStep *ApprovalWorkflowStepClient
 	// AttendanceDeduction is the client for interacting with the AttendanceDeduction builders.
 	AttendanceDeduction *AttendanceDeductionClient
+	// AttendanceDevice is the client for interacting with the AttendanceDevice builders.
+	AttendanceDevice *AttendanceDeviceClient
+	// AttendancePunch is the client for interacting with the AttendancePunch builders.
+	AttendancePunch *AttendancePunchClient
 	// AttendanceRecord is the client for interacting with the AttendanceRecord builders.
 	AttendanceRecord *AttendanceRecordClient
 	// AttendanceRule is the client for interacting with the AttendanceRule builders.
@@ -186,6 +197,8 @@ type Client struct {
 	CustomUser *CustomUserClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// DeviceCommand is the client for interacting with the DeviceCommand builders.
+	DeviceCommand *DeviceCommandClient
 	// DocumentSequence is the client for interacting with the DocumentSequence builders.
 	DocumentSequence *DocumentSequenceClient
 	// ESSSettings is the client for interacting with the ESSSettings builders.
@@ -338,6 +351,8 @@ type Client struct {
 	WorkShift *WorkShiftClient
 	// WorkShiftSchedule is the client for interacting with the WorkShiftSchedule builders.
 	WorkShiftSchedule *WorkShiftScheduleClient
+	// WorkSite is the client for interacting with the WorkSite builders.
+	WorkSite *WorkSiteClient
 	// WorkersUnion is the client for interacting with the WorkersUnion builders.
 	WorkersUnion *WorkersUnionClient
 }
@@ -351,6 +366,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.AccessEvent = NewAccessEventClient(c.config)
 	c.Advance = NewAdvanceClient(c.config)
 	c.ApiRequestMetric = NewApiRequestMetricClient(c.config)
 	c.AppSetting = NewAppSettingClient(c.config)
@@ -365,6 +381,8 @@ func (c *Client) init() {
 	c.ApprovalWorkflow = NewApprovalWorkflowClient(c.config)
 	c.ApprovalWorkflowStep = NewApprovalWorkflowStepClient(c.config)
 	c.AttendanceDeduction = NewAttendanceDeductionClient(c.config)
+	c.AttendanceDevice = NewAttendanceDeviceClient(c.config)
+	c.AttendancePunch = NewAttendancePunchClient(c.config)
 	c.AttendanceRecord = NewAttendanceRecordClient(c.config)
 	c.AttendanceRule = NewAttendanceRuleClient(c.config)
 	c.AuthOutlet = NewAuthOutletClient(c.config)
@@ -379,6 +397,7 @@ func (c *Client) init() {
 	c.Contract = NewContractClient(c.config)
 	c.CustomUser = NewCustomUserClient(c.config)
 	c.Department = NewDepartmentClient(c.config)
+	c.DeviceCommand = NewDeviceCommandClient(c.config)
 	c.DocumentSequence = NewDocumentSequenceClient(c.config)
 	c.ESSSettings = NewESSSettingsClient(c.config)
 	c.Employee = NewEmployeeClient(c.config)
@@ -455,6 +474,7 @@ func (c *Client) init() {
 	c.WithHoldingTax = NewWithHoldingTaxClient(c.config)
 	c.WorkShift = NewWorkShiftClient(c.config)
 	c.WorkShiftSchedule = NewWorkShiftScheduleClient(c.config)
+	c.WorkSite = NewWorkSiteClient(c.config)
 	c.WorkersUnion = NewWorkersUnionClient(c.config)
 }
 
@@ -548,6 +568,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:                       ctx,
 		config:                    cfg,
+		AccessEvent:               NewAccessEventClient(cfg),
 		Advance:                   NewAdvanceClient(cfg),
 		ApiRequestMetric:          NewApiRequestMetricClient(cfg),
 		AppSetting:                NewAppSettingClient(cfg),
@@ -562,6 +583,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ApprovalWorkflow:          NewApprovalWorkflowClient(cfg),
 		ApprovalWorkflowStep:      NewApprovalWorkflowStepClient(cfg),
 		AttendanceDeduction:       NewAttendanceDeductionClient(cfg),
+		AttendanceDevice:          NewAttendanceDeviceClient(cfg),
+		AttendancePunch:           NewAttendancePunchClient(cfg),
 		AttendanceRecord:          NewAttendanceRecordClient(cfg),
 		AttendanceRule:            NewAttendanceRuleClient(cfg),
 		AuthOutlet:                NewAuthOutletClient(cfg),
@@ -576,6 +599,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Contract:                  NewContractClient(cfg),
 		CustomUser:                NewCustomUserClient(cfg),
 		Department:                NewDepartmentClient(cfg),
+		DeviceCommand:             NewDeviceCommandClient(cfg),
 		DocumentSequence:          NewDocumentSequenceClient(cfg),
 		ESSSettings:               NewESSSettingsClient(cfg),
 		Employee:                  NewEmployeeClient(cfg),
@@ -652,6 +676,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		WithHoldingTax:            NewWithHoldingTaxClient(cfg),
 		WorkShift:                 NewWorkShiftClient(cfg),
 		WorkShiftSchedule:         NewWorkShiftScheduleClient(cfg),
+		WorkSite:                  NewWorkSiteClient(cfg),
 		WorkersUnion:              NewWorkersUnionClient(cfg),
 	}, nil
 }
@@ -672,6 +697,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:                       ctx,
 		config:                    cfg,
+		AccessEvent:               NewAccessEventClient(cfg),
 		Advance:                   NewAdvanceClient(cfg),
 		ApiRequestMetric:          NewApiRequestMetricClient(cfg),
 		AppSetting:                NewAppSettingClient(cfg),
@@ -686,6 +712,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ApprovalWorkflow:          NewApprovalWorkflowClient(cfg),
 		ApprovalWorkflowStep:      NewApprovalWorkflowStepClient(cfg),
 		AttendanceDeduction:       NewAttendanceDeductionClient(cfg),
+		AttendanceDevice:          NewAttendanceDeviceClient(cfg),
+		AttendancePunch:           NewAttendancePunchClient(cfg),
 		AttendanceRecord:          NewAttendanceRecordClient(cfg),
 		AttendanceRule:            NewAttendanceRuleClient(cfg),
 		AuthOutlet:                NewAuthOutletClient(cfg),
@@ -700,6 +728,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Contract:                  NewContractClient(cfg),
 		CustomUser:                NewCustomUserClient(cfg),
 		Department:                NewDepartmentClient(cfg),
+		DeviceCommand:             NewDeviceCommandClient(cfg),
 		DocumentSequence:          NewDocumentSequenceClient(cfg),
 		ESSSettings:               NewESSSettingsClient(cfg),
 		Employee:                  NewEmployeeClient(cfg),
@@ -776,6 +805,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		WithHoldingTax:            NewWithHoldingTaxClient(cfg),
 		WorkShift:                 NewWorkShiftClient(cfg),
 		WorkShiftSchedule:         NewWorkShiftScheduleClient(cfg),
+		WorkSite:                  NewWorkSiteClient(cfg),
 		WorkersUnion:              NewWorkersUnionClient(cfg),
 	}, nil
 }
@@ -783,7 +813,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Advance.
+//		AccessEvent.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -806,16 +836,17 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Advance, c.ApiRequestMetric, c.AppSetting, c.Application, c.Appraisal,
-		c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
+		c.AccessEvent, c.Advance, c.ApiRequestMetric, c.AppSetting, c.Application,
+		c.Appraisal, c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceDeduction,
-		c.AttendanceRecord, c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.BenefitTax,
-		c.Candidate, c.CasualPayment, c.ClaimItem, c.CompanySettings,
-		c.ConsultantVoucher, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
-		c.DocumentSequence, c.ESSSettings, c.Employee, c.EmployeeBankAccount,
-		c.EmployeeBenefit, c.EmployeeDisciplinary, c.EmployeeDocument,
-		c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
+		c.AttendanceDevice, c.AttendancePunch, c.AttendanceRecord, c.AttendanceRule,
+		c.AuthOutlet, c.AuthTenant, c.BenefitTax, c.Candidate, c.CasualPayment,
+		c.ClaimItem, c.CompanySettings, c.ConsultantVoucher, c.ContactDetails,
+		c.Contract, c.CustomUser, c.Department, c.DeviceCommand, c.DocumentSequence,
+		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
+		c.EmployeeDisciplinary, c.EmployeeDocument, c.EmployeeEducation,
+		c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
 		c.EmployeeProjectAllocation, c.EmploymentHistory, c.ExchangeRate,
 		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
 		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
@@ -831,7 +862,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.StaffShiftOverride, c.Task, c.TaskComment, c.TaskLog, c.Timesheet,
 		c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
 		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
-		c.WorkersUnion,
+		c.WorkSite, c.WorkersUnion,
 	} {
 		n.Use(hooks...)
 	}
@@ -841,16 +872,17 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Advance, c.ApiRequestMetric, c.AppSetting, c.Application, c.Appraisal,
-		c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
+		c.AccessEvent, c.Advance, c.ApiRequestMetric, c.AppSetting, c.Application,
+		c.Appraisal, c.AppraisalCycle, c.AppraisalQuestion, c.AppraisalResponse,
 		c.AppraisalTemplate, c.ApprovalRequest, c.ApprovalStepAction,
 		c.ApprovalWorkflow, c.ApprovalWorkflowStep, c.AttendanceDeduction,
-		c.AttendanceRecord, c.AttendanceRule, c.AuthOutlet, c.AuthTenant, c.BenefitTax,
-		c.Candidate, c.CasualPayment, c.ClaimItem, c.CompanySettings,
-		c.ConsultantVoucher, c.ContactDetails, c.Contract, c.CustomUser, c.Department,
-		c.DocumentSequence, c.ESSSettings, c.Employee, c.EmployeeBankAccount,
-		c.EmployeeBenefit, c.EmployeeDisciplinary, c.EmployeeDocument,
-		c.EmployeeEducation, c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
+		c.AttendanceDevice, c.AttendancePunch, c.AttendanceRecord, c.AttendanceRule,
+		c.AuthOutlet, c.AuthTenant, c.BenefitTax, c.Candidate, c.CasualPayment,
+		c.ClaimItem, c.CompanySettings, c.ConsultantVoucher, c.ContactDetails,
+		c.Contract, c.CustomUser, c.Department, c.DeviceCommand, c.DocumentSequence,
+		c.ESSSettings, c.Employee, c.EmployeeBankAccount, c.EmployeeBenefit,
+		c.EmployeeDisciplinary, c.EmployeeDocument, c.EmployeeEducation,
+		c.EmployeeLoan, c.EmployeeMetric, c.EmployeeOnboarding,
 		c.EmployeeProjectAllocation, c.EmploymentHistory, c.ExchangeRate,
 		c.ExchangeRateAPISettings, c.ExpenseClaim, c.GeneralHRSettings, c.Goal,
 		c.GoalProgress, c.HRDetails, c.IdempotencyKey, c.JobGroup, c.JobPosting,
@@ -866,7 +898,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.StaffShiftOverride, c.Task, c.TaskComment, c.TaskLog, c.Timesheet,
 		c.TimesheetEntry, c.TrainingCourse, c.TrainingEnrollment, c.TrainingEvaluation,
 		c.UserRoleAssignment, c.WithHoldingTax, c.WorkShift, c.WorkShiftSchedule,
-		c.WorkersUnion,
+		c.WorkSite, c.WorkersUnion,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -875,6 +907,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AccessEventMutation:
+		return c.AccessEvent.mutate(ctx, m)
 	case *AdvanceMutation:
 		return c.Advance.mutate(ctx, m)
 	case *ApiRequestMetricMutation:
@@ -903,6 +937,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ApprovalWorkflowStep.mutate(ctx, m)
 	case *AttendanceDeductionMutation:
 		return c.AttendanceDeduction.mutate(ctx, m)
+	case *AttendanceDeviceMutation:
+		return c.AttendanceDevice.mutate(ctx, m)
+	case *AttendancePunchMutation:
+		return c.AttendancePunch.mutate(ctx, m)
 	case *AttendanceRecordMutation:
 		return c.AttendanceRecord.mutate(ctx, m)
 	case *AttendanceRuleMutation:
@@ -931,6 +969,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.CustomUser.mutate(ctx, m)
 	case *DepartmentMutation:
 		return c.Department.mutate(ctx, m)
+	case *DeviceCommandMutation:
+		return c.DeviceCommand.mutate(ctx, m)
 	case *DocumentSequenceMutation:
 		return c.DocumentSequence.mutate(ctx, m)
 	case *ESSSettingsMutation:
@@ -1083,10 +1123,145 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.WorkShift.mutate(ctx, m)
 	case *WorkShiftScheduleMutation:
 		return c.WorkShiftSchedule.mutate(ctx, m)
+	case *WorkSiteMutation:
+		return c.WorkSite.mutate(ctx, m)
 	case *WorkersUnionMutation:
 		return c.WorkersUnion.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AccessEventClient is a client for the AccessEvent schema.
+type AccessEventClient struct {
+	config
+}
+
+// NewAccessEventClient returns a client for the AccessEvent from the given config.
+func NewAccessEventClient(c config) *AccessEventClient {
+	return &AccessEventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `accessevent.Hooks(f(g(h())))`.
+func (c *AccessEventClient) Use(hooks ...Hook) {
+	c.hooks.AccessEvent = append(c.hooks.AccessEvent, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `accessevent.Intercept(f(g(h())))`.
+func (c *AccessEventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AccessEvent = append(c.inters.AccessEvent, interceptors...)
+}
+
+// Create returns a builder for creating a AccessEvent entity.
+func (c *AccessEventClient) Create() *AccessEventCreate {
+	mutation := newAccessEventMutation(c.config, OpCreate)
+	return &AccessEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AccessEvent entities.
+func (c *AccessEventClient) CreateBulk(builders ...*AccessEventCreate) *AccessEventCreateBulk {
+	return &AccessEventCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AccessEventClient) MapCreateBulk(slice any, setFunc func(*AccessEventCreate, int)) *AccessEventCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AccessEventCreateBulk{err: fmt.Errorf("calling to AccessEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AccessEventCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AccessEventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AccessEvent.
+func (c *AccessEventClient) Update() *AccessEventUpdate {
+	mutation := newAccessEventMutation(c.config, OpUpdate)
+	return &AccessEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AccessEventClient) UpdateOne(_m *AccessEvent) *AccessEventUpdateOne {
+	mutation := newAccessEventMutation(c.config, OpUpdateOne, withAccessEvent(_m))
+	return &AccessEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AccessEventClient) UpdateOneID(id uuid.UUID) *AccessEventUpdateOne {
+	mutation := newAccessEventMutation(c.config, OpUpdateOne, withAccessEventID(id))
+	return &AccessEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AccessEvent.
+func (c *AccessEventClient) Delete() *AccessEventDelete {
+	mutation := newAccessEventMutation(c.config, OpDelete)
+	return &AccessEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AccessEventClient) DeleteOne(_m *AccessEvent) *AccessEventDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AccessEventClient) DeleteOneID(id uuid.UUID) *AccessEventDeleteOne {
+	builder := c.Delete().Where(accessevent.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AccessEventDeleteOne{builder}
+}
+
+// Query returns a query builder for AccessEvent.
+func (c *AccessEventClient) Query() *AccessEventQuery {
+	return &AccessEventQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAccessEvent},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AccessEvent entity by its id.
+func (c *AccessEventClient) Get(ctx context.Context, id uuid.UUID) (*AccessEvent, error) {
+	return c.Query().Where(accessevent.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AccessEventClient) GetX(ctx context.Context, id uuid.UUID) *AccessEvent {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AccessEventClient) Hooks() []Hook {
+	return c.hooks.AccessEvent
+}
+
+// Interceptors returns the client interceptors.
+func (c *AccessEventClient) Interceptors() []Interceptor {
+	return c.inters.AccessEvent
+}
+
+func (c *AccessEventClient) mutate(ctx context.Context, m *AccessEventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AccessEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AccessEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AccessEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AccessEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AccessEvent mutation op: %q", m.Op())
 	}
 }
 
@@ -3016,6 +3191,272 @@ func (c *AttendanceDeductionClient) mutate(ctx context.Context, m *AttendanceDed
 	}
 }
 
+// AttendanceDeviceClient is a client for the AttendanceDevice schema.
+type AttendanceDeviceClient struct {
+	config
+}
+
+// NewAttendanceDeviceClient returns a client for the AttendanceDevice from the given config.
+func NewAttendanceDeviceClient(c config) *AttendanceDeviceClient {
+	return &AttendanceDeviceClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `attendancedevice.Hooks(f(g(h())))`.
+func (c *AttendanceDeviceClient) Use(hooks ...Hook) {
+	c.hooks.AttendanceDevice = append(c.hooks.AttendanceDevice, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `attendancedevice.Intercept(f(g(h())))`.
+func (c *AttendanceDeviceClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AttendanceDevice = append(c.inters.AttendanceDevice, interceptors...)
+}
+
+// Create returns a builder for creating a AttendanceDevice entity.
+func (c *AttendanceDeviceClient) Create() *AttendanceDeviceCreate {
+	mutation := newAttendanceDeviceMutation(c.config, OpCreate)
+	return &AttendanceDeviceCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AttendanceDevice entities.
+func (c *AttendanceDeviceClient) CreateBulk(builders ...*AttendanceDeviceCreate) *AttendanceDeviceCreateBulk {
+	return &AttendanceDeviceCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AttendanceDeviceClient) MapCreateBulk(slice any, setFunc func(*AttendanceDeviceCreate, int)) *AttendanceDeviceCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AttendanceDeviceCreateBulk{err: fmt.Errorf("calling to AttendanceDeviceClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AttendanceDeviceCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AttendanceDeviceCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AttendanceDevice.
+func (c *AttendanceDeviceClient) Update() *AttendanceDeviceUpdate {
+	mutation := newAttendanceDeviceMutation(c.config, OpUpdate)
+	return &AttendanceDeviceUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AttendanceDeviceClient) UpdateOne(_m *AttendanceDevice) *AttendanceDeviceUpdateOne {
+	mutation := newAttendanceDeviceMutation(c.config, OpUpdateOne, withAttendanceDevice(_m))
+	return &AttendanceDeviceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AttendanceDeviceClient) UpdateOneID(id uuid.UUID) *AttendanceDeviceUpdateOne {
+	mutation := newAttendanceDeviceMutation(c.config, OpUpdateOne, withAttendanceDeviceID(id))
+	return &AttendanceDeviceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AttendanceDevice.
+func (c *AttendanceDeviceClient) Delete() *AttendanceDeviceDelete {
+	mutation := newAttendanceDeviceMutation(c.config, OpDelete)
+	return &AttendanceDeviceDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AttendanceDeviceClient) DeleteOne(_m *AttendanceDevice) *AttendanceDeviceDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AttendanceDeviceClient) DeleteOneID(id uuid.UUID) *AttendanceDeviceDeleteOne {
+	builder := c.Delete().Where(attendancedevice.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AttendanceDeviceDeleteOne{builder}
+}
+
+// Query returns a query builder for AttendanceDevice.
+func (c *AttendanceDeviceClient) Query() *AttendanceDeviceQuery {
+	return &AttendanceDeviceQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAttendanceDevice},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AttendanceDevice entity by its id.
+func (c *AttendanceDeviceClient) Get(ctx context.Context, id uuid.UUID) (*AttendanceDevice, error) {
+	return c.Query().Where(attendancedevice.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AttendanceDeviceClient) GetX(ctx context.Context, id uuid.UUID) *AttendanceDevice {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AttendanceDeviceClient) Hooks() []Hook {
+	return c.hooks.AttendanceDevice
+}
+
+// Interceptors returns the client interceptors.
+func (c *AttendanceDeviceClient) Interceptors() []Interceptor {
+	return c.inters.AttendanceDevice
+}
+
+func (c *AttendanceDeviceClient) mutate(ctx context.Context, m *AttendanceDeviceMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AttendanceDeviceCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AttendanceDeviceUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AttendanceDeviceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AttendanceDeviceDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AttendanceDevice mutation op: %q", m.Op())
+	}
+}
+
+// AttendancePunchClient is a client for the AttendancePunch schema.
+type AttendancePunchClient struct {
+	config
+}
+
+// NewAttendancePunchClient returns a client for the AttendancePunch from the given config.
+func NewAttendancePunchClient(c config) *AttendancePunchClient {
+	return &AttendancePunchClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `attendancepunch.Hooks(f(g(h())))`.
+func (c *AttendancePunchClient) Use(hooks ...Hook) {
+	c.hooks.AttendancePunch = append(c.hooks.AttendancePunch, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `attendancepunch.Intercept(f(g(h())))`.
+func (c *AttendancePunchClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AttendancePunch = append(c.inters.AttendancePunch, interceptors...)
+}
+
+// Create returns a builder for creating a AttendancePunch entity.
+func (c *AttendancePunchClient) Create() *AttendancePunchCreate {
+	mutation := newAttendancePunchMutation(c.config, OpCreate)
+	return &AttendancePunchCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AttendancePunch entities.
+func (c *AttendancePunchClient) CreateBulk(builders ...*AttendancePunchCreate) *AttendancePunchCreateBulk {
+	return &AttendancePunchCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AttendancePunchClient) MapCreateBulk(slice any, setFunc func(*AttendancePunchCreate, int)) *AttendancePunchCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AttendancePunchCreateBulk{err: fmt.Errorf("calling to AttendancePunchClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AttendancePunchCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AttendancePunchCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AttendancePunch.
+func (c *AttendancePunchClient) Update() *AttendancePunchUpdate {
+	mutation := newAttendancePunchMutation(c.config, OpUpdate)
+	return &AttendancePunchUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AttendancePunchClient) UpdateOne(_m *AttendancePunch) *AttendancePunchUpdateOne {
+	mutation := newAttendancePunchMutation(c.config, OpUpdateOne, withAttendancePunch(_m))
+	return &AttendancePunchUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AttendancePunchClient) UpdateOneID(id uuid.UUID) *AttendancePunchUpdateOne {
+	mutation := newAttendancePunchMutation(c.config, OpUpdateOne, withAttendancePunchID(id))
+	return &AttendancePunchUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AttendancePunch.
+func (c *AttendancePunchClient) Delete() *AttendancePunchDelete {
+	mutation := newAttendancePunchMutation(c.config, OpDelete)
+	return &AttendancePunchDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AttendancePunchClient) DeleteOne(_m *AttendancePunch) *AttendancePunchDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AttendancePunchClient) DeleteOneID(id uuid.UUID) *AttendancePunchDeleteOne {
+	builder := c.Delete().Where(attendancepunch.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AttendancePunchDeleteOne{builder}
+}
+
+// Query returns a query builder for AttendancePunch.
+func (c *AttendancePunchClient) Query() *AttendancePunchQuery {
+	return &AttendancePunchQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAttendancePunch},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AttendancePunch entity by its id.
+func (c *AttendancePunchClient) Get(ctx context.Context, id uuid.UUID) (*AttendancePunch, error) {
+	return c.Query().Where(attendancepunch.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AttendancePunchClient) GetX(ctx context.Context, id uuid.UUID) *AttendancePunch {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AttendancePunchClient) Hooks() []Hook {
+	return c.hooks.AttendancePunch
+}
+
+// Interceptors returns the client interceptors.
+func (c *AttendancePunchClient) Interceptors() []Interceptor {
+	return c.inters.AttendancePunch
+}
+
+func (c *AttendancePunchClient) mutate(ctx context.Context, m *AttendancePunchMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AttendancePunchCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AttendancePunchUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AttendancePunchUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AttendancePunchDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AttendancePunch mutation op: %q", m.Op())
+	}
+}
+
 // AttendanceRecordClient is a client for the AttendanceRecord schema.
 type AttendanceRecordClient struct {
 	config
@@ -4923,6 +5364,139 @@ func (c *DepartmentClient) mutate(ctx context.Context, m *DepartmentMutation) (V
 		return (&DepartmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Department mutation op: %q", m.Op())
+	}
+}
+
+// DeviceCommandClient is a client for the DeviceCommand schema.
+type DeviceCommandClient struct {
+	config
+}
+
+// NewDeviceCommandClient returns a client for the DeviceCommand from the given config.
+func NewDeviceCommandClient(c config) *DeviceCommandClient {
+	return &DeviceCommandClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `devicecommand.Hooks(f(g(h())))`.
+func (c *DeviceCommandClient) Use(hooks ...Hook) {
+	c.hooks.DeviceCommand = append(c.hooks.DeviceCommand, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `devicecommand.Intercept(f(g(h())))`.
+func (c *DeviceCommandClient) Intercept(interceptors ...Interceptor) {
+	c.inters.DeviceCommand = append(c.inters.DeviceCommand, interceptors...)
+}
+
+// Create returns a builder for creating a DeviceCommand entity.
+func (c *DeviceCommandClient) Create() *DeviceCommandCreate {
+	mutation := newDeviceCommandMutation(c.config, OpCreate)
+	return &DeviceCommandCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of DeviceCommand entities.
+func (c *DeviceCommandClient) CreateBulk(builders ...*DeviceCommandCreate) *DeviceCommandCreateBulk {
+	return &DeviceCommandCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *DeviceCommandClient) MapCreateBulk(slice any, setFunc func(*DeviceCommandCreate, int)) *DeviceCommandCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &DeviceCommandCreateBulk{err: fmt.Errorf("calling to DeviceCommandClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*DeviceCommandCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &DeviceCommandCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for DeviceCommand.
+func (c *DeviceCommandClient) Update() *DeviceCommandUpdate {
+	mutation := newDeviceCommandMutation(c.config, OpUpdate)
+	return &DeviceCommandUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DeviceCommandClient) UpdateOne(_m *DeviceCommand) *DeviceCommandUpdateOne {
+	mutation := newDeviceCommandMutation(c.config, OpUpdateOne, withDeviceCommand(_m))
+	return &DeviceCommandUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DeviceCommandClient) UpdateOneID(id uuid.UUID) *DeviceCommandUpdateOne {
+	mutation := newDeviceCommandMutation(c.config, OpUpdateOne, withDeviceCommandID(id))
+	return &DeviceCommandUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for DeviceCommand.
+func (c *DeviceCommandClient) Delete() *DeviceCommandDelete {
+	mutation := newDeviceCommandMutation(c.config, OpDelete)
+	return &DeviceCommandDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DeviceCommandClient) DeleteOne(_m *DeviceCommand) *DeviceCommandDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DeviceCommandClient) DeleteOneID(id uuid.UUID) *DeviceCommandDeleteOne {
+	builder := c.Delete().Where(devicecommand.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DeviceCommandDeleteOne{builder}
+}
+
+// Query returns a query builder for DeviceCommand.
+func (c *DeviceCommandClient) Query() *DeviceCommandQuery {
+	return &DeviceCommandQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeDeviceCommand},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a DeviceCommand entity by its id.
+func (c *DeviceCommandClient) Get(ctx context.Context, id uuid.UUID) (*DeviceCommand, error) {
+	return c.Query().Where(devicecommand.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DeviceCommandClient) GetX(ctx context.Context, id uuid.UUID) *DeviceCommand {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *DeviceCommandClient) Hooks() []Hook {
+	return c.hooks.DeviceCommand
+}
+
+// Interceptors returns the client interceptors.
+func (c *DeviceCommandClient) Interceptors() []Interceptor {
+	return c.inters.DeviceCommand
+}
+
+func (c *DeviceCommandClient) mutate(ctx context.Context, m *DeviceCommandMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DeviceCommandCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DeviceCommandUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DeviceCommandUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DeviceCommandDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown DeviceCommand mutation op: %q", m.Op())
 	}
 }
 
@@ -15242,6 +15816,139 @@ func (c *WorkShiftScheduleClient) mutate(ctx context.Context, m *WorkShiftSchedu
 	}
 }
 
+// WorkSiteClient is a client for the WorkSite schema.
+type WorkSiteClient struct {
+	config
+}
+
+// NewWorkSiteClient returns a client for the WorkSite from the given config.
+func NewWorkSiteClient(c config) *WorkSiteClient {
+	return &WorkSiteClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `worksite.Hooks(f(g(h())))`.
+func (c *WorkSiteClient) Use(hooks ...Hook) {
+	c.hooks.WorkSite = append(c.hooks.WorkSite, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `worksite.Intercept(f(g(h())))`.
+func (c *WorkSiteClient) Intercept(interceptors ...Interceptor) {
+	c.inters.WorkSite = append(c.inters.WorkSite, interceptors...)
+}
+
+// Create returns a builder for creating a WorkSite entity.
+func (c *WorkSiteClient) Create() *WorkSiteCreate {
+	mutation := newWorkSiteMutation(c.config, OpCreate)
+	return &WorkSiteCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of WorkSite entities.
+func (c *WorkSiteClient) CreateBulk(builders ...*WorkSiteCreate) *WorkSiteCreateBulk {
+	return &WorkSiteCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *WorkSiteClient) MapCreateBulk(slice any, setFunc func(*WorkSiteCreate, int)) *WorkSiteCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &WorkSiteCreateBulk{err: fmt.Errorf("calling to WorkSiteClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*WorkSiteCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &WorkSiteCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for WorkSite.
+func (c *WorkSiteClient) Update() *WorkSiteUpdate {
+	mutation := newWorkSiteMutation(c.config, OpUpdate)
+	return &WorkSiteUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *WorkSiteClient) UpdateOne(_m *WorkSite) *WorkSiteUpdateOne {
+	mutation := newWorkSiteMutation(c.config, OpUpdateOne, withWorkSite(_m))
+	return &WorkSiteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *WorkSiteClient) UpdateOneID(id uuid.UUID) *WorkSiteUpdateOne {
+	mutation := newWorkSiteMutation(c.config, OpUpdateOne, withWorkSiteID(id))
+	return &WorkSiteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for WorkSite.
+func (c *WorkSiteClient) Delete() *WorkSiteDelete {
+	mutation := newWorkSiteMutation(c.config, OpDelete)
+	return &WorkSiteDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *WorkSiteClient) DeleteOne(_m *WorkSite) *WorkSiteDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *WorkSiteClient) DeleteOneID(id uuid.UUID) *WorkSiteDeleteOne {
+	builder := c.Delete().Where(worksite.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &WorkSiteDeleteOne{builder}
+}
+
+// Query returns a query builder for WorkSite.
+func (c *WorkSiteClient) Query() *WorkSiteQuery {
+	return &WorkSiteQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeWorkSite},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a WorkSite entity by its id.
+func (c *WorkSiteClient) Get(ctx context.Context, id uuid.UUID) (*WorkSite, error) {
+	return c.Query().Where(worksite.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *WorkSiteClient) GetX(ctx context.Context, id uuid.UUID) *WorkSite {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *WorkSiteClient) Hooks() []Hook {
+	return c.hooks.WorkSite
+}
+
+// Interceptors returns the client interceptors.
+func (c *WorkSiteClient) Interceptors() []Interceptor {
+	return c.inters.WorkSite
+}
+
+func (c *WorkSiteClient) mutate(ctx context.Context, m *WorkSiteMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&WorkSiteCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&WorkSiteUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&WorkSiteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&WorkSiteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown WorkSite mutation op: %q", m.Op())
+	}
+}
+
 // WorkersUnionClient is a client for the WorkersUnion schema.
 type WorkersUnionClient struct {
 	config
@@ -15378,54 +16085,54 @@ func (c *WorkersUnionClient) mutate(ctx context.Context, m *WorkersUnionMutation
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
-		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
-		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep,
-		AttendanceDeduction, AttendanceRecord, AttendanceRule, AuthOutlet, AuthTenant,
-		BenefitTax, Candidate, CasualPayment, ClaimItem, CompanySettings,
-		ConsultantVoucher, ContactDetails, Contract, CustomUser, Department,
-		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
-		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
-		EmployeeMetric, EmployeeOnboarding, EmployeeProjectAllocation,
-		EmploymentHistory, ExchangeRate, ExchangeRateAPISettings, ExpenseClaim,
-		GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey, JobGroup,
-		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
-		LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
-		MileageRoute, NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
-		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollRunJob,
-		PayrollSplitRatio, Payslip, PayslipAudit, PayslipLine, PerformanceMetric,
-		PerformanceReview, Permission, PublicHoliday, RecoveryLine, Region,
-		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
-		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
-		StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment, TaskLog,
-		Timesheet, TimesheetEntry, TrainingCourse, TrainingEnrollment,
+		AccessEvent, Advance, ApiRequestMetric, AppSetting, Application, Appraisal,
+		AppraisalCycle, AppraisalQuestion, AppraisalResponse, AppraisalTemplate,
+		ApprovalRequest, ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep,
+		AttendanceDeduction, AttendanceDevice, AttendancePunch, AttendanceRecord,
+		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, CasualPayment,
+		ClaimItem, CompanySettings, ConsultantVoucher, ContactDetails, Contract,
+		CustomUser, Department, DeviceCommand, DocumentSequence, ESSSettings, Employee,
+		EmployeeBankAccount, EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument,
+		EmployeeEducation, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
+		EmployeeProjectAllocation, EmploymentHistory, ExchangeRate,
+		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
+		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
+		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
+		LossAndDamage, MetricCategory, MetricTarget, MileageRoute, NextOfKin, OffDay,
+		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		PayrollFormulaItem, PayrollRelief, PayrollRunJob, PayrollSplitRatio, Payslip,
+		PayslipAudit, PayslipLine, PerformanceMetric, PerformanceReview, Permission,
+		PublicHoliday, RecoveryLine, Region, RepayOption, ReviewMetric, Role,
+		RolePermission, SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot,
+		ShiftRotation, StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment,
+		TaskLog, Timesheet, TimesheetEntry, TrainingCourse, TrainingEnrollment,
 		TrainingEvaluation, UserRoleAssignment, WithHoldingTax, WorkShift,
-		WorkShiftSchedule, WorkersUnion []ent.Hook
+		WorkShiftSchedule, WorkSite, WorkersUnion []ent.Hook
 	}
 	inters struct {
-		Advance, ApiRequestMetric, AppSetting, Application, Appraisal, AppraisalCycle,
-		AppraisalQuestion, AppraisalResponse, AppraisalTemplate, ApprovalRequest,
-		ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep,
-		AttendanceDeduction, AttendanceRecord, AttendanceRule, AuthOutlet, AuthTenant,
-		BenefitTax, Candidate, CasualPayment, ClaimItem, CompanySettings,
-		ConsultantVoucher, ContactDetails, Contract, CustomUser, Department,
-		DocumentSequence, ESSSettings, Employee, EmployeeBankAccount, EmployeeBenefit,
-		EmployeeDisciplinary, EmployeeDocument, EmployeeEducation, EmployeeLoan,
-		EmployeeMetric, EmployeeOnboarding, EmployeeProjectAllocation,
-		EmploymentHistory, ExchangeRate, ExchangeRateAPISettings, ExpenseClaim,
-		GeneralHRSettings, Goal, GoalProgress, HRDetails, IdempotencyKey, JobGroup,
-		JobPosting, JobTitle, LeaveBalance, LeaveCategory, LeaveEntitlement, LeaveLog,
-		LeaveRequest, LoanType, LossAndDamage, MetricCategory, MetricTarget,
-		MileageRoute, NextOfKin, OffDay, OnboardingTask, OutboxEvent, PayrollComponent,
-		PayrollFormula, PayrollFormulaItem, PayrollRelief, PayrollRunJob,
-		PayrollSplitRatio, Payslip, PayslipAudit, PayslipLine, PerformanceMetric,
-		PerformanceReview, Permission, PublicHoliday, RecoveryLine, Region,
-		RepayOption, ReviewMetric, Role, RolePermission, SalaryDetails,
-		ShiftAssignment, ShiftRoster, ShiftRosterSlot, ShiftRotation,
-		StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment, TaskLog,
-		Timesheet, TimesheetEntry, TrainingCourse, TrainingEnrollment,
+		AccessEvent, Advance, ApiRequestMetric, AppSetting, Application, Appraisal,
+		AppraisalCycle, AppraisalQuestion, AppraisalResponse, AppraisalTemplate,
+		ApprovalRequest, ApprovalStepAction, ApprovalWorkflow, ApprovalWorkflowStep,
+		AttendanceDeduction, AttendanceDevice, AttendancePunch, AttendanceRecord,
+		AttendanceRule, AuthOutlet, AuthTenant, BenefitTax, Candidate, CasualPayment,
+		ClaimItem, CompanySettings, ConsultantVoucher, ContactDetails, Contract,
+		CustomUser, Department, DeviceCommand, DocumentSequence, ESSSettings, Employee,
+		EmployeeBankAccount, EmployeeBenefit, EmployeeDisciplinary, EmployeeDocument,
+		EmployeeEducation, EmployeeLoan, EmployeeMetric, EmployeeOnboarding,
+		EmployeeProjectAllocation, EmploymentHistory, ExchangeRate,
+		ExchangeRateAPISettings, ExpenseClaim, GeneralHRSettings, Goal, GoalProgress,
+		HRDetails, IdempotencyKey, JobGroup, JobPosting, JobTitle, LeaveBalance,
+		LeaveCategory, LeaveEntitlement, LeaveLog, LeaveRequest, LoanType,
+		LossAndDamage, MetricCategory, MetricTarget, MileageRoute, NextOfKin, OffDay,
+		OnboardingTask, OutboxEvent, PayrollComponent, PayrollFormula,
+		PayrollFormulaItem, PayrollRelief, PayrollRunJob, PayrollSplitRatio, Payslip,
+		PayslipAudit, PayslipLine, PerformanceMetric, PerformanceReview, Permission,
+		PublicHoliday, RecoveryLine, Region, RepayOption, ReviewMetric, Role,
+		RolePermission, SalaryDetails, ShiftAssignment, ShiftRoster, ShiftRosterSlot,
+		ShiftRotation, StaffPurchaseDeduction, StaffShiftOverride, Task, TaskComment,
+		TaskLog, Timesheet, TimesheetEntry, TrainingCourse, TrainingEnrollment,
 		TrainingEvaluation, UserRoleAssignment, WithHoldingTax, WorkShift,
-		WorkShiftSchedule, WorkersUnion []ent.Interceptor
+		WorkShiftSchedule, WorkSite, WorkersUnion []ent.Interceptor
 	}
 )
 

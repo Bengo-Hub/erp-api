@@ -399,6 +399,38 @@ func (_u *EmployeeUpdate) SetNillableDeleted(v *bool) *EmployeeUpdate {
 	return _u
 }
 
+// SetDevicePin sets the "device_pin" field.
+func (_u *EmployeeUpdate) SetDevicePin(v string) *EmployeeUpdate {
+	_u.mutation.SetDevicePin(v)
+	return _u
+}
+
+// SetNillableDevicePin sets the "device_pin" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableDevicePin(v *string) *EmployeeUpdate {
+	if v != nil {
+		_u.SetDevicePin(*v)
+	}
+	return _u
+}
+
+// ClearDevicePin clears the value of the "device_pin" field.
+func (_u *EmployeeUpdate) ClearDevicePin() *EmployeeUpdate {
+	_u.mutation.ClearDevicePin()
+	return _u
+}
+
+// SetMetadata sets the "metadata" field.
+func (_u *EmployeeUpdate) SetMetadata(v map[string]interface{}) *EmployeeUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *EmployeeUpdate) ClearMetadata() *EmployeeUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *EmployeeUpdate) SetUpdatedAt(v time.Time) *EmployeeUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -559,6 +591,18 @@ func (_u *EmployeeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Deleted(); ok {
 		_spec.SetField(employee.FieldDeleted, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.DevicePin(); ok {
+		_spec.SetField(employee.FieldDevicePin, field.TypeString, value)
+	}
+	if _u.mutation.DevicePinCleared() {
+		_spec.ClearField(employee.FieldDevicePin, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(employee.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(employee.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(employee.FieldUpdatedAt, field.TypeTime, value)
@@ -953,6 +997,38 @@ func (_u *EmployeeUpdateOne) SetNillableDeleted(v *bool) *EmployeeUpdateOne {
 	return _u
 }
 
+// SetDevicePin sets the "device_pin" field.
+func (_u *EmployeeUpdateOne) SetDevicePin(v string) *EmployeeUpdateOne {
+	_u.mutation.SetDevicePin(v)
+	return _u
+}
+
+// SetNillableDevicePin sets the "device_pin" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableDevicePin(v *string) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetDevicePin(*v)
+	}
+	return _u
+}
+
+// ClearDevicePin clears the value of the "device_pin" field.
+func (_u *EmployeeUpdateOne) ClearDevicePin() *EmployeeUpdateOne {
+	_u.mutation.ClearDevicePin()
+	return _u
+}
+
+// SetMetadata sets the "metadata" field.
+func (_u *EmployeeUpdateOne) SetMetadata(v map[string]interface{}) *EmployeeUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *EmployeeUpdateOne) ClearMetadata() *EmployeeUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *EmployeeUpdateOne) SetUpdatedAt(v time.Time) *EmployeeUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -1143,6 +1219,18 @@ func (_u *EmployeeUpdateOne) sqlSave(ctx context.Context) (_node *Employee, err 
 	}
 	if value, ok := _u.mutation.Deleted(); ok {
 		_spec.SetField(employee.FieldDeleted, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.DevicePin(); ok {
+		_spec.SetField(employee.FieldDevicePin, field.TypeString, value)
+	}
+	if _u.mutation.DevicePinCleared() {
+		_spec.ClearField(employee.FieldDevicePin, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(employee.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(employee.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(employee.FieldUpdatedAt, field.TypeTime, value)

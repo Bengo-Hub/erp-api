@@ -53,6 +53,12 @@ func (Employee) Fields() []ent.Field {
 		// workload (owner, 17 November 2026). Unset means ERP holds no working hours for them.
 		field.UUID("work_shift_id", uuid.UUID{}).Optional().Nillable().Comment("Standard work shift (FK -> work_shifts.id): weekly working hours"),
 		field.Bool("deleted").Default(false).Comment("Soft delete (delete_status)"),
+		// DevicePIN is the employee's user PIN on biometric devices; every device batch resolves
+		// PINs to employees, so it is an indexed column, unique per tenant (NULLs never collide).
+		field.String("device_pin").Optional().Nillable(),
+		// Metadata holds attendance attributes such as attendance_mode ("site" by default,
+		// "field" for staff who may clock in anywhere with every punch geo-tagged).
+		field.JSON("metadata", map[string]any{}).Optional(),
 
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
@@ -68,5 +74,6 @@ func (Employee) Indexes() []ent.Index {
 		// National ID unique within a tenant, never globally.
 		index.Fields("tenant_id", "national_id").Unique(),
 		index.Fields("user_id"),
+		index.Fields("tenant_id", "device_pin").Unique(),
 	}
 }

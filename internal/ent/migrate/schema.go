@@ -9,6 +9,46 @@ import (
 )
 
 var (
+	// AccessEventsColumns holds the columns for the "access_events" table.
+	AccessEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "device_id", Type: field.TypeUUID},
+		{Name: "device_sn", Type: field.TypeString},
+		{Name: "device_pin", Type: field.TypeString, Default: ""},
+		{Name: "employee_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "occurred_at", Type: field.TypeTime},
+		{Name: "door", Type: field.TypeInt, Default: 1},
+		{Name: "result", Type: field.TypeEnum, Enums: []string{"granted", "denied"}},
+		{Name: "event_code", Type: field.TypeInt, Default: 0},
+		{Name: "verify_mode", Type: field.TypeInt, Default: 0},
+		{Name: "in_out", Type: field.TypeInt, Default: 0},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// AccessEventsTable holds the schema information for the "access_events" table.
+	AccessEventsTable = &schema.Table{
+		Name:       "access_events",
+		Columns:    AccessEventsColumns,
+		PrimaryKey: []*schema.Column{AccessEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "accessevent_device_sn_device_pin_occurred_at_door_event_code",
+				Unique:  true,
+				Columns: []*schema.Column{AccessEventsColumns[3], AccessEventsColumns[4], AccessEventsColumns[6], AccessEventsColumns[7], AccessEventsColumns[9]},
+			},
+			{
+				Name:    "accessevent_tenant_id_occurred_at",
+				Unique:  false,
+				Columns: []*schema.Column{AccessEventsColumns[1], AccessEventsColumns[6]},
+			},
+			{
+				Name:    "accessevent_tenant_id_result",
+				Unique:  false,
+				Columns: []*schema.Column{AccessEventsColumns[1], AccessEventsColumns[8]},
+			},
+		},
+	}
 	// AdvancesColumns holds the columns for the "advances" table.
 	AdvancesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -490,6 +530,92 @@ var (
 			},
 		},
 	}
+	// AttendanceDevicesColumns holds the columns for the "attendance_devices" table.
+	AttendanceDevicesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "outlet_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "work_site_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "serial_number", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "mode", Type: field.TypeEnum, Enums: []string{"ta", "ac"}, Default: "ta"},
+		{Name: "active", Type: field.TypeBool, Default: true},
+		{Name: "timezone", Type: field.TypeString, Nullable: true},
+		{Name: "last_seen_at", Type: field.TypeTime, Nullable: true},
+		{Name: "firmware", Type: field.TypeString, Nullable: true},
+		{Name: "push_version", Type: field.TypeString, Nullable: true},
+		{Name: "last_ip", Type: field.TypeString, Nullable: true},
+		{Name: "user_count", Type: field.TypeInt, Default: 0},
+		{Name: "punch_count", Type: field.TypeInt, Default: 0},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// AttendanceDevicesTable holds the schema information for the "attendance_devices" table.
+	AttendanceDevicesTable = &schema.Table{
+		Name:       "attendance_devices",
+		Columns:    AttendanceDevicesColumns,
+		PrimaryKey: []*schema.Column{AttendanceDevicesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "attendancedevice_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{AttendanceDevicesColumns[1]},
+			},
+			{
+				Name:    "attendancedevice_serial_number",
+				Unique:  true,
+				Columns: []*schema.Column{AttendanceDevicesColumns[4]},
+			},
+		},
+	}
+	// AttendancePunchesColumns holds the columns for the "attendance_punches" table.
+	AttendancePunchesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "device_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "device_sn", Type: field.TypeString, Default: ""},
+		{Name: "device_pin", Type: field.TypeString},
+		{Name: "employee_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "punched_at", Type: field.TypeTime},
+		{Name: "status", Type: field.TypeInt, Default: 0},
+		{Name: "verify_mode", Type: field.TypeInt, Default: 0},
+		{Name: "work_code", Type: field.TypeString, Nullable: true},
+		{Name: "source", Type: field.TypeEnum, Enums: []string{"device", "mobile", "web", "manual"}, Default: "device"},
+		{Name: "processed", Type: field.TypeBool, Default: false},
+		{Name: "attendance_record_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "flagged", Type: field.TypeBool, Default: false},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// AttendancePunchesTable holds the schema information for the "attendance_punches" table.
+	AttendancePunchesTable = &schema.Table{
+		Name:       "attendance_punches",
+		Columns:    AttendancePunchesColumns,
+		PrimaryKey: []*schema.Column{AttendancePunchesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "attendancepunch_device_sn_device_pin_punched_at",
+				Unique:  true,
+				Columns: []*schema.Column{AttendancePunchesColumns[3], AttendancePunchesColumns[4], AttendancePunchesColumns[6]},
+			},
+			{
+				Name:    "attendancepunch_tenant_id_punched_at",
+				Unique:  false,
+				Columns: []*schema.Column{AttendancePunchesColumns[1], AttendancePunchesColumns[6]},
+			},
+			{
+				Name:    "attendancepunch_tenant_id_processed",
+				Unique:  false,
+				Columns: []*schema.Column{AttendancePunchesColumns[1], AttendancePunchesColumns[11]},
+			},
+			{
+				Name:    "attendancepunch_tenant_id_employee_id_punched_at",
+				Unique:  false,
+				Columns: []*schema.Column{AttendancePunchesColumns[1], AttendancePunchesColumns[5], AttendancePunchesColumns[6]},
+			},
+		},
+	}
 	// AttendanceRecordsColumns holds the columns for the "attendance_records" table.
 	AttendanceRecordsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -508,6 +634,7 @@ var (
 		{Name: "regular_hours", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(8,2)"}},
 		{Name: "overtime_hours", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(8,2)"}},
 		{Name: "notes", Type: field.TypeString, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
@@ -1037,6 +1164,46 @@ var (
 			},
 		},
 	}
+	// DeviceCommandsColumns holds the columns for the "device_commands" table.
+	DeviceCommandsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "device_id", Type: field.TypeUUID},
+		{Name: "cmd_no", Type: field.TypeInt64},
+		{Name: "command_type", Type: field.TypeString},
+		{Name: "command", Type: field.TypeString, Size: 2147483647},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"queued", "sent", "done", "failed"}, Default: "queued"},
+		{Name: "return_code", Type: field.TypeInt, Nullable: true},
+		{Name: "result", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "sent_at", Type: field.TypeTime, Nullable: true},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// DeviceCommandsTable holds the schema information for the "device_commands" table.
+	DeviceCommandsTable = &schema.Table{
+		Name:       "device_commands",
+		Columns:    DeviceCommandsColumns,
+		PrimaryKey: []*schema.Column{DeviceCommandsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "devicecommand_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{DeviceCommandsColumns[1]},
+			},
+			{
+				Name:    "devicecommand_device_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{DeviceCommandsColumns[2], DeviceCommandsColumns[6]},
+			},
+			{
+				Name:    "devicecommand_device_id_cmd_no",
+				Unique:  true,
+				Columns: []*schema.Column{DeviceCommandsColumns[2], DeviceCommandsColumns[3]},
+			},
+		},
+	}
 	// DocumentSequencesColumns holds the columns for the "document_sequences" table.
 	DocumentSequencesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -1121,6 +1288,8 @@ var (
 		{Name: "terminated_at", Type: field.TypeTime, Nullable: true},
 		{Name: "work_shift_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "deleted", Type: field.TypeBool, Default: false},
+		{Name: "device_pin", Type: field.TypeString, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
@@ -1159,6 +1328,11 @@ var (
 				Name:    "employee_user_id",
 				Unique:  false,
 				Columns: []*schema.Column{EmployeesColumns[3]},
+			},
+			{
+				Name:    "employee_tenant_id_device_pin",
+				Unique:  true,
+				Columns: []*schema.Column{EmployeesColumns[1], EmployeesColumns[21]},
 			},
 		},
 	}
@@ -3743,6 +3917,39 @@ var (
 			},
 		},
 	}
+	// WorkSitesColumns holds the columns for the "work_sites" table.
+	WorkSitesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "outlet_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "name", Type: field.TypeString},
+		{Name: "center_lat", Type: field.TypeFloat64, Default: 0},
+		{Name: "center_lng", Type: field.TypeFloat64, Default: 0},
+		{Name: "radius_m", Type: field.TypeFloat64, Default: 100},
+		{Name: "ring", Type: field.TypeJSON, Nullable: true},
+		{Name: "holes", Type: field.TypeJSON, Nullable: true},
+		{Name: "active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// WorkSitesTable holds the schema information for the "work_sites" table.
+	WorkSitesTable = &schema.Table{
+		Name:       "work_sites",
+		Columns:    WorkSitesColumns,
+		PrimaryKey: []*schema.Column{WorkSitesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "worksite_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{WorkSitesColumns[1]},
+			},
+			{
+				Name:    "worksite_tenant_id_active",
+				Unique:  false,
+				Columns: []*schema.Column{WorkSitesColumns[1], WorkSitesColumns[9]},
+			},
+		},
+	}
 	// WorkersUnionsColumns holds the columns for the "workers_unions" table.
 	WorkersUnionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -3777,6 +3984,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AccessEventsTable,
 		AdvancesTable,
 		APIRequestMetricsTable,
 		AppSettingsTable,
@@ -3791,6 +3999,8 @@ var (
 		ApprovalWorkflowsTable,
 		ApprovalWorkflowStepsTable,
 		AttendanceDeductionsTable,
+		AttendanceDevicesTable,
+		AttendancePunchesTable,
 		AttendanceRecordsTable,
 		AttendanceRulesTable,
 		AuthOutletsTable,
@@ -3805,6 +4015,7 @@ var (
 		ContractsTable,
 		CustomUsersTable,
 		DepartmentsTable,
+		DeviceCommandsTable,
 		DocumentSequencesTable,
 		EssSettingsTable,
 		EmployeesTable,
@@ -3881,6 +4092,7 @@ var (
 		WithHoldingTaxesTable,
 		WorkShiftsTable,
 		WorkShiftSchedulesTable,
+		WorkSitesTable,
 		WorkersUnionsTable,
 	}
 )

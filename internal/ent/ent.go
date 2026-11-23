@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/Bengo-Hub/erp-api/internal/ent/accessevent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/apirequestmetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/application"
@@ -26,6 +27,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflowstep"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancededuction"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancedevice"
+	"github.com/Bengo-Hub/erp-api/internal/ent/attendancepunch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerule"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
@@ -40,6 +43,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/contract"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
+	"github.com/Bengo-Hub/erp-api/internal/ent/devicecommand"
 	"github.com/Bengo-Hub/erp-api/internal/ent/documentsequence"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
@@ -117,6 +121,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/workersunion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshiftschedule"
+	"github.com/Bengo-Hub/erp-api/internal/ent/worksite"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -177,6 +182,7 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			accessevent.Table:               accessevent.ValidColumn,
 			advance.Table:                   advance.ValidColumn,
 			apirequestmetric.Table:          apirequestmetric.ValidColumn,
 			appsetting.Table:                appsetting.ValidColumn,
@@ -191,6 +197,8 @@ func checkColumn(t, c string) error {
 			approvalworkflow.Table:          approvalworkflow.ValidColumn,
 			approvalworkflowstep.Table:      approvalworkflowstep.ValidColumn,
 			attendancededuction.Table:       attendancededuction.ValidColumn,
+			attendancedevice.Table:          attendancedevice.ValidColumn,
+			attendancepunch.Table:           attendancepunch.ValidColumn,
 			attendancerecord.Table:          attendancerecord.ValidColumn,
 			attendancerule.Table:            attendancerule.ValidColumn,
 			authoutlet.Table:                authoutlet.ValidColumn,
@@ -205,6 +213,7 @@ func checkColumn(t, c string) error {
 			contract.Table:                  contract.ValidColumn,
 			customuser.Table:                customuser.ValidColumn,
 			department.Table:                department.ValidColumn,
+			devicecommand.Table:             devicecommand.ValidColumn,
 			documentsequence.Table:          documentsequence.ValidColumn,
 			esssettings.Table:               esssettings.ValidColumn,
 			employee.Table:                  employee.ValidColumn,
@@ -281,6 +290,7 @@ func checkColumn(t, c string) error {
 			withholdingtax.Table:            withholdingtax.ValidColumn,
 			workshift.Table:                 workshift.ValidColumn,
 			workshiftschedule.Table:         workshiftschedule.ValidColumn,
+			worksite.Table:                  worksite.ValidColumn,
 			workersunion.Table:              workersunion.ValidColumn,
 		})
 	})

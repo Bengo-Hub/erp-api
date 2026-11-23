@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AccessEvent is the predicate function for accessevent builders.
+type AccessEvent func(*sql.Selector)
+
 // Advance is the predicate function for advance builders.
 type Advance func(*sql.Selector)
 
@@ -48,6 +51,12 @@ type ApprovalWorkflowStep func(*sql.Selector)
 // AttendanceDeduction is the predicate function for attendancededuction builders.
 type AttendanceDeduction func(*sql.Selector)
 
+// AttendanceDevice is the predicate function for attendancedevice builders.
+type AttendanceDevice func(*sql.Selector)
+
+// AttendancePunch is the predicate function for attendancepunch builders.
+type AttendancePunch func(*sql.Selector)
+
 // AttendanceRecord is the predicate function for attendancerecord builders.
 type AttendanceRecord func(*sql.Selector)
 
@@ -89,6 +98,9 @@ type CustomUser func(*sql.Selector)
 
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
+
+// DeviceCommand is the predicate function for devicecommand builders.
+type DeviceCommand func(*sql.Selector)
 
 // DocumentSequence is the predicate function for documentsequence builders.
 type DocumentSequence func(*sql.Selector)
@@ -317,6 +329,9 @@ type WorkShift func(*sql.Selector)
 
 // WorkShiftSchedule is the predicate function for workshiftschedule builders.
 type WorkShiftSchedule func(*sql.Selector)
+
+// WorkSite is the predicate function for worksite builders.
+type WorkSite func(*sql.Selector)
 
 // WorkersUnion is the predicate function for workersunion builders.
 type WorkersUnion func(*sql.Selector)

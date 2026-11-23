@@ -9,6 +9,18 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 )
 
+// The AccessEventFunc type is an adapter to allow the use of ordinary
+// function as AccessEvent mutator.
+type AccessEventFunc func(context.Context, *ent.AccessEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AccessEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AccessEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AccessEventMutation", m)
+}
+
 // The AdvanceFunc type is an adapter to allow the use of ordinary
 // function as Advance mutator.
 type AdvanceFunc func(context.Context, *ent.AdvanceMutation) (ent.Value, error)
@@ -177,6 +189,30 @@ func (f AttendanceDeductionFunc) Mutate(ctx context.Context, m ent.Mutation) (en
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttendanceDeductionMutation", m)
 }
 
+// The AttendanceDeviceFunc type is an adapter to allow the use of ordinary
+// function as AttendanceDevice mutator.
+type AttendanceDeviceFunc func(context.Context, *ent.AttendanceDeviceMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AttendanceDeviceFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AttendanceDeviceMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttendanceDeviceMutation", m)
+}
+
+// The AttendancePunchFunc type is an adapter to allow the use of ordinary
+// function as AttendancePunch mutator.
+type AttendancePunchFunc func(context.Context, *ent.AttendancePunchMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AttendancePunchFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AttendancePunchMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttendancePunchMutation", m)
+}
+
 // The AttendanceRecordFunc type is an adapter to allow the use of ordinary
 // function as AttendanceRecord mutator.
 type AttendanceRecordFunc func(context.Context, *ent.AttendanceRecordMutation) (ent.Value, error)
@@ -343,6 +379,18 @@ func (f DepartmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DepartmentMutation", m)
+}
+
+// The DeviceCommandFunc type is an adapter to allow the use of ordinary
+// function as DeviceCommand mutator.
+type DeviceCommandFunc func(context.Context, *ent.DeviceCommandMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DeviceCommandFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.DeviceCommandMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DeviceCommandMutation", m)
 }
 
 // The DocumentSequenceFunc type is an adapter to allow the use of ordinary
@@ -1255,6 +1303,18 @@ func (f WorkShiftScheduleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WorkShiftScheduleMutation", m)
+}
+
+// The WorkSiteFunc type is an adapter to allow the use of ordinary
+// function as WorkSite mutator.
+type WorkSiteFunc func(context.Context, *ent.WorkSiteMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WorkSiteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.WorkSiteMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WorkSiteMutation", m)
 }
 
 // The WorkersUnionFunc type is an adapter to allow the use of ordinary

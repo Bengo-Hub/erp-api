@@ -155,6 +155,11 @@ func Deleted(v bool) predicate.Employee {
 	return predicate.Employee(sql.FieldEQ(FieldDeleted, v))
 }
 
+// DevicePin applies equality check predicate on the "device_pin" field. It's identical to DevicePinEQ.
+func DevicePin(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldDevicePin, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Employee {
 	return predicate.Employee(sql.FieldEQ(FieldCreatedAt, v))
@@ -1243,6 +1248,91 @@ func DeletedEQ(v bool) predicate.Employee {
 // DeletedNEQ applies the NEQ predicate on the "deleted" field.
 func DeletedNEQ(v bool) predicate.Employee {
 	return predicate.Employee(sql.FieldNEQ(FieldDeleted, v))
+}
+
+// DevicePinEQ applies the EQ predicate on the "device_pin" field.
+func DevicePinEQ(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldDevicePin, v))
+}
+
+// DevicePinNEQ applies the NEQ predicate on the "device_pin" field.
+func DevicePinNEQ(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldNEQ(FieldDevicePin, v))
+}
+
+// DevicePinIn applies the In predicate on the "device_pin" field.
+func DevicePinIn(vs ...string) predicate.Employee {
+	return predicate.Employee(sql.FieldIn(FieldDevicePin, vs...))
+}
+
+// DevicePinNotIn applies the NotIn predicate on the "device_pin" field.
+func DevicePinNotIn(vs ...string) predicate.Employee {
+	return predicate.Employee(sql.FieldNotIn(FieldDevicePin, vs...))
+}
+
+// DevicePinGT applies the GT predicate on the "device_pin" field.
+func DevicePinGT(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldGT(FieldDevicePin, v))
+}
+
+// DevicePinGTE applies the GTE predicate on the "device_pin" field.
+func DevicePinGTE(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldGTE(FieldDevicePin, v))
+}
+
+// DevicePinLT applies the LT predicate on the "device_pin" field.
+func DevicePinLT(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldLT(FieldDevicePin, v))
+}
+
+// DevicePinLTE applies the LTE predicate on the "device_pin" field.
+func DevicePinLTE(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldLTE(FieldDevicePin, v))
+}
+
+// DevicePinContains applies the Contains predicate on the "device_pin" field.
+func DevicePinContains(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldContains(FieldDevicePin, v))
+}
+
+// DevicePinHasPrefix applies the HasPrefix predicate on the "device_pin" field.
+func DevicePinHasPrefix(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldHasPrefix(FieldDevicePin, v))
+}
+
+// DevicePinHasSuffix applies the HasSuffix predicate on the "device_pin" field.
+func DevicePinHasSuffix(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldHasSuffix(FieldDevicePin, v))
+}
+
+// DevicePinIsNil applies the IsNil predicate on the "device_pin" field.
+func DevicePinIsNil() predicate.Employee {
+	return predicate.Employee(sql.FieldIsNull(FieldDevicePin))
+}
+
+// DevicePinNotNil applies the NotNil predicate on the "device_pin" field.
+func DevicePinNotNil() predicate.Employee {
+	return predicate.Employee(sql.FieldNotNull(FieldDevicePin))
+}
+
+// DevicePinEqualFold applies the EqualFold predicate on the "device_pin" field.
+func DevicePinEqualFold(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldEqualFold(FieldDevicePin, v))
+}
+
+// DevicePinContainsFold applies the ContainsFold predicate on the "device_pin" field.
+func DevicePinContainsFold(v string) predicate.Employee {
+	return predicate.Employee(sql.FieldContainsFold(FieldDevicePin, v))
+}
+
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.Employee {
+	return predicate.Employee(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.Employee {
+	return predicate.Employee(sql.FieldNotNull(FieldMetadata))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

@@ -46,6 +46,8 @@ const (
 	FieldOvertimeHours = "overtime_hours"
 	// FieldNotes holds the string denoting the notes field in the database.
 	FieldNotes = "notes"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -72,6 +74,7 @@ var Columns = []string{
 	FieldRegularHours,
 	FieldOvertimeHours,
 	FieldNotes,
+	FieldMetadata,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }

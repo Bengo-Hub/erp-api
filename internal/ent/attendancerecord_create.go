@@ -211,6 +211,12 @@ func (_c *AttendanceRecordCreate) SetNillableNotes(v *string) *AttendanceRecordC
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *AttendanceRecordCreate) SetMetadata(v map[string]interface{}) *AttendanceRecordCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *AttendanceRecordCreate) SetCreatedAt(v time.Time) *AttendanceRecordCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -447,6 +453,10 @@ func (_c *AttendanceRecordCreate) createSpec() (*AttendanceRecord, *sqlgraph.Cre
 	if value, ok := _c.mutation.Notes(); ok {
 		_spec.SetField(attendancerecord.FieldNotes, field.TypeString, value)
 		_node.Notes = &value
+	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(attendancerecord.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(attendancerecord.FieldCreatedAt, field.TypeTime, value)
@@ -739,6 +749,24 @@ func (u *AttendanceRecordUpsert) UpdateNotes() *AttendanceRecordUpsert {
 // ClearNotes clears the value of the "notes" field.
 func (u *AttendanceRecordUpsert) ClearNotes() *AttendanceRecordUpsert {
 	u.SetNull(attendancerecord.FieldNotes)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *AttendanceRecordUpsert) SetMetadata(v map[string]interface{}) *AttendanceRecordUpsert {
+	u.Set(attendancerecord.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *AttendanceRecordUpsert) UpdateMetadata() *AttendanceRecordUpsert {
+	u.SetExcluded(attendancerecord.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *AttendanceRecordUpsert) ClearMetadata() *AttendanceRecordUpsert {
+	u.SetNull(attendancerecord.FieldMetadata)
 	return u
 }
 
@@ -1075,6 +1103,27 @@ func (u *AttendanceRecordUpsertOne) UpdateNotes() *AttendanceRecordUpsertOne {
 func (u *AttendanceRecordUpsertOne) ClearNotes() *AttendanceRecordUpsertOne {
 	return u.Update(func(s *AttendanceRecordUpsert) {
 		s.ClearNotes()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *AttendanceRecordUpsertOne) SetMetadata(v map[string]interface{}) *AttendanceRecordUpsertOne {
+	return u.Update(func(s *AttendanceRecordUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *AttendanceRecordUpsertOne) UpdateMetadata() *AttendanceRecordUpsertOne {
+	return u.Update(func(s *AttendanceRecordUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *AttendanceRecordUpsertOne) ClearMetadata() *AttendanceRecordUpsertOne {
+	return u.Update(func(s *AttendanceRecordUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -1580,6 +1629,27 @@ func (u *AttendanceRecordUpsertBulk) UpdateNotes() *AttendanceRecordUpsertBulk {
 func (u *AttendanceRecordUpsertBulk) ClearNotes() *AttendanceRecordUpsertBulk {
 	return u.Update(func(s *AttendanceRecordUpsert) {
 		s.ClearNotes()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *AttendanceRecordUpsertBulk) SetMetadata(v map[string]interface{}) *AttendanceRecordUpsertBulk {
+	return u.Update(func(s *AttendanceRecordUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *AttendanceRecordUpsertBulk) UpdateMetadata() *AttendanceRecordUpsertBulk {
+	return u.Update(func(s *AttendanceRecordUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *AttendanceRecordUpsertBulk) ClearMetadata() *AttendanceRecordUpsertBulk {
+	return u.Update(func(s *AttendanceRecordUpsert) {
+		s.ClearMetadata()
 	})
 }
 

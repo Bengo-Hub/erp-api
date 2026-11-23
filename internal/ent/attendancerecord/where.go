@@ -846,6 +846,16 @@ func NotesContainsFold(v string) predicate.AttendanceRecord {
 	return predicate.AttendanceRecord(sql.FieldContainsFold(FieldNotes, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.AttendanceRecord {
+	return predicate.AttendanceRecord(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.AttendanceRecord {
+	return predicate.AttendanceRecord(sql.FieldNotNull(FieldMetadata))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.AttendanceRecord {
 	return predicate.AttendanceRecord(sql.FieldEQ(FieldCreatedAt, v))

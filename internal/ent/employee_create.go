@@ -296,6 +296,26 @@ func (_c *EmployeeCreate) SetNillableDeleted(v *bool) *EmployeeCreate {
 	return _c
 }
 
+// SetDevicePin sets the "device_pin" field.
+func (_c *EmployeeCreate) SetDevicePin(v string) *EmployeeCreate {
+	_c.mutation.SetDevicePin(v)
+	return _c
+}
+
+// SetNillableDevicePin sets the "device_pin" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableDevicePin(v *string) *EmployeeCreate {
+	if v != nil {
+		_c.SetDevicePin(*v)
+	}
+	return _c
+}
+
+// SetMetadata sets the "metadata" field.
+func (_c *EmployeeCreate) SetMetadata(v map[string]interface{}) *EmployeeCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *EmployeeCreate) SetCreatedAt(v time.Time) *EmployeeCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -541,6 +561,14 @@ func (_c *EmployeeCreate) createSpec() (*Employee, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Deleted(); ok {
 		_spec.SetField(employee.FieldDeleted, field.TypeBool, value)
 		_node.Deleted = value
+	}
+	if value, ok := _c.mutation.DevicePin(); ok {
+		_spec.SetField(employee.FieldDevicePin, field.TypeString, value)
+		_node.DevicePin = &value
+	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(employee.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(employee.FieldCreatedAt, field.TypeTime, value)
@@ -929,6 +957,42 @@ func (u *EmployeeUpsert) SetDeleted(v bool) *EmployeeUpsert {
 // UpdateDeleted sets the "deleted" field to the value that was provided on create.
 func (u *EmployeeUpsert) UpdateDeleted() *EmployeeUpsert {
 	u.SetExcluded(employee.FieldDeleted)
+	return u
+}
+
+// SetDevicePin sets the "device_pin" field.
+func (u *EmployeeUpsert) SetDevicePin(v string) *EmployeeUpsert {
+	u.Set(employee.FieldDevicePin, v)
+	return u
+}
+
+// UpdateDevicePin sets the "device_pin" field to the value that was provided on create.
+func (u *EmployeeUpsert) UpdateDevicePin() *EmployeeUpsert {
+	u.SetExcluded(employee.FieldDevicePin)
+	return u
+}
+
+// ClearDevicePin clears the value of the "device_pin" field.
+func (u *EmployeeUpsert) ClearDevicePin() *EmployeeUpsert {
+	u.SetNull(employee.FieldDevicePin)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *EmployeeUpsert) SetMetadata(v map[string]interface{}) *EmployeeUpsert {
+	u.Set(employee.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *EmployeeUpsert) UpdateMetadata() *EmployeeUpsert {
+	u.SetExcluded(employee.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *EmployeeUpsert) ClearMetadata() *EmployeeUpsert {
+	u.SetNull(employee.FieldMetadata)
 	return u
 }
 
@@ -1377,6 +1441,48 @@ func (u *EmployeeUpsertOne) SetDeleted(v bool) *EmployeeUpsertOne {
 func (u *EmployeeUpsertOne) UpdateDeleted() *EmployeeUpsertOne {
 	return u.Update(func(s *EmployeeUpsert) {
 		s.UpdateDeleted()
+	})
+}
+
+// SetDevicePin sets the "device_pin" field.
+func (u *EmployeeUpsertOne) SetDevicePin(v string) *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetDevicePin(v)
+	})
+}
+
+// UpdateDevicePin sets the "device_pin" field to the value that was provided on create.
+func (u *EmployeeUpsertOne) UpdateDevicePin() *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateDevicePin()
+	})
+}
+
+// ClearDevicePin clears the value of the "device_pin" field.
+func (u *EmployeeUpsertOne) ClearDevicePin() *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.ClearDevicePin()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *EmployeeUpsertOne) SetMetadata(v map[string]interface{}) *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *EmployeeUpsertOne) UpdateMetadata() *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *EmployeeUpsertOne) ClearMetadata() *EmployeeUpsertOne {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -1994,6 +2100,48 @@ func (u *EmployeeUpsertBulk) SetDeleted(v bool) *EmployeeUpsertBulk {
 func (u *EmployeeUpsertBulk) UpdateDeleted() *EmployeeUpsertBulk {
 	return u.Update(func(s *EmployeeUpsert) {
 		s.UpdateDeleted()
+	})
+}
+
+// SetDevicePin sets the "device_pin" field.
+func (u *EmployeeUpsertBulk) SetDevicePin(v string) *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetDevicePin(v)
+	})
+}
+
+// UpdateDevicePin sets the "device_pin" field to the value that was provided on create.
+func (u *EmployeeUpsertBulk) UpdateDevicePin() *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateDevicePin()
+	})
+}
+
+// ClearDevicePin clears the value of the "device_pin" field.
+func (u *EmployeeUpsertBulk) ClearDevicePin() *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.ClearDevicePin()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *EmployeeUpsertBulk) SetMetadata(v map[string]interface{}) *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *EmployeeUpsertBulk) UpdateMetadata() *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *EmployeeUpsertBulk) ClearMetadata() *EmployeeUpsertBulk {
+	return u.Update(func(s *EmployeeUpsert) {
+		s.ClearMetadata()
 	})
 }
 

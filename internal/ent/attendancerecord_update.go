@@ -295,6 +295,18 @@ func (_u *AttendanceRecordUpdate) ClearNotes() *AttendanceRecordUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *AttendanceRecordUpdate) SetMetadata(v map[string]interface{}) *AttendanceRecordUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *AttendanceRecordUpdate) ClearMetadata() *AttendanceRecordUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *AttendanceRecordUpdate) SetUpdatedAt(v time.Time) *AttendanceRecordUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -435,6 +447,12 @@ func (_u *AttendanceRecordUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if _u.mutation.NotesCleared() {
 		_spec.ClearField(attendancerecord.FieldNotes, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(attendancerecord.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(attendancerecord.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(attendancerecord.FieldUpdatedAt, field.TypeTime, value)
@@ -724,6 +742,18 @@ func (_u *AttendanceRecordUpdateOne) ClearNotes() *AttendanceRecordUpdateOne {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *AttendanceRecordUpdateOne) SetMetadata(v map[string]interface{}) *AttendanceRecordUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *AttendanceRecordUpdateOne) ClearMetadata() *AttendanceRecordUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *AttendanceRecordUpdateOne) SetUpdatedAt(v time.Time) *AttendanceRecordUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -894,6 +924,12 @@ func (_u *AttendanceRecordUpdateOne) sqlSave(ctx context.Context) (_node *Attend
 	}
 	if _u.mutation.NotesCleared() {
 		_spec.ClearField(attendancerecord.FieldNotes, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(attendancerecord.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(attendancerecord.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(attendancerecord.FieldUpdatedAt, field.TypeTime, value)

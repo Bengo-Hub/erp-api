@@ -37,6 +37,10 @@ func (AttendanceRecord) Fields() []ent.Field {
 		hoursField("regular_hours"),
 		hoursField("overtime_hours"),
 		field.String("notes").Optional().Nillable(),
+		// Metadata holds attendance extras that need no column of their own: source of the
+		// punches, early_leave_minutes, late_minutes, shift_source, geo {inside, distance_m,
+		// site_id}, flagged (out-of-fence punch waiting for HR review) and auto_absent.
+		field.JSON("metadata", map[string]any{}).Optional(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

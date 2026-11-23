@@ -54,6 +54,10 @@ const (
 	FieldWorkShiftID = "work_shift_id"
 	// FieldDeleted holds the string denoting the deleted field in the database.
 	FieldDeleted = "deleted"
+	// FieldDevicePin holds the string denoting the device_pin field in the database.
+	FieldDevicePin = "device_pin"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -85,6 +89,8 @@ var Columns = []string{
 	FieldTerminatedAt,
 	FieldWorkShiftID,
 	FieldDeleted,
+	FieldDevicePin,
+	FieldMetadata,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -224,6 +230,11 @@ func ByWorkShiftID(opts ...sql.OrderTermOption) OrderOption {
 // ByDeleted orders the results by the deleted field.
 func ByDeleted(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDeleted, opts...).ToFunc()
+}
+
+// ByDevicePin orders the results by the device_pin field.
+func ByDevicePin(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDevicePin, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

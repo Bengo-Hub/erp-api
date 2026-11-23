@@ -14,6 +14,8 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// AccessEvent is the client for interacting with the AccessEvent builders.
+	AccessEvent *AccessEventClient
 	// Advance is the client for interacting with the Advance builders.
 	Advance *AdvanceClient
 	// ApiRequestMetric is the client for interacting with the ApiRequestMetric builders.
@@ -42,6 +44,10 @@ type Tx struct {
 	ApprovalWorkflowStep *ApprovalWorkflowStepClient
 	// AttendanceDeduction is the client for interacting with the AttendanceDeduction builders.
 	AttendanceDeduction *AttendanceDeductionClient
+	// AttendanceDevice is the client for interacting with the AttendanceDevice builders.
+	AttendanceDevice *AttendanceDeviceClient
+	// AttendancePunch is the client for interacting with the AttendancePunch builders.
+	AttendancePunch *AttendancePunchClient
 	// AttendanceRecord is the client for interacting with the AttendanceRecord builders.
 	AttendanceRecord *AttendanceRecordClient
 	// AttendanceRule is the client for interacting with the AttendanceRule builders.
@@ -70,6 +76,8 @@ type Tx struct {
 	CustomUser *CustomUserClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// DeviceCommand is the client for interacting with the DeviceCommand builders.
+	DeviceCommand *DeviceCommandClient
 	// DocumentSequence is the client for interacting with the DocumentSequence builders.
 	DocumentSequence *DocumentSequenceClient
 	// ESSSettings is the client for interacting with the ESSSettings builders.
@@ -222,6 +230,8 @@ type Tx struct {
 	WorkShift *WorkShiftClient
 	// WorkShiftSchedule is the client for interacting with the WorkShiftSchedule builders.
 	WorkShiftSchedule *WorkShiftScheduleClient
+	// WorkSite is the client for interacting with the WorkSite builders.
+	WorkSite *WorkSiteClient
 	// WorkersUnion is the client for interacting with the WorkersUnion builders.
 	WorkersUnion *WorkersUnionClient
 
@@ -355,6 +365,7 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.AccessEvent = NewAccessEventClient(tx.config)
 	tx.Advance = NewAdvanceClient(tx.config)
 	tx.ApiRequestMetric = NewApiRequestMetricClient(tx.config)
 	tx.AppSetting = NewAppSettingClient(tx.config)
@@ -369,6 +380,8 @@ func (tx *Tx) init() {
 	tx.ApprovalWorkflow = NewApprovalWorkflowClient(tx.config)
 	tx.ApprovalWorkflowStep = NewApprovalWorkflowStepClient(tx.config)
 	tx.AttendanceDeduction = NewAttendanceDeductionClient(tx.config)
+	tx.AttendanceDevice = NewAttendanceDeviceClient(tx.config)
+	tx.AttendancePunch = NewAttendancePunchClient(tx.config)
 	tx.AttendanceRecord = NewAttendanceRecordClient(tx.config)
 	tx.AttendanceRule = NewAttendanceRuleClient(tx.config)
 	tx.AuthOutlet = NewAuthOutletClient(tx.config)
@@ -383,6 +396,7 @@ func (tx *Tx) init() {
 	tx.Contract = NewContractClient(tx.config)
 	tx.CustomUser = NewCustomUserClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
+	tx.DeviceCommand = NewDeviceCommandClient(tx.config)
 	tx.DocumentSequence = NewDocumentSequenceClient(tx.config)
 	tx.ESSSettings = NewESSSettingsClient(tx.config)
 	tx.Employee = NewEmployeeClient(tx.config)
@@ -459,6 +473,7 @@ func (tx *Tx) init() {
 	tx.WithHoldingTax = NewWithHoldingTaxClient(tx.config)
 	tx.WorkShift = NewWorkShiftClient(tx.config)
 	tx.WorkShiftSchedule = NewWorkShiftScheduleClient(tx.config)
+	tx.WorkSite = NewWorkSiteClient(tx.config)
 	tx.WorkersUnion = NewWorkersUnionClient(tx.config)
 }
 
@@ -469,7 +484,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: Advance.QueryXXX(), the query will be executed
+// applies a query, for example: AccessEvent.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.
