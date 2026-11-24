@@ -20,12 +20,14 @@ import (
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 
 	"github.com/Bengo-Hub/erp-api/internal/config"
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/defaults"
+	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
 )
 
 func main() {
@@ -58,9 +60,19 @@ func main() {
 		log.Println("seed-defaults: no tenant shadows yet — nothing to seed")
 		return
 	}
+	// Payroll reliefs, formulas and components are platform rows every tenant inherits; reliefs
+	// copied per tenant by an earlier bootstrap are removed when they repeat the platform relief
+	// exactly, so platform rate changes reach those tenants too.
+	systemTenant, _ := uuid.Parse(cfg.Payroll.SystemTenantID)
+	payroll := payrollsettings.NewService(client, systemTenant)
 	for _, t := range tenants {
 		if err := svc.EnsureAll(ctx, t.ID); err != nil {
 			log.Fatalf("seed-defaults: tenant %s (%s): %v", t.Slug, t.ID, err)
+		}
+		if n, err := payroll.DedupeTenantReliefs(ctx, t.ID); err != nil {
+			log.Printf("seed-defaults: tenant %s: relief dedupe skipped: %v", t.Slug, err)
+		} else if n > 0 {
+			log.Printf("seed-defaults: tenant %s: removed %d relief copies identical to the platform reliefs", t.Slug, n)
 		}
 		log.Printf("seed-defaults: ensured defaults for tenant %s (%s)", t.Slug, t.ID)
 	}

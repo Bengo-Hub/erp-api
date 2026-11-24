@@ -1,102 +1,35 @@
-// Package payrollsettings owns the ERP's tenant-scoped statutory rate tables (PAYE,
-// NSSF, SHIF/NHIF, housing, relief) and resolves them into a payrollengine.Config.
-// Rates are NEVER read from treasury.
+// Package payrollsettings owns the ERP's payroll configuration: the statutory rate tables (PAYE,
+// NSSF, SHIF/NHIF, housing levy, NITA), the KRA reliefs and the earnings, deductions and benefits
+// catalogue, and resolves them into a payrollengine.Config.
+//
+// Configuration is defined once at platform level (rows of the system tenant) and inherited by
+// every tenant; a tenant customises only what it needs (resolver.go, reliefs.go, components.go).
+// Approved statutory rate changes published by treasury-api are applied to the platform rows only
+// (treasury_sync.go); the engine never calls treasury during a run.
 package payrollsettings
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
-	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
 )
 
-// Service provides CRUD + resolution over the payroll-settings tables.
+// Service provides CRUD and resolution over the payroll-settings tables.
 type Service struct {
 	orm *ent.Client
-	// systemTenant is the default-tenant whose rows are the inherited KRA national
-	// defaults; tenants without their own current formula fall back to it.
+	// systemTenant owns the platform rows (statutory formulas, reliefs, component catalogue)
+	// that every tenant inherits.
 	systemTenant uuid.UUID
 }
 
-// NewService builds the settings service. systemTenant is uuid.Nil-safe (falls back to
-// per-tenant only when zero).
+// NewService builds the settings service. A zero systemTenant disables inheritance (each tenant
+// then sees only its own rows).
 func NewService(orm *ent.Client, systemTenant uuid.UUID) *Service {
 	return &Service{orm: orm, systemTenant: systemTenant}
-}
-
-// ListFormulas returns tenant-scoped formulas, newest-effective first.
-func (s *Service) ListFormulas(ctx context.Context, tenantID uuid.UUID) ([]*ent.PayrollFormula, error) {
-	return s.orm.PayrollFormula.Query().
-		Where(payrollformula.TenantID(tenantID)).
-		Order(ent.Desc(payrollformula.FieldEffectiveFrom)).
-		All(ctx)
-}
-
-// EffectiveFormula resolves the single current+effective formula for (type, category) at
-// the given period, preferring the tenant's own rows then the system defaults. Returns a
-// typed error if none is configured (fail-loud).
-func (s *Service) EffectiveFormula(ctx context.Context, tenantID uuid.UUID, ftype, category string, period time.Time) (*ent.PayrollFormula, error) {
-	f, err := s.effectiveFor(ctx, tenantID, ftype, category, period)
-	if err == nil && f != nil {
-		return f, nil
-	}
-	if s.systemTenant != uuid.Nil && s.systemTenant != tenantID {
-		if f, err2 := s.effectiveFor(ctx, s.systemTenant, ftype, category, period); err2 == nil && f != nil {
-			return f, nil
-		}
-	}
-	return nil, fmt.Errorf("payrollsettings: no current %s/%s formula effective at %s", ftype, category, period.Format("2006-01-02"))
-}
-
-// effectiveFor finds a current formula matching type/category effective for period within
-// one tenant.
-func (s *Service) effectiveFor(ctx context.Context, tenantID uuid.UUID, ftype, category string, period time.Time) (*ent.PayrollFormula, error) {
-	q := s.orm.PayrollFormula.Query().Where(
-		payrollformula.TenantID(tenantID),
-		payrollformula.TypeEQ(ftype),
-		payrollformula.IsCurrent(true),
-	)
-	if category != "" {
-		q = q.Where(payrollformula.Category(category))
-	}
-	rows, err := q.Order(ent.Desc(payrollformula.FieldEffectiveFrom)).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for _, f := range rows {
-		if isEffective(f, period) {
-			return f, nil
-		}
-	}
-	// no date-bounded match; fall back to a current row with open bounds
-	for _, f := range rows {
-		if f.EffectiveFrom == nil {
-			return f, nil
-		}
-	}
-	if len(rows) > 0 {
-		return rows[0], nil
-	}
-	return nil, fmt.Errorf("not found")
-}
-
-func isEffective(f *ent.PayrollFormula, period time.Time) bool {
-	if f.EffectiveFrom == nil {
-		return false
-	}
-	if period.Before(*f.EffectiveFrom) {
-		return false
-	}
-	if f.EffectiveTo != nil && period.After(*f.EffectiveTo) {
-		return false
-	}
-	return true
 }
 
 // FormulaItems returns the bands of a formula (ascending amount_from).

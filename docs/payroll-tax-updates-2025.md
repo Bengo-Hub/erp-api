@@ -37,11 +37,16 @@ Personal relief: KES 2,400 per month, the only relief that remains.
 ## How the Go service applies them
 
 - Rates are effective-dated rows in `payrollsettings` (formula, items, reliefs). The formula chosen for
-  a payroll month is the one effective on that date; a tenant without its own current formula inherits
-  the system tenant's. An unconfigured statutory line is an error, never a silent zero.
+  a payroll month is the one in force on that date: the tenant's own version first, then the platform
+  version (the system tenant's). An unconfigured statutory line is an error, never a silent zero. The
+  full inherit and customise model is in [payroll-settings.md](payroll-settings.md).
 - Repealed reliefs are marked inactive, so a period after the repeal yields zero relief for them.
+  Reliefs are platform rows too; a tenant only records its own on/off choice.
 - Formula endpoints: `GET /formulas`, `GET /formulas/{id}`, `POST /formulas`, `PUT /formulas/{id}`,
-  `GET /formulas/relief-status` and `POST /formula-management`, under the payroll settings route.
-- To change a rate: add a new effective-dated formula (do not edit a past one), update
-  `KRADefaults()` and its test, and re-run `go run ./cmd/seed-payroll` (idempotent; it skips types that
-  already have a formula under the system tenant).
+  `DELETE /formulas/{id}`, `POST /formulas/{id}/customise`, `POST /formulas/{id}/revert`,
+  `GET /formulas/reliefs`, `GET /formulas/relief-status` and `POST /formula-management`, under the
+  payroll settings route.
+- To change a rate: approve it in treasury (the deploy-time sync, or `POST /platform/treasury-rate-sync`,
+  writes it as a new platform version), or as platform owner save a new current version of the
+  platform formula with its effective date. The previous version is closed the day before, so earlier
+  months keep their rates. Update `KRADefaults()` and its test only when the golden master changes.

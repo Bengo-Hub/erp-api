@@ -13,7 +13,8 @@ import (
 // PayrollFormula is the ERP-OWNED, tenant-scoped, effective-dated statutory rate table
 // (legacy hrm.payroll_settings.Formulas). Replaces global rates + the disabled save()
 // invariant: a DB partial unique index enforces ONE current formula per
-// (tenant, type, category). Rates are NEVER read from treasury.
+// (tenant, type, category). Platform rows (system tenant) are inherited by every tenant; a
+// payroll run never calls treasury (approved treasury rates are synced into platform rows).
 type PayrollFormula struct {
 	ent.Schema
 }

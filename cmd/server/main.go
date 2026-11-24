@@ -271,6 +271,11 @@ func run() error {
 	payrollHandler := handlers.NewPayrollHandler(log, payrollSvc, payrollDisburser).
 		WithMedia(mediaStore).WithLookups(lookupsClient).WithJobs(payrollJobs)
 	payrollSettingsHandler := handlers.NewPayrollSettingsHandler(log, payrollSettingsSvc, orm)
+	if treasuryClient.Enabled() {
+		payrollSettingsHandler.WithTreasuryRates(func(ctx context.Context) ([]treasury.StatutoryRate, error) {
+			return treasuryClient.ListStatutoryRates(ctx, systemTenant)
+		})
+	}
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher)).WithSystemTenant(systemTenant)
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
 	attendanceSvc := attendance.NewService(orm).WithPublisher(notifyPublisher).WithLogger(log.Named("attendance"))

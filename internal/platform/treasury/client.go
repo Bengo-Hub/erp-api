@@ -20,6 +20,7 @@ import (
 
 	serviceclient "github.com/Bengo-Hub/shared-service-client"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 )
 
@@ -169,6 +170,45 @@ func (c *Client) getRaw(ctx context.Context, fullURL string) (json.RawMessage, e
 		return nil, fmt.Errorf("treasury: %s status %d", fullURL, resp.StatusCode)
 	}
 	return json.RawMessage(body), nil
+}
+
+// StatutoryRate is one row of treasury's platform-wide statutory rate reference
+// (GET /api/v1/s2s/{tenant}/statutory-rates). Treasury lists only rates in force: rows the
+// platform owner created or approved through a tax advisor proposal.
+type StatutoryRate struct {
+	Category      string           `json:"category"`
+	Code          string           `json:"code"`
+	Name          string           `json:"name"`
+	Rate          decimal.Decimal  `json:"rate"`
+	RateType      string           `json:"rate_type"`
+	ThresholdMin  *decimal.Decimal `json:"threshold_min,omitempty"`
+	ThresholdMax  *decimal.Decimal `json:"threshold_max,omitempty"`
+	Source        string           `json:"source,omitempty"`
+	EffectiveFrom time.Time        `json:"effective_from"`
+	EffectiveTo   *time.Time       `json:"effective_to,omitempty"`
+	Params        map[string]any   `json:"params,omitempty"`
+	IsActive      bool             `json:"is_active"`
+	VerifiedAt    string           `json:"verified_at,omitempty"`
+}
+
+// ListStatutoryRates reads treasury's in-force statutory rate reference. The reference is
+// platform-wide; tenantID only fills the S2S path.
+func (c *Client) ListStatutoryRates(ctx context.Context, tenantID uuid.UUID) ([]StatutoryRate, error) {
+	if !c.enabled {
+		return nil, fmt.Errorf("treasury client not configured")
+	}
+	raw, err := c.getRaw(ctx, fmt.Sprintf("%s/api/v1/s2s/%s/statutory-rates", c.baseURL, tenantID.String()))
+	if err != nil {
+		return nil, err
+	}
+	// Treasury answers {"rates": [...], "total": n}.
+	var env struct {
+		Rates []StatutoryRate `json:"rates"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return nil, fmt.Errorf("treasury: decode statutory rates: %w", err)
+	}
+	return env.Rates, nil
 }
 
 // ClaimCheck is what treasury needs to check a staff claim against the tenant's budgets.

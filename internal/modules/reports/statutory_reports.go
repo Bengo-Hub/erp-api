@@ -8,8 +8,9 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
-	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslipline"
+	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
+	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
 )
 
 // nitaPerEmployee is the default monthly NITA Industrial Training Levy per employee (KES).
@@ -182,17 +183,10 @@ func (s *Service) NITA(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	return rep, nil
 }
 
-// nitaEnabled reads the tenant's NITA toggle (missing settings row = enabled).
+// nitaEnabled reads the tenant's NITA toggle through the payroll settings resolver, the same
+// rule payroll runs use (missing settings row = enabled).
 func (s *Service) nitaEnabled(ctx context.Context, tenantID uuid.UUID) (bool, error) {
-	g, err := s.orm.GeneralHRSettings.Query().
-		Where(generalhrsettings.TenantID(tenantID)).Only(ctx)
-	if ent.IsNotFound(err) {
-		return true, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return g.NitaEnabled, nil
+	return payrollsettings.NewService(s.orm, uuid.Nil).StatutoryEnabled(ctx, tenantID, payrollengine.CompNITA)
 }
 
 // nitaLineAmounts maps payslip ID → itemised NITA employer amount for the given slips.

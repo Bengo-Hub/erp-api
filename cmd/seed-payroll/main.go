@@ -28,6 +28,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/config"
 	"github.com/Bengo-Hub/erp-api/internal/ent"
@@ -35,6 +36,8 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
 	"github.com/Bengo-Hub/erp-api/internal/modules/defaults"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
+	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
+	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 )
 
 var hundred = decimal.NewFromInt(100)
@@ -86,6 +89,7 @@ func main() {
 	if err := seed(ctx, client, systemTenant); err != nil {
 		log.Fatalf("seed-payroll: %v", err)
 	}
+	syncTreasuryRates(ctx, cfg, client, systemTenant)
 	log.Printf("seed-payroll: global statutory rates ready under system tenant %s", systemTenant)
 }
 
@@ -142,7 +146,37 @@ func seed(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
 		return err
 	}
 	log.Printf("  seeded global appraisal template")
+
+	// Platform catalogue of earnings, deductions and benefits. Tenants inherit it: statutory and
+	// module-managed items are on, the rest are opt-in per tenant (payrollsettings.components).
+	n, err := payrollsettings.EnsurePlatformCatalogue(ctx, client, tenantID)
+	if err != nil {
+		return err
+	}
+	log.Printf("  platform payroll component catalogue ready (%d added)", n)
 	return nil
+}
+
+// syncTreasuryRates applies treasury's approved, newer statutory rate changes to the platform
+// formulas. Best effort: an unconfigured or unreachable treasury leaves the seeded rates alone.
+func syncTreasuryRates(ctx context.Context, cfg *config.Config, client *ent.Client, systemTenant uuid.UUID) {
+	tc := treasury.NewClient(cfg.Services.TreasuryURL, cfg.Auth.APIKey, zap.NewNop())
+	if !tc.Enabled() {
+		log.Printf("  treasury rate sync skipped (treasury not configured)")
+		return
+	}
+	rates, err := tc.ListStatutoryRates(ctx, systemTenant)
+	if err != nil {
+		log.Printf("  treasury rate sync skipped: %v", err)
+		return
+	}
+	res, err := payrollsettings.NewService(client, systemTenant).SyncTreasuryRates(ctx, rates)
+	if err != nil {
+		log.Printf("  treasury rate sync failed: %v", err)
+	}
+	for _, r := range res {
+		log.Printf("  treasury rates %s/%s: %s (effective %s)", r.Type, r.Category, r.Action, r.EffectiveFrom.Format("2006-01-02"))
+	}
 }
 
 // nssfYear4UEL is the Year-4 Tier II upper earnings limit — the marker distinguishing an

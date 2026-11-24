@@ -48,28 +48,52 @@ type FormulaDetail struct {
 	Split   *ent.PayrollSplitRatio
 }
 
-// GetFormulaDetail returns a tenant-scoped formula with its bands + split ratio.
+// GetFormulaDetail returns a formula the tenant can read (its own or an inherited platform row)
+// with its bands and split ratio.
 func (s *Service) GetFormulaDetail(ctx context.Context, tenantID, formulaID uuid.UUID) (*FormulaDetail, error) {
-	f, err := s.orm.PayrollFormula.Query().
-		Where(payrollformula.TenantID(tenantID), payrollformula.ID(formulaID)).Only(ctx)
+	f, err := s.visibleFormula(ctx, tenantID, formulaID)
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.FormulaItems(ctx, tenantID, formulaID)
+	items, err := s.FormulaItems(ctx, f.TenantID, formulaID)
 	if err != nil {
 		return nil, err
 	}
-	split, _ := s.SplitRatio(ctx, tenantID, formulaID) // optional
+	split, _ := s.SplitRatio(ctx, f.TenantID, formulaID) // optional
 	return &FormulaDetail{Formula: f, Items: items, Split: split}, nil
 }
 
-// UpsertFormula creates or updates a formula together with its bands and split ratio in one
-// transaction. When IsCurrent is set, any other current formula for the same (tenant, type,
-// category) is demoted first so the partial-unique "one current per (tenant,type,category)"
-// invariant holds. Bands are replaced wholesale; the split is replaced when provided.
+// UpsertFormula creates or updates a formula of tenantID together with its bands and split ratio
+// in one transaction. An update must target a row the tenant owns (a platform row is changed only
+// with tenantID set to the platform tenant). When IsCurrent is set, the other current formula of
+// the same (tenant, type, category) is demoted first so the partial unique "one current per
+// (tenant, type, category)" invariant holds; when the new version has a start date, the demoted
+// version is closed the day before it so earlier months keep resolving to it. Bands are replaced
+// wholesale; the split is replaced when provided.
 func (s *Service) UpsertFormula(ctx context.Context, tenantID uuid.UUID, in FormulaInput) (*ent.PayrollFormula, error) {
 	if in.Type == "" || in.Title == "" {
 		return nil, fmt.Errorf("type and title are required")
+	}
+	if in.EffectiveFrom != nil && in.EffectiveTo != nil && in.EffectiveTo.Before(*in.EffectiveFrom) {
+		return nil, fmt.Errorf("effective_to is before effective_from")
+	}
+	for i, it := range in.Items {
+		if it.AmountFrom.IsNegative() || it.AmountTo.IsNegative() || it.DeductAmount.IsNegative() || it.DeductPercentage.IsNegative() {
+			return nil, fmt.Errorf("band %d: amounts and percentages cannot be negative", i+1)
+		}
+		if !it.AmountTo.IsZero() && it.AmountTo.LessThan(it.AmountFrom) {
+			return nil, fmt.Errorf("band %d: upper bound is below the lower bound", i+1)
+		}
+	}
+	if in.ID != nil {
+		owned, err := s.orm.PayrollFormula.Query().
+			Where(payrollformula.ID(*in.ID), payrollformula.TenantID(tenantID)).Exist(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if !owned {
+			return nil, ErrPlatformReadOnly
+		}
 	}
 	tx, err := s.orm.Tx(ctx)
 	if err != nil {
@@ -79,7 +103,7 @@ func (s *Service) UpsertFormula(ctx context.Context, tenantID uuid.UUID, in Form
 
 	// Demote the existing current formula of the same (tenant,type,category) before promoting this one.
 	if in.IsCurrent {
-		demote := tx.PayrollFormula.Update().
+		q := tx.PayrollFormula.Query().
 			Where(
 				payrollformula.TenantID(tenantID),
 				payrollformula.TypeEQ(in.Type),
@@ -87,10 +111,21 @@ func (s *Service) UpsertFormula(ctx context.Context, tenantID uuid.UUID, in Form
 				payrollformula.IsCurrent(true),
 			)
 		if in.ID != nil {
-			demote = demote.Where(payrollformula.IDNEQ(*in.ID))
+			q = q.Where(payrollformula.IDNEQ(*in.ID))
 		}
-		if _, err := demote.SetIsCurrent(false).Save(ctx); err != nil {
+		olds, err := q.All(ctx)
+		if err != nil {
 			return nil, fmt.Errorf("demote current: %w", err)
+		}
+		for _, old := range olds {
+			u := old.Update().SetIsCurrent(false)
+			if in.EffectiveFrom != nil && old.EffectiveTo == nil &&
+				(old.EffectiveFrom == nil || old.EffectiveFrom.Before(*in.EffectiveFrom)) {
+				u = u.SetEffectiveTo(in.EffectiveFrom.AddDate(0, 0, -1))
+			}
+			if _, err := u.Save(ctx); err != nil {
+				return nil, fmt.Errorf("demote current: %w", err)
+			}
 		}
 	}
 

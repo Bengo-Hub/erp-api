@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -92,10 +93,12 @@ func (b formulaBody) toInput(id *uuid.UUID) payrollsettings.FormulaInput {
 	return in
 }
 
-// formulaDetailView serialises a formula + bands + split for the editor UI.
-func formulaDetailView(d *payrollsettings.FormulaDetail) map[string]any {
+// formulaDetailView serialises a formula + bands + split for the editor UI. source tells the
+// editor whether the tenant may change it (tenant) or must customise it first (platform).
+func formulaDetailView(d *payrollsettings.FormulaDetail, source string) map[string]any {
 	f := d.Formula
 	v := map[string]any{
+		"source":          source,
 		"id":              f.ID,
 		"type":            f.Type,
 		"category":        f.Category,
@@ -145,8 +148,9 @@ func (h *PayrollSettingsHandler) GetFormula(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	d, err := h.svc.GetFormulaDetail(r.Context(), scope.TenantID, id)
-	if ent.IsNotFound(err) {
+	tenant := h.settingsTenant(r, scope)
+	d, err := h.svc.GetFormulaDetail(r.Context(), tenant, id)
+	if ent.IsNotFound(err) || errors.Is(err, payrollsettings.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "not_found", "formula not found")
 		return
 	}
@@ -154,7 +158,69 @@ func (h *PayrollSettingsHandler) GetFormula(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to load formula")
 		return
 	}
-	writeJSON(w, http.StatusOK, formulaDetailView(d))
+	writeJSON(w, http.StatusOK, formulaDetailView(d, h.svc.FormulaSource(tenant, d.Formula)))
+}
+
+// CustomiseFormula gives the tenant its own copy of one platform formula to edit.
+func (h *PayrollSettingsHandler) CustomiseFormula(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	f, err := h.svc.CustomiseFormula(r.Context(), scope.TenantID, id)
+	if err != nil {
+		writeSettingsError(w, err, "customise_failed")
+		return
+	}
+	d, err := h.svc.GetFormulaDetail(r.Context(), scope.TenantID, f.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "customised but failed to reload")
+		return
+	}
+	writeJSON(w, http.StatusCreated, formulaDetailView(d, payrollsettings.SourceTenant))
+}
+
+// RevertFormula removes the tenant's own versions of the formula so the platform default applies.
+func (h *PayrollSettingsHandler) RevertFormula(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	n, err := h.svc.RevertFormula(r.Context(), scope.TenantID, id)
+	if err != nil {
+		writeSettingsError(w, err, "revert_failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"removed": n})
+}
+
+// DeleteFormula deletes one of the tenant's own formula rows (platform rows: platform owner with
+// scope=platform, and never the current one).
+func (h *PayrollSettingsHandler) DeleteFormula(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	if err := h.svc.DeleteFormula(r.Context(), h.settingsTenant(r, scope), id); err != nil {
+		writeSettingsError(w, err, "delete_failed")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // CreateFormula creates a formula + bands + split.
@@ -182,12 +248,21 @@ func (h *PayrollSettingsHandler) upsertFormula(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	formula, err := h.svc.UpsertFormula(r.Context(), scope.TenantID, b.toInput(id))
+	// A platform owner edits a platform formula in place (it reaches every tenant without its own
+	// version); everyone else writes the tenant's own rows, and a platform row must be
+	// customised first.
+	tenant := h.settingsTenant(r, scope)
+	if id != nil && tenant == scope.TenantID && scope.Claims != nil && scope.Claims.IsPlatformOwner {
+		if cur, err := h.svc.GetFormulaDetail(r.Context(), tenant, *id); err == nil && h.svc.IsPlatformTenant(cur.Formula.TenantID) {
+			tenant = cur.Formula.TenantID
+		}
+	}
+	formula, err := h.svc.UpsertFormula(r.Context(), tenant, b.toInput(id))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "formula_failed", err.Error())
+		writeSettingsError(w, err, "formula_failed")
 		return
 	}
-	d, err := h.svc.GetFormulaDetail(r.Context(), scope.TenantID, formula.ID)
+	d, err := h.svc.GetFormulaDetail(r.Context(), tenant, formula.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "saved but failed to reload")
 		return
@@ -196,5 +271,5 @@ func (h *PayrollSettingsHandler) upsertFormula(w http.ResponseWriter, r *http.Re
 	if id == nil {
 		status = http.StatusCreated
 	}
-	writeJSON(w, status, formulaDetailView(d))
+	writeJSON(w, status, formulaDetailView(d, h.svc.FormulaSource(tenant, d.Formula)))
 }

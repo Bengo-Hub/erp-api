@@ -148,9 +148,12 @@ flowchart TB
 
 `internal/modules/payroll/payrollengine` is the single source of truth for Kenyan statutory payroll.
 It is data driven through effective-dated formulas, with national defaults in `KRADefaults()` that
-`cmd/seed-payroll` writes under the system tenant (`PAYROLL_SYSTEM_TENANT_ID`). A tenant without its
-own current formula inherits those. A golden-master test pins the result (gross 100,000 gives net
-71,617.65).
+`cmd/seed-payroll` writes under the system tenant (`PAYROLL_SYSTEM_TENANT_ID`). Formulas, reliefs and
+the earnings, deductions and benefits catalogue are platform rows every tenant inherits; a tenant
+customises only the item it needs, and one resolver in `payrollsettings` serves the settings screens,
+the engine, payslips and reports (see [payroll-settings.md](payroll-settings.md)). Approved statutory
+rate changes from treasury are applied to the platform rows only. A golden-master test pins the result
+(gross 100,000 gives net 71,617.65).
 
 Covered: progressive PAYE with personal relief, tiered NSSF, SHIF (and NHIF for periods before the
 cutover), Housing Levy, employee recoverables (loans, advances, losses, non-cash benefits) and

@@ -1,11 +1,12 @@
 // Command backfill-tenant-defaults ensures a SINGLE tenant has the full set of per-tenant
 // payroll/HR bootstrap data that cmd/seed-defaults normally provisions for every tenant, plus
-// the tenant-level KRA reliefs and a general_hr_settings row (statutory toggles ON) — for
-// tenants that were created before those seeders ran, or whose bootstrap was otherwise skipped.
+// a general_hr_settings row (statutory toggles ON), for tenants that were created before those
+// seeders ran, or whose bootstrap was otherwise skipped. KRA reliefs, statutory formulas and the
+// component catalogue are platform rows every tenant inherits, so nothing is copied for them.
 //
-// Idempotent: reuses defaults.Service.EnsureAll + defaults.EnsureReliefsWithClient, both of
-// which no-op on rows that already exist. The general_hr_settings row is only created if one
-// doesn't already exist for the tenant (existing rows are left untouched).
+// Idempotent: reuses defaults.Service.EnsureAll, which no-ops on rows that already exist. The
+// general_hr_settings row is only created if one doesn't already exist for the tenant (existing
+// rows are left untouched).
 //
 // Usage:
 //
@@ -66,10 +67,8 @@ func main() {
 	}
 	log.Printf("  ensured job groups / leave categories / appraisal template / goal library / document sequences")
 
-	if err := defaults.EnsureReliefsWithClient(ctx, client, tenantID); err != nil {
-		log.Fatalf("EnsureReliefs: %v", err)
-	}
-	log.Printf("  ensured tenant KRA reliefs")
+	// KRA reliefs are platform rows the tenant inherits (payrollsettings.ResolveReliefs); they
+	// are no longer copied per tenant.
 
 	if err := ensureGeneralHRSettings(ctx, client, tenantID); err != nil {
 		log.Fatalf("ensureGeneralHRSettings: %v", err)

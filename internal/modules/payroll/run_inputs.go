@@ -12,11 +12,11 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebenefit"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
 	"github.com/Bengo-Hub/erp-api/internal/ent/lossanddamage"
-	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffpurchasededuction"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
+	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
 )
 
 // runChunk bounds each IN (...) list so a large payroll never builds an oversized query.
@@ -32,7 +32,10 @@ type runInputs struct {
 	staffPurchases map[uuid.UUID][]*ent.StaffPurchaseDeduction
 	benefits       map[uuid.UUID][]*ent.EmployeeBenefit
 	installments   map[uuid.UUID]decimal.Decimal // repay option id -> per-period installment
-	titles         map[uuid.UUID]string          // payroll component id -> title
+	titles         map[uuid.UUID]string          // payroll component id -> title the tenant sees
+	// inactive marks components the tenant has switched off (an opt-in catalogue item it never
+	// enabled, or its own component deactivated): benefits on them are not paid.
+	inactive map[uuid.UUID]bool
 }
 
 // loadRunInputs reads salaries, active recoverables, non-cash benefits, their repay options and
@@ -47,6 +50,7 @@ func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []
 		benefits:       map[uuid.UUID][]*ent.EmployeeBenefit{},
 		installments:   map[uuid.UUID]decimal.Decimal{},
 		titles:         map[uuid.UUID]string{},
+		inactive:       map[uuid.UUID]bool{},
 	}
 	repayIDs := map[uuid.UUID]bool{}
 	componentIDs := map[uuid.UUID]bool{}
@@ -139,13 +143,22 @@ func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []
 			}
 		}
 	}
+	// Components resolve through the shared payroll settings resolver (the tenant's own
+	// components and the platform catalogue with the tenant's choices applied).
+	resolver := s.settings
+	if resolver == nil {
+		resolver = payrollsettings.NewService(s.orm, uuid.Nil)
+	}
 	for _, chunk := range chunkIDs(componentIDs) {
-		rows, err := s.orm.PayrollComponent.Query().Where(payrollcomponent.IDIn(chunk...)).All(ctx)
+		rows, err := resolver.ComponentsByID(ctx, tenantID, chunk)
 		if err != nil {
 			return nil, fmt.Errorf("payroll components: %w", err)
 		}
-		for _, c := range rows {
-			in.titles[c.ID] = c.Title
+		for id, c := range rows {
+			in.titles[id] = c.Title
+			if !c.Active {
+				in.inactive[id] = true
+			}
 		}
 	}
 	return in, nil
@@ -250,6 +263,9 @@ func (s *Service) buildEmployeeInput(p RunParams, emp *ent.Employee, pre *runInp
 	for _, b := range pre.benefits[emp.ID] {
 		if !dateActive(b.EffectiveDate, b.EndDate, p.Period) {
 			continue
+		}
+		if b.ComponentID != nil && pre.inactive[*b.ComponentID] {
+			continue // the tenant has this component switched off
 		}
 		total = total.Add(b.Amount)
 		label := "Benefit"
