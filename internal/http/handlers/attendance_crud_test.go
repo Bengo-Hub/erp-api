@@ -34,7 +34,8 @@ func TestAttendanceRuleRotationOffDayUpdates(t *testing.T) {
 	ruleID := rule["id"].(string)
 	code, body := call(http.MethodPut, "/hrm/attendance/rules/"+ruleID,
 		`{"name":"Overtime","rule_type":"overtime_policy","overtime_threshold_hours":"9","overtime_rate_multiplier":"1.5","is_active":false}`)
-	if code != http.StatusOK || body["name"] != "Overtime" || body["rule_type"] != "overtime_policy" || body["is_active"] != false {
+	// Ent's JSON omits a false bool, so an inactive rule has no is_active key; it must not be true.
+	if code != http.StatusOK || body["name"] != "Overtime" || body["rule_type"] != "overtime_policy" || body["is_active"] == true {
 		t.Fatalf("update rule: %d %v", code, body)
 	}
 	if code, body := call(http.MethodPatch, "/hrm/attendance/rules/"+ruleID, `{"name":"x","rule_type":"nope"}`); code != http.StatusBadRequest || body["error"] != "invalid value for rule type" {
