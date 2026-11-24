@@ -5,18 +5,18 @@ go 1.26.0
 // Use the online tagged auth-client module (same redirect pattern as inventory-service / marketflow).
 // The shared module is published as github.com/Bengo-Hub/auth-client; the import path is
 // github.com/Bengo-Hub/shared-auth-client. This is NOT a local replace.
-replace github.com/Bengo-Hub/shared-auth-client => github.com/Bengo-Hub/auth-client v0.17.1
+replace github.com/Bengo-Hub/shared-auth-client => github.com/Bengo-Hub/auth-client v0.20.0
 
 require (
 	ariga.io/atlas v0.32.1-0.20250325101103-175b25e1c1b9
 	entgo.io/ent v0.14.5
-	github.com/Bengo-Hub/cache v0.5.7
-	github.com/Bengo-Hub/httpware v0.24.0
-	github.com/Bengo-Hub/pagination v0.3.0
+	github.com/Bengo-Hub/cache v0.5.11
+	github.com/Bengo-Hub/httpware v0.26.0
+	github.com/Bengo-Hub/pagination v0.5.0
 	github.com/Bengo-Hub/shared-auth-client v0.0.0-00010101000000-000000000000
-	github.com/Bengo-Hub/shared-events v0.10.1
+	github.com/Bengo-Hub/shared-events v0.11.1
 	github.com/Bengo-Hub/shared-ratelimit v0.3.1
-	github.com/Bengo-Hub/shared-service-client v0.3.1
+	github.com/Bengo-Hub/shared-service-client v0.5.0
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-pdf/fpdf v0.9.0
 	github.com/google/uuid v1.6.0
