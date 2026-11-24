@@ -51,6 +51,34 @@ func WorkSiteViews(rows []*ent.WorkSite) []WorkSiteView {
 	return out
 }
 
+// RecordView is an attendance record with the employee's name and number and the total hours
+// the records table shows.
+type RecordView struct {
+	*ent.AttendanceRecord
+	EmployeeName   string `json:"employee_name"`
+	EmployeeNumber string `json:"employee_number"`
+	HoursWorked    string `json:"hours_worked"`
+}
+
+// RecordViews adds names and total hours to a page of records.
+func (s *Service) RecordViews(ctx context.Context, tenantID uuid.UUID, rows []*ent.AttendanceRecord) []RecordView {
+	ids := make([]*uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		id := r.EmployeeID
+		ids = append(ids, &id)
+	}
+	names, numbers := s.employeeLabels(ctx, tenantID, uniq(ids...))
+	out := make([]RecordView, len(rows))
+	for i, r := range rows {
+		v := RecordView{AttendanceRecord: r, EmployeeName: names[r.EmployeeID], EmployeeNumber: numbers[r.EmployeeID]}
+		if r.CheckOut != nil {
+			v.HoursWorked = r.RegularHours.Add(r.OvertimeHours).StringFixed(2)
+		}
+		out[i] = v
+	}
+	return out
+}
+
 // PunchView is a raw punch with its device and employee names; record_id is null while the
 // punch is not yet (or cannot be) matched to an attendance record.
 type PunchView struct {
@@ -70,19 +98,28 @@ type AccessEventView struct {
 
 // employeeNames resolves "First Last" for a set of employee ids in one query.
 func (s *Service) employeeNames(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) map[uuid.UUID]string {
-	out := map[uuid.UUID]string{}
+	names, _ := s.employeeLabels(ctx, tenantID, ids)
+	return names
+}
+
+// employeeLabels resolves "First Last" and the staff number for a set of employee ids in one query.
+func (s *Service) employeeLabels(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (names, numbers map[uuid.UUID]string) {
+	names, numbers = map[uuid.UUID]string{}, map[uuid.UUID]string{}
 	if len(ids) == 0 {
-		return out
+		return
 	}
 	rows, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.IDIn(ids...)).
-		Select(employee.FieldID, employee.FieldFirstName, employee.FieldLastName).All(ctx)
+		Select(employee.FieldID, employee.FieldFirstName, employee.FieldLastName, employee.FieldEmployeeNumber).All(ctx)
 	if err != nil {
-		return out
+		return
 	}
 	for _, e := range rows {
-		out[e.ID] = strings.TrimSpace(e.FirstName + " " + e.LastName)
+		names[e.ID] = strings.TrimSpace(e.FirstName + " " + e.LastName)
+		if e.EmployeeNumber != nil {
+			numbers[e.ID] = *e.EmployeeNumber
+		}
 	}
-	return out
+	return
 }
 
 // deviceNames resolves device names for a set of device ids in one query.

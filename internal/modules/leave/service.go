@@ -6,14 +6,12 @@ package leave
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
-	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavecategory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaveentitlement"
@@ -90,6 +88,9 @@ type CategoryInput struct {
 
 // CreateCategory inserts a tenant-scoped leave category.
 func (s *Service) CreateCategory(ctx context.Context, tenantID uuid.UUID, in CategoryInput) (*ent.LeaveCategory, error) {
+	if err := s.ensureUniqueCategoryName(ctx, tenantID, in.Name, nil); err != nil {
+		return nil, err
+	}
 	row, err := s.orm.LeaveCategory.Create().
 		SetTenantID(tenantID).
 		SetName(in.Name).
@@ -108,6 +109,9 @@ func (s *Service) CreateCategory(ctx context.Context, tenantID uuid.UUID, in Cat
 
 // UpdateCategory updates a tenant-scoped leave category.
 func (s *Service) UpdateCategory(ctx context.Context, tenantID, id uuid.UUID, in CategoryInput) (*ent.LeaveCategory, error) {
+	if err := s.ensureUniqueCategoryName(ctx, tenantID, in.Name, &id); err != nil {
+		return nil, err
+	}
 	n, err := s.orm.LeaveCategory.Update().
 		Where(leavecategory.TenantID(tenantID), leavecategory.ID(id)).
 		SetName(in.Name).
@@ -230,32 +234,16 @@ func (s *Service) ListBalancesEnriched(ctx context.Context, tenantID uuid.UUID, 
 		empIDs = append(empIDs, r.EmployeeID)
 		catIDs = append(catIDs, r.CategoryID)
 	}
-	empNames := map[uuid.UUID]string{}
-	if len(empIDs) > 0 {
-		emps, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.IDIn(empIDs...)).All(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("leave: load employees: %w", err)
-		}
-		for _, e := range emps {
-			empNames[e.ID] = strings.TrimSpace(e.FirstName + " " + e.LastName)
-		}
-	}
-	catNames := map[uuid.UUID]string{}
-	if len(catIDs) > 0 {
-		cats, err := s.orm.LeaveCategory.Query().Where(leavecategory.IDIn(catIDs...)).All(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("leave: load categories: %w", err)
-		}
-		for _, c := range cats {
-			catNames[c.ID] = c.Name
-		}
+	n, err := s.lookupNames(ctx, tenantID, empIDs, catIDs)
+	if err != nil {
+		return nil, err
 	}
 	out := make([]BalanceView, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, BalanceView{
 			LeaveBalance:  r,
-			EmployeeName:  empNames[r.EmployeeID],
-			LeaveTypeName: catNames[r.CategoryID],
+			EmployeeName:  n.employee[r.EmployeeID],
+			LeaveTypeName: n.category[r.CategoryID],
 			Entitled:      r.DaysEntitled.String(),
 			Used:          r.DaysTaken.String(),
 			Remaining:     r.DaysRemaining.String(),

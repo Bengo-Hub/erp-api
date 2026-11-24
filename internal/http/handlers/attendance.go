@@ -236,7 +236,7 @@ func (h *AttendanceHandler) ListRecords(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list records")
 		return
 	}
-	writePaginated(w, rows, total, p)
+	writePaginated(w, h.svc.RecordViews(r.Context(), scope.TenantID, rows), total, p)
 }
 
 type checkInBody struct {

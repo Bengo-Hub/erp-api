@@ -69,14 +69,19 @@ func (s *Service) Get(ctx context.Context, tenantID, id uuid.UUID) (*ent.LeaveRe
 		Where(leaverequest.TenantID(tenantID), leaverequest.ID(id)).Only(ctx)
 }
 
-// ListLogs returns the tenant-scoped leave audit trail (optionally for one request),
-// newest first.
-func (s *Service) ListLogs(ctx context.Context, tenantID uuid.UUID, requestID *uuid.UUID) ([]*ent.LeaveLog, error) {
+// ListLogs returns one page of the tenant-scoped leave audit trail (optionally for one
+// request), newest first, with the total. Paged in SQL: the trail only grows.
+func (s *Service) ListLogs(ctx context.Context, tenantID uuid.UUID, requestID *uuid.UUID, limit, offset int) ([]*ent.LeaveLog, int, error) {
 	q := s.orm.LeaveLog.Query().Where(leavelog.TenantID(tenantID))
 	if requestID != nil {
 		q = q.Where(leavelog.LeaveRequestID(*requestID))
 	}
-	return q.Order(ent.Desc(leavelog.FieldCreatedAt)).All(ctx)
+	total, err := q.Clone().Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("leave: count logs: %w", err)
+	}
+	rows, err := q.Order(ent.Desc(leavelog.FieldCreatedAt)).Limit(limit).Offset(offset).All(ctx)
+	return rows, total, err
 }
 
 // CreateRequestInput is the payload for filing a leave request.

@@ -192,7 +192,7 @@ func (h *LeaveHandler) ListEntitlements(w http.ResponseWriter, r *http.Request) 
 	}
 	empID := optionalUUIDParam(r, "employee_id")
 	year, _ := strconv.Atoi(r.URL.Query().Get("year"))
-	rows, err := h.svc.ListEntitlements(r.Context(), scope.TenantID, empID, year)
+	rows, err := h.svc.ListEntitlementsEnriched(r.Context(), scope.TenantID, empID, year)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list entitlements")
 		return
@@ -357,12 +357,18 @@ func (h *LeaveHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 	if reqID == nil {
 		reqID = optionalUUIDParam(r, "request_id")
 	}
-	rows, err := h.svc.ListLogs(r.Context(), scope.TenantID, reqID)
+	p := pagination.Parse(r)
+	rows, total, err := h.svc.ListLogs(r.Context(), scope.TenantID, reqID, p.Limit, p.Offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list leave logs")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	views, err := h.svc.LogViews(r.Context(), scope.TenantID, rows)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list leave logs")
+		return
+	}
+	writePaginated(w, views, total, p)
 }
 
 // ---- Requests ----
@@ -388,7 +394,12 @@ func (h *LeaveHandler) ListRequests(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list requests")
 		return
 	}
-	writePaginated(w, rows, total, p)
+	views, err := h.svc.RequestViews(r.Context(), scope.TenantID, rows)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list requests")
+		return
+	}
+	writePaginated(w, views, total, p)
 }
 
 func (h *LeaveHandler) GetRequest(w http.ResponseWriter, r *http.Request) {
