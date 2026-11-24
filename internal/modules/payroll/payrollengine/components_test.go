@@ -32,6 +32,16 @@ func TestSHIFMinimumContribution(t *testing.T) {
 	}
 }
 
+// PAYE band 4 runs to 800,000: the next 300,000 above 500,000 is taxed at 32.5%, the rest at 35%.
+func TestPAYEBand4Limit(t *testing.T) {
+	for income, want := range map[string]string{"800000": "242283.35", "800001": "242283.70", "900000": "277283.35"} {
+		tax, err := CalculateIncomeTax(kra2025Config().Income, d(income))
+		if err != nil || !tax.Equal(d(want)) {
+			t.Errorf("tax on %s = %s (%v), want %s", income, tax, err, want)
+		}
+	}
+}
+
 // A taxable earning is taxed like basic pay; a non-taxable one adds to gross and net only.
 func TestComponentEarnings_TaxableVsNonTaxable(t *testing.T) {
 	cfg := kra2025Config()

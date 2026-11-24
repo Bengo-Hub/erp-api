@@ -13,6 +13,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
+	"github.com/Bengo-Hub/erp-api/internal/ent/schema"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 )
 
@@ -45,6 +46,8 @@ type FormulaInput struct {
 	// the formula's metadata. Nil keeps the stored value on update and sets none on create; zero
 	// removes it.
 	MinimumContribution *decimal.Decimal
+	// DeductionOrder is copied onto a new version (customise, sync, corrections); ignored on update.
+	DeductionOrder []schema.DeductionPhase
 }
 
 // metaMinimumContribution is the formula metadata key of the minimum monthly contribution.
@@ -239,6 +242,9 @@ func (s *Service) UpsertFormula(ctx context.Context, tenantID uuid.UUID, in Form
 		}
 		if in.MinimumContribution != nil {
 			c = c.SetMetadata(withMinimumContribution(nil, *in.MinimumContribution))
+		}
+		if len(in.DeductionOrder) > 0 {
+			c = c.SetDeductionOrder(in.DeductionOrder)
 		}
 		formula, err = c.Save(ctx)
 	} else {

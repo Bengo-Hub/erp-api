@@ -304,6 +304,7 @@ func (s *Service) CustomiseFormula(ctx context.Context, tenantID, platformFormul
 		Progressive: src.Progressive, PersonalRelief: src.PersonalRelief,
 	}
 	in.MinimumContribution = RecordedMinimumContribution(src)
+	in.DeductionOrder = src.DeductionOrder
 	if src.RegulatorySource != nil {
 		in.RegulatorySource = *src.RegulatorySource
 	}

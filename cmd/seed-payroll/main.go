@@ -125,6 +125,12 @@ func seed(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
 		}
 		log.Printf("  seeded %s/%s (%d bands)", f.ftype, f.category, len(f.rates.Bands))
 	}
+	// PAYE band 4 ends at 800,000 from the December 2026 payroll; earlier months keep 799,999.
+	if applied, err := payrollsettings.EnsurePAYEBand4(ctx, client, tenantID); err != nil {
+		return err
+	} else if applied {
+		log.Printf("  PAYE band 4 limit corrected to 800,000 from %s", payrollsettings.PAYEBand4From.Format("2006-01-02"))
+	}
 	// SHIF's KES 300 monthly minimum lives in the formula metadata (a band cannot express it).
 	if n, err := payrollsettings.EnsureSHIFMinimum(ctx, client, tenantID); err != nil {
 		return err

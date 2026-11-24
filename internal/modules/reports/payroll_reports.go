@@ -72,7 +72,7 @@ func money(d decimal.Decimal) string { return d.StringFixed(2) }
 type p9Acc struct {
 	e                                       *ent.Employee
 	gross, taxable, relief, paye, nssf, net decimal.Decimal
-	shif, ahl                               decimal.Decimal
+	shif, ahl, deductions                   decimal.Decimal
 	insurance, pension, mortgage, disabled  decimal.Decimal
 }
 
@@ -87,6 +87,10 @@ func (s *Service) P9(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report
 	if err != nil {
 		return nil, err
 	}
+	taxGross, err := s.taxableGross(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
+	}
 	byEmp := map[uuid.UUID]*p9Acc{}
 	order := []uuid.UUID{}
 	for _, p := range slips {
@@ -96,7 +100,8 @@ func (s *Service) P9(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report
 			byEmp[p.EmployeeID] = a
 			order = append(order, p.EmployeeID)
 		}
-		a.gross = a.gross.Add(p.GrossPay)
+		a.gross = a.gross.Add(taxGross[p.ID])
+		a.deductions = a.deductions.Add(p.GrossPay.Sub(p.NetPay))
 		a.taxable = a.taxable.Add(p.TaxablePay)
 		a.relief = a.relief.Add(p.TaxRelief)
 		a.paye = a.paye.Add(p.Paye)
@@ -120,7 +125,6 @@ func (s *Service) P9(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report
 	totChargeable, totPaye, totNet := d(), d(), d()
 	for _, id := range order {
 		a := byEmp[id]
-		deductions := a.gross.Sub(a.net)
 		// tax charged = PAYE before the relief credits (PAYE = tax_charged − relief).
 		taxCharged := a.paye.Add(a.relief)
 		// a.relief (tax_relief) = personal + insurance; show the personal portion separately.
@@ -136,7 +140,7 @@ func (s *Service) P9(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report
 			"housing_levy":         money(a.ahl),
 			"mortgage_relief":      money(a.mortgage),
 			"disability_exemption": money(a.disabled),
-			"total_deductions":     money(deductions),
+			"total_deductions":     money(a.deductions),
 			"chargeable_pay":       money(a.taxable),
 			"tax_charged":          money(taxCharged),
 			"personal_relief":      money(personal),
@@ -189,6 +193,10 @@ func (s *Service) P9A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 			salPension[sd.EmployeeID] = sd.PensionContribution
 		}
 	}
+	taxGross, err := s.taxableGross(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
+	}
 	byEmp := map[uuid.UUID][]*ent.Payslip{}
 	order := []uuid.UUID{}
 	for _, p := range slips {
@@ -214,9 +222,9 @@ func (s *Service) P9A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 			personal := p.TaxRelief.Sub(p.InsuranceRelief) // tax_relief = personal + insurance
 			sheet.Rows = append(sheet.Rows, map[string]any{
 				"month":                monthLabel(p),
-				"gross_pay":            money(p.GrossPay),
+				"gross_pay":            money(taxGross[p.ID]),
 				"nssf":                 money(p.NssfEmployeeTier1.Add(p.NssfEmployeeTier2)),
-				"pension_e1_30pct":     money(p.GrossPay.Mul(pensionPct30)),
+				"pension_e1_30pct":     money(taxGross[p.ID].Mul(pensionPct30)),
 				"pension_e2_actual":    money(salPension[p.EmployeeID]),
 				"pension_e3_cap":       money(pensionCap30),
 				"deductible_pension":   money(p.PensionDeduction),
@@ -231,7 +239,7 @@ func (s *Service) P9A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 				"paye":                 money(p.Paye),
 				"net_pay":              money(p.NetPay),
 			})
-			tg, tc, tp, tn = tg.Add(p.GrossPay), tc.Add(p.TaxablePay), tp.Add(p.Paye), tn.Add(p.NetPay)
+			tg, tc, tp, tn = tg.Add(taxGross[p.ID]), tc.Add(p.TaxablePay), tp.Add(p.Paye), tn.Add(p.NetPay)
 		}
 		sheet.Totals = map[string]any{"month": "TOTAL", "gross_pay": money(tg), "chargeable_pay": money(tc), "paye": money(tp), "net_pay": money(tn)}
 		rep.Sheets = append(rep.Sheets, sheet)
@@ -288,6 +296,10 @@ func (s *Service) P10A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	if err != nil {
 		return nil, err
 	}
+	taxGross, err := s.taxableGross(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
+	}
 	byEmp := map[uuid.UUID]*p10aAcc{}
 	order := []uuid.UUID{}
 	for _, p := range slips {
@@ -297,7 +309,7 @@ func (s *Service) P10A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 			byEmp[p.EmployeeID] = a
 			order = append(order, p.EmployeeID)
 		}
-		a.gross = a.gross.Add(p.GrossPay)
+		a.gross = a.gross.Add(taxGross[p.ID])
 		a.paye = a.paye.Add(p.Paye)
 		a.nssf = a.nssf.Add(p.NssfEmployeeTier1).Add(p.NssfEmployeeTier2)
 		a.shif = a.shif.Add(p.ShifOrNhifContribution)
@@ -344,7 +356,11 @@ func (s *Service) P10(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 	}
 	type acc struct {
 		e                                     *ent.Employee
-		gross, taxable, nssf, shif, ahl, paye decimal.Decimal
+		gross, full, taxable, nssf, shif, ahl, paye decimal.Decimal // gross is the taxable gross
+	}
+	taxGross, err := s.taxableGross(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
 	}
 	byEmp := map[uuid.UUID]*acc{}
 	order := []uuid.UUID{}
@@ -355,7 +371,8 @@ func (s *Service) P10(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 			byEmp[p.EmployeeID] = a
 			order = append(order, p.EmployeeID)
 		}
-		a.gross = a.gross.Add(p.GrossPay)
+		a.gross = a.gross.Add(taxGross[p.ID])
+		a.full = a.full.Add(p.GrossPay)
 		a.taxable = a.taxable.Add(p.TaxablePay)
 		a.nssf = a.nssf.Add(p.NssfEmployeeTier1).Add(p.NssfEmployeeTier2)
 		a.shif = a.shif.Add(p.ShifOrNhifContribution)
@@ -385,7 +402,7 @@ func (s *Service) P10(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 			})
 		}
 		m.Rows = append(m.Rows, map[string]any{
-			"employee_name": empName(a.e), "employee_pin": pin(a.e), "gross_pay": money(a.gross),
+			"employee_name": empName(a.e), "employee_pin": pin(a.e), "gross_pay": money(a.full),
 			"employee_ahl": money(a.ahl), "employer_ahl": money(a.ahl), "total_ahl": money(a.ahl.Add(a.ahl)),
 		})
 		rep.Rows = append(rep.Rows, map[string]any{

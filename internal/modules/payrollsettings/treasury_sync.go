@@ -208,6 +208,7 @@ func (s *Service) SyncTreasuryRates(ctx context.Context, rates []treasury.Statut
 		}
 		// Treasury does not publish SHIF's minimum; the new version keeps the current one.
 		in.MinimumContribution = RecordedMinimumContribution(cur)
+		in.DeductionOrder = cur.DeductionOrder
 		if split, _ := s.SplitRatio(ctx, s.systemTenant, cur.ID); split != nil {
 			emp, empr := split.EmployeePercentage, split.EmployerPercentage
 			in.EmployeePercentage, in.EmployerPercentage = &emp, &empr

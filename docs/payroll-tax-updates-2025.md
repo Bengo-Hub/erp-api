@@ -12,8 +12,11 @@ Reference for the national rate set that `cmd/seed-payroll` writes under the sys
 | 1 | 0 to 24,000 | 10% |
 | 2 | 24,001 to 32,333 | 25% |
 | 3 | 32,334 to 500,000 | 30% |
-| 4 | 500,001 to 799,999 | 32.5% |
-| 5 | 800,000 and above | 35% |
+| 4 | 500,001 to 800,000 | 32.5% |
+| 5 | Above 800,000 | 35% |
+
+Months up to November 2026 keep the earlier platform limit of 799,999 for band 4 when re-run; the
+corrected version applies from the December 2026 payroll (`payrollsettings.EnsurePAYEBand4`).
 
 Personal relief: KES 2,400 per month, the only relief that remains.
 
