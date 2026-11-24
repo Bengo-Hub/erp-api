@@ -321,18 +321,7 @@ func (s *Service) Capacity(ctx context.Context, tenantID uuid.UUID, authUserIDs 
 		if err != nil {
 			return nil, fmt.Errorf("attendance: capacity holidays: %w", err)
 		}
-		for _, h := range rows {
-			d := dateOnly(h.Date)
-			if h.IsNational {
-				national[d] = true
-				continue
-			}
-			if h.County != nil {
-				if k := countyKey(*h.County); k != "" {
-					byCounty[k] = append(byCounty[k], d)
-				}
-			}
-		}
+		national, byCounty = splitHolidays(rows)
 	}
 
 	for i, key := range keys {

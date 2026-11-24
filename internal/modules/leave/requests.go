@@ -9,6 +9,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavelog"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
@@ -86,36 +87,55 @@ func (s *Service) ListLogs(ctx context.Context, tenantID uuid.UUID, requestID *u
 
 // CreateRequestInput is the payload for filing a leave request.
 type CreateRequestInput struct {
-	EmployeeID    uuid.UUID
-	CategoryID    uuid.UUID
-	StartDate     time.Time
-	EndDate       time.Time
-	DaysRequested decimal.Decimal
-	Reason        string
-	ActingUserID  *uuid.UUID
+	EmployeeID   uuid.UUID
+	CategoryID   uuid.UUID
+	StartDate    time.Time
+	EndDate      time.Time
+	Reason       string
+	ActingUserID *uuid.UUID
 }
 
-// CreateRequest files a new pending leave request and writes the create audit log.
+// CreateRequest files a new pending leave request and writes the create audit log. The server
+// counts the days with the leave type's mode. The employee row is locked while the overlap check
+// and the insert run, so two requests filed at once cannot cover the same dates.
 func (s *Service) CreateRequest(ctx context.Context, tenantID uuid.UUID, in CreateRequestInput) (*ent.LeaveRequest, error) {
-	if in.EndDate.Before(in.StartDate) {
-		return nil, fmt.Errorf("leave: end_date before start_date")
+	in.StartDate, in.EndDate = utcDay(in.StartDate), utcDay(in.EndDate)
+	count, err := s.PreviewRequest(ctx, tenantID, in.EmployeeID, in.CategoryID, in.StartDate, in.EndDate)
+	if err != nil {
+		return nil, err
 	}
-	if in.DaysRequested.LessThanOrEqual(decimal.Zero) {
-		return nil, fmt.Errorf("leave: days_requested must be > 0")
+	if !count.Days.IsPositive() {
+		return nil, ErrNoDays
 	}
-	row, err := s.orm.LeaveRequest.Create().
+	tx, err := s.orm.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("leave: begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.Employee.Query().Where(employee.TenantID(tenantID), employee.ID(in.EmployeeID)).
+		ForUpdate().Only(ctx); err != nil {
+		return nil, fmt.Errorf("leave: lock employee: %w", err)
+	}
+	if err := refuseOverlap(ctx, tx, tenantID, in.EmployeeID, in.StartDate, in.EndDate); err != nil {
+		return nil, err
+	}
+	row, err := tx.LeaveRequest.Create().
 		SetTenantID(tenantID).
 		SetEmployeeID(in.EmployeeID).
 		SetCategoryID(in.CategoryID).
 		SetStartDate(in.StartDate).
 		SetEndDate(in.EndDate).
-		SetDaysRequested(in.DaysRequested).
+		SetDaysRequested(count.Days).
 		SetReason(in.Reason).
 		SetStatus(leaverequest.StatusPending).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("leave: create request: %w", err)
 	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("leave: commit request: %w", err)
+	}
+	row = row.Unwrap()
 	logAction(ctx, s.orm, tenantID, row.ID, leavelog.ActionCreate, "leave request filed", in.ActingUserID)
 
 	// Sprint 4: if the tenant configured a leave_request approval workflow, open an approval
@@ -153,7 +173,7 @@ func (s *Service) Approve(ctx context.Context, tenantID, id uuid.UUID, approverE
 	defer func() { _ = tx.Rollback() }()
 
 	req, err := tx.LeaveRequest.Query().
-		Where(leaverequest.TenantID(tenantID), leaverequest.ID(id)).Only(ctx)
+		Where(leaverequest.TenantID(tenantID), leaverequest.ID(id)).ForUpdate().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("leave: load request: %w", err)
 	}
@@ -214,6 +234,16 @@ func (s *Service) Reject(ctx context.Context, tenantID, id uuid.UUID, reason str
 // Cancel transitions a pending/approved request to cancelled. If it was approved, the
 // previously-deducted days are returned to the balance.
 func (s *Service) Cancel(ctx context.Context, tenantID, id uuid.UUID, actingUserID *uuid.UUID) (*ent.LeaveRequest, error) {
+	return s.cancel(ctx, tenantID, id, nil, actingUserID)
+}
+
+// CancelOwn lets an employee withdraw their own request while it is pending. Someone else's
+// request answers ErrRequestNotFound.
+func (s *Service) CancelOwn(ctx context.Context, tenantID, id, employeeID uuid.UUID, actingUserID *uuid.UUID) (*ent.LeaveRequest, error) {
+	return s.cancel(ctx, tenantID, id, &employeeID, actingUserID)
+}
+
+func (s *Service) cancel(ctx context.Context, tenantID, id uuid.UUID, own *uuid.UUID, actingUserID *uuid.UUID) (*ent.LeaveRequest, error) {
 	tx, err := s.orm.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("leave: begin tx: %w", err)
@@ -221,9 +251,15 @@ func (s *Service) Cancel(ctx context.Context, tenantID, id uuid.UUID, actingUser
 	defer func() { _ = tx.Rollback() }()
 
 	req, err := tx.LeaveRequest.Query().
-		Where(leaverequest.TenantID(tenantID), leaverequest.ID(id)).Only(ctx)
+		Where(leaverequest.TenantID(tenantID), leaverequest.ID(id)).ForUpdate().Only(ctx)
+	if ent.IsNotFound(err) || (err == nil && own != nil && req.EmployeeID != *own) {
+		return nil, ErrRequestNotFound
+	}
 	if err != nil {
 		return nil, fmt.Errorf("leave: load request: %w", err)
+	}
+	if own != nil && req.Status != leaverequest.StatusPending {
+		return nil, fmt.Errorf("only a pending request can be cancelled; this one is %s, so ask HR", req.Status)
 	}
 	if req.Status == leaverequest.StatusCancelled || req.Status == leaverequest.StatusRejected {
 		return nil, fmt.Errorf("leave: cannot cancel a %s request", req.Status)
@@ -243,7 +279,22 @@ func (s *Service) Cancel(ctx context.Context, tenantID, id uuid.UUID, actingUser
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("leave: commit cancel: %w", err)
 	}
+	s.withdrawApproval(ctx, tenantID, id)
 	return updated, nil
+}
+
+// withdrawApproval closes the open approval request of a cancelled leave (best-effort), so it
+// leaves the approvers' queue.
+func (s *Service) withdrawApproval(ctx context.Context, tenantID, id uuid.UUID) {
+	c, ok := s.approvals.(interface {
+		Cancel(ctx context.Context, tenantID, requestID uuid.UUID) (*ent.ApprovalRequest, error)
+	})
+	if !ok {
+		return
+	}
+	if apr, err := s.approvals.FindRequestForObject(ctx, tenantID, moduleLeaveRequest, id); err == nil && apr.Status == "pending" {
+		_, _ = c.Cancel(ctx, tenantID, apr.ID)
+	}
 }
 
 // routeDecision drives the approvals engine for a leave request when one is open.

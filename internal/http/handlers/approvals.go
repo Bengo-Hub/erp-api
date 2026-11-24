@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/Bengo-Hub/erp-api/internal/ent/approvalrequest"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 )
 
@@ -227,6 +228,15 @@ func (h *ApprovalsHandler) decide(w http.ResponseWriter, r *http.Request, approv
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
+	}
+	// Nobody approves (or escalates past) their own leave request.
+	if approve || escalate {
+		if req, gerr := h.svc.GetRequest(r.Context(), scope.TenantID, id); gerr == nil &&
+			req.Module == approvalrequest.ModuleLeaveRequest && req.RequesterEmployeeID != nil &&
+			isOwnEmployee(r, scope, *req.RequesterEmployeeID) {
+			writeError(w, http.StatusForbidden, "own_request", ownLeaveMessage)
+			return
+		}
 	}
 	var body decisionBody
 	_ = json.NewDecoder(r.Body).Decode(&body)

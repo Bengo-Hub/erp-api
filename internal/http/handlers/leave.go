@@ -40,6 +40,7 @@ func (h *LeaveHandler) RegisterRoutes(r chi.Router) {
 		lr.Post("/categories", h.CreateCategory)
 		lr.Put("/categories/{id}", h.UpdateCategory)
 		lr.Delete("/categories/{id}", h.DeleteCategory)
+		lr.Put("/categories/{id}/count-mode", h.SetCountMode)
 
 		lr.Get("/entitlements", h.ListEntitlements)
 		lr.Post("/entitlements", h.UpsertEntitlement)
@@ -57,6 +58,7 @@ func (h *LeaveHandler) RegisterRoutes(r chi.Router) {
 
 		lr.Get("/requests", h.ListRequests)
 		lr.Post("/requests", h.CreateRequest)
+		lr.Get("/requests/preview", h.PreviewRequest)
 		lr.Get("/requests/{id}", h.GetRequest)
 		lr.Post("/requests/{id}/approve", h.ApproveRequest)
 		lr.Post("/requests/{id}/reject", h.RejectRequest)
@@ -68,8 +70,14 @@ func (h *LeaveHandler) RegisterRoutes(r chi.Router) {
 
 func (h *LeaveHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
-	if !ok || !requirePermission(w, scope, permLeaveView) {
+	if !ok {
 		return
+	}
+	// Staff without the view permission still need the types to apply for their own leave.
+	if !hasPermission(scope, permLeaveView) {
+		if _, _, ok := selfEmployee(w, r); !ok {
+			return
+		}
 	}
 	rows, err := h.svc.ListCategories(r.Context(), scope.TenantID)
 	if err != nil {
@@ -77,7 +85,13 @@ func (h *LeaveHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list leave categories")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	views, err := h.svc.CategoryViews(r.Context(), scope.TenantID, rows)
+	if err != nil {
+		h.log.Error("list categories", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list leave categories")
+		return
+	}
+	writePagedSlice(w, views, pagination.Parse(r))
 }
 
 type categoryBody struct {
@@ -417,11 +431,15 @@ func (h *LeaveHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 
 func (h *LeaveHandler) ListRequests(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
-	if !ok || !requirePermission(w, scope, permLeaveView) {
+	if !ok {
+		return
+	}
+	// ?mine=true is self-service: the caller's own requests, without the view permission.
+	if r.URL.Query().Get("mine") != "true" && !requirePermission(w, scope, permLeaveView) {
 		return
 	}
 	f := leave.RequestFilter{
-		EmployeeID: optionalUUIDParam(r, "employee_id"),
+		EmployeeID: selfOrParamEmployeeID(r, scope),
 		Status:     r.URL.Query().Get("status"),
 	}
 	if d, err := parseDate(r.URL.Query().Get("from")); err == nil {
@@ -466,28 +484,24 @@ func (h *LeaveHandler) GetRequest(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, row)
 }
 
+// createRequestBody has no day count: the server counts the days, and a days_requested sent by an
+// older client is ignored. An empty employee_id files for the caller.
 type createRequestBody struct {
 	EmployeeID string `json:"employee_id"`
 	CategoryID string `json:"category_id"`
 	StartDate  string `json:"start_date"`
 	EndDate    string `json:"end_date"`
-	Days       string `json:"days_requested"`
 	Reason     string `json:"reason"`
 }
 
 func (h *LeaveHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
-	scope, ok := scopeFromRequest(w, r)
-	if !ok || !requirePermission(w, scope, permLeaveManage) {
-		return
-	}
 	var body createRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	empID, err := uuid.Parse(body.EmployeeID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
+	scope, empID, ok := leaveFiler(w, r, body.EmployeeID)
+	if !ok {
 		return
 	}
 	catID, err := uuid.Parse(body.CategoryID)
@@ -505,26 +519,13 @@ func (h *LeaveHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid end_date")
 		return
 	}
-	if end.Before(start) {
-		writeError(w, http.StatusBadRequest, "bad_request", "end_date must not be before start_date")
-		return
-	}
-	days, err := decimal.NewFromString(body.Days)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid days_requested")
-		return
-	}
-	if !days.IsPositive() {
-		writeError(w, http.StatusBadRequest, "bad_request", "days_requested must be greater than zero")
-		return
-	}
 	uid := scope.UserID
 	row, err := h.svc.CreateRequest(r.Context(), scope.TenantID, leave.CreateRequestInput{
 		EmployeeID: empID, CategoryID: catID, StartDate: start, EndDate: end,
-		DaysRequested: days, Reason: body.Reason, ActingUserID: &uid,
+		Reason: body.Reason, ActingUserID: &uid,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		leaveRequestError(w, "create_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
@@ -538,6 +539,11 @@ func (h *LeaveHandler) ApproveRequest(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	// Nobody approves their own request, whatever their role.
+	if req, gerr := h.svc.Get(r.Context(), scope.TenantID, id); gerr == nil && isOwnEmployee(r, scope, req.EmployeeID) {
+		writeError(w, http.StatusForbidden, "own_request", ownLeaveMessage)
 		return
 	}
 	uid := scope.UserID
@@ -576,7 +582,7 @@ func (h *LeaveHandler) RejectRequest(w http.ResponseWriter, r *http.Request) {
 
 func (h *LeaveHandler) CancelRequest(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
-	if !ok || !requirePermission(w, scope, permLeaveManage) {
+	if !ok {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -585,9 +591,18 @@ func (h *LeaveHandler) CancelRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := scope.UserID
-	row, err := h.svc.Cancel(r.Context(), scope.TenantID, id, &uid)
+	var row *ent.LeaveRequest
+	if hasPermission(scope, permLeaveManage) {
+		row, err = h.svc.Cancel(r.Context(), scope.TenantID, id, &uid)
+	} else {
+		_, empID, ok := selfEmployee(w, r)
+		if !ok {
+			return
+		}
+		row, err = h.svc.CancelOwn(r.Context(), scope.TenantID, id, empID, &uid)
+	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "cancel_failed", err.Error())
+		leaveRequestError(w, "cancel_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, row)

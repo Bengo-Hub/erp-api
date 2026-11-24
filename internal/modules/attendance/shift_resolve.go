@@ -36,6 +36,7 @@ type DayShift struct {
 	Off      bool       `json:"off"` // planned day off
 	Source   string     `json:"source"`
 	OutletID *uuid.UUID `json:"-"` // the shift's outlet, for its zone
+	HalfDay  bool       `json:"-"` // a half-day override
 }
 
 // Overnight reports whether the shift ends on the day after it starts.
@@ -215,6 +216,7 @@ func resolveOne(k empDay, o *ent.StaffShiftOverride, assigns []*ent.ShiftAssignm
 		if o.StartTime != nil && o.EndTime != nil {
 			ds.Start, ds.End = *o.StartTime, *o.EndTime
 		}
+		ds.HalfDay = o.OverrideType == staffshiftoverride.OverrideTypeHalfDay
 		return ds
 	}
 	for _, a := range assigns {

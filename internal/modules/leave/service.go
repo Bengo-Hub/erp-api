@@ -30,6 +30,7 @@ type Service struct {
 	// systemTenant owns the GLOBAL shared leave types; a tenant with none of its own inherits
 	// them (feedback_shared_core_reference_data). uuid.Nil = no fallback.
 	systemTenant uuid.UUID
+	calendar     WorkCalendar // working day source for counting requests (days.go)
 }
 
 // Notifier publishes leave-decision notifications to the outbox (erp.notification.requested).
