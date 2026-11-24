@@ -15,6 +15,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancedevice"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancepunch"
 	"github.com/Bengo-Hub/erp-api/internal/ent/devicecommand"
+	"github.com/Bengo-Hub/erp-api/internal/ent/worksite"
 )
 
 // Device errors, mapped to HTTP statuses by the handler.
@@ -47,6 +48,13 @@ type DeviceView struct {
 	HasCommKey      bool     `json:"has_comm_key"`
 	Online          bool     `json:"online"`
 	PunchCountToday int      `json:"punch_count_today"`
+	// EventCountToday counts today's door events; an access-control device reports these
+	// instead of punches.
+	EventCountToday int `json:"event_count_today"`
+	// WorkSiteName and SiteOutletID describe the device's work site, so a device without an
+	// outlet of its own can show the site's branch.
+	WorkSiteName string     `json:"work_site_name"`
+	SiteOutletID *uuid.UUID `json:"site_outlet_id"`
 	// Metadata shadows the embedded field so the comm key never leaves the server.
 	Metadata map[string]any `json:"metadata,omitempty"`
 }
@@ -272,10 +280,46 @@ func (s *Service) deviceViews(ctx context.Context, tenantID uuid.UUID, rows []*e
 	for _, c := range counts {
 		byDev[c.DeviceID] = c.Count
 	}
+	var events []struct {
+		DeviceID uuid.UUID `json:"device_id"`
+		Count    int       `json:"count"`
+	}
+	siteIDs := make([]*uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		siteIDs = append(siteIDs, r.WorkSiteID)
+	}
+	if len(rows) > 0 {
+		if err := s.orm.AccessEvent.Query().Where(
+			accessevent.TenantID(tenantID), accessevent.OccurredAtGTE(dayStart),
+		).GroupBy(accessevent.FieldDeviceID).Aggregate(ent.Count()).Scan(ctx, &events); err != nil {
+			return nil, fmt.Errorf("attendance: device event counts: %w", err)
+		}
+	}
+	eventsByDev := map[uuid.UUID]int{}
+	for _, c := range events {
+		eventsByDev[c.DeviceID] = c.Count
+	}
+	sites := map[uuid.UUID]*ent.WorkSite{}
+	if ids := uniq(siteIDs...); len(ids) > 0 {
+		ss, err := s.orm.WorkSite.Query().Where(worksite.TenantID(tenantID), worksite.IDIn(ids...)).All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("attendance: device work sites: %w", err)
+		}
+		for _, ws := range ss {
+			sites[ws.ID] = ws
+		}
+	}
 	window := time.Duration(st.DeviceOnlineMinutes) * time.Minute
 	out := make([]DeviceView, len(rows))
 	for i, r := range rows {
-		out[i] = newDeviceView(r, r.LastSeenAt != nil && now.Sub(*r.LastSeenAt) <= window, byDev[r.ID])
+		v := newDeviceView(r, r.LastSeenAt != nil && now.Sub(*r.LastSeenAt) <= window, byDev[r.ID])
+		v.EventCountToday = eventsByDev[r.ID]
+		if r.WorkSiteID != nil {
+			if ws, ok := sites[*r.WorkSiteID]; ok {
+				v.WorkSiteName, v.SiteOutletID = ws.Name, ws.OutletID
+			}
+		}
+		out[i] = v
 	}
 	return out, nil
 }

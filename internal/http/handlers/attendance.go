@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -55,16 +56,22 @@ func (h *AttendanceHandler) RegisterRoutes(r chi.Router) {
 		// Rules.
 		ar.Get("/rules", h.ListRules)
 		ar.Post("/rules", h.CreateRule)
+		ar.Put("/rules/{id}", h.UpdateRule)
+		ar.Patch("/rules/{id}", h.UpdateRule)
 		ar.Delete("/rules/{id}", h.DeleteRule)
 
 		// Rotations.
 		ar.Get("/rotations", h.ListRotations)
 		ar.Post("/rotations", h.CreateRotation)
+		ar.Put("/rotations/{id}", h.UpdateRotation)
+		ar.Patch("/rotations/{id}", h.UpdateRotation)
 		ar.Delete("/rotations/{id}", h.DeleteRotation)
 
 		// Off days.
 		ar.Get("/off-days", h.ListOffDays)
 		ar.Post("/off-days", h.CreateOffDay)
+		ar.Put("/off-days/{id}", h.UpdateOffDay)
+		ar.Patch("/off-days/{id}", h.UpdateOffDay)
 		ar.Delete("/off-days/{id}", h.DeleteOffDay)
 
 		// ESS settings (per-tenant).
@@ -370,10 +377,20 @@ func (h *AttendanceHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
+	row, err := h.svc.CreateRule(r.Context(), scope.TenantID, b.input())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
+		return
+	}
+	writeJSON(w, http.StatusCreated, row)
+}
+
+// input maps the wire body to the service input (priority 0 means the default 100).
+func (b ruleBody) input() attendance.RuleInput {
 	if b.Priority == 0 {
 		b.Priority = 100
 	}
-	row, err := h.svc.CreateRule(r.Context(), scope.TenantID, attendance.RuleInput{
+	return attendance.RuleInput{
 		Name: b.Name, RuleType: b.RuleType, Description: b.Description,
 		IsActive: b.IsActive == nil || *b.IsActive, Priority: b.Priority,
 		BranchID: optionalUUIDString(b.BranchID), DepartmentID: optionalUUIDString(b.DepartmentID),
@@ -385,12 +402,39 @@ func (h *AttendanceHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		ConsecutiveAbsentThreshold: b.ConsecutiveAbsentThreshold, MonthlyAbsentThreshold: b.MonthlyAbsentThreshold,
 		AbsenteeismAction: b.AbsenteeismAction, BreakDurationMinutes: b.BreakDurationMinutes,
 		HolidayPayMultiplier: b.HolidayPayMultiplier,
-	})
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
+	}
+}
+
+// writeUpdateError answers 404 for a missing (or other-tenant) row and 400 otherwise.
+func writeUpdateError(w http.ResponseWriter, err error) {
+	if errors.Is(err, attendance.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, row)
+	writeError(w, http.StatusBadRequest, "update_failed", clientMessage(err))
+}
+
+func (h *AttendanceHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAttendanceManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var b ruleBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	row, err := h.svc.UpdateRule(r.Context(), scope.TenantID, id, b.input())
+	if err != nil {
+		writeUpdateError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
 }
 
 func (h *AttendanceHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
@@ -422,7 +466,9 @@ func (h *AttendanceHandler) ListRotations(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list rotations")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	p := pagination.Parse(r)
+	page, total := pageWindow(rows, p)
+	writePaginated(w, h.svc.RotationViews(r.Context(), scope.TenantID, page), total, p)
 }
 
 type rotationBody struct {
@@ -445,21 +491,49 @@ func (h *AttendanceHandler) CreateRotation(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
+	row, err := h.svc.CreateRotation(r.Context(), scope.TenantID, b.input())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
+		return
+	}
+	writeJSON(w, http.StatusCreated, row)
+}
+
+// input maps the wire body to the service input; unparseable shift ids are dropped.
+func (b rotationBody) input() attendance.RotationInput {
 	ids := make([]uuid.UUID, 0, len(b.ShiftIDs))
 	for _, s := range b.ShiftIDs {
 		if id, err := uuid.Parse(s); err == nil {
 			ids = append(ids, id)
 		}
 	}
-	row, err := h.svc.CreateRotation(r.Context(), scope.TenantID, attendance.RotationInput{
+	return attendance.RotationInput{
 		Title: b.Title, ShiftIDs: ids, RunDuration: b.RunDuration, RunUnit: b.RunUnit,
 		BreakDuration: b.BreakDuration, BreakUnit: b.BreakUnit, IsActive: b.IsActive == nil || *b.IsActive,
-	})
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
+	}
+}
+
+func (h *AttendanceHandler) UpdateRotation(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAttendanceManage) {
 		return
 	}
-	writeJSON(w, http.StatusCreated, row)
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var b rotationBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	row, err := h.svc.UpdateRotation(r.Context(), scope.TenantID, id, b.input())
+	if err != nil {
+		writeUpdateError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
 }
 
 func (h *AttendanceHandler) DeleteRotation(w http.ResponseWriter, r *http.Request) {
@@ -492,7 +566,9 @@ func (h *AttendanceHandler) ListOffDays(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list off-days")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	p := pagination.Parse(r)
+	page, total := pageWindow(rows, p)
+	writePaginated(w, h.svc.OffDayViews(r.Context(), scope.TenantID, page), total, p)
 }
 
 type offDayBody struct {
@@ -506,19 +582,8 @@ func (h *AttendanceHandler) CreateOffDay(w http.ResponseWriter, r *http.Request)
 	if !ok || !requirePermission(w, scope, permAttendanceManage) {
 		return
 	}
-	var b offDayBody
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
-		return
-	}
-	empID, err := uuid.Parse(b.EmployeeID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
-		return
-	}
-	date, err := parseDate(b.Date)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid date")
+	b, empID, date, ok := decodeOffDay(w, r)
+	if !ok {
 		return
 	}
 	row, err := h.svc.CreateOffDay(r.Context(), scope.TenantID, empID, date, b.Reason)
@@ -527,6 +592,48 @@ func (h *AttendanceHandler) CreateOffDay(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
+}
+
+// decodeOffDay reads and validates an off-day body, writing the 400 itself on failure.
+func decodeOffDay(w http.ResponseWriter, r *http.Request) (offDayBody, uuid.UUID, time.Time, bool) {
+	var b offDayBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return b, uuid.Nil, time.Time{}, false
+	}
+	empID, err := uuid.Parse(b.EmployeeID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
+		return b, uuid.Nil, time.Time{}, false
+	}
+	date, err := parseDate(b.Date)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid date")
+		return b, uuid.Nil, time.Time{}, false
+	}
+	return b, empID, date, true
+}
+
+func (h *AttendanceHandler) UpdateOffDay(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAttendanceManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	b, empID, date, ok := decodeOffDay(w, r)
+	if !ok {
+		return
+	}
+	row, err := h.svc.UpdateOffDay(r.Context(), scope.TenantID, id, empID, date, b.Reason)
+	if err != nil {
+		writeUpdateError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
 }
 
 func (h *AttendanceHandler) DeleteOffDay(w http.ResponseWriter, r *http.Request) {

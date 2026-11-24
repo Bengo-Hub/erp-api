@@ -335,7 +335,9 @@ func (h *AttendanceHandler) ListOverrides(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list overrides")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	p := pagination.Parse(r)
+	page, total := pageWindow(rows, p)
+	writePaginated(w, h.svc.OverrideViews(r.Context(), scope.TenantID, page), total, p)
 }
 
 type overrideBody struct {

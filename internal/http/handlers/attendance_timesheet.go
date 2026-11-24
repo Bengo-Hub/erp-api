@@ -34,7 +34,19 @@ func (h *AttendanceHandler) ListTimesheets(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list timesheets")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	// ?status=submitted feeds the approvals queue.
+	if status := r.URL.Query().Get("status"); status != "" {
+		kept := rows[:0]
+		for _, t := range rows {
+			if string(t.Status) == status {
+				kept = append(kept, t)
+			}
+		}
+		rows = kept
+	}
+	p := pagination.Parse(r)
+	page, total := pageWindow(rows, p)
+	writePaginated(w, h.svc.TimesheetViews(r.Context(), scope.TenantID, page), total, p)
 }
 
 type timesheetBody struct {

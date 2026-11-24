@@ -226,6 +226,10 @@ type ResolvedCell struct {
 	OverrideID   uuid.UUID  `json:"override_id"`
 }
 
+// PlannerReason is the reason the weekly shift planner stores on the overrides it writes, so the
+// overrides list can tell planner cells from one-off overrides.
+const PlannerReason = "Set in shift planner"
+
 // UpsertPlannerCell creates/replaces the cell for (employee, date). work_shift_id nil = off-duty.
 func (s *Service) UpsertPlannerCell(ctx context.Context, tenantID uuid.UUID, in PlannerCellInput) (*ent.StaffShiftOverride, error) {
 	overrideType := "manual_shift"
@@ -241,7 +245,7 @@ func (s *Service) UpsertPlannerCell(ctx context.Context, tenantID uuid.UUID, in 
 		return s.CreateOverride(ctx, tenantID, OverrideInput{
 			EmployeeID: in.EmployeeID, Date: in.Date, OverrideType: overrideType,
 			WorkShiftID: in.WorkShiftID, StartTime: in.StartTime, EndTime: in.EndTime,
-			Status: "approved", CreatedBy: in.CreatedBy,
+			Reason: PlannerReason, Status: "approved", CreatedBy: in.CreatedBy,
 		})
 	}
 	if err != nil {
@@ -249,7 +253,8 @@ func (s *Service) UpsertPlannerCell(ctx context.Context, tenantID uuid.UUID, in 
 	}
 	u := existing.Update().
 		SetOverrideType(staffshiftoverride.OverrideType(overrideType)).
-		SetStatus(staffshiftoverride.StatusApproved)
+		SetStatus(staffshiftoverride.StatusApproved).
+		SetReason(PlannerReason)
 	if in.WorkShiftID != nil {
 		u = u.SetWorkShiftID(*in.WorkShiftID)
 	} else {

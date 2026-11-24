@@ -9,6 +9,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancedevice"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
+	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 )
 
 // API views: the wire shapes erp-ui reads for work sites, punches and access events. Names
@@ -136,6 +137,86 @@ func (s *Service) deviceNames(ctx context.Context, tenantID uuid.UUID, ids []uui
 	}
 	for _, d := range rows {
 		out[d.ID] = d.Name
+	}
+	return out
+}
+
+// workShifts loads a set of work shifts by id in one query.
+func (s *Service) workShifts(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) map[uuid.UUID]*ent.WorkShift {
+	out := map[uuid.UUID]*ent.WorkShift{}
+	if len(ids) == 0 {
+		return out
+	}
+	rows, err := s.orm.WorkShift.Query().Where(workshift.TenantID(tenantID), workshift.IDIn(ids...)).All(ctx)
+	if err != nil {
+		return out
+	}
+	for _, sh := range rows {
+		out[sh.ID] = sh
+	}
+	return out
+}
+
+// OverrideView is a shift override with the employee's name and, for rows that carry a work
+// shift (the weekly shift planner writes those), the shift's name and default hours. FromPlanner
+// marks rows the planner wrote: they carry a work shift or the planner's reason.
+type OverrideView struct {
+	*ent.StaffShiftOverride
+	EmployeeName   string `json:"employee_name"`
+	EmployeeNumber string `json:"employee_number"`
+	ShiftName      string `json:"shift_name"`
+	ShiftStartTime string `json:"shift_start_time"`
+	ShiftEndTime   string `json:"shift_end_time"`
+	FromPlanner    bool   `json:"from_planner"`
+}
+
+// OverrideViews adds names and shift hours to a page of overrides.
+func (s *Service) OverrideViews(ctx context.Context, tenantID uuid.UUID, rows []*ent.StaffShiftOverride) []OverrideView {
+	empIDs, shiftIDs := make([]*uuid.UUID, 0, len(rows)), make([]*uuid.UUID, 0, len(rows))
+	for _, o := range rows {
+		id := o.EmployeeID
+		empIDs, shiftIDs = append(empIDs, &id), append(shiftIDs, o.WorkShiftID)
+	}
+	names, numbers := s.employeeLabels(ctx, tenantID, uniq(empIDs...))
+	shifts := s.workShifts(ctx, tenantID, uniq(shiftIDs...))
+	out := make([]OverrideView, len(rows))
+	for i, o := range rows {
+		v := OverrideView{StaffShiftOverride: o, EmployeeName: names[o.EmployeeID], EmployeeNumber: numbers[o.EmployeeID],
+			FromPlanner: o.WorkShiftID != nil || (o.Reason != nil && *o.Reason == PlannerReason)}
+		if o.WorkShiftID != nil {
+			if sh, ok := shifts[*o.WorkShiftID]; ok {
+				v.ShiftName = sh.Name
+				if sh.StartTime != nil {
+					v.ShiftStartTime = *sh.StartTime
+				}
+				if sh.EndTime != nil {
+					v.ShiftEndTime = *sh.EndTime
+				}
+			}
+		}
+		out[i] = v
+	}
+	return out
+}
+
+// TimesheetView is a timesheet with the employee's name and staff number.
+type TimesheetView struct {
+	*ent.Timesheet
+	EmployeeName   string `json:"employee_name"`
+	EmployeeNumber string `json:"employee_number"`
+}
+
+// TimesheetViews adds employee names to a page of timesheets.
+func (s *Service) TimesheetViews(ctx context.Context, tenantID uuid.UUID, rows []*ent.Timesheet) []TimesheetView {
+	ids := make([]*uuid.UUID, 0, len(rows))
+	for _, t := range rows {
+		id := t.EmployeeID
+		ids = append(ids, &id)
+	}
+	names, numbers := s.employeeLabels(ctx, tenantID, uniq(ids...))
+	out := make([]TimesheetView, len(rows))
+	for i, t := range rows {
+		out[i] = TimesheetView{Timesheet: t, EmployeeName: names[t.EmployeeID], EmployeeNumber: numbers[t.EmployeeID]}
 	}
 	return out
 }

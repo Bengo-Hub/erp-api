@@ -61,6 +61,13 @@ func writePaginated[T any](w http.ResponseWriter, rows []T, total int, p paginat
 // requested page and reports the true total, so every list endpoint shares the
 // uniform pagination envelope without requiring service/schema changes.
 func writePagedSlice[T any](w http.ResponseWriter, rows []T, p pagination.Params) {
+	page, total := pageWindow(rows, p)
+	writeJSON(w, http.StatusOK, pagination.NewResponse(page, total, p))
+}
+
+// pageWindow slices in-memory rows to the requested page and returns the full count, for
+// handlers that decorate only the visible page (names, shift hours) before writing it.
+func pageWindow[T any](rows []T, p pagination.Params) ([]T, int) {
 	total := len(rows)
 	start := p.Offset
 	if start > total {
@@ -70,7 +77,7 @@ func writePagedSlice[T any](w http.ResponseWriter, rows []T, p pagination.Params
 	if end > total {
 		end = total
 	}
-	writeJSON(w, http.StatusOK, pagination.NewResponse(rows[start:end], total, p))
+	return rows[start:end], total
 }
 
 // parseDecimalDefault parses a decimal string, returning decimal.Zero for an empty value.
