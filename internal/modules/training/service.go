@@ -4,12 +4,17 @@ package training
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/trainingcourse"
 	"github.com/Bengo-Hub/erp-api/internal/ent/trainingenrollment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/trainingevaluation"
@@ -31,27 +36,208 @@ func (s *Service) ListCourses(ctx context.Context, tenantID uuid.UUID) ([]*ent.T
 		Order(ent.Desc(trainingcourse.FieldStartDate)).All(ctx)
 }
 
-// CourseInput is the create payload for a training course.
+// CourseInput is the create/update payload for a training course. Provider, Duration
+// (hours), Cost and Status have no columns; they are kept in the course metadata.
 type CourseInput struct {
 	Title       string
 	Description string
 	StartDate   time.Time
 	EndDate     time.Time
 	Capacity    int
+	Provider    string
+	Duration    string
+	Cost        string
+	Status      string
+}
+
+// CourseStatuses are the course states the screens offer.
+var CourseStatuses = []string{"draft", "scheduled", "ongoing", "completed"}
+
+// courseMetaKeys are the metadata keys CourseInput writes.
+var courseMetaKeys = []string{"provider", "duration", "cost", "status"}
+
+// validate checks dates, the numeric fields and the status.
+func (in CourseInput) validate() error {
+	if strings.TrimSpace(in.Title) == "" {
+		return fmt.Errorf("training: title is required")
+	}
+	if in.EndDate.Before(in.StartDate) {
+		return fmt.Errorf("training: end_date before start_date")
+	}
+	for name, v := range map[string]string{"duration": in.Duration, "cost": in.Cost} {
+		if v == "" {
+			continue
+		}
+		d, err := decimal.NewFromString(v)
+		if err != nil || d.IsNegative() {
+			return fmt.Errorf("training: %s must be a number of zero or more", name)
+		}
+	}
+	if in.Status != "" && !slices.Contains(CourseStatuses, in.Status) {
+		return fmt.Errorf("training: status must be one of %s", strings.Join(CourseStatuses, ", "))
+	}
+	return nil
+}
+
+// metadata merges the input's provider, duration, cost and status into existing
+// metadata (other keys are kept; a blank value removes its key).
+func (in CourseInput) metadata(existing map[string]any) map[string]any {
+	out := map[string]any{}
+	for k, v := range existing {
+		out[k] = v
+	}
+	vals := map[string]string{"provider": strings.TrimSpace(in.Provider), "duration": in.Duration, "cost": in.Cost, "status": in.Status}
+	for _, k := range courseMetaKeys {
+		if vals[k] == "" {
+			delete(out, k)
+		} else {
+			out[k] = vals[k]
+		}
+	}
+	return out
 }
 
 // CreateCourse inserts a tenant-scoped training course.
 func (s *Service) CreateCourse(ctx context.Context, tenantID uuid.UUID, in CourseInput) (*ent.TrainingCourse, error) {
-	if in.EndDate.Before(in.StartDate) {
-		return nil, fmt.Errorf("training: end_date before start_date")
+	if in.Status == "" {
+		in.Status = "draft"
+	}
+	if err := in.validate(); err != nil {
+		return nil, err
 	}
 	row, err := s.orm.TrainingCourse.Create().
 		SetTenantID(tenantID).SetTitle(in.Title).SetDescription(in.Description).
-		SetStartDate(in.StartDate).SetEndDate(in.EndDate).SetCapacity(in.Capacity).Save(ctx)
+		SetStartDate(in.StartDate).SetEndDate(in.EndDate).SetCapacity(in.Capacity).
+		SetMetadata(in.metadata(nil)).Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("training: create course: %w", err)
 	}
 	return row, nil
+}
+
+// UpdateCourse replaces a tenant-scoped course's details.
+func (s *Service) UpdateCourse(ctx context.Context, tenantID, id uuid.UUID, in CourseInput) (*ent.TrainingCourse, error) {
+	if in.Status == "" {
+		in.Status = "draft"
+	}
+	if err := in.validate(); err != nil {
+		return nil, err
+	}
+	c, err := s.orm.TrainingCourse.Query().
+		Where(trainingcourse.TenantID(tenantID), trainingcourse.ID(id)).Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	row, err := c.Update().SetTitle(in.Title).SetDescription(in.Description).
+		SetStartDate(in.StartDate).SetEndDate(in.EndDate).SetCapacity(in.Capacity).
+		SetMetadata(in.metadata(c.Metadata)).Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("training: update course: %w", err)
+	}
+	return row, nil
+}
+
+// CourseView is a course with its metadata fields at the top level, named as the screens
+// name them.
+type CourseView struct {
+	*ent.TrainingCourse
+	Provider string `json:"provider,omitempty"`
+	Duration string `json:"duration,omitempty"`
+	Cost     string `json:"cost,omitempty"`
+	Status   string `json:"status"`
+}
+
+// ViewCourse flattens a course's metadata.
+func ViewCourse(c *ent.TrainingCourse) CourseView {
+	str := func(k string) string {
+		if v, ok := c.Metadata[k]; ok && v != nil {
+			return fmt.Sprint(v)
+		}
+		return ""
+	}
+	v := CourseView{TrainingCourse: c, Provider: str("provider"), Duration: str("duration"), Cost: str("cost"), Status: str("status")}
+	if v.Status == "" {
+		v.Status = "draft"
+	}
+	return v
+}
+
+// namesRef carries the employee's name and the course title (as course_name, the name the
+// screens read) for an enrolment or evaluation.
+type namesRef struct {
+	EmployeeName string `json:"employee_name,omitempty"`
+	CourseName   string `json:"course_name,omitempty"`
+}
+
+// EnrollmentView is an enrolment with the employee's name and the course title.
+type EnrollmentView struct {
+	*ent.TrainingEnrollment
+	namesRef
+}
+
+// EvaluationView is an evaluation with the employee's name and the course title.
+type EvaluationView struct {
+	*ent.TrainingEvaluation
+	namesRef
+}
+
+// lookupNames loads employee names and course titles for the given ids (one query each).
+func (s *Service) lookupNames(ctx context.Context, tenantID uuid.UUID, empIDs, courseIDs []uuid.UUID) (map[uuid.UUID]string, map[uuid.UUID]string, error) {
+	emps := map[uuid.UUID]string{}
+	courses := map[uuid.UUID]string{}
+	if len(empIDs) > 0 {
+		rows, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.IDIn(empIDs...)).All(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("training: load employees: %w", err)
+		}
+		for _, e := range rows {
+			emps[e.ID] = strings.TrimSpace(e.FirstName + " " + e.LastName)
+		}
+	}
+	if len(courseIDs) > 0 {
+		rows, err := s.orm.TrainingCourse.Query().Where(trainingcourse.TenantID(tenantID), trainingcourse.IDIn(courseIDs...)).All(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("training: load courses: %w", err)
+		}
+		for _, c := range rows {
+			courses[c.ID] = c.Title
+		}
+	}
+	return emps, courses, nil
+}
+
+// DescribeEnrollments adds employee names and course titles to enrolments.
+func (s *Service) DescribeEnrollments(ctx context.Context, tenantID uuid.UUID, rows []*ent.TrainingEnrollment) ([]EnrollmentView, error) {
+	empIDs, courseIDs := make([]uuid.UUID, len(rows)), make([]uuid.UUID, len(rows))
+	for i, r := range rows {
+		empIDs[i], courseIDs[i] = r.EmployeeID, r.CourseID
+	}
+	emps, courses, err := s.lookupNames(ctx, tenantID, empIDs, courseIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]EnrollmentView, len(rows))
+	for i, r := range rows {
+		out[i] = EnrollmentView{TrainingEnrollment: r, namesRef: namesRef{EmployeeName: emps[r.EmployeeID], CourseName: courses[r.CourseID]}}
+	}
+	return out, nil
+}
+
+// DescribeEvaluations adds employee names and course titles to evaluations.
+func (s *Service) DescribeEvaluations(ctx context.Context, tenantID uuid.UUID, rows []*ent.TrainingEvaluation) ([]EvaluationView, error) {
+	empIDs, courseIDs := make([]uuid.UUID, len(rows)), make([]uuid.UUID, len(rows))
+	for i, r := range rows {
+		empIDs[i], courseIDs[i] = r.EmployeeID, r.CourseID
+	}
+	emps, courses, err := s.lookupNames(ctx, tenantID, empIDs, courseIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]EvaluationView, len(rows))
+	for i, r := range rows {
+		out[i] = EvaluationView{TrainingEvaluation: r, namesRef: namesRef{EmployeeName: emps[r.EmployeeID], CourseName: courses[r.CourseID]}}
+	}
+	return out, nil
 }
 
 // DeleteCourse removes a tenant-scoped training course.
@@ -143,6 +329,10 @@ func (s *Service) ListEvaluations(ctx context.Context, tenantID uuid.UUID, cours
 	return q.Order(ent.Desc(trainingevaluation.FieldCreatedAt)).All(ctx)
 }
 
+// ErrNotEnrolled is returned when an evaluation names an employee who is not enrolled on
+// the course (or whose enrolment was cancelled).
+var ErrNotEnrolled = errors.New("training: the employee is not enrolled on this course")
+
 // CreateEvaluation records an employee's post-course evaluation (rating clamped 0-5).
 func (s *Service) CreateEvaluation(ctx context.Context, tenantID, courseID, employeeID uuid.UUID, rating int, feedback string) (*ent.TrainingEvaluation, error) {
 	if rating < 0 {
@@ -150,6 +340,18 @@ func (s *Service) CreateEvaluation(ctx context.Context, tenantID, courseID, empl
 	}
 	if rating > 5 {
 		rating = 5
+	}
+	// Only someone enrolled on the course can evaluate it.
+	enrolled, err := s.orm.TrainingEnrollment.Query().Where(
+		trainingenrollment.TenantID(tenantID), trainingenrollment.CourseID(courseID),
+		trainingenrollment.EmployeeID(employeeID),
+		trainingenrollment.StatusNEQ(trainingenrollment.StatusCancelled),
+	).Exist(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("training: check enrolment: %w", err)
+	}
+	if !enrolled {
+		return nil, ErrNotEnrolled
 	}
 	row, err := s.orm.TrainingEvaluation.Create().
 		SetTenantID(tenantID).SetCourseID(courseID).SetEmployeeID(employeeID).

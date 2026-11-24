@@ -23,8 +23,10 @@ type EmployeeView struct {
 	JobTitleID     *uuid.UUID `json:"job_title_id,omitempty"`
 	JobTitleName   string     `json:"job_title_name,omitempty"`
 	EmploymentType string     `json:"employment_type,omitempty"`
-	ReportsToID    *uuid.UUID `json:"reports_to_id,omitempty"`
-	ReportsTo      string     `json:"reports_to_name,omitempty"`
+	// DateJoined is the hr_details date joined as YYYY-MM-DD (the form's date input format).
+	DateJoined  string     `json:"date_joined,omitempty"`
+	ReportsToID *uuid.UUID `json:"reports_to_id,omitempty"`
+	ReportsTo   string     `json:"reports_to_name,omitempty"`
 	// Manager mirrors reports_to_id so the org-chart (which reads `manager`) renders the tree.
 	Manager *uuid.UUID `json:"manager,omitempty"`
 	// Outlet is the branch/outlet NAME (resolved from the local AuthOutlet shadow), so the UI
@@ -71,6 +73,9 @@ func (s *Service) Enrich(ctx context.Context, tenantID uuid.UUID, emps []*ent.Em
 	for _, h := range hrs {
 		i := idx[h.EmployeeID]
 		out[i].EmploymentType = h.EmploymentType
+		if h.DateJoined != nil {
+			out[i].DateJoined = h.DateJoined.Format("2006-01-02")
+		}
 		if h.DepartmentID != nil {
 			out[i].DepartmentID = h.DepartmentID
 			deptIDs[*h.DepartmentID] = true

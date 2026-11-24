@@ -3,12 +3,14 @@ package performance
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metrictarget"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/reviewmetric"
@@ -55,13 +57,69 @@ func (s *Service) SetTarget(ctx context.Context, tenantID, employeeID, metricID 
 
 // ---- Reviews ----
 
-// ListReviews returns reviews filtered by tenant (+ optional employee).
-func (s *Service) ListReviews(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID) ([]*ent.PerformanceReview, error) {
+// ListReviews returns reviews filtered by tenant (+ optional employee and status; an unknown
+// status matches nothing rather than everything).
+func (s *Service) ListReviews(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, status string) ([]*ent.PerformanceReview, error) {
 	q := s.orm.PerformanceReview.Query().Where(performancereview.TenantID(tenantID))
 	if employeeID != nil {
 		q = q.Where(performancereview.EmployeeID(*employeeID))
 	}
+	if status != "" {
+		st := performancereview.Status(status)
+		if performancereview.StatusValidator(st) != nil {
+			return []*ent.PerformanceReview{}, nil
+		}
+		q = q.Where(performancereview.StatusEQ(st))
+	}
 	return q.Order(ent.Desc(performancereview.FieldReviewDate)).All(ctx)
+}
+
+// ReviewView is a review with the employee's and reviewer's names.
+type ReviewView struct {
+	*ent.PerformanceReview
+	EmployeeName   string `json:"employee_name,omitempty"`
+	EmployeeNumber string `json:"employee_number,omitempty"`
+	ReviewerName   string `json:"reviewer_name,omitempty"`
+}
+
+// DescribeReviews adds the employee and reviewer names to reviews in one employee query.
+func (s *Service) DescribeReviews(ctx context.Context, tenantID uuid.UUID, rows []*ent.PerformanceReview) ([]ReviewView, error) {
+	out := make([]ReviewView, len(rows))
+	if len(rows) == 0 {
+		return out, nil
+	}
+	ids := make([]uuid.UUID, 0, len(rows)*2)
+	for _, r := range rows {
+		ids = append(ids, r.EmployeeID)
+		if r.ReviewerID != nil {
+			ids = append(ids, *r.ReviewerID)
+		}
+	}
+	emps, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.IDIn(ids...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("performance: load employees: %w", err)
+	}
+	byID := make(map[uuid.UUID]*ent.Employee, len(emps))
+	for _, e := range emps {
+		byID[e.ID] = e
+	}
+	name := func(e *ent.Employee) string { return strings.TrimSpace(e.FirstName + " " + e.LastName) }
+	for i, r := range rows {
+		v := ReviewView{PerformanceReview: r}
+		if e := byID[r.EmployeeID]; e != nil {
+			v.EmployeeName = name(e)
+			if e.EmployeeNumber != nil {
+				v.EmployeeNumber = *e.EmployeeNumber
+			}
+		}
+		if r.ReviewerID != nil {
+			if e := byID[*r.ReviewerID]; e != nil {
+				v.ReviewerName = name(e)
+			}
+		}
+		out[i] = v
+	}
+	return out, nil
 }
 
 // ReviewInput is the create payload for a performance review.
@@ -103,8 +161,9 @@ var reviewTransitions = map[performancereview.Status][]performancereview.Status{
 }
 
 // SetReviewStatus transitions a review, rejecting invalid transitions; overallRating (0-5,
-// optional) applied where supplied.
-func (s *Service) SetReviewStatus(ctx context.Context, tenantID, id uuid.UUID, status, overallRating string) (*ent.PerformanceReview, error) {
+// optional) applied where supplied, and comments (the reason when rejecting) saved on the
+// review where supplied.
+func (s *Service) SetReviewStatus(ctx context.Context, tenantID, id uuid.UUID, status, overallRating, comments string) (*ent.PerformanceReview, error) {
 	rv, err := s.orm.PerformanceReview.Query().
 		Where(performancereview.TenantID(tenantID), performancereview.ID(id)).Only(ctx)
 	if err != nil {
@@ -128,6 +187,9 @@ func (s *Service) SetReviewStatus(ctx context.Context, tenantID, id uuid.UUID, s
 			return nil, fmt.Errorf("performance: overall_rating must be 0-5")
 		}
 		u = u.SetOverallRating(d)
+	}
+	if c := strings.TrimSpace(comments); c != "" {
+		u = u.SetComments(c)
 	}
 	row, err := u.Save(ctx)
 	if err != nil {

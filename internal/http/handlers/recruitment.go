@@ -41,6 +41,7 @@ func (h *RecruitmentHandler) RegisterRoutes(r chi.Router) {
 
 		rr.Get("/candidates", h.ListCandidates)
 		rr.Post("/candidates", h.CreateCandidate)
+		rr.Put("/candidates/{id}", h.UpdateCandidate)
 		rr.Post("/candidates/{id}/resume", h.UploadResume)
 
 		rr.Get("/applications", h.ListApplications)
@@ -185,10 +186,11 @@ func (h *RecruitmentHandler) ListCandidates(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list candidates")
 		return
 	}
-	for _, c := range rows {
-		h.withResumeLink(c)
+	views := make([]recruitment.CandidateView, len(rows))
+	for i, c := range rows {
+		views[i] = recruitment.ViewCandidate(h.withResumeLink(c))
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	writePagedSlice(w, views, pagination.Parse(r))
 }
 
 type candidateBody struct {
@@ -196,6 +198,15 @@ type candidateBody struct {
 	Email     string `json:"email"`
 	Phone     string `json:"phone"`
 	ResumeURL string `json:"resume_url"`
+	Source    string `json:"source"`
+	Status    string `json:"status"`
+}
+
+func (b candidateBody) input() recruitment.CandidateInput {
+	return recruitment.CandidateInput{
+		FullName: b.FullName, Email: b.Email, Phone: b.Phone, ResumeURL: b.ResumeURL,
+		Source: b.Source, Status: b.Status,
+	}
 }
 
 func (h *RecruitmentHandler) CreateCandidate(w http.ResponseWriter, r *http.Request) {
@@ -208,14 +219,40 @@ func (h *RecruitmentHandler) CreateCandidate(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	row, err := h.svc.CreateCandidate(r.Context(), scope.TenantID, recruitment.CandidateInput{
-		FullName: b.FullName, Email: b.Email, Phone: b.Phone, ResumeURL: b.ResumeURL,
-	})
+	row, err := h.svc.CreateCandidate(r.Context(), scope.TenantID, b.input())
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, h.withResumeLink(row))
+	writeJSON(w, http.StatusCreated, recruitment.ViewCandidate(h.withResumeLink(row)))
+}
+
+// UpdateCandidate changes a candidate's details, source and status.
+func (h *RecruitmentHandler) UpdateCandidate(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permRecruitmentManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var b candidateBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	row, err := h.svc.UpdateCandidate(r.Context(), scope.TenantID, id, b.input())
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "candidate not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, recruitment.ViewCandidate(h.withResumeLink(row)))
 }
 
 // withResumeLink swaps a stored resume key for a short-lived presigned link in a response (the
@@ -292,7 +329,12 @@ func (h *RecruitmentHandler) ListApplications(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list applications")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	views, err := h.svc.DescribeApplications(r.Context(), scope.TenantID, rows)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list applications")
+		return
+	}
+	writePagedSlice(w, views, pagination.Parse(r))
 }
 
 type applicationBody struct {

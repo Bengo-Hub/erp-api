@@ -131,6 +131,81 @@ func (s *Service) ListTemplates(ctx context.Context, tenantID uuid.UUID) ([]*ent
 		Order(ent.Desc(appraisaltemplate.FieldCreatedAt)).All(ctx)
 }
 
+// TemplateView is a template with how many questions it holds.
+type TemplateView struct {
+	*ent.AppraisalTemplate
+	QuestionCount int `json:"question_count"`
+}
+
+// ListTemplateViews returns ListTemplates with each template's question count (one
+// grouped count query).
+func (s *Service) ListTemplateViews(ctx context.Context, tenantID uuid.UUID) ([]TemplateView, error) {
+	tpls, err := s.ListTemplates(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]TemplateView, len(tpls))
+	if len(tpls) == 0 {
+		return out, nil
+	}
+	ids := make([]uuid.UUID, len(tpls))
+	for i, t := range tpls {
+		ids[i] = t.ID
+	}
+	var counts []struct {
+		TemplateID uuid.UUID `json:"template_id"`
+		Count      int       `json:"count"`
+	}
+	if err := s.orm.AppraisalQuestion.Query().
+		Where(appraisalquestion.TenantIDIn(s.tenantScope(tenantID)...), appraisalquestion.TemplateIDIn(ids...)).
+		GroupBy(appraisalquestion.FieldTemplateID).Aggregate(ent.Count()).Scan(ctx, &counts); err != nil {
+		return nil, fmt.Errorf("appraisals: count questions: %w", err)
+	}
+	byTemplate := make(map[uuid.UUID]int, len(counts))
+	for _, c := range counts {
+		byTemplate[c.TemplateID] = c.Count
+	}
+	for i, t := range tpls {
+		out[i] = TemplateView{AppraisalTemplate: t, QuestionCount: byTemplate[t.ID]}
+	}
+	return out, nil
+}
+
+// QuestionView is a question with its template's name.
+type QuestionView struct {
+	*ent.AppraisalQuestion
+	TemplateName string `json:"template_name,omitempty"`
+}
+
+// ListAllQuestions returns the questions of every template the tenant can use, grouped by
+// template and in template order, each with its template's name.
+func (s *Service) ListAllQuestions(ctx context.Context, tenantID uuid.UUID) ([]QuestionView, error) {
+	tpls, err := s.ListTemplates(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	out := []QuestionView{}
+	if len(tpls) == 0 {
+		return out, nil
+	}
+	names := make(map[uuid.UUID]string, len(tpls))
+	ids := make([]uuid.UUID, len(tpls))
+	for i, t := range tpls {
+		names[t.ID] = t.Name
+		ids[i] = t.ID
+	}
+	rows, err := s.orm.AppraisalQuestion.Query().
+		Where(appraisalquestion.TenantIDIn(s.tenantScope(tenantID)...), appraisalquestion.TemplateIDIn(ids...)).
+		Order(ent.Asc(appraisalquestion.FieldTemplateID), ent.Asc(appraisalquestion.FieldOrder)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, q := range rows {
+		out = append(out, QuestionView{AppraisalQuestion: q, TemplateName: names[q.TemplateID]})
+	}
+	return out, nil
+}
+
 // CreateTemplate inserts a tenant-scoped template.
 func (s *Service) CreateTemplate(ctx context.Context, tenantID uuid.UUID, name, description string, createdBy *uuid.UUID) (*ent.AppraisalTemplate, error) {
 	b := s.orm.AppraisalTemplate.Create().
@@ -145,10 +220,11 @@ func (s *Service) CreateTemplate(ctx context.Context, tenantID uuid.UUID, name, 
 	return row, nil
 }
 
-// ListQuestions returns the questions for a tenant-scoped template.
+// ListQuestions returns the questions for a template the tenant can use: its own, or the
+// inherited standard template of the system tenant.
 func (s *Service) ListQuestions(ctx context.Context, tenantID, templateID uuid.UUID) ([]*ent.AppraisalQuestion, error) {
 	return s.orm.AppraisalQuestion.Query().
-		Where(appraisalquestion.TenantID(tenantID), appraisalquestion.TemplateID(templateID)).
+		Where(appraisalquestion.TenantIDIn(s.tenantScope(tenantID)...), appraisalquestion.TemplateID(templateID)).
 		Order(ent.Asc(appraisalquestion.FieldOrder)).All(ctx)
 }
 
@@ -166,6 +242,9 @@ type QuestionInput struct {
 
 // AddQuestion appends a question to a template.
 func (s *Service) AddQuestion(ctx context.Context, tenantID uuid.UUID, in QuestionInput) (*ent.AppraisalQuestion, error) {
+	if in.QuestionType == "" {
+		in.QuestionType = string(appraisalquestion.QuestionTypeRating) // most questions are rated
+	}
 	c := s.orm.AppraisalQuestion.Create().
 		SetTenantID(tenantID).SetTemplateID(in.TemplateID).
 		SetQuestionText(in.QuestionText).

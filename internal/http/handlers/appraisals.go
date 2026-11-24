@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/appraisals"
 )
 
@@ -37,10 +38,12 @@ func (h *AppraisalsHandler) RegisterRoutes(r chi.Router) {
 		ar.Get("/templates", h.ListTemplates)
 		ar.Post("/templates", h.CreateTemplate)
 		ar.Get("/templates/{id}/questions", h.ListQuestions)
+		ar.Get("/questions", h.ListAllQuestions)
 		ar.Post("/templates/{id}/questions", h.AddQuestion)
 
 		ar.Get("/", h.ListAppraisals)
 		ar.Post("/", h.CreateAppraisal)
+		ar.Get("/{id}", h.GetAppraisal)
 		ar.Put("/{id}/status", h.SetAppraisalStatus)
 		ar.Get("/{id}/responses", h.ListResponses)
 		ar.Post("/{id}/responses", h.AddResponse)
@@ -139,9 +142,24 @@ func (h *AppraisalsHandler) ListTemplates(w http.ResponseWriter, r *http.Request
 	if !ok || !requirePermission(w, scope, permAppraisalView) {
 		return
 	}
-	rows, err := h.svc.ListTemplates(r.Context(), scope.TenantID)
+	rows, err := h.svc.ListTemplateViews(r.Context(), scope.TenantID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list templates")
+		return
+	}
+	writePagedSlice(w, rows, pagination.Parse(r))
+}
+
+// ListAllQuestions returns the questions of every template the tenant can use, each with
+// its template name (the questions screen with no template filter).
+func (h *AppraisalsHandler) ListAllQuestions(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAppraisalView) {
+		return
+	}
+	rows, err := h.svc.ListAllQuestions(r.Context(), scope.TenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list questions")
 		return
 	}
 	writePagedSlice(w, rows, pagination.Parse(r))
@@ -240,7 +258,35 @@ func (h *AppraisalsHandler) ListAppraisals(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list appraisals")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	views, err := h.svc.DescribeAppraisals(r.Context(), scope.TenantID, rows)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list appraisals")
+		return
+	}
+	writePagedSlice(w, views, pagination.Parse(r))
+}
+
+// GetAppraisal returns one appraisal with its employee, evaluator, cycle and template names.
+func (h *AppraisalsHandler) GetAppraisal(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAppraisalView) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	row, err := h.svc.GetAppraisal(r.Context(), scope.TenantID, id)
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "appraisal not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to load appraisal")
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
 }
 
 type appraisalBody struct {
@@ -385,16 +431,23 @@ func (h *AppraisalsHandler) ListGoals(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list goals")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	views, err := h.svc.DescribeGoals(r.Context(), scope.TenantID, rows)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list goals")
+		return
+	}
+	writePagedSlice(w, views, pagination.Parse(r))
 }
 
 type goalBody struct {
-	EmployeeID  string `json:"employee_id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	StartDate   string `json:"start_date"`
-	EndDate     string `json:"end_date"`
-	IsTemplate  bool   `json:"is_template"`
+	EmployeeID  string      `json:"employee_id"`
+	Title       string      `json:"title"`
+	Description string      `json:"description"`
+	StartDate   string      `json:"start_date"`
+	EndDate     string      `json:"end_date"`
+	IsTemplate  bool        `json:"is_template"`
+	Category    string      `json:"category"`
+	Weight      json.Number `json:"weight"`
 }
 
 func (h *AppraisalsHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
@@ -424,6 +477,7 @@ func (h *AppraisalsHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
 	in := appraisals.GoalInput{
 		EmployeeID: empID, Title: b.Title, Description: b.Description,
 		IsTemplate: b.IsTemplate, CreatedBy: &uid,
+		Category: b.Category, Weight: b.Weight.String(),
 	}
 	if d, derr := parseDate(b.StartDate); derr == nil {
 		in.StartDate = &d

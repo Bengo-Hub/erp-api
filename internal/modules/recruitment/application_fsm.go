@@ -3,6 +3,7 @@ package recruitment
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,6 +21,16 @@ var allowedTransitions = map[application.Status][]application.Status{
 	application.StatusOffered:   {application.StatusHired, application.StatusRejected},
 	application.StatusHired:     {},
 	application.StatusRejected:  {},
+}
+
+// splitFullName splits a candidate's full name into the employee's first name and the rest
+// as last name ("Jane Wanjiru Mwangi" gives "Jane", "Wanjiru Mwangi").
+func splitFullName(full string) (first, last string) {
+	parts := strings.Fields(full)
+	if len(parts) == 0 {
+		return "", ""
+	}
+	return parts[0], strings.Join(parts[1:], " ")
 }
 
 func canTransition(from, to application.Status) bool {
@@ -103,9 +114,11 @@ func (s *Service) Transition(ctx context.Context, tenantID, id uuid.UUID, to str
 	if err != nil {
 		return res, fmt.Errorf("recruitment: load candidate: %w", err)
 	}
+	first, last := splitFullName(cand.FullName)
 	emp, err := tx.Employee.Create().
 		SetTenantID(tenantID).
-		SetFirstName(cand.FullName).
+		SetFirstName(first).
+		SetLastName(last).
 		SetEmail(cand.Email).
 		Save(ctx)
 	if err != nil {
@@ -115,7 +128,8 @@ func (s *Service) Transition(ctx context.Context, tenantID, id uuid.UUID, to str
 	if err != nil {
 		return res, err
 	}
-	updated, err := app.Update().SetStatus(target).SetHiredEmployeeID(emp.ID).Save(ctx)
+	// Through the transaction, so a failed commit leaves the application un-hired too.
+	updated, err := tx.Application.UpdateOne(app).SetStatus(target).SetHiredEmployeeID(emp.ID).Save(ctx)
 	if err != nil {
 		return res, fmt.Errorf("recruitment: hire transition: %w", err)
 	}

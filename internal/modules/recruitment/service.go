@@ -5,6 +5,8 @@ package recruitment
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -186,18 +188,77 @@ func (s *Service) ListCandidates(ctx context.Context, tenantID uuid.UUID) ([]*en
 		Order(ent.Desc(candidate.FieldCreatedAt)).All(ctx)
 }
 
-// CandidateInput is the create payload for a candidate.
+// CandidateInput is the create/update payload for a candidate. Source and Status have no
+// columns; they are kept in the candidate metadata.
 type CandidateInput struct {
 	FullName  string
 	Email     string
 	Phone     string
 	ResumeURL string
+	Source    string
+	Status    string
+}
+
+// CandidateStatuses are the candidate states the screens offer. Where an application
+// stands in the pipeline is the application's own status.
+var CandidateStatuses = []string{"new", "active", "on_hold", "withdrawn", "hired"}
+
+func (in CandidateInput) validate() error {
+	if strings.TrimSpace(in.FullName) == "" {
+		return fmt.Errorf("recruitment: full_name is required")
+	}
+	if in.Status != "" && !slices.Contains(CandidateStatuses, in.Status) {
+		return fmt.Errorf("recruitment: status must be one of %s", strings.Join(CandidateStatuses, ", "))
+	}
+	return nil
+}
+
+// metadata merges source and status into existing metadata (a blank source removes it).
+func (in CandidateInput) metadata(existing map[string]any) map[string]any {
+	out := map[string]any{}
+	for k, v := range existing {
+		out[k] = v
+	}
+	if src := strings.TrimSpace(in.Source); src != "" {
+		out["source"] = src
+	} else {
+		delete(out, "source")
+	}
+	status := in.Status
+	if status == "" {
+		status = "new"
+	}
+	out["status"] = status
+	return out
+}
+
+// CandidateView is a candidate with its metadata fields at the top level.
+type CandidateView struct {
+	*ent.Candidate
+	Source string `json:"source,omitempty"`
+	Status string `json:"status"`
+}
+
+// ViewCandidate flattens a candidate's metadata.
+func ViewCandidate(c *ent.Candidate) CandidateView {
+	v := CandidateView{Candidate: c, Status: "new"}
+	if s, ok := c.Metadata["source"].(string); ok {
+		v.Source = s
+	}
+	if s, ok := c.Metadata["status"].(string); ok && s != "" {
+		v.Status = s
+	}
+	return v
 }
 
 // CreateCandidate inserts a tenant-scoped candidate.
 func (s *Service) CreateCandidate(ctx context.Context, tenantID uuid.UUID, in CandidateInput) (*ent.Candidate, error) {
+	if err := in.validate(); err != nil {
+		return nil, err
+	}
 	b := s.orm.Candidate.Create().
-		SetTenantID(tenantID).SetFullName(in.FullName).SetEmail(in.Email)
+		SetTenantID(tenantID).SetFullName(strings.TrimSpace(in.FullName)).SetEmail(in.Email).
+		SetMetadata(in.metadata(nil))
 	if in.Phone != "" {
 		b = b.SetPhone(in.Phone)
 	}
@@ -207,6 +268,30 @@ func (s *Service) CreateCandidate(ctx context.Context, tenantID uuid.UUID, in Ca
 	row, err := b.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("recruitment: create candidate: %w", err)
+	}
+	return row, nil
+}
+
+// UpdateCandidate changes a candidate's name, contacts, source and status. The resume is
+// changed through UploadResume, so an empty ResumeURL keeps the stored one.
+func (s *Service) UpdateCandidate(ctx context.Context, tenantID, id uuid.UUID, in CandidateInput) (*ent.Candidate, error) {
+	if err := in.validate(); err != nil {
+		return nil, err
+	}
+	c, err := s.GetCandidate(ctx, tenantID, id)
+	if err != nil {
+		return nil, err
+	}
+	u := c.Update().SetFullName(strings.TrimSpace(in.FullName)).SetEmail(in.Email).
+		SetMetadata(in.metadata(c.Metadata))
+	if in.Phone != "" {
+		u = u.SetPhone(in.Phone)
+	} else {
+		u = u.ClearPhone()
+	}
+	row, err := u.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("recruitment: update candidate: %w", err)
 	}
 	return row, nil
 }
@@ -242,6 +327,51 @@ func (s *Service) ListApplications(ctx context.Context, tenantID uuid.UUID, jobI
 		q = q.Where(application.StatusEQ(application.Status(status)))
 	}
 	return q.Order(ent.Desc(application.FieldAppliedAt)).All(ctx)
+}
+
+// ApplicationView is an application with the candidate's name and email and the job title.
+type ApplicationView struct {
+	*ent.Application
+	CandidateName  string `json:"candidate_name,omitempty"`
+	CandidateEmail string `json:"candidate_email,omitempty"`
+	JobTitle       string `json:"job_title,omitempty"`
+}
+
+// DescribeApplications adds candidate and job names to applications (one query per kind).
+func (s *Service) DescribeApplications(ctx context.Context, tenantID uuid.UUID, rows []*ent.Application) ([]ApplicationView, error) {
+	out := make([]ApplicationView, len(rows))
+	if len(rows) == 0 {
+		return out, nil
+	}
+	candIDs := make([]uuid.UUID, len(rows))
+	jobIDs := make([]uuid.UUID, len(rows))
+	for i, a := range rows {
+		candIDs[i], jobIDs[i] = a.CandidateID, a.JobID
+	}
+	cands, err := s.orm.Candidate.Query().Where(candidate.TenantID(tenantID), candidate.IDIn(candIDs...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("recruitment: load candidates: %w", err)
+	}
+	jobs, err := s.orm.JobPosting.Query().Where(jobposting.TenantID(tenantID), jobposting.IDIn(jobIDs...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("recruitment: load postings: %w", err)
+	}
+	byCand := make(map[uuid.UUID]*ent.Candidate, len(cands))
+	for _, c := range cands {
+		byCand[c.ID] = c
+	}
+	titles := make(map[uuid.UUID]string, len(jobs))
+	for _, j := range jobs {
+		titles[j.ID] = j.Title
+	}
+	for i, a := range rows {
+		v := ApplicationView{Application: a, JobTitle: titles[a.JobID]}
+		if c := byCand[a.CandidateID]; c != nil {
+			v.CandidateName, v.CandidateEmail = c.FullName, c.Email
+		}
+		out[i] = v
+	}
+	return out, nil
 }
 
 // CreateApplication files a candidate's application (starts at applied).

@@ -2,14 +2,20 @@ package appraisals
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisal"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalcycle"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalquestion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalresponse"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 )
 
@@ -23,6 +29,111 @@ func (s *Service) ListAppraisals(ctx context.Context, tenantID uuid.UUID, cycleI
 		q = q.Where(appraisal.EmployeeID(*employeeID))
 	}
 	return q.Order(ent.Desc(appraisal.FieldCreatedAt)).All(ctx)
+}
+
+// AppraisalView is an appraisal with the employee, evaluator, cycle and template names a
+// screen shows next to it.
+type AppraisalView struct {
+	*ent.Appraisal
+	EmployeeName   string `json:"employee_name,omitempty"`
+	EmployeeNumber string `json:"employee_number,omitempty"`
+	EvaluatorName  string `json:"evaluator_name,omitempty"`
+	CycleName      string `json:"cycle_name,omitempty"`
+	TemplateName   string `json:"template_name,omitempty"`
+}
+
+// tenantScope is the tenant plus the system tenant whose standard templates every tenant
+// inherits (see ListTemplates).
+func (s *Service) tenantScope(tenantID uuid.UUID) []uuid.UUID {
+	if s.systemTenant == uuid.Nil || s.systemTenant == tenantID {
+		return []uuid.UUID{tenantID}
+	}
+	return []uuid.UUID{tenantID, s.systemTenant}
+}
+
+// DescribeAppraisals adds the employee, evaluator, cycle and template names to appraisals,
+// loading each kind in one query.
+func (s *Service) DescribeAppraisals(ctx context.Context, tenantID uuid.UUID, rows []*ent.Appraisal) ([]AppraisalView, error) {
+	out := make([]AppraisalView, len(rows))
+	if len(rows) == 0 {
+		return out, nil
+	}
+	var empIDs, cycleIDs, templateIDs []uuid.UUID
+	for _, a := range rows {
+		empIDs = append(empIDs, a.EmployeeID)
+		if a.EvaluatorID != nil {
+			empIDs = append(empIDs, *a.EvaluatorID)
+		}
+		cycleIDs = append(cycleIDs, a.CycleID)
+		if a.TemplateID != nil {
+			templateIDs = append(templateIDs, *a.TemplateID)
+		}
+	}
+	emps, err := s.orm.Employee.Query().
+		Where(employee.TenantID(tenantID), employee.IDIn(empIDs...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("appraisals: load employees: %w", err)
+	}
+	names := make(map[uuid.UUID]*ent.Employee, len(emps))
+	for _, e := range emps {
+		names[e.ID] = e
+	}
+	cycles, err := s.orm.AppraisalCycle.Query().
+		Where(appraisalcycle.TenantID(tenantID), appraisalcycle.IDIn(cycleIDs...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("appraisals: load cycles: %w", err)
+	}
+	cycleNames := make(map[uuid.UUID]string, len(cycles))
+	for _, c := range cycles {
+		cycleNames[c.ID] = c.Name
+	}
+	templateNames := map[uuid.UUID]string{}
+	if len(templateIDs) > 0 {
+		tpls, terr := s.orm.AppraisalTemplate.Query().
+			Where(appraisaltemplate.TenantIDIn(s.tenantScope(tenantID)...), appraisaltemplate.IDIn(templateIDs...)).All(ctx)
+		if terr != nil {
+			return nil, fmt.Errorf("appraisals: load templates: %w", terr)
+		}
+		for _, t := range tpls {
+			templateNames[t.ID] = t.Name
+		}
+	}
+	for i, a := range rows {
+		v := AppraisalView{Appraisal: a, CycleName: cycleNames[a.CycleID]}
+		if a.TemplateID != nil {
+			v.TemplateName = templateNames[*a.TemplateID]
+		}
+		if e := names[a.EmployeeID]; e != nil {
+			v.EmployeeName = fullName(e)
+			if e.EmployeeNumber != nil {
+				v.EmployeeNumber = *e.EmployeeNumber
+			}
+		}
+		if a.EvaluatorID != nil {
+			if e := names[*a.EvaluatorID]; e != nil {
+				v.EvaluatorName = fullName(e)
+			}
+		}
+		out[i] = v
+	}
+	return out, nil
+}
+
+func fullName(e *ent.Employee) string {
+	return strings.TrimSpace(e.FirstName + " " + e.LastName)
+}
+
+// GetAppraisal returns one tenant-scoped appraisal with its names.
+func (s *Service) GetAppraisal(ctx context.Context, tenantID, id uuid.UUID) (*AppraisalView, error) {
+	a, err := s.orm.Appraisal.Query().Where(appraisal.TenantID(tenantID), appraisal.ID(id)).Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	views, err := s.DescribeAppraisals(ctx, tenantID, []*ent.Appraisal{a})
+	if err != nil {
+		return nil, err
+	}
+	return &views[0], nil
 }
 
 // AppraisalInput is the create payload for an appraisal.
@@ -171,19 +282,66 @@ type ResponseInput struct {
 	Rating      string
 }
 
-// AddResponse records an answer to a question within an appraisal.
+// ErrAppraisalLocked is returned when answers are saved on an appraisal that is no longer
+// being evaluated (completed, approved or rejected); a rejected one is reopened first.
+var ErrAppraisalLocked = errors.New("appraisals: this appraisal is not open for evaluation")
+
+// AddResponse records the answer to a question within an appraisal. Saving the same
+// question again replaces the earlier answer, and the first answer on a draft appraisal
+// moves it to in_progress.
 func (s *Service) AddResponse(ctx context.Context, tenantID uuid.UUID, in ResponseInput) (*ent.AppraisalResponse, error) {
-	b := s.orm.AppraisalResponse.Create().
-		SetTenantID(tenantID).SetAppraisalID(in.AppraisalID).SetQuestionID(in.QuestionID).
-		SetResponse(in.Response)
-	if rating, rerr := parseRating(in.Rating); rerr != nil {
+	rating, rerr := parseRating(in.Rating)
+	if rerr != nil {
 		return nil, fmt.Errorf("appraisals: %w", rerr)
-	} else if rating != nil {
-		b = b.SetRating(*rating)
 	}
-	row, err := b.Save(ctx)
+	a, err := s.orm.Appraisal.Query().
+		Where(appraisal.TenantID(tenantID), appraisal.ID(in.AppraisalID)).Only(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("appraisals: add response: %w", err)
+		return nil, fmt.Errorf("appraisals: load appraisal: %w", err)
+	}
+	if a.Status != appraisal.StatusDraft && a.Status != appraisal.StatusInProgress {
+		return nil, ErrAppraisalLocked
+	}
+	if ok, qerr := s.orm.AppraisalQuestion.Query().
+		Where(appraisalquestion.TenantIDIn(s.tenantScope(tenantID)...), appraisalquestion.ID(in.QuestionID)).
+		Exist(ctx); qerr != nil {
+		return nil, fmt.Errorf("appraisals: load question: %w", qerr)
+	} else if !ok {
+		return nil, fmt.Errorf("appraisals: question not found")
+	}
+
+	existing, err := s.orm.AppraisalResponse.Query().
+		Where(appraisalresponse.TenantID(tenantID), appraisalresponse.AppraisalID(in.AppraisalID),
+			appraisalresponse.QuestionID(in.QuestionID)).
+		First(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return nil, fmt.Errorf("appraisals: load response: %w", err)
+	}
+	var row *ent.AppraisalResponse
+	if existing != nil {
+		u := existing.Update().SetResponse(in.Response)
+		if rating != nil {
+			u = u.SetRating(*rating)
+		} else {
+			u = u.ClearRating()
+		}
+		row, err = u.Save(ctx)
+	} else {
+		b := s.orm.AppraisalResponse.Create().
+			SetTenantID(tenantID).SetAppraisalID(in.AppraisalID).SetQuestionID(in.QuestionID).
+			SetResponse(in.Response)
+		if rating != nil {
+			b = b.SetRating(*rating)
+		}
+		row, err = b.Save(ctx)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("appraisals: save response: %w", err)
+	}
+	if a.Status == appraisal.StatusDraft {
+		if _, uerr := a.Update().SetStatus(appraisal.StatusInProgress).Save(ctx); uerr != nil {
+			return nil, fmt.Errorf("appraisals: start appraisal: %w", uerr)
+		}
 	}
 	return row, nil
 }

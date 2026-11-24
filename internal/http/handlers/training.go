@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/training"
 )
 
@@ -32,6 +33,7 @@ func (h *TrainingHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/hrm/training", func(tr chi.Router) {
 		tr.Get("/courses", h.ListCourses)
 		tr.Post("/courses", h.CreateCourse)
+		tr.Put("/courses/{id}", h.UpdateCourse)
 		tr.Delete("/courses/{id}", h.DeleteCourse)
 
 		tr.Get("/enrollments", h.ListEnrollments)
@@ -53,15 +55,48 @@ func (h *TrainingHandler) ListCourses(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list courses")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	views := make([]training.CourseView, len(rows))
+	for i, c := range rows {
+		views[i] = training.ViewCourse(c)
+	}
+	writePagedSlice(w, views, pagination.Parse(r))
 }
 
+// courseBody is the course create/update payload. duration (hours) and cost take a JSON
+// number or a numeric string.
 type courseBody struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	StartDate   string `json:"start_date"`
-	EndDate     string `json:"end_date"`
-	Capacity    int    `json:"capacity"`
+	Title       string      `json:"title"`
+	Description string      `json:"description"`
+	StartDate   string      `json:"start_date"`
+	EndDate     string      `json:"end_date"`
+	Capacity    int         `json:"capacity"`
+	Provider    string      `json:"provider"`
+	Duration    json.Number `json:"duration"`
+	Cost        json.Number `json:"cost"`
+	Status      string      `json:"status"`
+}
+
+// decodeCourse reads and validates a course body; it writes the error response itself.
+func decodeCourse(w http.ResponseWriter, r *http.Request) (training.CourseInput, bool) {
+	var b courseBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body (duration and cost must be numbers)")
+		return training.CourseInput{}, false
+	}
+	start, err := parseDate(b.StartDate)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid start_date")
+		return training.CourseInput{}, false
+	}
+	end, err := parseDate(b.EndDate)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid end_date")
+		return training.CourseInput{}, false
+	}
+	return training.CourseInput{
+		Title: b.Title, Description: b.Description, StartDate: start, EndDate: end, Capacity: b.Capacity,
+		Provider: b.Provider, Duration: b.Duration.String(), Cost: b.Cost.String(), Status: b.Status,
+	}, true
 }
 
 func (h *TrainingHandler) CreateCourse(w http.ResponseWriter, r *http.Request) {
@@ -69,29 +104,43 @@ func (h *TrainingHandler) CreateCourse(w http.ResponseWriter, r *http.Request) {
 	if !ok || !requirePermission(w, scope, permTrainingManage) {
 		return
 	}
-	var b courseBody
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+	in, ok := decodeCourse(w, r)
+	if !ok {
 		return
 	}
-	start, err := parseDate(b.StartDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid start_date")
-		return
-	}
-	end, err := parseDate(b.EndDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid end_date")
-		return
-	}
-	row, err := h.svc.CreateCourse(r.Context(), scope.TenantID, training.CourseInput{
-		Title: b.Title, Description: b.Description, StartDate: start, EndDate: end, Capacity: b.Capacity,
-	})
+	row, err := h.svc.CreateCourse(r.Context(), scope.TenantID, in)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, row)
+	writeJSON(w, http.StatusCreated, training.ViewCourse(row))
+}
+
+// UpdateCourse replaces a course's details.
+func (h *TrainingHandler) UpdateCourse(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permTrainingManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	in, ok := decodeCourse(w, r)
+	if !ok {
+		return
+	}
+	row, err := h.svc.UpdateCourse(r.Context(), scope.TenantID, id, in)
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "course not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, training.ViewCourse(row))
 }
 
 func (h *TrainingHandler) DeleteCourse(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +171,12 @@ func (h *TrainingHandler) ListEnrollments(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list enrollments")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	views, err := h.svc.DescribeEnrollments(r.Context(), scope.TenantID, rows)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list enrollments")
+		return
+	}
+	writePagedSlice(w, views, pagination.Parse(r))
 }
 
 type enrollBody struct {
@@ -192,7 +246,12 @@ func (h *TrainingHandler) ListEvaluations(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list evaluations")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	views, err := h.svc.DescribeEvaluations(r.Context(), scope.TenantID, rows)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list evaluations")
+		return
+	}
+	writePagedSlice(w, views, pagination.Parse(r))
 }
 
 type trainingEvalBody struct {

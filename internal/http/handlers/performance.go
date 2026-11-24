@@ -271,12 +271,17 @@ func (h *PerformanceHandler) ListReviews(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	empID := optionalUUIDParam(r, "employee_id")
-	rows, err := h.svc.ListReviews(r.Context(), scope.TenantID, empID)
+	rows, err := h.svc.ListReviews(r.Context(), scope.TenantID, empID, r.URL.Query().Get("status"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list reviews")
 		return
 	}
-	writePagedSlice(w, rows, pagination.Parse(r))
+	views, err := h.svc.DescribeReviews(r.Context(), scope.TenantID, rows)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list reviews")
+		return
+	}
+	writePagedSlice(w, views, pagination.Parse(r))
 }
 
 type reviewBody struct {
@@ -327,6 +332,8 @@ func (h *PerformanceHandler) CreateReview(w http.ResponseWriter, r *http.Request
 type reviewStatusBody struct {
 	Status        string `json:"status"`
 	OverallRating string `json:"overall_rating"`
+	// Comments is saved on the review; the UI sends the rejection reason here.
+	Comments string `json:"comments"`
 }
 
 func (h *PerformanceHandler) SetReviewStatus(w http.ResponseWriter, r *http.Request) {
@@ -344,7 +351,7 @@ func (h *PerformanceHandler) SetReviewStatus(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	row, err := h.svc.SetReviewStatus(r.Context(), scope.TenantID, id, b.Status, b.OverallRating)
+	row, err := h.svc.SetReviewStatus(r.Context(), scope.TenantID, id, b.Status, b.OverallRating, b.Comments)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "transition_failed", err.Error())
 		return

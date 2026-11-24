@@ -3,11 +3,14 @@ package appraisals
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/goal"
 	"github.com/Bengo-Hub/erp-api/internal/ent/goalprogress"
 )
@@ -21,7 +24,52 @@ func (s *Service) ListGoals(ctx context.Context, tenantID uuid.UUID, employeeID 
 	return q.Order(ent.Desc(goal.FieldCreatedAt)).All(ctx)
 }
 
-// GoalInput is the create payload for an employee goal. EmployeeID is nil for a library template.
+// GoalView is a goal with its employee's name and its metadata fields (category, weight)
+// at the top level.
+type GoalView struct {
+	*ent.Goal
+	EmployeeName string `json:"employee_name,omitempty"`
+	Category     string `json:"category,omitempty"`
+	Weight       string `json:"weight,omitempty"`
+}
+
+// DescribeGoals adds employee names (one query) and flattens category and weight.
+func (s *Service) DescribeGoals(ctx context.Context, tenantID uuid.UUID, rows []*ent.Goal) ([]GoalView, error) {
+	var ids []uuid.UUID
+	for _, g := range rows {
+		if g.EmployeeID != nil {
+			ids = append(ids, *g.EmployeeID)
+		}
+	}
+	names := map[uuid.UUID]string{}
+	if len(ids) > 0 {
+		emps, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.IDIn(ids...)).All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("appraisals: load employees: %w", err)
+		}
+		for _, e := range emps {
+			names[e.ID] = fullName(e)
+		}
+	}
+	out := make([]GoalView, len(rows))
+	for i, g := range rows {
+		v := GoalView{Goal: g}
+		if g.EmployeeID != nil {
+			v.EmployeeName = names[*g.EmployeeID]
+		}
+		if c, ok := g.Metadata["category"].(string); ok {
+			v.Category = c
+		}
+		if w, ok := g.Metadata["weight"]; ok && w != nil {
+			v.Weight = fmt.Sprint(w)
+		}
+		out[i] = v
+	}
+	return out, nil
+}
+
+// GoalInput is the create payload for an employee goal. EmployeeID is nil for a library
+// template. Category and Weight have no columns; they are kept in the goal metadata.
 type GoalInput struct {
 	EmployeeID  *uuid.UUID
 	Title       string
@@ -30,14 +78,28 @@ type GoalInput struct {
 	EndDate     *time.Time
 	IsTemplate  bool
 	CreatedBy   *uuid.UUID
+	Category    string
+	Weight      string
 }
 
 // CreateGoal inserts a tenant-scoped goal (status not_started, progress 0).
 func (s *Service) CreateGoal(ctx context.Context, tenantID uuid.UUID, in GoalInput) (*ent.Goal, error) {
+	md := map[string]any{}
+	if c := strings.TrimSpace(in.Category); c != "" {
+		md["category"] = c
+	}
+	if in.Weight != "" {
+		w, err := decimal.NewFromString(in.Weight)
+		if err != nil || w.IsNegative() {
+			return nil, fmt.Errorf("appraisals: weight must be a number of zero or more")
+		}
+		md["weight"] = w.String()
+	}
 	b := s.orm.Goal.Create().
 		SetTenantID(tenantID).SetNillableEmployeeID(in.EmployeeID).
 		SetTitle(in.Title).SetDescription(in.Description).
-		SetStatus(goal.StatusNotStarted).SetProgress(0).SetIsTemplate(in.IsTemplate)
+		SetStatus(goal.StatusNotStarted).SetProgress(0).SetIsTemplate(in.IsTemplate).
+		SetMetadata(md)
 	if in.StartDate != nil {
 		b = b.SetStartDate(*in.StartDate)
 	}
