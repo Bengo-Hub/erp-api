@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -11,6 +12,8 @@ import (
 	"github.com/Bengo-Hub/pagination"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+
+	"github.com/Bengo-Hub/erp-api/internal/ent"
 )
 
 // writeJSON writes the payload as a JSON response with the given status code.
@@ -34,6 +37,16 @@ type errorResponse struct {
 // writeError writes a structured JSON error response.
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	writeJSON(w, status, errorResponse{Error: message, Code: code})
+}
+
+// clientMessage turns a service error into text safe to show a user: an Ent validator failure
+// becomes "invalid value for <field>" instead of the raw "ent: validator failed..." chain.
+func clientMessage(err error) string {
+	var ve *ent.ValidationError
+	if errors.As(err, &ve) {
+		return "invalid value for " + strings.ReplaceAll(ve.Name, "_", " ")
+	}
+	return err.Error()
 }
 
 // writePaginated writes a list response using the shared pagination envelope

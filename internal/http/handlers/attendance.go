@@ -124,7 +124,7 @@ func (h *AttendanceHandler) CreateShift(w http.ResponseWriter, r *http.Request) 
 		GraceMinutes: b.GraceMinutes, TotalHoursPerWeek: b.TotalHoursPerWeek,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
@@ -387,7 +387,7 @@ func (h *AttendanceHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		HolidayPayMultiplier: b.HolidayPayMultiplier,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
@@ -456,7 +456,7 @@ func (h *AttendanceHandler) CreateRotation(w http.ResponseWriter, r *http.Reques
 		BreakDuration: b.BreakDuration, BreakUnit: b.BreakUnit, IsActive: b.IsActive == nil || *b.IsActive,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
@@ -523,7 +523,7 @@ func (h *AttendanceHandler) CreateOffDay(w http.ResponseWriter, r *http.Request)
 	}
 	row, err := h.svc.CreateOffDay(r.Context(), scope.TenantID, empID, date, b.Reason)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)

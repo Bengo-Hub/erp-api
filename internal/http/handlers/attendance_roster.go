@@ -165,7 +165,7 @@ func (h *AttendanceHandler) CreateRoster(w http.ResponseWriter, r *http.Request)
 	}
 	row, err := h.svc.CreateRoster(r.Context(), scope.TenantID, b.Name, b.CycleDays, start)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
@@ -375,7 +375,7 @@ func (h *AttendanceHandler) CreateOverride(w http.ResponseWriter, r *http.Reques
 		Status: b.Status, CreatedBy: &uid,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
