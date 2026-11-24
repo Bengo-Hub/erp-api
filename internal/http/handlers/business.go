@@ -77,7 +77,16 @@ func (h *BusinessHandler) UpsertSettings(w http.ResponseWriter, r *http.Request)
 	if !ok || !requirePermission(w, scope, permBusinessManage) {
 		return
 	}
+	// Start from the stored values so a tab that sends only its own fields (Company or Currency
+	// & Time) never blanks the others: JSON decoding only overwrites the keys present.
 	var b settingsBody
+	if cur, err := h.svc.GetSettings(r.Context(), scope.TenantID); err == nil && cur != nil {
+		b = settingsBody{LegalName: cur.LegalName, KRAPin: cur.KraPin, NSSFEmployerNo: cur.NssfEmployerNo,
+			SHIFEmployerNo: cur.ShifEmployerNo, ContactEmail: cur.ContactEmail, ContactPhone: cur.ContactPhone,
+			PostalAddress: cur.PostalAddress, PhysicalAddress: cur.PhysicalAddress,
+			FinancialYearStartMonth: cur.FinancialYearStartMonth, DefaultCurrency: cur.DefaultCurrency,
+			Timezone: cur.Timezone, DateFormat: cur.DateFormat, TimeFormat: cur.TimeFormat}
+	}
 	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
