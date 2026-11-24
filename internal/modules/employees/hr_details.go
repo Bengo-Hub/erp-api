@@ -42,7 +42,9 @@ func (s *Service) UpsertHR(ctx context.Context, tenantID, empID uuid.UUID, in HR
 	}
 	set := func(id *uuid.UUID) bool { return id != nil && *id != uuid.Nil }
 	if set(in.DepartmentID) {
-		if ok, err := s.orm.Department.Query().Where(department.ID(*in.DepartmentID), department.TenantID(tenantID)).Exist(ctx); err != nil || !ok {
+		// Same rule as the departments list: the tenant's own or a shared platform department.
+		if ok, err := s.orm.Department.Query().Where(department.ID(*in.DepartmentID),
+			department.Or(department.TenantID(tenantID), department.TenantIDIsNil())).Exist(ctx); err != nil || !ok {
 			return fmt.Errorf("department not found")
 		}
 	}
