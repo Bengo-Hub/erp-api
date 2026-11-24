@@ -3,10 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
@@ -131,7 +133,67 @@ func (h *EmployeesHandler) Renumber(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "renumbered": n})
 }
 
+// employeeHRFields are the employment details saved to hr_details on create and update. The
+// employee form sends department / job_title; API clients may send the *_id names. "" clears.
+type employeeHRFields struct {
+	Department     *string `json:"department"`
+	DepartmentID   *string `json:"department_id"`
+	JobTitle       *string `json:"job_title"`
+	JobTitleID     *string `json:"job_title_id"`
+	ReportsToID    *string `json:"reports_to_id"`
+	EmploymentType *string `json:"employment_type"`
+	DateJoined     *string `json:"date_joined"`
+}
+
+// hrInput validates and converts the HR fields.
+func (b employeeHRFields) hrInput() (employees.HRInput, error) {
+	var in employees.HRInput
+	pick := func(a, b *string) *string {
+		if b != nil {
+			return b
+		}
+		return a
+	}
+	for _, f := range []struct {
+		raw  *string
+		dst  **uuid.UUID
+		name string
+	}{
+		{pick(b.Department, b.DepartmentID), &in.DepartmentID, "department_id"},
+		{pick(b.JobTitle, b.JobTitleID), &in.JobTitleID, "job_title_id"},
+		{b.ReportsToID, &in.ReportsToID, "reports_to_id"},
+	} {
+		if f.raw == nil {
+			continue
+		}
+		id := uuid.Nil
+		if s := strings.TrimSpace(*f.raw); s != "" {
+			var err error
+			if id, err = uuid.Parse(s); err != nil {
+				return in, fmt.Errorf("%s must be a UUID or empty", f.name)
+			}
+		}
+		*f.dst = &id
+	}
+	in.EmploymentType = b.EmploymentType
+	if b.DateJoined != nil && strings.TrimSpace(*b.DateJoined) != "" {
+		raw := strings.TrimSpace(*b.DateJoined)
+		if len(raw) > 10 {
+			raw = raw[:10]
+		}
+		d, err := time.Parse("2006-01-02", raw)
+		if err != nil {
+			return in, fmt.Errorf("date_joined must be YYYY-MM-DD")
+		}
+		in.DateJoined = &d
+	}
+	return in, nil
+}
+
 type updateEmployeeBody struct {
+	employeeHRFields
+	// KraPin is the employee form's name for pin_no.
+	KraPin            *string `json:"kra_pin"`
 	FirstName         *string `json:"first_name"`
 	LastName          *string `json:"last_name"`
 	Email             *string `json:"email"`
@@ -176,6 +238,14 @@ func (h *EmployeesHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 		workShiftID = &shift
 	}
+	hr, err := body.hrInput()
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	if body.PinNo == nil {
+		body.PinNo = body.KraPin
+	}
 	row, err := h.svc.Update(r.Context(), scope.TenantID, id, employees.UpdateInput{
 		WorkShiftID:       workShiftID,
 		FirstName:         body.FirstName,
@@ -197,6 +267,10 @@ func (h *EmployeesHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	if err := h.svc.UpsertHR(r.Context(), scope.TenantID, id, hr); err != nil {
 		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
 		return
 	}
@@ -539,6 +613,8 @@ func (h *EmployeesHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 type createEmployeeBody struct {
+	employeeHRFields
+	KraPin            string `json:"kra_pin"`
 	OutletID          string `json:"outlet_id"`
 	UserID            string `json:"user_id"`
 	EmployeeNumber    string `json:"employee_number"`
@@ -567,6 +643,14 @@ func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
+	}
+	hr, err := body.hrInput()
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	if body.PinNo == "" {
+		body.PinNo = body.KraPin
 	}
 	in := employees.CreateInput{
 		EmployeeNumber:    body.EmployeeNumber,
@@ -604,6 +688,11 @@ func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.log.Warn("create employee", zap.Error(err))
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		return
+	}
+	if err := h.svc.UpsertHR(r.Context(), scope.TenantID, row.ID, hr); err != nil {
+		// The person exists; report the HR detail problem without losing the new record.
+		writeJSON(w, http.StatusCreated, map[string]any{"employee": row, "warning": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
