@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
@@ -130,6 +131,7 @@ type CreateInput struct {
 	ResidentialStatus string
 	IsDirector        bool
 	IsShareholder     bool
+	DateOfBirth       *time.Time
 }
 
 // ErrNameRequired is returned by Create when first_name or last_name is blank. The HTTP
@@ -154,10 +156,12 @@ func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, in CreateInput
 		SetGender(in.Gender).
 		SetNationalID(in.NationalID).
 		SetPinNo(in.PinNo).
+		SetShifOrNhifNumber(in.ShifOrNhifNumber).
 		SetNssfNo(in.NssfNo).
 		SetResidentialStatus(in.ResidentialStatus).
 		SetIsDirector(in.IsDirector).
-		SetIsShareholder(in.IsShareholder)
+		SetIsShareholder(in.IsShareholder).
+		SetNillableDateOfBirth(in.DateOfBirth)
 	if in.OutletID != nil {
 		b = b.SetOutletID(*in.OutletID)
 	}

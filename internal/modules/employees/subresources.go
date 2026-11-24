@@ -28,7 +28,9 @@ type UpdateInput struct {
 	ShifOrNhifNumber  *string
 	NssfNo            *string
 	ResidentialStatus *string
-	EmployeeNumber    *string
+	// DateOfBirth sets the date of birth; a pointer to the zero time clears it.
+	DateOfBirth    *time.Time
+	EmployeeNumber *string
 	Terminated        *bool
 	IsDirector        *bool
 	IsShareholder     *bool
@@ -73,6 +75,13 @@ func (s *Service) Update(ctx context.Context, tenantID, id uuid.UUID, in UpdateI
 	}
 	if in.EmployeeNumber != nil {
 		u = u.SetEmployeeNumber(*in.EmployeeNumber)
+	}
+	if in.DateOfBirth != nil {
+		if in.DateOfBirth.IsZero() {
+			u = u.ClearDateOfBirth()
+		} else {
+			u = u.SetDateOfBirth(*in.DateOfBirth)
+		}
 	}
 	if in.Terminated != nil {
 		u = u.SetTerminated(*in.Terminated)

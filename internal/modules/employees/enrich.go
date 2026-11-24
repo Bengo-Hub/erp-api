@@ -11,7 +11,9 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
+	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
+	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 )
 
 // EmployeeView is an employee enriched with the hr_details-derived fields the UI lists/charts need
@@ -35,6 +37,16 @@ type EmployeeView struct {
 	Outlet string `json:"outlet,omitempty"`
 	// PhoneNumber is the phone kept in contact_details (the employee form's phone_number).
 	PhoneNumber string `json:"phone_number,omitempty"`
+	// BasicSalary is the monthly salary from the active salary_details row (the Salary tab).
+	BasicSalary *string `json:"basic_salary,omitempty"`
+	// JobGroup is the salary_details job group as {id, name} (the UI's relation shape).
+	JobGroup *NamedRef `json:"job_group,omitempty"`
+}
+
+// NamedRef is an id with its display name.
+type NamedRef struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
 }
 
 // Enrich attaches each employee's hr_details (department/job-title names, employment type, manager)
@@ -67,6 +79,35 @@ func (s *Service) Enrich(ctx context.Context, tenantID uuid.UUID, emps []*ent.Em
 	}
 	for _, c := range contacts { // ascending, so the latest row wins
 		out[idx[c.EmployeeID]].PhoneNumber = *c.Phone
+	}
+	salaries, err := s.orm.SalaryDetails.Query().
+		Where(salarydetails.TenantID(tenantID), salarydetails.EmployeeIDIn(ids...), salarydetails.IsActive(true)).
+		Order(ent.Asc(salarydetails.FieldUpdatedAt)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	groupIDs := map[uuid.UUID]bool{}
+	for _, sd := range salaries { // ascending, so the latest active row wins
+		i := idx[sd.EmployeeID]
+		amount := sd.MonthlySalary.StringFixed(2)
+		out[i].BasicSalary = &amount
+		out[i].JobGroup = nil
+		if sd.JobGroupID != nil {
+			out[i].JobGroup = &NamedRef{ID: *sd.JobGroupID}
+			groupIDs[*sd.JobGroupID] = true
+		}
+	}
+	if len(groupIDs) > 0 {
+		groups, _ := s.orm.JobGroup.Query().Where(jobgroup.TenantID(tenantID), jobgroup.IDIn(keys(groupIDs)...)).All(ctx)
+		groupName := make(map[uuid.UUID]string, len(groups))
+		for _, g := range groups {
+			groupName[g.ID] = g.Title
+		}
+		for i := range out {
+			if out[i].JobGroup != nil {
+				out[i].JobGroup.Name = groupName[out[i].JobGroup.ID]
+			}
+		}
 	}
 	outletIDs := map[uuid.UUID]bool{}
 	for _, e := range emps {

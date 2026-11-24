@@ -205,7 +205,9 @@ type updateEmployeeBody struct {
 	ShifOrNhifNumber  *string `json:"shif_or_nhif_number"`
 	NssfNo            *string `json:"nssf_no"`
 	ResidentialStatus *string `json:"residential_status"`
-	EmployeeNumber    *string `json:"employee_number"`
+	// DateOfBirth is YYYY-MM-DD; "" clears it.
+	DateOfBirth    *string `json:"date_of_birth"`
+	EmployeeNumber *string `json:"employee_number"`
 	Terminated        *bool   `json:"terminated"`
 	IsDirector        *bool   `json:"is_director"`
 	IsShareholder     *bool   `json:"is_shareholder"`
@@ -248,7 +250,19 @@ func (h *EmployeesHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if body.PinNo == nil {
 		body.PinNo = body.KraPin
 	}
+	var dob *time.Time
+	if body.DateOfBirth != nil {
+		d := time.Time{}
+		if raw := strings.TrimSpace(*body.DateOfBirth); raw != "" {
+			if d, err = parseDate(raw); err != nil {
+				writeError(w, http.StatusBadRequest, "bad_request", "date_of_birth must be YYYY-MM-DD")
+				return
+			}
+		}
+		dob = &d
+	}
 	row, err := h.svc.Update(r.Context(), scope.TenantID, id, employees.UpdateInput{
+		DateOfBirth:       dob,
 		WorkShiftID:       workShiftID,
 		FirstName:         body.FirstName,
 		LastName:          body.LastName,
@@ -638,6 +652,7 @@ type createEmployeeBody struct {
 	ResidentialStatus string `json:"residential_status"`
 	IsDirector        bool   `json:"is_director"`
 	IsShareholder     bool   `json:"is_shareholder"`
+	DateOfBirth       string `json:"date_of_birth"` // YYYY-MM-DD, optional
 }
 
 func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -674,6 +689,14 @@ func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ResidentialStatus: body.ResidentialStatus,
 		IsDirector:        body.IsDirector,
 		IsShareholder:     body.IsShareholder,
+	}
+	if raw := strings.TrimSpace(body.DateOfBirth); raw != "" {
+		d, err := parseDate(raw)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", "date_of_birth must be YYYY-MM-DD")
+			return
+		}
+		in.DateOfBirth = &d
 	}
 	// Restricted users default the new employee to their own outlet.
 	if body.OutletID != "" {
