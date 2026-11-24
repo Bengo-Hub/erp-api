@@ -54,7 +54,7 @@ func (s *Service) MarkAbsent(ctx context.Context, tenantID uuid.UUID, day time.T
 	if len(emps) == 0 {
 		return 0, nil
 	}
-	expected, err := s.expectedToWork(ctx, tenantID, emps, day, st)
+	expected, _, err := s.expectedToWork(ctx, tenantID, emps, day, st)
 	if err != nil {
 		return 0, err
 	}
@@ -76,20 +76,20 @@ func (s *Service) MarkAbsent(ctx context.Context, tenantID uuid.UUID, day time.T
 }
 
 // expectedToWork filters employees down to those planned to work on day and not on a public
-// holiday that applies to them.
-func (s *Service) expectedToWork(ctx context.Context, tenantID uuid.UUID, emps []uuid.UUID, day time.Time, st Settings) ([]uuid.UUID, error) {
+// holiday that applies to them, and returns the shifts it resolved for them.
+func (s *Service) expectedToWork(ctx context.Context, tenantID uuid.UUID, emps []uuid.UUID, day time.Time, st Settings) ([]uuid.UUID, map[empDay]DayShift, error) {
 	keys := make([]empDay, len(emps))
 	for i, id := range emps {
 		keys[i] = empDay{id, day}
 	}
 	shifts, err := s.resolveShifts(ctx, tenantID, keys, st)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	hols, err := s.orm.PublicHoliday.Query().Where(publicholiday.TenantID(tenantID),
 		publicholiday.DateGTE(day), publicholiday.DateLT(day.AddDate(0, 0, 1))).All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("attendance: auto-absent holidays: %w", err)
+		return nil, nil, fmt.Errorf("attendance: auto-absent holidays: %w", err)
 	}
 	national := false
 	counties := map[string]bool{}
@@ -101,15 +101,15 @@ func (s *Service) expectedToWork(ctx context.Context, tenantID uuid.UUID, emps [
 		}
 	}
 	if national {
-		return nil, nil
+		return nil, shifts, nil
 	}
 	var countyOf map[uuid.UUID][]string
 	if len(counties) > 0 {
 		if countyOf, err = s.employeeCounties(ctx, tenantID, emps); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return selectExpected(keys, shifts, counties, countyOf), nil
+	return selectExpected(keys, shifts, counties, countyOf), shifts, nil
 }
 
 // selectExpected keeps the employees with a known working shift that day who are not on one of

@@ -3,6 +3,7 @@ package reports
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	sharedcache "github.com/Bengo-Hub/cache"
@@ -15,10 +16,12 @@ import (
 type AttendanceAnalytics struct {
 	Date  string `json:"date"`
 	Today struct {
-		Expected         int `json:"expected"`
-		Present          int `json:"present"`
-		Late             int `json:"late"`
-		Absent           int `json:"absent"`
+		Expected int `json:"expected"`
+		Present  int `json:"present"`
+		Late     int `json:"late"`
+		Absent   int `json:"absent"`
+		// NotInYet counts people expected today whose shift start plus grace has not passed.
+		NotInYet         int `json:"not_in_yet"`
 		OnLeave          int `json:"on_leave"`
 		Field            int `json:"field"`
 		EarlyLeave       int `json:"early_leave"`
@@ -100,20 +103,23 @@ func (s *Service) attendanceAnalytics(ctx context.Context, att *attendance.Servi
 
 	// Scoped employees, who is expected today, who is on leave today.
 	a := &sqlArgs{list: []any{tenantID}}
-	empRows, err := s.queryMaps(ctx, `SELECT e.id::text AS id FROM employees e WHERE `+f.employeeScope(a)+` AND e.terminated = false`, a.list...)
+	empRows, err := s.queryMaps(ctx, `SELECT e.id::text AS id, COALESCE(dep.title, 'No department') AS dept
+FROM employees e `+deptJoinSQL+` WHERE `+f.employeeScope(a)+` AND e.terminated = false`, a.list...)
 	if err != nil {
 		return nil, fmt.Errorf("analytics employees: %w", err)
 	}
 	ids := make([]uuid.UUID, 0, len(empRows))
+	deptOfEmp := make(map[string]string, len(empRows))
 	for _, r := range empRows {
 		if id, err := uuid.Parse(fmt.Sprint(r["id"])); err == nil {
 			ids = append(ids, id)
+			deptOfEmp[id.String()] = fmt.Sprint(r["dept"])
 		}
 	}
 	if len(ids) == 0 {
 		return out, nil
 	}
-	expected, err := att.ExpectedToWork(ctx, tenantID, day, ids)
+	expected, err := att.ExpectedStarts(ctx, tenantID, day, ids)
 	if err != nil {
 		return nil, fmt.Errorf("analytics expected: %w", err)
 	}
@@ -151,8 +157,7 @@ WHERE r.tenant_id = $1 AND r.date >= $2 AND r.date < $3 AND e.id = ANY($4)`, ten
 	for _, r := range recRows {
 		d := deptOf(fmt.Sprint(r["dept"]))
 		if r["status"] == "absent" {
-			d.Absent++
-			continue
+			continue // counted below from the expected set, like the day's total
 		}
 		present[fmt.Sprint(r["id"])] = true
 		out.Today.Present++
@@ -168,15 +173,32 @@ WHERE r.tenant_id = $1 AND r.date >= $2 AND r.date < $3 AND e.id = ANY($4)`, ten
 			out.Today.Field++
 		}
 	}
-	// Absent: expected today, not present and not on leave (whether or not auto-absent ran yet).
-	for _, id := range expected {
-		if !present[id.String()] && !onLeave[id.String()] {
-			out.Today.Absent++
+	// Expected, not present and not on leave: absent once their shift start plus grace has
+	// passed (whether or not auto-absent ran yet), otherwise not in yet. Past days have no
+	// "not in yet". Department figures use the same rule so both views agree.
+	now := time.Now()
+	for id, due := range expected {
+		if present[id.String()] || onLeave[id.String()] {
+			continue
 		}
+		if !due.IsZero() && now.Before(due) {
+			out.Today.NotInYet++
+			continue
+		}
+		out.Today.Absent++
+		deptOf(deptOfEmp[id.String()]).Absent++
 	}
 	for _, d := range byDept {
 		out.ByDepartment = append(out.ByDepartment, *d)
 	}
+	// Most late and absent first, then by name, so the order is stable between refreshes.
+	sort.Slice(out.ByDepartment, func(i, j int) bool {
+		a, b := out.ByDepartment[i], out.ByDepartment[j]
+		if a.Late+a.Absent != b.Late+b.Absent {
+			return a.Late+a.Absent > b.Late+b.Absent
+		}
+		return a.Department < b.Department
+	})
 
 	dayStart := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, loc)
 	if rows, err := s.queryMaps(ctx, `SELECT count(*)::bigint AS n FROM attendance_punches
