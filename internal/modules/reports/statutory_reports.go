@@ -17,14 +17,14 @@ var nitaPerEmployee = decimal.NewFromInt(50)
 
 // SHIF is the Social Health Insurance Fund return (2024+): per-employee SHIF/NHIF contribution.
 func (s *Service) SHIF(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
-	return s.singleStatutory(ctx, tenantID, f, "shif", "shif_nhif", func(p *ent.Payslip) decimal.Decimal {
+	return s.singleStatutory(ctx, tenantID, f, "shif", "shif_number", "shif_contribution", func(p *ent.Payslip) decimal.Decimal {
 		return p.ShifOrNhifContribution
 	})
 }
 
 // NHIF is the legacy NHIF return (same source column; cutover is config-driven in payroll).
 func (s *Service) NHIF(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
-	return s.singleStatutory(ctx, tenantID, f, "nhif", "nhif", func(p *ent.Payslip) decimal.Decimal {
+	return s.singleStatutory(ctx, tenantID, f, "nhif", "nhif_number", "nhif_contribution", func(p *ent.Payslip) decimal.Decimal {
 		return p.ShifOrNhifContribution
 	})
 }
@@ -42,33 +42,37 @@ func (s *Service) NSSF(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	rep := &Report{
 		Report:  "nssf",
 		Period:  periodMeta(f),
-		Columns: []string{"employee", "nssf_number", "tier_1", "tier_2", "employee_total", "employer", "total"},
+		Columns: nssfColumns,
 		Rows:    []map[string]any{},
 	}
-	totE, totR := d(), d()
+	totGross, totT1, totT2, totE, totR := d(), d(), d(), d(), d()
 	for _, p := range slips {
 		e := emps[p.EmployeeID]
 		empTotal := p.NssfEmployeeTier1.Add(p.NssfEmployeeTier2)
-		total := empTotal.Add(p.NssfEmployerContribution)
 		nssfNo := ""
 		if e != nil {
 			nssfNo = e.NssfNo
 		}
 		rep.Rows = append(rep.Rows, map[string]any{
-			"employee":       empName(e),
-			"nssf_number":    nssfNo,
-			"tier_1":         money(p.NssfEmployeeTier1),
-			"tier_2":         money(p.NssfEmployeeTier2),
-			"employee_total": money(empTotal),
-			"employer":       money(p.NssfEmployerContribution),
-			"total":          money(total),
+			"employee_name":     empName(e),
+			"employee_pin":      pin(e),
+			"nssf_number":       nssfNo,
+			"gross_pay":         money(p.GrossPay),
+			"tier_1":            money(p.NssfEmployeeTier1),
+			"tier_2":            money(p.NssfEmployeeTier2),
+			"employee_total":    money(empTotal),
+			"employer":          money(p.NssfEmployerContribution),
+			"nssf_contribution": money(empTotal.Add(p.NssfEmployerContribution)),
 		})
+		totGross = totGross.Add(p.GrossPay)
+		totT1 = totT1.Add(p.NssfEmployeeTier1)
+		totT2 = totT2.Add(p.NssfEmployeeTier2)
 		totE = totE.Add(empTotal)
 		totR = totR.Add(p.NssfEmployerContribution)
 	}
 	rep.Totals = map[string]any{
-		"count": len(slips), "employee_total": money(totE),
-		"employer": money(totR), "total": money(totE.Add(totR)),
+		"count": len(slips), "gross_pay": money(totGross), "tier_1": money(totT1), "tier_2": money(totT2),
+		"employee_total": money(totE), "employer": money(totR), "nssf_contribution": money(totE.Add(totR)),
 	}
 	return rep, nil
 }
@@ -114,27 +118,23 @@ func (s *Service) HousingLevy(ctx context.Context, tenantID uuid.UUID, f Filter)
 }
 
 // NITA is the Industrial Training Levy return: a flat per-employee monthly levy
-// (employer-only). The levy is read from each payslip's itemised "nita" employer line
-// (formula-driven); legacy payslips processed before that line existed fall back to the
-// default KES 50. Tenants that disabled NITA in statutory settings get an empty return.
+// (employer-only). The levy is read from each payslip's itemised "nita" employer line, which
+// is what the payroll run actually charged. A payslip without that line (processed before the
+// line existed, or when no NITA formula resolved at run time) gets the tenant's configured
+// levy, as long as NITA is enabled in statutory settings. Disabling NITA hides only the
+// payslips that were never charged; a levy already on a payslip stays on the return.
 func (s *Service) NITA(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
 	rep := &Report{
 		Report:  "nita",
 		Period:  periodMeta(f),
-		Columns: []string{"employee", "levy"},
+		Columns: nitaColumns,
 		Rows:    []map[string]any{},
 	}
-	if enabled, err := s.nitaEnabled(ctx, tenantID); err != nil {
-		return nil, err
-	} else if !enabled {
-		rep.Totals = map[string]any{"count": 0, "levy": money(d())}
-		return rep, nil
-	}
-	slips, err := s.fetchPayslips(ctx, tenantID, f)
+	enabled, err := s.nitaEnabled(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
-	emps, err := s.employeeMap(ctx, tenantID, slips)
+	slips, err := s.fetchPayslips(ctx, tenantID, f)
 	if err != nil {
 		return nil, err
 	}
@@ -142,19 +142,43 @@ func (s *Service) NITA(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	if err != nil {
 		return nil, err
 	}
-	total := d()
+	charged := make([]*ent.Payslip, 0, len(slips))
 	for _, p := range slips {
-		levy := nitaPerEmployee
-		if v, ok := levies[p.ID]; ok {
-			levy = v
+		if _, ok := levies[p.ID]; ok || enabled {
+			charged = append(charged, p)
 		}
+	}
+	emps, err := s.employeeMap(ctx, tenantID, charged)
+	if err != nil {
+		return nil, err
+	}
+	var fallback *decimal.Decimal
+	totGross, total := d(), d()
+	for _, p := range charged {
+		levy, ok := levies[p.ID]
+		if !ok {
+			if fallback == nil {
+				v := s.nitaConfiguredLevy(ctx, tenantID, f.Start)
+				if v.IsZero() {
+					v = nitaPerEmployee
+				}
+				fallback = &v
+			}
+			levy = *fallback
+		}
+		e := emps[p.EmployeeID]
 		rep.Rows = append(rep.Rows, map[string]any{
-			"employee": empName(emps[p.EmployeeID]),
-			"levy":     money(levy),
+			"employee_name": empName(e),
+			"employee_pin":  pin(e),
+			"gross_pay":     money(p.GrossPay),
+			"nita_levy":     money(levy),
 		})
+		totGross = totGross.Add(p.GrossPay)
 		total = total.Add(levy)
 	}
-	rep.Totals = map[string]any{"count": len(slips), "levy": money(total)}
+	rep.Totals = map[string]any{
+		"count": len(charged), "gross_pay": money(totGross), "nita_levy": money(total), "nita_enabled": enabled,
+	}
 	return rep, nil
 }
 
@@ -180,24 +204,28 @@ func (s *Service) nitaLineAmounts(ctx context.Context, tenantID uuid.UUID, slips
 	for _, p := range slips {
 		ids = append(ids, p.ID)
 	}
-	lines, err := s.orm.PayslipLine.Query().
-		Where(
-			payslipline.TenantID(tenantID),
-			payslipline.PayslipIDIn(ids...),
-			payslipline.Code("nita"),
-		).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[uuid.UUID]decimal.Decimal, len(lines))
-	for _, l := range lines {
-		out[l.PayslipID] = l.EmployerAmount
+	out := make(map[uuid.UUID]decimal.Decimal, len(slips))
+	for _, chunk := range idChunks(ids) {
+		lines, err := s.orm.PayslipLine.Query().
+			Where(
+				payslipline.TenantID(tenantID),
+				payslipline.PayslipIDIn(chunk...),
+				payslipline.Code("nita"),
+			).All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, l := range lines {
+			out[l.PayslipID] = out[l.PayslipID].Add(l.EmployerAmount)
+		}
 	}
 	return out, nil
 }
 
 // singleStatutory is the shared per-employee single-amount statutory report builder.
-func (s *Service) singleStatutory(ctx context.Context, tenantID uuid.UUID, f Filter, name, amountKey string, amount func(*ent.Payslip) decimal.Decimal) (*Report, error) {
+// Each row carries the member's name, KRA PIN, national ID, health-scheme number (numberKey),
+// gross pay, the contribution (amountKey) and whether it was an NHIF or SHIF deduction.
+func (s *Service) singleStatutory(ctx context.Context, tenantID uuid.UUID, f Filter, name, numberKey, amountKey string, amount func(*ent.Payslip) decimal.Decimal) (*Report, error) {
 	slips, err := s.fetchPayslips(ctx, tenantID, f)
 	if err != nil {
 		return nil, err
@@ -209,16 +237,26 @@ func (s *Service) singleStatutory(ctx context.Context, tenantID uuid.UUID, f Fil
 	rep := &Report{
 		Report:  name,
 		Period:  periodMeta(f),
-		Columns: []string{"employee", amountKey},
+		Columns: healthColumns(numberKey, amountKey),
 		Rows:    []map[string]any{},
 	}
-	total := d()
+	totGross, total := d(), d()
 	for _, p := range slips {
+		e := emps[p.EmployeeID]
 		amt := amount(p)
-		rep.Rows = append(rep.Rows, map[string]any{"employee": empName(emps[p.EmployeeID]), amountKey: money(amt)})
+		rep.Rows = append(rep.Rows, map[string]any{
+			"employee_name": empName(e),
+			"employee_pin":  pin(e),
+			"national_id":   natID(e),
+			numberKey:       healthNumber(e),
+			"gross_pay":     money(p.GrossPay),
+			amountKey:       money(amt),
+			"coverage_type": coverageType(p),
+		})
+		totGross = totGross.Add(p.GrossPay)
 		total = total.Add(amt)
 	}
-	rep.Totals = map[string]any{"count": len(slips), amountKey: money(total)}
+	rep.Totals = map[string]any{"count": len(slips), "gross_pay": money(totGross), amountKey: money(total)}
 	return rep, nil
 }
 

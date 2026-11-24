@@ -183,7 +183,7 @@ func (s *Service) P9A(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 		sals, serr := s.orm.SalaryDetails.Query().
 			Where(salarydetails.TenantID(tenantID), salarydetails.IsActive(true), salarydetails.EmployeeIDIn(chunk...)).All(ctx)
 		if serr != nil {
-			break
+			return nil, fmt.Errorf("reports: load salary details: %w", serr)
 		}
 		for _, sd := range sals {
 			salPension[sd.EmployeeID] = sd.PensionContribution
@@ -343,7 +343,7 @@ func (s *Service) P10(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 		return nil, err
 	}
 	type acc struct {
-		e                              *ent.Employee
+		e                                     *ent.Employee
 		gross, taxable, nssf, shif, ahl, paye decimal.Decimal
 	}
 	byEmp := map[uuid.UUID]*acc{}
@@ -438,81 +438,6 @@ func (s *Service) Statutory(ctx context.Context, tenantID uuid.UUID, f Filter) (
 		"count": len(slips), "paye": money(totPaye), "shif_nhif": money(totShif),
 		"nssf_employee": money(totNssfE), "nssf_employer": money(totNssfR), "housing_levy": money(totHouse),
 	}
-	return rep, nil
-}
-
-// BankSchedule is the bank net-pay disbursement list: employee + primary bank account + net.
-func (s *Service) BankSchedule(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
-	slips, err := s.fetchPayslips(ctx, tenantID, f)
-	if err != nil {
-		return nil, err
-	}
-	emps, err := s.employeeMap(ctx, tenantID, slips)
-	if err != nil {
-		return nil, err
-	}
-	banks, err := s.primaryBankMap(ctx, tenantID, slips)
-	if err != nil {
-		return nil, err
-	}
-	rep := &Report{
-		Report:  "bank_schedule",
-		Period:  periodMeta(f),
-		Columns: []string{"employee", "bank_name", "branch_name", "account_number", "net_pay"},
-		Rows:    []map[string]any{},
-	}
-	total := d()
-	for _, p := range slips {
-		ba := banks[p.EmployeeID]
-		row := map[string]any{"employee": empName(emps[p.EmployeeID]), "net_pay": money(p.NetPay)}
-		if ba != nil {
-			row["bank_name"] = ba.BankName
-			row["branch_name"] = ba.BranchName
-			row["account_number"] = ba.AccountNumber
-		}
-		rep.Rows = append(rep.Rows, row)
-		total = total.Add(p.NetPay)
-	}
-	rep.Totals = map[string]any{"count": len(slips), "net_pay": money(total)}
-	return rep, nil
-}
-
-// PayrollVariance compares this period's per-employee net pay with the previous period.
-func (s *Service) PayrollVariance(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
-	cur, err := s.fetchPayslips(ctx, tenantID, f)
-	if err != nil {
-		return nil, err
-	}
-	span := f.End.Sub(f.Start)
-	prevF := Filter{Start: f.Start.Add(-span), End: f.Start, OutletID: f.OutletID}
-	prev, err := s.fetchPayslips(ctx, tenantID, prevF)
-	if err != nil {
-		return nil, err
-	}
-	emps, err := s.employeeMap(ctx, tenantID, cur, prev)
-	if err != nil {
-		return nil, err
-	}
-	prevNet := map[uuid.UUID]decimal.Decimal{}
-	for _, p := range prev {
-		prevNet[p.EmployeeID] = p.NetPay
-	}
-	rep := &Report{
-		Report:  "payroll_variance",
-		Period:  periodMeta(f),
-		Columns: []string{"employee", "previous_net", "current_net", "variance"},
-		Rows:    []map[string]any{},
-	}
-	for _, p := range cur {
-		pv := prevNet[p.EmployeeID]
-		rep.Rows = append(rep.Rows, map[string]any{
-			"employee":     empName(emps[p.EmployeeID]),
-			"previous_net": money(pv),
-			"current_net":  money(p.NetPay),
-			"variance":     money(p.NetPay.Sub(pv)),
-		})
-	}
-	rep.Totals = map[string]any{"count": len(cur)}
 	return rep, nil
 }
 

@@ -21,9 +21,18 @@ import (
 // Service aggregates HRM/payroll data into reports. Tenant-scoped; never crosses services.
 type Service struct {
 	orm *ent.Client
+	// systemTenant holds the national default payroll formulas that tenants inherit. Reports
+	// that need a configured rate (the NITA levy) resolve it the same way payroll runs do.
+	systemTenant uuid.UUID
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
+
+// WithSystemTenant sets the tenant whose payroll formulas are the inherited defaults.
+func (s *Service) WithSystemTenant(id uuid.UUID) *Service {
+	s.systemTenant = id
+	return s
+}
 
 // Period is the inclusive [Start, End) window a report covers. Filter narrows by outlet.
 type Filter struct {

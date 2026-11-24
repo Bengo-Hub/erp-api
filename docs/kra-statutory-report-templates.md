@@ -88,6 +88,16 @@ NSSF (Year-4 rates, eff. Feb 2026: LEL 9,000 / UEL 108,000, Tier I + Tier II) ex
 the **employer-match column** (name, nssf_number, tier_1, tier_2, employee_total, employer, total),
 i.e. the SF24 shape — exposed additionally under the `nssf-sf24` report key.
 
+**Row keys (updated 2026-11-24):** the payroll returns use the field names the erp-ui report pages
+read. NSSF: `employee_name, employee_pin, nssf_number, gross_pay, tier_1, tier_2, employee_total,
+employer, nssf_contribution` (the grand total). NHIF and SHIF: `employee_name, employee_pin,
+national_id, nhif_number | shif_number, gross_pay, nhif_contribution | shif_contribution,
+coverage_type`. NITA: `employee_name, employee_pin, gross_pay, nita_levy`. Bank net pay: one row per
+bank with `bank_name, bank_code, employee_count, account_count, total_net_pay, reference_number`,
+and an Employees sheet in the Excel export. Payroll variance: one row per category with
+`variance_category, current_period, previous_period, variance_amount, variance_percent,
+variance_type`, and a By Employee sheet. Totals use the same keys as the rows.
+
 ---
 
 ## 4. SHIF (SHA) — by-member contribution schedule

@@ -304,7 +304,7 @@ func run() error {
 	tasksHandler := handlers.NewTasksHandler(log, tasks.NewService(orm))
 
 	// Sprint 4: reporting layer (P9/P10A/statutory/bank/summaries) for the erp-ui report-runner.
-	reportsHandler := handlers.NewReportsHandler(log, reports.NewService(orm))
+	reportsHandler := handlers.NewReportsHandler(log, reports.NewService(orm).WithSystemTenant(systemTenant))
 
 	// Document generation (payslip PDF + report PDF/Excel export). Mirrors treasury-api's
 	// docs module: branded PDF/CSV/XLSX via fpdf/excelize + atomic doc-number sequences.
