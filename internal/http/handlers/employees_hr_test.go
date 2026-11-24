@@ -38,6 +38,18 @@ func TestEmployeeHRFieldsFormAndAPINames(t *testing.T) {
 		t.Fatalf("clear not honoured: %+v %v", in, err)
 	}
 
+	// date_joined: "" clears (zero time), a bad date is refused, absent is no change.
+	var j updateEmployeeBody
+	_ = json.Unmarshal([]byte(`{"date_joined":""}`), &j)
+	if in, err := j.hrInput(); err != nil || in.DateJoined == nil || !in.DateJoined.IsZero() || in.Empty() {
+		t.Fatalf("blank date_joined must clear: %+v %v", in, err)
+	}
+	var k updateEmployeeBody
+	_ = json.Unmarshal([]byte(`{"date_joined":"01/02/2026"}`), &k)
+	if _, err := k.hrInput(); err == nil {
+		t.Fatal("bad date_joined must be rejected")
+	}
+
 	var d updateEmployeeBody
 	_ = json.Unmarshal([]byte(`{"department":"not-a-uuid"}`), &d)
 	if _, err := d.hrInput(); err == nil {

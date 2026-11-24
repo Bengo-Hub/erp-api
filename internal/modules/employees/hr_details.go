@@ -18,7 +18,7 @@ import (
 
 // HRInput carries the employment details kept in hr_details: department, job title, manager,
 // employment type and date joined. Nil leaves a field unchanged; a pointer to uuid.Nil clears
-// an id. Department-based reports, attendance rules and approvals read these.
+// an id and a pointer to the zero time clears the date joined. Department-based reports, attendance rules and approvals read these.
 type HRInput struct {
 	DepartmentID   *uuid.UUID
 	JobTitleID     *uuid.UUID
@@ -86,7 +86,9 @@ func (s *Service) UpsertHR(ctx context.Context, tenantID, empID uuid.UUID, in HR
 		if in.EmploymentType != nil {
 			c.SetEmploymentType(empType)
 		}
-		c.SetNillableDateJoined(in.DateJoined)
+		if in.DateJoined != nil && !in.DateJoined.IsZero() {
+			c.SetDateJoined(*in.DateJoined)
+		}
 		return c.Exec(ctx)
 	}
 	if err != nil {
@@ -109,7 +111,11 @@ func (s *Service) UpsertHR(ctx context.Context, tenantID, empID uuid.UUID, in HR
 		u.SetEmploymentType(empType)
 	}
 	if in.DateJoined != nil {
-		u.SetDateJoined(*in.DateJoined)
+		if in.DateJoined.IsZero() {
+			u.ClearDateJoined()
+		} else {
+			u.SetDateJoined(*in.DateJoined)
+		}
 	}
 	return u.Exec(ctx)
 }

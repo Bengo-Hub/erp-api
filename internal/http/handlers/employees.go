@@ -176,14 +176,16 @@ func (b employeeHRFields) hrInput() (employees.HRInput, error) {
 		*f.dst = &id
 	}
 	in.EmploymentType = b.EmploymentType
-	if b.DateJoined != nil && strings.TrimSpace(*b.DateJoined) != "" {
-		raw := strings.TrimSpace(*b.DateJoined)
-		if len(raw) > 10 {
-			raw = raw[:10]
-		}
-		d, err := time.Parse("2006-01-02", raw)
-		if err != nil {
-			return in, fmt.Errorf("date_joined must be YYYY-MM-DD")
+	if b.DateJoined != nil {
+		var d time.Time // the zero time clears the date
+		if raw := strings.TrimSpace(*b.DateJoined); raw != "" {
+			if len(raw) > 10 {
+				raw = raw[:10]
+			}
+			var err error
+			if d, err = time.Parse("2006-01-02", raw); err != nil {
+				return in, fmt.Errorf("date_joined must be YYYY-MM-DD")
+			}
 		}
 		in.DateJoined = &d
 	}
