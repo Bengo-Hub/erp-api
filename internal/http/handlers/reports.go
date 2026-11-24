@@ -124,6 +124,7 @@ func (h *ReportsHandler) Export(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
+	f.DepartmentID, f.RegionID = optionalUUIDParam(r, "department_id"), optionalUUIDParam(r, "region_id")
 
 	rep, err := fn(r.Context(), scope.TenantID, f)
 	if err != nil {
@@ -205,6 +206,7 @@ func (h *ReportsHandler) period(fn periodReport) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 			return
 		}
+		f.DepartmentID, f.RegionID = optionalUUIDParam(r, "department_id"), optionalUUIDParam(r, "region_id")
 		rep, err := fn(r.Context(), scope.TenantID, f)
 		if err != nil {
 			h.log.Error("report", zap.Error(err))

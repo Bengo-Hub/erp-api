@@ -91,6 +91,31 @@ func TestIntegration_NSSFReturnFields(t *testing.T) {
 	}
 }
 
+// A department filter narrows a payroll return to that department's employees (hr_details).
+func TestIntegration_ReturnDepartmentFilter(t *testing.T) {
+	fx := newReturnsFixture(t)
+	ctx := context.Background()
+	dept := fx.client.Department.Create().SetTenantID(fx.tenant).SetTitle("Finance").SaveX(ctx)
+	other := fx.client.Department.Create().SetTenantID(fx.tenant).SetTitle("Sales").SaveX(ctx)
+	fx.client.HRDetails.Create().SetTenantID(fx.tenant).SetEmployeeID(fx.amina.ID).SetDepartmentID(dept.ID).SaveX(ctx)
+	fx.client.HRDetails.Create().SetTenantID(fx.tenant).SetEmployeeID(fx.brian.ID).SetDepartmentID(other.ID).SaveX(ctx)
+
+	f := fx.octF
+	f.DepartmentID = &dept.ID
+	rep, err := NewService(fx.client).NSSF(ctx, fx.tenant, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rep.Rows) != 1 || rep.Rows[0]["employee_name"] != "Amina Otieno" || rep.Totals["count"] != 1 {
+		t.Fatalf("finance-only NSSF = rows %v totals %v", rep.Rows, rep.Totals)
+	}
+	empty := uuid.New()
+	f.DepartmentID = &empty
+	if rep, err = NewService(fx.client).NSSF(ctx, fx.tenant, f); err != nil || len(rep.Rows) != 0 {
+		t.Fatalf("unknown department must return no rows, got %v (%v)", rep.Rows, err)
+	}
+}
+
 func TestIntegration_NHIFReturnFields(t *testing.T) {
 	fx := newReturnsFixture(t)
 	rep, err := NewService(fx.client).NHIF(context.Background(), fx.tenant, fx.octF)

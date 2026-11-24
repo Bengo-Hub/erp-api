@@ -10,11 +10,13 @@ import (
 	"fmt"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
+	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 )
 
@@ -34,11 +36,14 @@ func (s *Service) WithSystemTenant(id uuid.UUID) *Service {
 	return s
 }
 
-// Period is the inclusive [Start, End) window a report covers. Filter narrows by outlet.
+// Period is the inclusive [Start, End) window a report covers. Filter narrows by outlet, and by
+// the employee's department or region (from hr_details).
 type Filter struct {
-	Start    time.Time
-	End      time.Time
-	OutletID *uuid.UUID
+	Start        time.Time
+	End          time.Time
+	OutletID     *uuid.UUID
+	DepartmentID *uuid.UUID
+	RegionID     *uuid.UUID
 }
 
 // ResolvePeriod builds a Filter from year + optional month (1-12). month=0 => full year.
@@ -71,6 +76,22 @@ func (s *Service) fetchPayslips(ctx context.Context, tenantID uuid.UUID, f Filte
 		)
 	if f.OutletID != nil {
 		q = q.Where(payslip.OutletID(*f.OutletID))
+	}
+	// Department and region live on hr_details: one subquery, so a large payroll is still a
+	// single indexed query rather than an id list built in Go.
+	if f.DepartmentID != nil || f.RegionID != nil {
+		q = q.Where(func(s *entsql.Selector) {
+			hd := entsql.Table(hrdetails.Table)
+			preds := []*entsql.Predicate{entsql.EQ(hd.C(hrdetails.FieldTenantID), tenantID)}
+			if f.DepartmentID != nil {
+				preds = append(preds, entsql.EQ(hd.C(hrdetails.FieldDepartmentID), *f.DepartmentID))
+			}
+			if f.RegionID != nil {
+				preds = append(preds, entsql.EQ(hd.C(hrdetails.FieldRegionID), *f.RegionID))
+			}
+			sub := entsql.Select(hd.C(hrdetails.FieldEmployeeID)).From(hd).Where(entsql.And(preds...))
+			s.Where(entsql.In(s.C(payslip.FieldEmployeeID), sub))
+		})
 	}
 	return q.Order(ent.Asc(payslip.FieldEmployeeID)).All(ctx)
 }
