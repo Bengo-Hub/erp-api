@@ -46,7 +46,20 @@ func clientMessage(err error) string {
 	if errors.As(err, &ve) {
 		return "invalid value for " + strings.ReplaceAll(ve.Name, "_", " ")
 	}
+	if ent.IsConstraintError(err) {
+		for index, msg := range uniqueViolationMessages {
+			if strings.Contains(err.Error(), index) {
+				return msg
+			}
+		}
+	}
 	return err.Error()
+}
+
+// uniqueViolationMessages maps a unique index name to the message a user sees when a save breaks it.
+var uniqueViolationMessages = map[string]string{
+	"employee_tenant_id_national_id": "Another employee already has this national ID",
+	"employee_tenant_id_device_pin":  "Another employee already uses this device PIN",
 }
 
 // writePaginated writes a list response using the shared pagination envelope

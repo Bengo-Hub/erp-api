@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -71,9 +72,12 @@ func (Employee) Indexes() []ent.Index {
 		index.Fields("tenant_id", "outlet_id"),
 		index.Fields("tenant_id", "deleted"),
 		index.Fields("tenant_id", "terminated_at"),
-		// National ID unique within a tenant, never globally.
-		index.Fields("tenant_id", "national_id").Unique(),
+		// National ID unique within a tenant, never globally. Blank IDs are not values: any
+		// number of employees may have none (partial index ignores NULL and '').
+		index.Fields("tenant_id", "national_id").Unique().
+			Annotations(entsql.IndexWhere("national_id IS NOT NULL AND national_id <> ''")),
 		index.Fields("user_id"),
-		index.Fields("tenant_id", "device_pin").Unique(),
+		index.Fields("tenant_id", "device_pin").Unique().
+			Annotations(entsql.IndexWhere("device_pin IS NOT NULL AND device_pin <> ''")),
 	}
 }

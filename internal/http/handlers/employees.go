@@ -283,7 +283,7 @@ func (h *EmployeesHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		writeError(w, http.StatusBadRequest, "update_failed", clientMessage(err))
 		return
 	}
 	if err := h.svc.UpsertHR(r.Context(), scope.TenantID, id, hr); err != nil {
@@ -719,7 +719,7 @@ func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		h.log.Warn("create employee", zap.Error(err))
-		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
 		return
 	}
 	if err := h.svc.UpsertHR(r.Context(), scope.TenantID, row.ID, hr); err != nil {

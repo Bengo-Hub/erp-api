@@ -1361,6 +1361,9 @@ var (
 				Name:    "employee_tenant_id_national_id",
 				Unique:  true,
 				Columns: []*schema.Column{EmployeesColumns[1], EmployeesColumns[11]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "national_id IS NOT NULL AND national_id <> ''",
+				},
 			},
 			{
 				Name:    "employee_user_id",
@@ -1371,6 +1374,9 @@ var (
 				Name:    "employee_tenant_id_device_pin",
 				Unique:  true,
 				Columns: []*schema.Column{EmployeesColumns[1], EmployeesColumns[21]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "device_pin IS NOT NULL AND device_pin <> ''",
+				},
 			},
 		},
 	}
