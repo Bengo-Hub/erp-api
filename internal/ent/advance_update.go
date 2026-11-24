@@ -112,6 +112,18 @@ func (_u *AdvanceUpdate) SetNillableApproved(v *bool) *AdvanceUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *AdvanceUpdate) SetMetadata(v map[string]interface{}) *AdvanceUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *AdvanceUpdate) ClearMetadata() *AdvanceUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetIssueDate sets the "issue_date" field.
 func (_u *AdvanceUpdate) SetIssueDate(v time.Time) *AdvanceUpdate {
 	_u.mutation.SetIssueDate(v)
@@ -291,6 +303,12 @@ func (_u *AdvanceUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Approved(); ok {
 		_spec.SetField(advance.FieldApproved, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(advance.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(advance.FieldMetadata, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.IssueDate(); ok {
 		_spec.SetField(advance.FieldIssueDate, field.TypeTime, value)
 	}
@@ -420,6 +438,18 @@ func (_u *AdvanceUpdateOne) SetNillableApproved(v *bool) *AdvanceUpdateOne {
 	if v != nil {
 		_u.SetApproved(*v)
 	}
+	return _u
+}
+
+// SetMetadata sets the "metadata" field.
+func (_u *AdvanceUpdateOne) SetMetadata(v map[string]interface{}) *AdvanceUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *AdvanceUpdateOne) ClearMetadata() *AdvanceUpdateOne {
+	_u.mutation.ClearMetadata()
 	return _u
 }
 
@@ -631,6 +661,12 @@ func (_u *AdvanceUpdateOne) sqlSave(ctx context.Context) (_node *Advance, err er
 	}
 	if value, ok := _u.mutation.Approved(); ok {
 		_spec.SetField(advance.FieldApproved, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(advance.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(advance.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.IssueDate(); ok {
 		_spec.SetField(advance.FieldIssueDate, field.TypeTime, value)

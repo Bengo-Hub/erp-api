@@ -22,6 +22,9 @@ func (Candidate) Fields() []ent.Field {
 		field.String("email"),
 		field.String("phone").Optional().Nillable(),
 		field.String("resume_url").Optional().Nillable().Comment("Relative media path to the resume file"),
+		// Metadata holds candidate attributes without their own column, such as source
+		// (where the candidate came from) and status (active, on hold, withdrawn).
+		field.JSON("metadata", map[string]any{}).Optional(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

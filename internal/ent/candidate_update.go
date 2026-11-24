@@ -110,6 +110,18 @@ func (_u *CandidateUpdate) ClearResumeURL() *CandidateUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *CandidateUpdate) SetMetadata(v map[string]interface{}) *CandidateUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *CandidateUpdate) ClearMetadata() *CandidateUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // Mutation returns the CandidateMutation object of the builder.
 func (_u *CandidateUpdate) Mutation() *CandidateMutation {
 	return _u.mutation
@@ -171,6 +183,12 @@ func (_u *CandidateUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ResumeURLCleared() {
 		_spec.ClearField(candidate.FieldResumeURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(candidate.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(candidate.FieldMetadata, field.TypeJSON)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -274,6 +292,18 @@ func (_u *CandidateUpdateOne) ClearResumeURL() *CandidateUpdateOne {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *CandidateUpdateOne) SetMetadata(v map[string]interface{}) *CandidateUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *CandidateUpdateOne) ClearMetadata() *CandidateUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // Mutation returns the CandidateMutation object of the builder.
 func (_u *CandidateUpdateOne) Mutation() *CandidateMutation {
 	return _u.mutation
@@ -365,6 +395,12 @@ func (_u *CandidateUpdateOne) sqlSave(ctx context.Context) (_node *Candidate, er
 	}
 	if _u.mutation.ResumeURLCleared() {
 		_spec.ClearField(candidate.FieldResumeURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(candidate.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(candidate.FieldMetadata, field.TypeJSON)
 	}
 	_node = &Candidate{config: _u.config}
 	_spec.Assign = _node.assignValues

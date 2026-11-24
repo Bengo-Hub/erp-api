@@ -33,6 +33,8 @@ const (
 	FieldProgress = "progress"
 	// FieldIsTemplate holds the string denoting the is_template field in the database.
 	FieldIsTemplate = "is_template"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCreatedBy holds the string denoting the created_by field in the database.
 	FieldCreatedBy = "created_by"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -55,6 +57,7 @@ var Columns = []string{
 	FieldStatus,
 	FieldProgress,
 	FieldIsTemplate,
+	FieldMetadata,
 	FieldCreatedBy,
 	FieldCreatedAt,
 	FieldUpdatedAt,

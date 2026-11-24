@@ -311,6 +311,16 @@ func ApprovedNEQ(v bool) predicate.Advance {
 	return predicate.Advance(sql.FieldNEQ(FieldApproved, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.Advance {
+	return predicate.Advance(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.Advance {
+	return predicate.Advance(sql.FieldNotNull(FieldMetadata))
+}
+
 // IssueDateEQ applies the EQ predicate on the "issue_date" field.
 func IssueDateEQ(v time.Time) predicate.Advance {
 	return predicate.Advance(sql.FieldEQ(FieldIssueDate, v))

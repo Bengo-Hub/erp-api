@@ -405,6 +405,16 @@ func ResumeURLContainsFold(v string) predicate.Candidate {
 	return predicate.Candidate(sql.FieldContainsFold(FieldResumeURL, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.Candidate {
+	return predicate.Candidate(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.Candidate {
+	return predicate.Candidate(sql.FieldNotNull(FieldMetadata))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Candidate {
 	return predicate.Candidate(sql.FieldEQ(FieldCreatedAt, v))

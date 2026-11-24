@@ -1424,6 +1424,7 @@ type AdvanceMutation struct {
 	approver_id       *uuid.UUID
 	repay_option_id   *uuid.UUID
 	approved          *bool
+	metadata          *map[string]interface{}
 	issue_date        *time.Time
 	prev_payment_date *time.Time
 	next_payment_date *time.Time
@@ -1746,6 +1747,55 @@ func (m *AdvanceMutation) OldApproved(ctx context.Context) (v bool, err error) {
 // ResetApproved resets all changes to the "approved" field.
 func (m *AdvanceMutation) ResetApproved() {
 	m.approved = nil
+}
+
+// SetMetadata sets the "metadata" field.
+func (m *AdvanceMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *AdvanceMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the Advance entity.
+// If the Advance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AdvanceMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *AdvanceMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[advance.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *AdvanceMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[advance.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *AdvanceMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, advance.FieldMetadata)
 }
 
 // SetIssueDate sets the "issue_date" field.
@@ -2109,7 +2159,7 @@ func (m *AdvanceMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AdvanceMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.tenant_id != nil {
 		fields = append(fields, advance.FieldTenantID)
 	}
@@ -2124,6 +2174,9 @@ func (m *AdvanceMutation) Fields() []string {
 	}
 	if m.approved != nil {
 		fields = append(fields, advance.FieldApproved)
+	}
+	if m.metadata != nil {
+		fields = append(fields, advance.FieldMetadata)
 	}
 	if m.issue_date != nil {
 		fields = append(fields, advance.FieldIssueDate)
@@ -2167,6 +2220,8 @@ func (m *AdvanceMutation) Field(name string) (ent.Value, bool) {
 		return m.RepayOptionID()
 	case advance.FieldApproved:
 		return m.Approved()
+	case advance.FieldMetadata:
+		return m.Metadata()
 	case advance.FieldIssueDate:
 		return m.IssueDate()
 	case advance.FieldPrevPaymentDate:
@@ -2202,6 +2257,8 @@ func (m *AdvanceMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldRepayOptionID(ctx)
 	case advance.FieldApproved:
 		return m.OldApproved(ctx)
+	case advance.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case advance.FieldIssueDate:
 		return m.OldIssueDate(ctx)
 	case advance.FieldPrevPaymentDate:
@@ -2261,6 +2318,13 @@ func (m *AdvanceMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetApproved(v)
+		return nil
+	case advance.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case advance.FieldIssueDate:
 		v, ok := value.(time.Time)
@@ -2354,6 +2418,9 @@ func (m *AdvanceMutation) ClearedFields() []string {
 	if m.FieldCleared(advance.FieldRepayOptionID) {
 		fields = append(fields, advance.FieldRepayOptionID)
 	}
+	if m.FieldCleared(advance.FieldMetadata) {
+		fields = append(fields, advance.FieldMetadata)
+	}
 	if m.FieldCleared(advance.FieldIssueDate) {
 		fields = append(fields, advance.FieldIssueDate)
 	}
@@ -2382,6 +2449,9 @@ func (m *AdvanceMutation) ClearField(name string) error {
 		return nil
 	case advance.FieldRepayOptionID:
 		m.ClearRepayOptionID()
+		return nil
+	case advance.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	case advance.FieldIssueDate:
 		m.ClearIssueDate()
@@ -2414,6 +2484,9 @@ func (m *AdvanceMutation) ResetField(name string) error {
 		return nil
 	case advance.FieldApproved:
 		m.ResetApproved()
+		return nil
+	case advance.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case advance.FieldIssueDate:
 		m.ResetIssueDate()
@@ -24308,6 +24381,7 @@ type CandidateMutation struct {
 	email         *string
 	phone         *string
 	resume_url    *string
+	metadata      *map[string]interface{}
 	created_at    *time.Time
 	clearedFields map[string]struct{}
 	done          bool
@@ -24625,6 +24699,55 @@ func (m *CandidateMutation) ResetResumeURL() {
 	delete(m.clearedFields, candidate.FieldResumeURL)
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *CandidateMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *CandidateMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the Candidate entity.
+// If the Candidate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CandidateMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *CandidateMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[candidate.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *CandidateMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[candidate.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *CandidateMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, candidate.FieldMetadata)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *CandidateMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -24695,7 +24818,7 @@ func (m *CandidateMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CandidateMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.tenant_id != nil {
 		fields = append(fields, candidate.FieldTenantID)
 	}
@@ -24710,6 +24833,9 @@ func (m *CandidateMutation) Fields() []string {
 	}
 	if m.resume_url != nil {
 		fields = append(fields, candidate.FieldResumeURL)
+	}
+	if m.metadata != nil {
+		fields = append(fields, candidate.FieldMetadata)
 	}
 	if m.created_at != nil {
 		fields = append(fields, candidate.FieldCreatedAt)
@@ -24732,6 +24858,8 @@ func (m *CandidateMutation) Field(name string) (ent.Value, bool) {
 		return m.Phone()
 	case candidate.FieldResumeURL:
 		return m.ResumeURL()
+	case candidate.FieldMetadata:
+		return m.Metadata()
 	case candidate.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -24753,6 +24881,8 @@ func (m *CandidateMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldPhone(ctx)
 	case candidate.FieldResumeURL:
 		return m.OldResumeURL(ctx)
+	case candidate.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case candidate.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -24799,6 +24929,13 @@ func (m *CandidateMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetResumeURL(v)
 		return nil
+	case candidate.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
+		return nil
 	case candidate.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -24842,6 +24979,9 @@ func (m *CandidateMutation) ClearedFields() []string {
 	if m.FieldCleared(candidate.FieldResumeURL) {
 		fields = append(fields, candidate.FieldResumeURL)
 	}
+	if m.FieldCleared(candidate.FieldMetadata) {
+		fields = append(fields, candidate.FieldMetadata)
+	}
 	return fields
 }
 
@@ -24861,6 +25001,9 @@ func (m *CandidateMutation) ClearField(name string) error {
 		return nil
 	case candidate.FieldResumeURL:
 		m.ClearResumeURL()
+		return nil
+	case candidate.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	}
 	return fmt.Errorf("unknown Candidate nullable field %s", name)
@@ -24884,6 +25027,9 @@ func (m *CandidateMutation) ResetField(name string) error {
 		return nil
 	case candidate.FieldResumeURL:
 		m.ResetResumeURL()
+		return nil
+	case candidate.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case candidate.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -53772,6 +53918,7 @@ type GoalMutation struct {
 	progress      *int
 	addprogress   *int
 	is_template   *bool
+	metadata      *map[string]interface{}
 	created_by    *uuid.UUID
 	created_at    *time.Time
 	updated_at    *time.Time
@@ -54281,6 +54428,55 @@ func (m *GoalMutation) ResetIsTemplate() {
 	m.is_template = nil
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *GoalMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *GoalMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the Goal entity.
+// If the Goal object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GoalMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *GoalMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[goal.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *GoalMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[goal.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *GoalMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, goal.FieldMetadata)
+}
+
 // SetCreatedBy sets the "created_by" field.
 func (m *GoalMutation) SetCreatedBy(u uuid.UUID) {
 	m.created_by = &u
@@ -54436,7 +54632,7 @@ func (m *GoalMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GoalMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 13)
 	if m.tenant_id != nil {
 		fields = append(fields, goal.FieldTenantID)
 	}
@@ -54463,6 +54659,9 @@ func (m *GoalMutation) Fields() []string {
 	}
 	if m.is_template != nil {
 		fields = append(fields, goal.FieldIsTemplate)
+	}
+	if m.metadata != nil {
+		fields = append(fields, goal.FieldMetadata)
 	}
 	if m.created_by != nil {
 		fields = append(fields, goal.FieldCreatedBy)
@@ -54499,6 +54698,8 @@ func (m *GoalMutation) Field(name string) (ent.Value, bool) {
 		return m.Progress()
 	case goal.FieldIsTemplate:
 		return m.IsTemplate()
+	case goal.FieldMetadata:
+		return m.Metadata()
 	case goal.FieldCreatedBy:
 		return m.CreatedBy()
 	case goal.FieldCreatedAt:
@@ -54532,6 +54733,8 @@ func (m *GoalMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldProgress(ctx)
 	case goal.FieldIsTemplate:
 		return m.OldIsTemplate(ctx)
+	case goal.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case goal.FieldCreatedBy:
 		return m.OldCreatedBy(ctx)
 	case goal.FieldCreatedAt:
@@ -54609,6 +54812,13 @@ func (m *GoalMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsTemplate(v)
+		return nil
+	case goal.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case goal.FieldCreatedBy:
 		v, ok := value.(uuid.UUID)
@@ -54688,6 +54898,9 @@ func (m *GoalMutation) ClearedFields() []string {
 	if m.FieldCleared(goal.FieldEndDate) {
 		fields = append(fields, goal.FieldEndDate)
 	}
+	if m.FieldCleared(goal.FieldMetadata) {
+		fields = append(fields, goal.FieldMetadata)
+	}
 	if m.FieldCleared(goal.FieldCreatedBy) {
 		fields = append(fields, goal.FieldCreatedBy)
 	}
@@ -54716,6 +54929,9 @@ func (m *GoalMutation) ClearField(name string) error {
 		return nil
 	case goal.FieldEndDate:
 		m.ClearEndDate()
+		return nil
+	case goal.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	case goal.FieldCreatedBy:
 		m.ClearCreatedBy()
@@ -54754,6 +54970,9 @@ func (m *GoalMutation) ResetField(name string) error {
 		return nil
 	case goal.FieldIsTemplate:
 		m.ResetIsTemplate()
+		return nil
+	case goal.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case goal.FieldCreatedBy:
 		m.ResetCreatedBy()
@@ -106366,6 +106585,7 @@ type TrainingCourseMutation struct {
 	end_date      *time.Time
 	capacity      *int
 	addcapacity   *int
+	metadata      *map[string]interface{}
 	created_at    *time.Time
 	updated_at    *time.Time
 	clearedFields map[string]struct{}
@@ -106727,6 +106947,55 @@ func (m *TrainingCourseMutation) ResetCapacity() {
 	m.addcapacity = nil
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *TrainingCourseMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *TrainingCourseMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the TrainingCourse entity.
+// If the TrainingCourse object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TrainingCourseMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *TrainingCourseMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[trainingcourse.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *TrainingCourseMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[trainingcourse.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *TrainingCourseMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, trainingcourse.FieldMetadata)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *TrainingCourseMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -106833,7 +107102,7 @@ func (m *TrainingCourseMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TrainingCourseMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.tenant_id != nil {
 		fields = append(fields, trainingcourse.FieldTenantID)
 	}
@@ -106851,6 +107120,9 @@ func (m *TrainingCourseMutation) Fields() []string {
 	}
 	if m.capacity != nil {
 		fields = append(fields, trainingcourse.FieldCapacity)
+	}
+	if m.metadata != nil {
+		fields = append(fields, trainingcourse.FieldMetadata)
 	}
 	if m.created_at != nil {
 		fields = append(fields, trainingcourse.FieldCreatedAt)
@@ -106878,6 +107150,8 @@ func (m *TrainingCourseMutation) Field(name string) (ent.Value, bool) {
 		return m.EndDate()
 	case trainingcourse.FieldCapacity:
 		return m.Capacity()
+	case trainingcourse.FieldMetadata:
+		return m.Metadata()
 	case trainingcourse.FieldCreatedAt:
 		return m.CreatedAt()
 	case trainingcourse.FieldUpdatedAt:
@@ -106903,6 +107177,8 @@ func (m *TrainingCourseMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldEndDate(ctx)
 	case trainingcourse.FieldCapacity:
 		return m.OldCapacity(ctx)
+	case trainingcourse.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case trainingcourse.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case trainingcourse.FieldUpdatedAt:
@@ -106957,6 +107233,13 @@ func (m *TrainingCourseMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCapacity(v)
+		return nil
+	case trainingcourse.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case trainingcourse.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -107020,6 +107303,9 @@ func (m *TrainingCourseMutation) ClearedFields() []string {
 	if m.FieldCleared(trainingcourse.FieldDescription) {
 		fields = append(fields, trainingcourse.FieldDescription)
 	}
+	if m.FieldCleared(trainingcourse.FieldMetadata) {
+		fields = append(fields, trainingcourse.FieldMetadata)
+	}
 	return fields
 }
 
@@ -107036,6 +107322,9 @@ func (m *TrainingCourseMutation) ClearField(name string) error {
 	switch name {
 	case trainingcourse.FieldDescription:
 		m.ClearDescription()
+		return nil
+	case trainingcourse.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	}
 	return fmt.Errorf("unknown TrainingCourse nullable field %s", name)
@@ -107062,6 +107351,9 @@ func (m *TrainingCourseMutation) ResetField(name string) error {
 		return nil
 	case trainingcourse.FieldCapacity:
 		m.ResetCapacity()
+		return nil
+	case trainingcourse.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case trainingcourse.FieldCreatedAt:
 		m.ResetCreatedAt()

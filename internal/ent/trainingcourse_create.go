@@ -76,6 +76,12 @@ func (_c *TrainingCourseCreate) SetNillableCapacity(v *int) *TrainingCourseCreat
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *TrainingCourseCreate) SetMetadata(v map[string]interface{}) *TrainingCourseCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *TrainingCourseCreate) SetCreatedAt(v time.Time) *TrainingCourseCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -254,6 +260,10 @@ func (_c *TrainingCourseCreate) createSpec() (*TrainingCourse, *sqlgraph.CreateS
 		_spec.SetField(trainingcourse.FieldCapacity, field.TypeInt, value)
 		_node.Capacity = value
 	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(trainingcourse.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(trainingcourse.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -395,6 +405,24 @@ func (u *TrainingCourseUpsert) UpdateCapacity() *TrainingCourseUpsert {
 // AddCapacity adds v to the "capacity" field.
 func (u *TrainingCourseUpsert) AddCapacity(v int) *TrainingCourseUpsert {
 	u.Add(trainingcourse.FieldCapacity, v)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *TrainingCourseUpsert) SetMetadata(v map[string]interface{}) *TrainingCourseUpsert {
+	u.Set(trainingcourse.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *TrainingCourseUpsert) UpdateMetadata() *TrainingCourseUpsert {
+	u.SetExcluded(trainingcourse.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *TrainingCourseUpsert) ClearMetadata() *TrainingCourseUpsert {
+	u.SetNull(trainingcourse.FieldMetadata)
 	return u
 }
 
@@ -556,6 +584,27 @@ func (u *TrainingCourseUpsertOne) AddCapacity(v int) *TrainingCourseUpsertOne {
 func (u *TrainingCourseUpsertOne) UpdateCapacity() *TrainingCourseUpsertOne {
 	return u.Update(func(s *TrainingCourseUpsert) {
 		s.UpdateCapacity()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *TrainingCourseUpsertOne) SetMetadata(v map[string]interface{}) *TrainingCourseUpsertOne {
+	return u.Update(func(s *TrainingCourseUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *TrainingCourseUpsertOne) UpdateMetadata() *TrainingCourseUpsertOne {
+	return u.Update(func(s *TrainingCourseUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *TrainingCourseUpsertOne) ClearMetadata() *TrainingCourseUpsertOne {
+	return u.Update(func(s *TrainingCourseUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -886,6 +935,27 @@ func (u *TrainingCourseUpsertBulk) AddCapacity(v int) *TrainingCourseUpsertBulk 
 func (u *TrainingCourseUpsertBulk) UpdateCapacity() *TrainingCourseUpsertBulk {
 	return u.Update(func(s *TrainingCourseUpsert) {
 		s.UpdateCapacity()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *TrainingCourseUpsertBulk) SetMetadata(v map[string]interface{}) *TrainingCourseUpsertBulk {
+	return u.Update(func(s *TrainingCourseUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *TrainingCourseUpsertBulk) UpdateMetadata() *TrainingCourseUpsertBulk {
+	return u.Update(func(s *TrainingCourseUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *TrainingCourseUpsertBulk) ClearMetadata() *TrainingCourseUpsertBulk {
+	return u.Update(func(s *TrainingCourseUpsert) {
+		s.ClearMetadata()
 	})
 }
 

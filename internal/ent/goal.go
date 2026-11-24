@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -36,6 +37,8 @@ type Goal struct {
 	Progress int `json:"progress,omitempty"`
 	// IsTemplate holds the value of the "is_template" field.
 	IsTemplate bool `json:"is_template,omitempty"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CreatedBy holds the value of the "created_by" field.
 	CreatedBy *uuid.UUID `json:"created_by,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -52,6 +55,8 @@ func (*Goal) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case goal.FieldEmployeeID, goal.FieldCreatedBy:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case goal.FieldMetadata:
+			values[i] = new([]byte)
 		case goal.FieldIsTemplate:
 			values[i] = new(sql.NullBool)
 		case goal.FieldProgress:
@@ -140,6 +145,14 @@ func (_m *Goal) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.IsTemplate = value.Bool
 			}
+		case goal.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
+			}
 		case goal.FieldCreatedBy:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field created_by", values[i])
@@ -227,6 +240,9 @@ func (_m *Goal) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_template=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsTemplate))
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	if v := _m.CreatedBy; v != nil {
 		builder.WriteString("created_by=")

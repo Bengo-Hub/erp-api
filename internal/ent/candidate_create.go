@@ -70,6 +70,12 @@ func (_c *CandidateCreate) SetNillableResumeURL(v *string) *CandidateCreate {
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *CandidateCreate) SetMetadata(v map[string]interface{}) *CandidateCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *CandidateCreate) SetCreatedAt(v time.Time) *CandidateCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -213,6 +219,10 @@ func (_c *CandidateCreate) createSpec() (*Candidate, *sqlgraph.CreateSpec) {
 		_spec.SetField(candidate.FieldResumeURL, field.TypeString, value)
 		_node.ResumeURL = &value
 	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(candidate.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(candidate.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -338,6 +348,24 @@ func (u *CandidateUpsert) UpdateResumeURL() *CandidateUpsert {
 // ClearResumeURL clears the value of the "resume_url" field.
 func (u *CandidateUpsert) ClearResumeURL() *CandidateUpsert {
 	u.SetNull(candidate.FieldResumeURL)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *CandidateUpsert) SetMetadata(v map[string]interface{}) *CandidateUpsert {
+	u.Set(candidate.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *CandidateUpsert) UpdateMetadata() *CandidateUpsert {
+	u.SetExcluded(candidate.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *CandidateUpsert) ClearMetadata() *CandidateUpsert {
+	u.SetNull(candidate.FieldMetadata)
 	return u
 }
 
@@ -473,6 +501,27 @@ func (u *CandidateUpsertOne) UpdateResumeURL() *CandidateUpsertOne {
 func (u *CandidateUpsertOne) ClearResumeURL() *CandidateUpsertOne {
 	return u.Update(func(s *CandidateUpsert) {
 		s.ClearResumeURL()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *CandidateUpsertOne) SetMetadata(v map[string]interface{}) *CandidateUpsertOne {
+	return u.Update(func(s *CandidateUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *CandidateUpsertOne) UpdateMetadata() *CandidateUpsertOne {
+	return u.Update(func(s *CandidateUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *CandidateUpsertOne) ClearMetadata() *CandidateUpsertOne {
+	return u.Update(func(s *CandidateUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -775,6 +824,27 @@ func (u *CandidateUpsertBulk) UpdateResumeURL() *CandidateUpsertBulk {
 func (u *CandidateUpsertBulk) ClearResumeURL() *CandidateUpsertBulk {
 	return u.Update(func(s *CandidateUpsert) {
 		s.ClearResumeURL()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *CandidateUpsertBulk) SetMetadata(v map[string]interface{}) *CandidateUpsertBulk {
+	return u.Update(func(s *CandidateUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *CandidateUpsertBulk) UpdateMetadata() *CandidateUpsertBulk {
+	return u.Update(func(s *CandidateUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *CandidateUpsertBulk) ClearMetadata() *CandidateUpsertBulk {
+	return u.Update(func(s *CandidateUpsert) {
+		s.ClearMetadata()
 	})
 }
 

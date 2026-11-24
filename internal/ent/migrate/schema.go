@@ -57,6 +57,7 @@ var (
 		{Name: "approver_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "repay_option_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "approved", Type: field.TypeBool, Default: false},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "issue_date", Type: field.TypeTime, Nullable: true},
 		{Name: "prev_payment_date", Type: field.TypeTime, Nullable: true},
 		{Name: "next_payment_date", Type: field.TypeTime, Nullable: true},
@@ -85,7 +86,7 @@ var (
 			{
 				Name:    "advance_employee_id_is_active",
 				Unique:  false,
-				Columns: []*schema.Column{AdvancesColumns[2], AdvancesColumns[11]},
+				Columns: []*schema.Column{AdvancesColumns[2], AdvancesColumns[12]},
 			},
 		},
 	}
@@ -862,6 +863,7 @@ var (
 		{Name: "email", Type: field.TypeString},
 		{Name: "phone", Type: field.TypeString, Nullable: true},
 		{Name: "resume_url", Type: field.TypeString, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// CandidatesTable holds the schema information for the "candidates" table.
@@ -1872,6 +1874,7 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"not_started", "in_progress", "completed", "cancelled"}, Default: "not_started"},
 		{Name: "progress", Type: field.TypeInt, Default: 0},
 		{Name: "is_template", Type: field.TypeBool, Default: false},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -3838,6 +3841,7 @@ var (
 		{Name: "start_date", Type: field.TypeTime},
 		{Name: "end_date", Type: field.TypeTime},
 		{Name: "capacity", Type: field.TypeInt, Default: 0},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}

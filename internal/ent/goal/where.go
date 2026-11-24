@@ -510,6 +510,16 @@ func IsTemplateNEQ(v bool) predicate.Goal {
 	return predicate.Goal(sql.FieldNEQ(FieldIsTemplate, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.Goal {
+	return predicate.Goal(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.Goal {
+	return predicate.Goal(sql.FieldNotNull(FieldMetadata))
+}
+
 // CreatedByEQ applies the EQ predicate on the "created_by" field.
 func CreatedByEQ(v uuid.UUID) predicate.Goal {
 	return predicate.Goal(sql.FieldEQ(FieldCreatedBy, v))

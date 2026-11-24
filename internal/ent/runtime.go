@@ -164,23 +164,23 @@ func init() {
 	// advance.DefaultApproved holds the default value on creation for the approved field.
 	advance.DefaultApproved = advanceDescApproved.Default.(bool)
 	// advanceDescAmountIssued is the schema descriptor for amount_issued field.
-	advanceDescAmountIssued := advanceFields[9].Descriptor()
+	advanceDescAmountIssued := advanceFields[10].Descriptor()
 	// advance.DefaultAmountIssued holds the default value on creation for the amount_issued field.
 	advance.DefaultAmountIssued = advanceDescAmountIssued.Default.(decimal.Decimal)
 	// advanceDescAmountRepaid is the schema descriptor for amount_repaid field.
-	advanceDescAmountRepaid := advanceFields[10].Descriptor()
+	advanceDescAmountRepaid := advanceFields[11].Descriptor()
 	// advance.DefaultAmountRepaid holds the default value on creation for the amount_repaid field.
 	advance.DefaultAmountRepaid = advanceDescAmountRepaid.Default.(decimal.Decimal)
 	// advanceDescIsActive is the schema descriptor for is_active field.
-	advanceDescIsActive := advanceFields[11].Descriptor()
+	advanceDescIsActive := advanceFields[12].Descriptor()
 	// advance.DefaultIsActive holds the default value on creation for the is_active field.
 	advance.DefaultIsActive = advanceDescIsActive.Default.(bool)
 	// advanceDescCreatedAt is the schema descriptor for created_at field.
-	advanceDescCreatedAt := advanceFields[12].Descriptor()
+	advanceDescCreatedAt := advanceFields[13].Descriptor()
 	// advance.DefaultCreatedAt holds the default value on creation for the created_at field.
 	advance.DefaultCreatedAt = advanceDescCreatedAt.Default.(func() time.Time)
 	// advanceDescUpdatedAt is the schema descriptor for updated_at field.
-	advanceDescUpdatedAt := advanceFields[13].Descriptor()
+	advanceDescUpdatedAt := advanceFields[14].Descriptor()
 	// advance.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	advance.DefaultUpdatedAt = advanceDescUpdatedAt.Default.(func() time.Time)
 	// advance.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -720,7 +720,7 @@ func init() {
 	candidateFields := schema.Candidate{}.Fields()
 	_ = candidateFields
 	// candidateDescCreatedAt is the schema descriptor for created_at field.
-	candidateDescCreatedAt := candidateFields[6].Descriptor()
+	candidateDescCreatedAt := candidateFields[7].Descriptor()
 	// candidate.DefaultCreatedAt holds the default value on creation for the created_at field.
 	candidate.DefaultCreatedAt = candidateDescCreatedAt.Default.(func() time.Time)
 	// candidateDescID is the schema descriptor for id field.
@@ -1542,11 +1542,11 @@ func init() {
 	// goal.DefaultIsTemplate holds the default value on creation for the is_template field.
 	goal.DefaultIsTemplate = goalDescIsTemplate.Default.(bool)
 	// goalDescCreatedAt is the schema descriptor for created_at field.
-	goalDescCreatedAt := goalFields[11].Descriptor()
+	goalDescCreatedAt := goalFields[12].Descriptor()
 	// goal.DefaultCreatedAt holds the default value on creation for the created_at field.
 	goal.DefaultCreatedAt = goalDescCreatedAt.Default.(func() time.Time)
 	// goalDescUpdatedAt is the schema descriptor for updated_at field.
-	goalDescUpdatedAt := goalFields[12].Descriptor()
+	goalDescUpdatedAt := goalFields[13].Descriptor()
 	// goal.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	goal.DefaultUpdatedAt = goalDescUpdatedAt.Default.(func() time.Time)
 	// goal.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -2988,11 +2988,11 @@ func init() {
 	// trainingcourse.DefaultCapacity holds the default value on creation for the capacity field.
 	trainingcourse.DefaultCapacity = trainingcourseDescCapacity.Default.(int)
 	// trainingcourseDescCreatedAt is the schema descriptor for created_at field.
-	trainingcourseDescCreatedAt := trainingcourseFields[7].Descriptor()
+	trainingcourseDescCreatedAt := trainingcourseFields[8].Descriptor()
 	// trainingcourse.DefaultCreatedAt holds the default value on creation for the created_at field.
 	trainingcourse.DefaultCreatedAt = trainingcourseDescCreatedAt.Default.(func() time.Time)
 	// trainingcourseDescUpdatedAt is the schema descriptor for updated_at field.
-	trainingcourseDescUpdatedAt := trainingcourseFields[8].Descriptor()
+	trainingcourseDescUpdatedAt := trainingcourseFields[9].Descriptor()
 	// trainingcourse.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	trainingcourse.DefaultUpdatedAt = trainingcourseDescUpdatedAt.Default.(func() time.Time)
 	// trainingcourse.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

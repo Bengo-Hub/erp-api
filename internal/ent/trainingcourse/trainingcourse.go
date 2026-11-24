@@ -26,6 +26,8 @@ const (
 	FieldEndDate = "end_date"
 	// FieldCapacity holds the string denoting the capacity field in the database.
 	FieldCapacity = "capacity"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -43,6 +45,7 @@ var Columns = []string{
 	FieldStartDate,
 	FieldEndDate,
 	FieldCapacity,
+	FieldMetadata,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }

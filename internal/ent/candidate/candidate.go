@@ -24,6 +24,8 @@ const (
 	FieldPhone = "phone"
 	// FieldResumeURL holds the string denoting the resume_url field in the database.
 	FieldResumeURL = "resume_url"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// Table holds the table name of the candidate in the database.
@@ -38,6 +40,7 @@ var Columns = []string{
 	FieldEmail,
 	FieldPhone,
 	FieldResumeURL,
+	FieldMetadata,
 	FieldCreatedAt,
 }
 

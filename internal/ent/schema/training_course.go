@@ -24,6 +24,9 @@ func (TrainingCourse) Fields() []ent.Field {
 		field.Time("start_date"),
 		field.Time("end_date"),
 		field.Int("capacity").Default(0).Comment("0 = unlimited"),
+		// Metadata holds course attributes without their own column: provider, duration,
+		// cost and status.
+		field.JSON("metadata", map[string]any{}).Optional(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

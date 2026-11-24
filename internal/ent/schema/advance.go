@@ -23,6 +23,7 @@ func (Advance) Fields() []ent.Field {
 		field.UUID("repay_option_id", uuid.UUID{}).Optional().Nillable(),
 
 		field.Bool("approved").Default(false),
+		field.JSON("metadata", map[string]any{}).Optional().Comment("reason: the reason given for the advance"),
 		field.Time("issue_date").Optional().Nillable(),
 		field.Time("prev_payment_date").Optional().Nillable(),
 		field.Time("next_payment_date").Optional().Nillable(),

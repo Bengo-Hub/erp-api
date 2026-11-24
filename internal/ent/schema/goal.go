@@ -29,6 +29,8 @@ func (Goal) Fields() []ent.Field {
 		field.Enum("status").Values("not_started", "in_progress", "completed", "cancelled").Default("not_started"),
 		field.Int("progress").Default(0).Comment("0-100"),
 		field.Bool("is_template").Default(false),
+		// Metadata holds goal attributes without their own column: category and weight.
+		field.JSON("metadata", map[string]any{}).Optional(),
 		field.UUID("created_by", uuid.UUID{}).Optional().Nillable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),

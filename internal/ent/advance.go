@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -29,6 +30,8 @@ type Advance struct {
 	RepayOptionID *uuid.UUID `json:"repay_option_id,omitempty"`
 	// Approved holds the value of the "approved" field.
 	Approved bool `json:"approved,omitempty"`
+	// reason: the reason given for the advance
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// IssueDate holds the value of the "issue_date" field.
 	IssueDate *time.Time `json:"issue_date,omitempty"`
 	// PrevPaymentDate holds the value of the "prev_payment_date" field.
@@ -55,6 +58,8 @@ func (*Advance) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case advance.FieldApproverID, advance.FieldRepayOptionID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case advance.FieldMetadata:
+			values[i] = new([]byte)
 		case advance.FieldAmountIssued, advance.FieldAmountRepaid:
 			values[i] = new(decimal.Decimal)
 		case advance.FieldApproved, advance.FieldIsActive:
@@ -115,6 +120,14 @@ func (_m *Advance) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field approved", values[i])
 			} else if value.Valid {
 				_m.Approved = value.Bool
+			}
+		case advance.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
 			}
 		case advance.FieldIssueDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -221,6 +234,9 @@ func (_m *Advance) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("approved=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Approved))
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	if v := _m.IssueDate; v != nil {
 		builder.WriteString("issue_date=")

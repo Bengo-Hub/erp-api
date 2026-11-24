@@ -79,6 +79,12 @@ func (_c *AdvanceCreate) SetNillableApproved(v *bool) *AdvanceCreate {
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *AdvanceCreate) SetMetadata(v map[string]interface{}) *AdvanceCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetIssueDate sets the "issue_date" field.
 func (_c *AdvanceCreate) SetIssueDate(v time.Time) *AdvanceCreate {
 	_c.mutation.SetIssueDate(v)
@@ -352,6 +358,10 @@ func (_c *AdvanceCreate) createSpec() (*Advance, *sqlgraph.CreateSpec) {
 		_spec.SetField(advance.FieldApproved, field.TypeBool, value)
 		_node.Approved = value
 	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(advance.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
+	}
 	if value, ok := _c.mutation.IssueDate(); ok {
 		_spec.SetField(advance.FieldIssueDate, field.TypeTime, value)
 		_node.IssueDate = &value
@@ -505,6 +515,24 @@ func (u *AdvanceUpsert) SetApproved(v bool) *AdvanceUpsert {
 // UpdateApproved sets the "approved" field to the value that was provided on create.
 func (u *AdvanceUpsert) UpdateApproved() *AdvanceUpsert {
 	u.SetExcluded(advance.FieldApproved)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *AdvanceUpsert) SetMetadata(v map[string]interface{}) *AdvanceUpsert {
+	u.Set(advance.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *AdvanceUpsert) UpdateMetadata() *AdvanceUpsert {
+	u.SetExcluded(advance.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *AdvanceUpsert) ClearMetadata() *AdvanceUpsert {
+	u.SetNull(advance.FieldMetadata)
 	return u
 }
 
@@ -742,6 +770,27 @@ func (u *AdvanceUpsertOne) SetApproved(v bool) *AdvanceUpsertOne {
 func (u *AdvanceUpsertOne) UpdateApproved() *AdvanceUpsertOne {
 	return u.Update(func(s *AdvanceUpsert) {
 		s.UpdateApproved()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *AdvanceUpsertOne) SetMetadata(v map[string]interface{}) *AdvanceUpsertOne {
+	return u.Update(func(s *AdvanceUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *AdvanceUpsertOne) UpdateMetadata() *AdvanceUpsertOne {
+	return u.Update(func(s *AdvanceUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *AdvanceUpsertOne) ClearMetadata() *AdvanceUpsertOne {
+	return u.Update(func(s *AdvanceUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -1163,6 +1212,27 @@ func (u *AdvanceUpsertBulk) SetApproved(v bool) *AdvanceUpsertBulk {
 func (u *AdvanceUpsertBulk) UpdateApproved() *AdvanceUpsertBulk {
 	return u.Update(func(s *AdvanceUpsert) {
 		s.UpdateApproved()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *AdvanceUpsertBulk) SetMetadata(v map[string]interface{}) *AdvanceUpsertBulk {
+	return u.Update(func(s *AdvanceUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *AdvanceUpsertBulk) UpdateMetadata() *AdvanceUpsertBulk {
+	return u.Update(func(s *AdvanceUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *AdvanceUpsertBulk) ClearMetadata() *AdvanceUpsertBulk {
+	return u.Update(func(s *AdvanceUpsert) {
+		s.ClearMetadata()
 	})
 }
 

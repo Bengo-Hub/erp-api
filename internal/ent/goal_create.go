@@ -134,6 +134,12 @@ func (_c *GoalCreate) SetNillableIsTemplate(v *bool) *GoalCreate {
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *GoalCreate) SetMetadata(v map[string]interface{}) *GoalCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedBy sets the "created_by" field.
 func (_c *GoalCreate) SetCreatedBy(v uuid.UUID) *GoalCreate {
 	_c.mutation.SetCreatedBy(v)
@@ -351,6 +357,10 @@ func (_c *GoalCreate) createSpec() (*Goal, *sqlgraph.CreateSpec) {
 		_spec.SetField(goal.FieldIsTemplate, field.TypeBool, value)
 		_node.IsTemplate = value
 	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(goal.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
+	}
 	if value, ok := _c.mutation.CreatedBy(); ok {
 		_spec.SetField(goal.FieldCreatedBy, field.TypeUUID, value)
 		_node.CreatedBy = &value
@@ -550,6 +560,24 @@ func (u *GoalUpsert) SetIsTemplate(v bool) *GoalUpsert {
 // UpdateIsTemplate sets the "is_template" field to the value that was provided on create.
 func (u *GoalUpsert) UpdateIsTemplate() *GoalUpsert {
 	u.SetExcluded(goal.FieldIsTemplate)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *GoalUpsert) SetMetadata(v map[string]interface{}) *GoalUpsert {
+	u.Set(goal.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *GoalUpsert) UpdateMetadata() *GoalUpsert {
+	u.SetExcluded(goal.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *GoalUpsert) ClearMetadata() *GoalUpsert {
+	u.SetNull(goal.FieldMetadata)
 	return u
 }
 
@@ -792,6 +820,27 @@ func (u *GoalUpsertOne) SetIsTemplate(v bool) *GoalUpsertOne {
 func (u *GoalUpsertOne) UpdateIsTemplate() *GoalUpsertOne {
 	return u.Update(func(s *GoalUpsert) {
 		s.UpdateIsTemplate()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *GoalUpsertOne) SetMetadata(v map[string]interface{}) *GoalUpsertOne {
+	return u.Update(func(s *GoalUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *GoalUpsertOne) UpdateMetadata() *GoalUpsertOne {
+	return u.Update(func(s *GoalUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *GoalUpsertOne) ClearMetadata() *GoalUpsertOne {
+	return u.Update(func(s *GoalUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -1206,6 +1255,27 @@ func (u *GoalUpsertBulk) SetIsTemplate(v bool) *GoalUpsertBulk {
 func (u *GoalUpsertBulk) UpdateIsTemplate() *GoalUpsertBulk {
 	return u.Update(func(s *GoalUpsert) {
 		s.UpdateIsTemplate()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *GoalUpsertBulk) SetMetadata(v map[string]interface{}) *GoalUpsertBulk {
+	return u.Update(func(s *GoalUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *GoalUpsertBulk) UpdateMetadata() *GoalUpsertBulk {
+	return u.Update(func(s *GoalUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *GoalUpsertBulk) ClearMetadata() *GoalUpsertBulk {
+	return u.Update(func(s *GoalUpsert) {
+		s.ClearMetadata()
 	})
 }
 

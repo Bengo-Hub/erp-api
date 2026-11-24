@@ -186,6 +186,18 @@ func (_u *GoalUpdate) SetNillableIsTemplate(v *bool) *GoalUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *GoalUpdate) SetMetadata(v map[string]interface{}) *GoalUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *GoalUpdate) ClearMetadata() *GoalUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetCreatedBy sets the "created_by" field.
 func (_u *GoalUpdate) SetCreatedBy(v uuid.UUID) *GoalUpdate {
 	_u.mutation.SetCreatedBy(v)
@@ -316,6 +328,12 @@ func (_u *GoalUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.IsTemplate(); ok {
 		_spec.SetField(goal.FieldIsTemplate, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(goal.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(goal.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.CreatedBy(); ok {
 		_spec.SetField(goal.FieldCreatedBy, field.TypeUUID, value)
@@ -503,6 +521,18 @@ func (_u *GoalUpdateOne) SetNillableIsTemplate(v *bool) *GoalUpdateOne {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *GoalUpdateOne) SetMetadata(v map[string]interface{}) *GoalUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *GoalUpdateOne) ClearMetadata() *GoalUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetCreatedBy sets the "created_by" field.
 func (_u *GoalUpdateOne) SetCreatedBy(v uuid.UUID) *GoalUpdateOne {
 	_u.mutation.SetCreatedBy(v)
@@ -663,6 +693,12 @@ func (_u *GoalUpdateOne) sqlSave(ctx context.Context) (_node *Goal, err error) {
 	}
 	if value, ok := _u.mutation.IsTemplate(); ok {
 		_spec.SetField(goal.FieldIsTemplate, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(goal.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(goal.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.CreatedBy(); ok {
 		_spec.SetField(goal.FieldCreatedBy, field.TypeUUID, value)

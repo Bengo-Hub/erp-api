@@ -395,6 +395,16 @@ func CapacityLTE(v int) predicate.TrainingCourse {
 	return predicate.TrainingCourse(sql.FieldLTE(FieldCapacity, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.TrainingCourse {
+	return predicate.TrainingCourse(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.TrainingCourse {
+	return predicate.TrainingCourse(sql.FieldNotNull(FieldMetadata))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.TrainingCourse {
 	return predicate.TrainingCourse(sql.FieldEQ(FieldCreatedAt, v))

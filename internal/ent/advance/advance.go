@@ -25,6 +25,8 @@ const (
 	FieldRepayOptionID = "repay_option_id"
 	// FieldApproved holds the string denoting the approved field in the database.
 	FieldApproved = "approved"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldIssueDate holds the string denoting the issue_date field in the database.
 	FieldIssueDate = "issue_date"
 	// FieldPrevPaymentDate holds the string denoting the prev_payment_date field in the database.
@@ -53,6 +55,7 @@ var Columns = []string{
 	FieldApproverID,
 	FieldRepayOptionID,
 	FieldApproved,
+	FieldMetadata,
 	FieldIssueDate,
 	FieldPrevPaymentDate,
 	FieldNextPaymentDate,

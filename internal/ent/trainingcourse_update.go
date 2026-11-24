@@ -126,6 +126,18 @@ func (_u *TrainingCourseUpdate) AddCapacity(v int) *TrainingCourseUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *TrainingCourseUpdate) SetMetadata(v map[string]interface{}) *TrainingCourseUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *TrainingCourseUpdate) ClearMetadata() *TrainingCourseUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *TrainingCourseUpdate) SetUpdatedAt(v time.Time) *TrainingCourseUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -205,6 +217,12 @@ func (_u *TrainingCourseUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if value, ok := _u.mutation.AddedCapacity(); ok {
 		_spec.AddField(trainingcourse.FieldCapacity, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(trainingcourse.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(trainingcourse.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(trainingcourse.FieldUpdatedAt, field.TypeTime, value)
@@ -326,6 +344,18 @@ func (_u *TrainingCourseUpdateOne) AddCapacity(v int) *TrainingCourseUpdateOne {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *TrainingCourseUpdateOne) SetMetadata(v map[string]interface{}) *TrainingCourseUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *TrainingCourseUpdateOne) ClearMetadata() *TrainingCourseUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *TrainingCourseUpdateOne) SetUpdatedAt(v time.Time) *TrainingCourseUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -435,6 +465,12 @@ func (_u *TrainingCourseUpdateOne) sqlSave(ctx context.Context) (_node *Training
 	}
 	if value, ok := _u.mutation.AddedCapacity(); ok {
 		_spec.AddField(trainingcourse.FieldCapacity, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(trainingcourse.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(trainingcourse.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(trainingcourse.FieldUpdatedAt, field.TypeTime, value)
