@@ -14,8 +14,11 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 )
 
-// Taxable expense claims are paid through payroll: treasury books only non-taxable claims to
-// accounts payable and leaves taxable ones to the payslip, where they are a taxable earning.
+// Approved expense claims are paid through payroll. A taxable claim is a taxable earning on the
+// payslip. A non-taxable claim stays out of gross and PAYE and is added to net pay; treasury
+// booked it to 2600 Employee Reimbursements Payable on approval and clears that account from the
+// erp.payroll.processed totals.reimbursements figure. A claim treasury settles on its own
+// (treasury.claim.settled) is paid and no run picks it up.
 // A claim is linked to the payslip that carries it (metadata payroll_period and payslip_id),
 // so it is paid once: a re-run of the same period picks it up again and relinks it, another
 // period skips it, and it is marked paid when that payslip's net pay is dispatched.
@@ -25,8 +28,8 @@ const (
 	claimEarningCode = "expense_claim"
 )
 
-// loadPayrollClaims returns, per employee, the approved and unpaid taxable claims dated on or
-// before the end of the period that are not already linked to another period's payslip.
+// loadPayrollClaims returns, per employee, the approved and unpaid claims (taxable or not) dated
+// on or before the end of the period that are not already linked to another period's payslip.
 func (s *Service) loadPayrollClaims(ctx context.Context, tenantID uuid.UUID, period time.Time, emps []*ent.Employee) (map[uuid.UUID][]*ent.ExpenseClaim, error) {
 	ids := make([]uuid.UUID, len(emps))
 	for i, e := range emps {
@@ -42,13 +45,12 @@ func (s *Service) loadPayrollClaims(ctx context.Context, tenantID uuid.UUID, per
 		expenseclaim.TenantID(tenantID),
 		expenseclaim.EmployeeIDIn(ids...),
 		expenseclaim.Approved(true),
-		expenseclaim.Taxable(true),
 		expenseclaim.IsPaid(false),
 		expenseclaim.DeleteStatus(false),
 		expenseclaim.Or(expenseclaim.ApplicationDateIsNil(), expenseclaim.ApplicationDateLT(end)),
 	).All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("payroll: load taxable claims: %w", err)
+		return nil, fmt.Errorf("payroll: load expense claims: %w", err)
 	}
 	key := month.Format("2006-01")
 	for _, c := range rows {
@@ -60,18 +62,24 @@ func (s *Service) loadPayrollClaims(ctx context.Context, tenantID uuid.UUID, per
 	return out, nil
 }
 
-// applyClaims adds an employee's taxable claims to taxable gross and to the payslip lines.
+// applyClaims adds an employee's taxable claims to taxable gross and their non-taxable claims to
+// net pay, and lists each on the payslip.
 func applyClaims(claims []*ent.ExpenseClaim, in *payrollengine.EmployeeInput, items *EmployeeItemized) {
 	for _, c := range claims {
 		if !c.Amount.IsPositive() {
 			continue
 		}
-		in.TaxableAllowances = in.TaxableAllowances.Add(c.Amount)
 		label := "Expense claim"
 		if c.ClaimType != "" {
 			label = "Expense claim (" + c.ClaimType + ")"
 		}
-		items.Earnings = append(items.Earnings, EarningLine{Code: claimEarningCode, Label: label, Amount: c.Amount})
+		if c.Taxable {
+			in.TaxableAllowances = in.TaxableAllowances.Add(c.Amount)
+			items.Earnings = append(items.Earnings, EarningLine{Code: claimEarningCode, Label: label, Amount: c.Amount})
+		} else {
+			in.Reimbursements = in.Reimbursements.Add(c.Amount)
+			items.Reimbursements = append(items.Reimbursements, LabeledAmount{Label: label, Amount: c.Amount})
+		}
 		items.ClaimIDs = append(items.ClaimIDs, c.ID)
 	}
 }

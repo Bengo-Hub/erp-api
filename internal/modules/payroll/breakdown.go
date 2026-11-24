@@ -86,15 +86,28 @@ func BuildPayslipBreakdownWithLines(ps *ent.Payslip, lines []*ent.PayslipLine) P
 	}
 	earnings := make([]AmountItem, 0, len(lines))
 	deductions := make([]AmountItem, 0, len(lines))
+	reimbursed := decimal.Zero
 	for _, l := range lines {
 		switch l.Section {
 		case "earning_cash", "benefit_noncash":
 			earnings = append(earnings, AmountItem{Label: l.Label, Amount: l.CashAmount})
+		case secReimbursement:
+			// Repaid with net pay but not part of gross: listed with the earnings so the two
+			// columns still reconcile to net pay.
+			earnings = append(earnings, AmountItem{Label: l.Label, Amount: l.CashAmount})
+			reimbursed = reimbursed.Add(l.CashAmount)
 		case "deduction_before_tax", "tax", "deduction_after_tax":
 			// relief + employer_contribution are intentionally excluded (relief reduces PAYE; the
 			// employer side is not deducted from the employee's net).
 			deductions = append(deductions, AmountItem{Label: l.Label, Amount: l.CashAmount})
 		}
+	}
+	if reimbursed.IsPositive() {
+		// Net pay includes the reimbursements, so total deductions are gross + reimbursements - net.
+		b.TotalEarnings = ps.GrossPay.Add(reimbursed)
+		b.TotalDeductions = b.TotalEarnings.Sub(ps.NetPay)
+		statutory := ps.Paye.Add(b.NSSF).Add(ps.ShifOrNhifContribution).Add(ps.HousingLevy)
+		b.OtherDeductions = decimal.Max(b.TotalDeductions.Sub(statutory), decimal.Zero)
 	}
 	if len(earnings) > 0 {
 		b.Earnings = earnings

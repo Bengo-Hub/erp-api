@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/Bengo-Hub/pagination"
@@ -33,6 +34,9 @@ func (h *AppraisalsHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/hrm/appraisals", func(ar chi.Router) {
 		ar.Get("/cycles", h.ListCycles)
 		ar.Post("/cycles", h.CreateCycle)
+		ar.Put("/cycles/{id}", h.UpdateCycle)
+		ar.Patch("/cycles/{id}", h.UpdateCycle)
+		ar.Delete("/cycles/{id}", h.DeleteCycle)
 		ar.Put("/cycles/{id}/status", h.SetCycleStatus)
 
 		ar.Get("/templates", h.ListTemplates)
@@ -50,6 +54,9 @@ func (h *AppraisalsHandler) RegisterRoutes(r chi.Router) {
 
 		ar.Get("/goals", h.ListGoals)
 		ar.Post("/goals", h.CreateGoal)
+		ar.Put("/goals/{id}", h.UpdateGoal)
+		ar.Patch("/goals/{id}", h.UpdateGoal)
+		ar.Delete("/goals/{id}", h.DeleteGoal)
 		ar.Post("/goals/{id}/progress", h.AddProgress)
 		ar.Get("/goals/{id}/progress", h.ListProgress)
 	})
@@ -78,29 +85,89 @@ type cycleBody struct {
 	DueDate     string `json:"due_date"`
 }
 
+// decodeCycle reads a cycle create/update body; it writes the error response itself.
+func decodeCycle(w http.ResponseWriter, r *http.Request) (appraisals.CycleInput, bool) {
+	var b cycleBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return appraisals.CycleInput{}, false
+	}
+	start, err := parseDate(b.StartDate)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid start_date")
+		return appraisals.CycleInput{}, false
+	}
+	end, err := parseDate(b.EndDate)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid end_date")
+		return appraisals.CycleInput{}, false
+	}
+	in := appraisals.CycleInput{Name: b.Name, Description: b.Description, StartDate: start, EndDate: end}
+	if d, derr := parseDate(b.DueDate); derr == nil {
+		in.DueDate = &d
+	}
+	return in, true
+}
+
+// UpdateCycle changes a cycle's name, description and dates (PUT/PATCH /cycles/{id}).
+func (h *AppraisalsHandler) UpdateCycle(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAppraisalManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	in, ok := decodeCycle(w, r)
+	if !ok {
+		return
+	}
+	row, err := h.svc.UpdateCycle(r.Context(), scope.TenantID, id, in)
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "cycle not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+// DeleteCycle removes a cycle that holds no appraisals (409 in_use otherwise).
+func (h *AppraisalsHandler) DeleteCycle(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAppraisalManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	err = h.svc.DeleteCycle(r.Context(), scope.TenantID, id)
+	switch {
+	case ent.IsNotFound(err):
+		writeError(w, http.StatusNotFound, "not_found", "cycle not found")
+	case errors.Is(err, appraisals.ErrCycleInUse):
+		writeError(w, http.StatusConflict, "in_use", err.Error())
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to delete cycle")
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 func (h *AppraisalsHandler) CreateCycle(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permAppraisalManage) {
 		return
 	}
-	var b cycleBody
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+	in, ok := decodeCycle(w, r)
+	if !ok {
 		return
-	}
-	start, err := parseDate(b.StartDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid start_date")
-		return
-	}
-	end, err := parseDate(b.EndDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid end_date")
-		return
-	}
-	in := appraisals.CycleInput{Name: b.Name, Description: b.Description, StartDate: start, EndDate: end}
-	if d, derr := parseDate(b.DueDate); derr == nil {
-		in.DueDate = &d
 	}
 	uid := scope.UserID
 	in.CreatedBy = &uid
@@ -253,7 +320,7 @@ func (h *AppraisalsHandler) ListAppraisals(w http.ResponseWriter, r *http.Reques
 	}
 	cycleID := optionalUUIDParam(r, "cycle_id")
 	empID := optionalUUIDParam(r, "employee_id")
-	rows, err := h.svc.ListAppraisals(r.Context(), scope.TenantID, cycleID, empID)
+	rows, err := h.svc.ListAppraisals(r.Context(), scope.TenantID, cycleID, empID, r.URL.Query().Get("search"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list appraisals")
 		return
@@ -425,8 +492,11 @@ func (h *AppraisalsHandler) ListGoals(w http.ResponseWriter, r *http.Request) {
 	if !ok || !requirePermission(w, scope, permAppraisalView) {
 		return
 	}
-	empID := optionalUUIDParam(r, "employee_id")
-	rows, err := h.svc.ListGoals(r.Context(), scope.TenantID, empID)
+	// is_template filters the goal library; is_library is the name older screens send.
+	rows, err := h.svc.ListGoals(r.Context(), scope.TenantID, appraisals.GoalFilter{
+		EmployeeID: optionalUUIDParam(r, "employee_id"),
+		IsTemplate: optionalBoolParam(r, "is_template", "is_library"),
+	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list goals")
 		return
@@ -450,15 +520,14 @@ type goalBody struct {
 	Weight      json.Number `json:"weight"`
 }
 
-func (h *AppraisalsHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
-	scope, ok := scopeFromRequest(w, r)
-	if !ok || !requirePermission(w, scope, permAppraisalManage) {
-		return
-	}
+// decodeGoal reads a goal create/update body; it writes the error response itself. An
+// employee id is required unless the body is a library template; on update the service
+// checks the stored goal instead (requireEmployee false).
+func decodeGoal(w http.ResponseWriter, r *http.Request, requireEmployee bool) (appraisals.GoalInput, bool) {
 	var b goalBody
 	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
-		return
+		return appraisals.GoalInput{}, false
 	}
 	// Library templates (is_template=true) have no employee; employee goals require one.
 	var empID *uuid.UUID
@@ -466,18 +535,16 @@ func (h *AppraisalsHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
 		parsed, err := uuid.Parse(b.EmployeeID)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
-			return
+			return appraisals.GoalInput{}, false
 		}
 		empID = &parsed
-	} else if !b.IsTemplate {
+	} else if requireEmployee && !b.IsTemplate {
 		writeError(w, http.StatusBadRequest, "bad_request", "employee_id is required for a non-template goal")
-		return
+		return appraisals.GoalInput{}, false
 	}
-	uid := scope.UserID
 	in := appraisals.GoalInput{
 		EmployeeID: empID, Title: b.Title, Description: b.Description,
-		IsTemplate: b.IsTemplate, CreatedBy: &uid,
-		Category: b.Category, Weight: b.Weight.String(),
+		IsTemplate: b.IsTemplate, Category: b.Category, Weight: b.Weight.String(),
 	}
 	if d, derr := parseDate(b.StartDate); derr == nil {
 		in.StartDate = &d
@@ -485,6 +552,74 @@ func (h *AppraisalsHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
 	if d, derr := parseDate(b.EndDate); derr == nil {
 		in.EndDate = &d
 	}
+	return in, true
+}
+
+// UpdateGoal changes a goal's details (PUT/PATCH /goals/{id}); progress has its own route.
+func (h *AppraisalsHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAppraisalManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	in, ok := decodeGoal(w, r, false)
+	if !ok {
+		return
+	}
+	row, err := h.svc.UpdateGoal(r.Context(), scope.TenantID, id, in)
+	if ent.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "not_found", "goal not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	views, err := h.svc.DescribeGoals(r.Context(), scope.TenantID, []*ent.Goal{row})
+	if err != nil {
+		writeJSON(w, http.StatusOK, row)
+		return
+	}
+	writeJSON(w, http.StatusOK, views[0])
+}
+
+// DeleteGoal removes a goal and its progress updates.
+func (h *AppraisalsHandler) DeleteGoal(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAppraisalManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	err = h.svc.DeleteGoal(r.Context(), scope.TenantID, id)
+	switch {
+	case ent.IsNotFound(err):
+		writeError(w, http.StatusNotFound, "not_found", "goal not found")
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to delete goal")
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func (h *AppraisalsHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAppraisalManage) {
+		return
+	}
+	in, ok := decodeGoal(w, r, true)
+	if !ok {
+		return
+	}
+	uid := scope.UserID
+	in.CreatedBy = &uid
 	row, err := h.svc.CreateGoal(r.Context(), scope.TenantID, in)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())

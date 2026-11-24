@@ -54,3 +54,27 @@ func TestBuildPayslipBreakdownWithLines(t *testing.T) {
 		t.Errorf("net pay = %s, want 52425.40", b.NetPay)
 	}
 }
+
+// A non-taxable claim repaid with net pay is listed with the earnings, and the totals still
+// reconcile: total earnings - total deductions = net pay.
+func TestBuildPayslipBreakdownWithReimbursement(t *testing.T) {
+	ps := &ent.Payslip{GrossPay: dec("50000"), NetPay: dec("41900"), Paye: dec("8000"),
+		ShifOrNhifContribution: dec("1000")}
+	lines := []*ent.PayslipLine{
+		{Section: "earning_cash", Label: "Basic Pay", CashAmount: dec("50000")},
+		{Section: secReimbursement, Label: "Expense claim (reimbursement)", CashAmount: dec("900")},
+		{Section: "deduction_before_tax", Label: "S.H.I.F.", CashAmount: dec("1000")},
+		{Section: "tax", Label: "P.A.Y.E.", CashAmount: dec("8000")},
+	}
+	b := BuildPayslipBreakdownWithLines(ps, lines)
+	if len(b.Earnings) != 2 {
+		t.Fatalf("earnings = %+v, want Basic Pay and the claim", b.Earnings)
+	}
+	if !b.TotalEarnings.Equal(dec("50900")) || !b.TotalDeductions.Equal(dec("9000")) || !b.OtherDeductions.IsZero() {
+		t.Fatalf("totals = earnings %s deductions %s other %s, want 50900 / 9000 / 0",
+			b.TotalEarnings, b.TotalDeductions, b.OtherDeductions)
+	}
+	if !b.TotalEarnings.Sub(b.TotalDeductions).Equal(b.NetPay) {
+		t.Fatalf("earnings - deductions != net")
+	}
+}

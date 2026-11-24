@@ -193,7 +193,9 @@ func (b employeeHRFields) hrInput() (employees.HRInput, error) {
 type updateEmployeeBody struct {
 	employeeHRFields
 	// KraPin is the employee form's name for pin_no.
-	KraPin            *string `json:"kra_pin"`
+	KraPin *string `json:"kra_pin"`
+	// PhoneNumber is kept in contact_details; "" clears it.
+	PhoneNumber       *string `json:"phone_number"`
 	FirstName         *string `json:"first_name"`
 	LastName          *string `json:"last_name"`
 	Email             *string `json:"email"`
@@ -273,6 +275,12 @@ func (h *EmployeesHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if err := h.svc.UpsertHR(r.Context(), scope.TenantID, id, hr); err != nil {
 		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
 		return
+	}
+	if body.PhoneNumber != nil {
+		if err := h.svc.SetPhone(r.Context(), scope.TenantID, id, *body.PhoneNumber); err != nil {
+			writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, row)
 }
@@ -615,6 +623,7 @@ func (h *EmployeesHandler) Get(w http.ResponseWriter, r *http.Request) {
 type createEmployeeBody struct {
 	employeeHRFields
 	KraPin            string `json:"kra_pin"`
+	PhoneNumber       string `json:"phone_number"` // kept in contact_details
 	OutletID          string `json:"outlet_id"`
 	UserID            string `json:"user_id"`
 	EmployeeNumber    string `json:"employee_number"`
@@ -692,6 +701,10 @@ func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.svc.UpsertHR(r.Context(), scope.TenantID, row.ID, hr); err != nil {
 		// The person exists; report the HR detail problem without losing the new record.
+		writeJSON(w, http.StatusCreated, map[string]any{"employee": row, "warning": err.Error()})
+		return
+	}
+	if err := h.svc.SetPhone(r.Context(), scope.TenantID, row.ID, body.PhoneNumber); err != nil {
 		writeJSON(w, http.StatusCreated, map[string]any{"employee": row, "warning": err.Error()})
 		return
 	}

@@ -4,13 +4,16 @@ package appraisals
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisal"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalcycle"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalquestion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
@@ -67,8 +70,11 @@ type CycleInput struct {
 
 // CreateCycle inserts a tenant-scoped appraisal cycle (status created).
 func (s *Service) CreateCycle(ctx context.Context, tenantID uuid.UUID, in CycleInput) (*ent.AppraisalCycle, error) {
+	if err := in.validate(); err != nil {
+		return nil, err
+	}
 	b := s.orm.AppraisalCycle.Create().
-		SetTenantID(tenantID).SetName(in.Name).SetDescription(in.Description).
+		SetTenantID(tenantID).SetName(strings.TrimSpace(in.Name)).SetDescription(in.Description).
 		SetStartDate(in.StartDate).SetEndDate(in.EndDate).SetStatus(appraisalcycle.StatusCreated)
 	if in.DueDate != nil {
 		b = b.SetDueDate(*in.DueDate)
@@ -110,6 +116,64 @@ func (s *Service) SetCycleStatus(ctx context.Context, tenantID, id uuid.UUID, st
 		return nil, fmt.Errorf("appraisals: invalid cycle transition %s -> %s", c.Status, target)
 	}
 	return c.Update().SetStatus(target).Save(ctx)
+}
+
+// ErrCycleInUse is returned when a cycle that still holds appraisals is deleted.
+var ErrCycleInUse = errors.New("this cycle has appraisals; delete them first or close the cycle instead")
+
+// validate checks the fields a cycle cannot do without.
+func (in CycleInput) validate() error {
+	if strings.TrimSpace(in.Name) == "" {
+		return fmt.Errorf("appraisals: name is required")
+	}
+	if in.EndDate.Before(in.StartDate) {
+		return fmt.Errorf("appraisals: end_date must not be before start_date")
+	}
+	return nil
+}
+
+// UpdateCycle changes a cycle's name, description and dates. The status moves only through
+// SetCycleStatus, and a missing due date keeps the stored one.
+func (s *Service) UpdateCycle(ctx context.Context, tenantID, id uuid.UUID, in CycleInput) (*ent.AppraisalCycle, error) {
+	if err := in.validate(); err != nil {
+		return nil, err
+	}
+	c, err := s.orm.AppraisalCycle.Query().
+		Where(appraisalcycle.TenantID(tenantID), appraisalcycle.ID(id)).Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	u := c.Update().SetName(strings.TrimSpace(in.Name)).SetDescription(in.Description).
+		SetStartDate(in.StartDate).SetEndDate(in.EndDate)
+	if in.DueDate != nil {
+		u = u.SetDueDate(*in.DueDate)
+	}
+	row, err := u.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("appraisals: update cycle: %w", err)
+	}
+	return row, nil
+}
+
+// DeleteCycle removes a cycle that holds no appraisals (ErrCycleInUse otherwise).
+func (s *Service) DeleteCycle(ctx context.Context, tenantID, id uuid.UUID) error {
+	c, err := s.orm.AppraisalCycle.Query().
+		Where(appraisalcycle.TenantID(tenantID), appraisalcycle.ID(id)).Only(ctx)
+	if err != nil {
+		return err
+	}
+	used, err := s.orm.Appraisal.Query().
+		Where(appraisal.TenantID(tenantID), appraisal.CycleID(c.ID)).Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("appraisals: check cycle appraisals: %w", err)
+	}
+	if used {
+		return ErrCycleInUse
+	}
+	if err := s.orm.AppraisalCycle.DeleteOne(c).Exec(ctx); err != nil {
+		return fmt.Errorf("appraisals: delete cycle: %w", err)
+	}
+	return nil
 }
 
 // ---- Templates + questions ----

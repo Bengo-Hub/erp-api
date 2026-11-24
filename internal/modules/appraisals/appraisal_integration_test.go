@@ -143,7 +143,7 @@ func TestGoalCategoryAndWeightOnPostgres(t *testing.T) {
 	if _, err := svc.CreateGoal(ctx, tenant, GoalInput{EmployeeID: &emp.ID, Title: "x", Weight: "-1"}); err == nil {
 		t.Fatal("negative weight must be refused")
 	}
-	rows, err := svc.ListGoals(ctx, tenant, nil)
+	rows, err := svc.ListGoals(ctx, tenant, GoalFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,5 +154,46 @@ func TestGoalCategoryAndWeightOnPostgres(t *testing.T) {
 	v := views[0]
 	if v.ID != g.ID || v.EmployeeName != "Jane Wanjiru" || v.Category != "Operations" || v.Weight != "25" {
 		t.Fatalf("goal view: %+v", v)
+	}
+}
+
+// TestListGoalsLibraryFilter: IsTemplate true lists only the goal library, false only employee
+// goals, nil both.
+func TestListGoalsLibraryFilter(t *testing.T) {
+	client := openTestClient(t)
+	ctx := context.Background()
+	tenant := uuid.New()
+	svc := NewService(client)
+	emp := client.Employee.Create().SetTenantID(tenant).SetFirstName("Jane").SaveX(ctx)
+	own, err := svc.CreateGoal(ctx, tenant, GoalInput{EmployeeID: &emp.ID, Title: "Cut stock losses"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tpl, err := svc.CreateGoal(ctx, tenant, GoalInput{Title: "Customer satisfaction", IsTemplate: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	yes, no := true, false
+	for _, tc := range []struct {
+		f    GoalFilter
+		want []uuid.UUID
+	}{
+		{GoalFilter{IsTemplate: &yes}, []uuid.UUID{tpl.ID}},
+		{GoalFilter{IsTemplate: &no}, []uuid.UUID{own.ID}},
+		{GoalFilter{}, []uuid.UUID{tpl.ID, own.ID}},
+	} {
+		rows, err := svc.ListGoals(ctx, tenant, tc.f)
+		if err != nil || len(rows) != len(tc.want) {
+			t.Fatalf("filter %+v: %d rows, %v; want %d", tc.f, len(rows), err, len(tc.want))
+		}
+		got := map[uuid.UUID]bool{}
+		for _, r := range rows {
+			got[r.ID] = true
+		}
+		for _, id := range tc.want {
+			if !got[id] {
+				t.Fatalf("filter %+v: goal %s missing", tc.f, id)
+			}
+		}
 	}
 }

@@ -79,6 +79,35 @@ type DisburseResult struct {
 	DisburseError   string          `json:"disburse_error,omitempty"`
 	AlreadyDone     bool            `json:"already_done,omitempty"`
 	PendingApproval bool            `json:"pending_approval,omitempty"` // treasury requires finance approval (+OTP) first
+	// DisburseCode names why the payout step stopped (one of the Disburse* codes) so the screen
+	// can say what to do next. Empty when nothing went wrong.
+	DisburseCode string `json:"disburse_code,omitempty"`
+}
+
+// Payout step outcomes reported in DisburseResult.DisburseCode.
+const (
+	DisburseApprovalPending       = "approval_pending"        // waiting for finance sign-off in treasury
+	DisburseApprovalRejected      = "approval_rejected"       // finance rejected the batch in treasury
+	DisburseApprovalNotConfigured = "approval_not_configured" // treasury has no payroll approval rule
+	DisburseNoPayoutAccount       = "no_payout_account"       // no payout account connected in treasury
+	DisburseDuplicateRequest      = "duplicate_request"       // treasury is still processing this batch
+	DisburseNotConfigured         = "not_configured"          // erp has no treasury connection
+	DisburseFailed                = "failed"                  // transport or treasury error
+	DisbursePartial               = "partial"                 // some payouts were not dispatched
+)
+
+// payoutStops maps each treasury refusal to its code and the message the screen shows. None of
+// them paid anything; disbursing again sends the same batch under the same key.
+var payoutStops = []struct {
+	err  error
+	code string
+	msg  string
+}{
+	{treasury.ErrApprovalPending, DisburseApprovalPending, "pending finance approval"},
+	{treasury.ErrApprovalRejected, DisburseApprovalRejected, "finance rejected this payroll disbursement in Treasury"},
+	{treasury.ErrApprovalNotConfigured, DisburseApprovalNotConfigured, "Treasury has no approval rule for payroll payouts; set one up, then disburse again"},
+	{treasury.ErrNoPayoutAccount, DisburseNoPayoutAccount, "no payout account is connected in Treasury; connect M-Pesa, Paystack or PayHero under Settings, Payments, then disburse again"},
+	{treasury.ErrDuplicateRequest, DisburseDuplicateRequest, "Treasury is still processing this batch; try again in a minute"},
 }
 
 // cycleRef is the batch reference of one posting cycle. Treasury books erp.payroll.processed
@@ -195,12 +224,10 @@ func (d *Disburser) post(ctx context.Context, p DisburseParams, batchRef string,
 		}
 		return nil, nil
 	}
-	empByID, err := d.loadEmployees(ctx, p.TenantID, slips)
+	payload, _, err := d.buildEvent(ctx, p, slips, ref)
 	if err != nil {
 		return nil, err
 	}
-	prefs := d.loadPayoutPrefs(ctx, p.TenantID, slips)
-	payload, _ := buildPayrollEvent(slips, empByID, prefs, p, ref)
 	// Attribute the gross to projects and department cost centers for treasury budgets.
 	if shares, aerr := d.buildCostAllocations(ctx, p.TenantID, p.Period, slips); aerr == nil {
 		payload["allocations"] = allocationsPayload(shares)
@@ -281,15 +308,13 @@ func (d *Disburser) post(ctx context.Context, p DisburseParams, batchRef string,
 // without a second payment.
 func (d *Disburser) pay(ctx context.Context, p DisburseParams, batchRef, ref string, slips []*ent.Payslip, res DisburseResult) (DisburseResult, error) {
 	if d.treasury == nil {
-		res.DisburseError = treasury.ErrNotConfigured.Error()
+		res.DisburseError, res.DisburseCode = treasury.ErrNotConfigured.Error(), DisburseNotConfigured
 		return res, nil
 	}
-	empByID, err := d.loadEmployees(ctx, p.TenantID, slips)
+	payload, _, err := d.buildEvent(ctx, p, slips, ref)
 	if err != nil {
 		return res, err
 	}
-	prefs := d.loadPayoutPrefs(ctx, p.TenantID, slips)
-	payload, _ := buildPayrollEvent(slips, empByID, prefs, p, ref)
 	payouts, refToSlip := buildPayouts(payload, batchRef, p.Period)
 
 	done := map[uuid.UUID]bool{}
@@ -301,15 +326,22 @@ func (d *Disburser) pay(ctx context.Context, p DisburseParams, batchRef, ref str
 	}
 	result, err := d.treasury.DisburseBatch(ctx, p.TenantID, payouts, ref)
 	switch {
-	case errors.Is(err, treasury.ErrApprovalPending):
-		// Treasury opened a finance approval for this batch. Nothing was paid; disbursing again
-		// after sign-off sends the same batch under the same key.
-		res.PendingApproval = true
-		res.DisburseError = "pending finance approval"
-		d.log.Info("payroll disbursement pending finance approval in treasury", zap.String("batch", ref))
 	case err != nil:
-		res.DisburseError = err.Error()
-		d.log.Warn("treasury disburse failed (GL event already posted)", zap.String("batch", ref), zap.Error(err))
+		res.DisburseError, res.DisburseCode = err.Error(), DisburseFailed
+		if errors.Is(err, treasury.ErrNotConfigured) {
+			res.DisburseCode = DisburseNotConfigured
+		}
+		for _, s := range payoutStops {
+			if errors.Is(err, s.err) {
+				res.DisburseError, res.DisburseCode = s.msg, s.code
+				break
+			}
+		}
+		// Treasury opened a finance approval for this batch; disbursing again after sign-off
+		// sends the same batch under the same key.
+		res.PendingApproval = res.DisburseCode == DisburseApprovalPending
+		d.log.Warn("treasury did not pay the batch (GL event already posted)", zap.String("batch", ref),
+			zap.String("code", res.DisburseCode), zap.Error(err))
 	default:
 		for r := range result.DispatchedRefs() {
 			if id, ok := refToSlip[r]; ok {
@@ -324,6 +356,7 @@ func (d *Disburser) pay(ctx context.Context, p DisburseParams, batchRef, ref str
 		}
 		if len(failed) > 0 {
 			res.DisburseError = fmt.Sprintf("%d payout(s) not dispatched: %s", len(failed), strings.Join(failed, "; "))
+			res.DisburseCode = DisbursePartial
 		}
 	}
 
@@ -337,7 +370,7 @@ func (d *Disburser) pay(ctx context.Context, p DisburseParams, batchRef, ref str
 		if err := d.markPaid(ctx, p.TenantID, newlyPaid); err != nil {
 			// The money moved; the next disburse sees treasury's existing payouts and marks them.
 			d.log.Error("payouts dispatched but payslips not marked paid", zap.String("batch", ref), zap.Error(err))
-			res.DisburseError = "payouts sent but not recorded; disburse again to record them"
+			res.DisburseError, res.DisburseCode = "payouts sent but not recorded; disburse again to record them", DisburseFailed
 			return res, nil
 		}
 	}
@@ -397,12 +430,10 @@ func (d *Disburser) Reverse(ctx context.Context, p DisburseParams) (DisburseResu
 			return DisburseResult{BatchRef: ref}, ErrBatchPaid
 		}
 	}
-	empByID, err := d.loadEmployees(ctx, p.TenantID, slips)
+	payload, netTotal, err := d.buildEvent(ctx, p, slips, ref)
 	if err != nil {
 		return DisburseResult{}, err
 	}
-	prefs := d.loadPayoutPrefs(ctx, p.TenantID, slips)
-	payload, netTotal := buildPayrollEvent(slips, empByID, prefs, p, ref)
 	// Attribute the gross to projects and department cost centers for treasury budgets.
 	if shares, aerr := d.buildCostAllocations(ctx, p.TenantID, p.Period, slips); aerr == nil {
 		payload["allocations"] = allocationsPayload(shares)

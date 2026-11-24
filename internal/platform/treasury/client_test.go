@@ -36,9 +36,26 @@ func TestDisburseBatchOutcomes(t *testing.T) {
 		t.Fatalf("Disburse with a failed item: err = %v, want ErrPartialDisburse", err)
 	}
 
-	status, body = http.StatusConflict, `{"error":"approval_required"}`
-	if _, err := c.DisburseBatch(context.Background(), uuid.New(), items, "batch-1"); !errors.Is(err, ErrApprovalPending) {
-		t.Fatalf("409: err = %v, want ErrApprovalPending", err)
+	// Every coded 409 maps to its own error; an uncoded one (older treasury) is a pending approval.
+	conflicts := []struct {
+		body string
+		want error
+	}{
+		{`{"error":"approval_required"}`, ErrApprovalPending},
+		{`{"error":"approval_required","code":"approval_required","state":"pending"}`, ErrApprovalPending},
+		{`{"error":"approval_required","code":"approval_required","state":"not_submitted"}`, ErrApprovalPending},
+		{`{"error":"approval_required","code":"approval_required","state":"rejected"}`, ErrApprovalRejected},
+		{`{"error":"approval_required","code":"approval_required","state":"no_rule_configured"}`, ErrApprovalNotConfigured},
+		{`{"error":"approval_required","code":"approval_required","blocked":[{"reference":"a","state":"pending"},{"reference":"b","state":"rejected"}]}`, ErrApprovalRejected},
+		{`{"error":"no payout account","code":"no_tenant_payout_account","hint":"connect one"}`, ErrNoPayoutAccount},
+		{`{"error":"duplicate request","code":"duplicate_request","message":"in flight"}`, ErrDuplicateRequest},
+		{`{"error":"duplicate request","message":"in flight"}`, ErrDuplicateRequest},
+	}
+	for _, tc := range conflicts {
+		status, body = http.StatusConflict, tc.body
+		if _, err := c.DisburseBatch(context.Background(), uuid.New(), items, "batch-1"); !errors.Is(err, tc.want) {
+			t.Fatalf("409 %s: err = %v, want %v", tc.body, err, tc.want)
+		}
 	}
 
 	off := NewClient("", "", zap.NewNop())

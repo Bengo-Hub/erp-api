@@ -10,6 +10,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payslipline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 )
@@ -66,17 +67,59 @@ func (d *Disburser) loadEmployees(ctx context.Context, tenantID uuid.UUID, slips
 	return m, nil
 }
 
+// loadReimbursements sums, per payslip, the non-taxable expense claims its net pay carries. The
+// run froze them as reimbursement payslip lines, so the figure matches the stored net pay even
+// after a claim changes.
+func (d *Disburser) loadReimbursements(ctx context.Context, tenantID uuid.UUID, slips []*ent.Payslip) (map[uuid.UUID]decimal.Decimal, error) {
+	ids := make([]uuid.UUID, len(slips))
+	for i, s := range slips {
+		ids[i] = s.ID
+	}
+	rows, err := d.orm.PayslipLine.Query().Where(
+		payslipline.TenantID(tenantID), payslipline.PayslipIDIn(ids...), payslipline.Section(secReimbursement),
+	).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("disburse: load reimbursements: %w", err)
+	}
+	m := make(map[uuid.UUID]decimal.Decimal, len(rows))
+	for _, r := range rows {
+		m[r.PayslipID] = m[r.PayslipID].Add(r.CashAmount)
+	}
+	return m, nil
+}
+
+// buildEvent loads what the batch event needs (employees, payout channels, reimbursements) and
+// builds it. Returns the payload + net total.
+func (d *Disburser) buildEvent(ctx context.Context, p DisburseParams, slips []*ent.Payslip, ref string) (map[string]any, decimal.Decimal, error) {
+	empByID, err := d.loadEmployees(ctx, p.TenantID, slips)
+	if err != nil {
+		return nil, decimal.Zero, err
+	}
+	reimb, err := d.loadReimbursements(ctx, p.TenantID, slips)
+	if err != nil {
+		return nil, decimal.Zero, err
+	}
+	payload, net := buildPayrollEvent(slips, empByID, d.loadPayoutPrefs(ctx, p.TenantID, slips), reimb, p, ref)
+	return payload, net, nil
+}
+
 // buildPayrollEvent constructs the erp.payroll.processed payload, as documented in
 // integrations.md section 1. Money is sent as decimal STRINGS. Returns the payload + net total.
-func buildPayrollEvent(slips []*ent.Payslip, empByID map[uuid.UUID]*ent.Employee, prefs map[uuid.UUID]payoutPref, p DisburseParams, batchRef string) (map[string]any, decimal.Decimal) {
+// reimb is each payslip's non-taxable claims carried in net pay: totals.reimbursements carries
+// their sum, so gross + reimbursements - net is what was withheld (treasury posts DR 2600 for
+// the reimbursements).
+func buildPayrollEvent(slips []*ent.Payslip, empByID map[uuid.UUID]*ent.Employee, prefs map[uuid.UUID]payoutPref, reimb map[uuid.UUID]decimal.Decimal, p DisburseParams, batchRef string) (map[string]any, decimal.Decimal) {
 	lines := make([]map[string]any, 0, len(slips))
 	gross := decimal.Zero
 	net := decimal.Zero
+	reimbursed := decimal.Zero
 
 	for _, s := range slips {
 		nssf := s.NssfEmployeeTier1.Add(s.NssfEmployeeTier2)
 		gross = gross.Add(s.GrossPay)
 		net = net.Add(s.NetPay)
+		r := reimb[s.ID]
+		reimbursed = reimbursed.Add(r)
 
 		empRef := s.EmployeeID.String()
 		recipientID := s.EmployeeID.String()
@@ -111,9 +154,12 @@ func buildPayrollEvent(slips []*ent.Payslip, empByID map[uuid.UUID]*ent.Employee
 		if pref.phone != "" {
 			line["payout_phone"] = pref.phone
 		}
+		if r.IsPositive() {
+			line["reimbursements"] = r.StringFixed(2)
+		}
 		lines = append(lines, line)
 	}
-	deductions := gross.Sub(net)
+	deductions := gross.Add(reimbursed).Sub(net)
 
 	outletStr := ""
 	if p.OutletID != uuid.Nil {
@@ -126,9 +172,10 @@ func buildPayrollEvent(slips []*ent.Payslip, empByID map[uuid.UUID]*ent.Employee
 		"period":    p.Period.Format("2006-01-02"),
 		"currency":  "KES",
 		"totals": map[string]any{
-			"gross":      gross.StringFixed(2),
-			"deductions": deductions.StringFixed(2),
-			"net":        net.StringFixed(2),
+			"gross":          gross.StringFixed(2),
+			"deductions":     deductions.StringFixed(2),
+			"net":            net.StringFixed(2),
+			"reimbursements": reimbursed.StringFixed(2),
 		},
 		"lines":     lines,
 		"batch_ref": batchRef,

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -42,6 +43,8 @@ func (h *RecruitmentHandler) RegisterRoutes(r chi.Router) {
 		rr.Get("/candidates", h.ListCandidates)
 		rr.Post("/candidates", h.CreateCandidate)
 		rr.Put("/candidates/{id}", h.UpdateCandidate)
+		rr.Patch("/candidates/{id}", h.UpdateCandidate)
+		rr.Delete("/candidates/{id}", h.DeleteCandidate)
 		rr.Post("/candidates/{id}/resume", h.UploadResume)
 
 		rr.Get("/applications", h.ListApplications)
@@ -253,6 +256,38 @@ func (h *RecruitmentHandler) UpdateCandidate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	writeJSON(w, http.StatusOK, recruitment.ViewCandidate(h.withResumeLink(row)))
+}
+
+// DeleteCandidate removes a candidate with no applications (409 in_use otherwise) and
+// deletes the resume file stored for them.
+func (h *RecruitmentHandler) DeleteCandidate(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permRecruitmentManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	row, err := h.svc.DeleteCandidate(r.Context(), scope.TenantID, id)
+	switch {
+	case ent.IsNotFound(err):
+		writeError(w, http.StatusNotFound, "not_found", "candidate not found")
+		return
+	case errors.Is(err, recruitment.ErrCandidateInUse):
+		writeError(w, http.StatusConflict, "in_use", err.Error())
+		return
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to delete candidate")
+		return
+	}
+	if row.ResumeURL != nil && h.media != nil && h.media.Enabled() {
+		if rerr := h.media.Release(r.Context(), *row.ResumeURL, ""); rerr != nil {
+			h.log.Warn("deleted candidate's resume not removed", zap.Error(rerr))
+		}
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // withResumeLink swaps a stored resume key for a short-lived presigned link in a response (the

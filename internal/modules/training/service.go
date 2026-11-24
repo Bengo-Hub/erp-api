@@ -240,15 +240,27 @@ func (s *Service) DescribeEvaluations(ctx context.Context, tenantID uuid.UUID, r
 	return out, nil
 }
 
-// DeleteCourse removes a tenant-scoped training course.
+// ErrCourseInUse is returned when a course that still has enrolments is deleted.
+var ErrCourseInUse = errors.New("this course has enrolments; delete them first or deactivate the course instead")
+
+// DeleteCourse removes a tenant-scoped training course that has no enrolments (ErrCourseInUse
+// otherwise).
 func (s *Service) DeleteCourse(ctx context.Context, tenantID, id uuid.UUID) error {
-	n, err := s.orm.TrainingCourse.Delete().
-		Where(trainingcourse.TenantID(tenantID), trainingcourse.ID(id)).Exec(ctx)
+	c, err := s.orm.TrainingCourse.Query().
+		Where(trainingcourse.TenantID(tenantID), trainingcourse.ID(id)).Only(ctx)
 	if err != nil {
-		return fmt.Errorf("training: delete course: %w", err)
+		return err
 	}
-	if n == 0 {
-		return fmt.Errorf("training: course not found")
+	used, err := s.orm.TrainingEnrollment.Query().
+		Where(trainingenrollment.TenantID(tenantID), trainingenrollment.CourseID(c.ID)).Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("training: check course enrolments: %w", err)
+	}
+	if used {
+		return ErrCourseInUse
+	}
+	if err := s.orm.TrainingCourse.DeleteOne(c).Exec(ctx); err != nil {
+		return fmt.Errorf("training: delete course: %w", err)
 	}
 	return nil
 }
@@ -273,23 +285,8 @@ func (s *Service) Enroll(ctx context.Context, tenantID, courseID, employeeID uui
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	course, err := tx.TrainingCourse.Query().
-		Where(trainingcourse.TenantID(tenantID), trainingcourse.ID(courseID)).Only(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("training: load course: %w", err)
-	}
-	if course.Capacity > 0 {
-		enrolled, cerr := tx.TrainingEnrollment.Query().Where(
-			trainingenrollment.TenantID(tenantID),
-			trainingenrollment.CourseID(courseID),
-			trainingenrollment.StatusEQ(trainingenrollment.StatusEnrolled),
-		).Count(ctx)
-		if cerr != nil {
-			return nil, fmt.Errorf("training: count enrolled: %w", cerr)
-		}
-		if enrolled >= course.Capacity {
-			return nil, fmt.Errorf("training: course is at capacity (%d)", course.Capacity)
-		}
+	if err := checkSeat(ctx, tx, tenantID, courseID); err != nil {
+		return nil, err
 	}
 	row, err := tx.TrainingEnrollment.Create().
 		SetTenantID(tenantID).SetCourseID(courseID).SetEmployeeID(employeeID).
@@ -301,6 +298,115 @@ func (s *Service) Enroll(ctx context.Context, tenantID, courseID, employeeID uui
 		return nil, fmt.Errorf("training: commit enroll: %w", err)
 	}
 	return row, nil
+}
+
+// checkSeat loads a tenant course and refuses when its active enrolments already fill its
+// capacity (0 = unlimited).
+func checkSeat(ctx context.Context, tx *ent.Tx, tenantID, courseID uuid.UUID) error {
+	course, err := tx.TrainingCourse.Query().
+		Where(trainingcourse.TenantID(tenantID), trainingcourse.ID(courseID)).Only(ctx)
+	if err != nil {
+		return fmt.Errorf("training: load course: %w", err)
+	}
+	if course.Capacity <= 0 {
+		return nil
+	}
+	enrolled, err := tx.TrainingEnrollment.Query().Where(
+		trainingenrollment.TenantID(tenantID),
+		trainingenrollment.CourseID(courseID),
+		trainingenrollment.StatusEQ(trainingenrollment.StatusEnrolled),
+	).Count(ctx)
+	if err != nil {
+		return fmt.Errorf("training: count enrolled: %w", err)
+	}
+	if enrolled >= course.Capacity {
+		return fmt.Errorf("training: course is at capacity (%d)", course.Capacity)
+	}
+	return nil
+}
+
+// ErrEnrollmentEvaluated is returned when an enrolment whose employee already evaluated the
+// course is moved or deleted (the evaluation would no longer match an enrolment).
+var ErrEnrollmentEvaluated = errors.New("this enrolment already has an evaluation; delete the evaluation first")
+
+// hasEvaluation reports whether the employee evaluated the course.
+func hasEvaluation(ctx context.Context, c *ent.Client, tenantID, courseID, employeeID uuid.UUID) (bool, error) {
+	ok, err := c.TrainingEvaluation.Query().Where(
+		trainingevaluation.TenantID(tenantID), trainingevaluation.CourseID(courseID),
+		trainingevaluation.EmployeeID(employeeID),
+	).Exist(ctx)
+	if err != nil {
+		return false, fmt.Errorf("training: check evaluations: %w", err)
+	}
+	return ok, nil
+}
+
+// UpdateEnrollment moves an enrolment to another course and/or employee. A new course must
+// have a free seat while the enrolment is active, and an evaluated enrolment cannot move.
+func (s *Service) UpdateEnrollment(ctx context.Context, tenantID, id, courseID, employeeID uuid.UUID) (*ent.TrainingEnrollment, error) {
+	tx, err := s.orm.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("training: begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	e, err := tx.TrainingEnrollment.Query().
+		Where(trainingenrollment.TenantID(tenantID), trainingenrollment.ID(id)).Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if e.CourseID == courseID && e.EmployeeID == employeeID {
+		return e, nil
+	}
+	if evaluated, err := hasEvaluation(ctx, tx.Client(), tenantID, e.CourseID, e.EmployeeID); err != nil {
+		return nil, err
+	} else if evaluated {
+		return nil, ErrEnrollmentEvaluated
+	}
+	if ok, err := tx.Employee.Query().Where(employee.TenantID(tenantID), employee.ID(employeeID)).Exist(ctx); err != nil {
+		return nil, fmt.Errorf("training: check employee: %w", err)
+	} else if !ok {
+		return nil, fmt.Errorf("training: employee not found")
+	}
+	if e.CourseID != courseID && e.Status == trainingenrollment.StatusEnrolled {
+		if err := checkSeat(ctx, tx, tenantID, courseID); err != nil {
+			return nil, err
+		}
+	} else if e.CourseID != courseID {
+		if _, err := tx.TrainingCourse.Query().
+			Where(trainingcourse.TenantID(tenantID), trainingcourse.ID(courseID)).Only(ctx); err != nil {
+			return nil, fmt.Errorf("training: load course: %w", err)
+		}
+	}
+	row, err := e.Update().SetCourseID(courseID).SetEmployeeID(employeeID).Save(ctx)
+	if err != nil {
+		if ent.IsConstraintError(err) {
+			return nil, fmt.Errorf("training: the employee is already enrolled on that course")
+		}
+		return nil, fmt.Errorf("training: update enrollment: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("training: commit enrollment: %w", err)
+	}
+	return row, nil
+}
+
+// DeleteEnrollment removes an enrolment whose employee has not evaluated the course.
+func (s *Service) DeleteEnrollment(ctx context.Context, tenantID, id uuid.UUID) error {
+	e, err := s.orm.TrainingEnrollment.Query().
+		Where(trainingenrollment.TenantID(tenantID), trainingenrollment.ID(id)).Only(ctx)
+	if err != nil {
+		return err
+	}
+	if evaluated, err := hasEvaluation(ctx, s.orm, tenantID, e.CourseID, e.EmployeeID); err != nil {
+		return err
+	} else if evaluated {
+		return ErrEnrollmentEvaluated
+	}
+	if err := s.orm.TrainingEnrollment.DeleteOne(e).Exec(ctx); err != nil {
+		return fmt.Errorf("training: delete enrollment: %w", err)
+	}
+	return nil
 }
 
 // SetEnrollmentStatus updates an enrollment's status (enrolled|completed|cancelled).
@@ -335,12 +441,7 @@ var ErrNotEnrolled = errors.New("training: the employee is not enrolled on this 
 
 // CreateEvaluation records an employee's post-course evaluation (rating clamped 0-5).
 func (s *Service) CreateEvaluation(ctx context.Context, tenantID, courseID, employeeID uuid.UUID, rating int, feedback string) (*ent.TrainingEvaluation, error) {
-	if rating < 0 {
-		rating = 0
-	}
-	if rating > 5 {
-		rating = 5
-	}
+	rating = clampRating(rating)
 	// Only someone enrolled on the course can evaluate it.
 	enrolled, err := s.orm.TrainingEnrollment.Query().Where(
 		trainingenrollment.TenantID(tenantID), trainingenrollment.CourseID(courseID),
@@ -360,4 +461,37 @@ func (s *Service) CreateEvaluation(ctx context.Context, tenantID, courseID, empl
 		return nil, fmt.Errorf("training: create evaluation: %w", err)
 	}
 	return row, nil
+}
+
+// clampRating keeps a rating within 0-5.
+func clampRating(rating int) int {
+	return min(max(rating, 0), 5)
+}
+
+// UpdateEvaluation changes an evaluation's rating (clamped 0-5) and feedback; the course and
+// employee stay those of the enrolment it was recorded for.
+func (s *Service) UpdateEvaluation(ctx context.Context, tenantID, id uuid.UUID, rating int, feedback string) (*ent.TrainingEvaluation, error) {
+	ev, err := s.orm.TrainingEvaluation.Query().
+		Where(trainingevaluation.TenantID(tenantID), trainingevaluation.ID(id)).Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	row, err := ev.Update().SetRating(clampRating(rating)).SetFeedback(feedback).Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("training: update evaluation: %w", err)
+	}
+	return row, nil
+}
+
+// DeleteEvaluation removes a tenant-scoped evaluation (nothing else refers to it).
+func (s *Service) DeleteEvaluation(ctx context.Context, tenantID, id uuid.UUID) error {
+	n, err := s.orm.TrainingEvaluation.Delete().
+		Where(trainingevaluation.TenantID(tenantID), trainingevaluation.ID(id)).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("training: delete evaluation: %w", err)
+	}
+	if n == 0 {
+		return &ent.NotFoundError{}
+	}
+	return nil
 }

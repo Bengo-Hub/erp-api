@@ -114,15 +114,10 @@ func (s *Service) Transition(ctx context.Context, tenantID, id uuid.UUID, to str
 	if err != nil {
 		return res, fmt.Errorf("recruitment: load candidate: %w", err)
 	}
-	first, last := splitFullName(cand.FullName)
-	emp, err := tx.Employee.Create().
-		SetTenantID(tenantID).
-		SetFirstName(first).
-		SetLastName(last).
-		SetEmail(cand.Email).
-		Save(ctx)
+	// The offer terms recorded on the earlier transition give the start date.
+	emp, err := s.hireEmployee(ctx, tx.Client(), tenantID, app, cand)
 	if err != nil {
-		return res, fmt.Errorf("recruitment: create employee on hire: %w", err)
+		return res, err
 	}
 	onb, err := seedOnboardingTx(ctx, tx, tenantID, emp.ID)
 	if err != nil {

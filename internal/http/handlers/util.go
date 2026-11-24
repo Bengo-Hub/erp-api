@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -149,6 +150,23 @@ func optionalUUIDParam(r *http.Request, key string) *uuid.UUID {
 		return nil
 	}
 	return &id
+}
+
+// optionalBoolParam reads the first of the given query keys that is set as a bool (true/false,
+// 1/0), returning nil when none is set or the value is not a bool.
+func optionalBoolParam(r *http.Request, keys ...string) *bool {
+	for _, key := range keys {
+		v := r.URL.Query().Get(key)
+		if v == "" {
+			continue
+		}
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil
+		}
+		return &b
+	}
+	return nil
 }
 
 // optionalUUIDString parses a body string as a UUID, returning nil when empty or invalid.

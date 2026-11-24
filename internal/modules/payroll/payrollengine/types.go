@@ -45,9 +45,12 @@ type EmployeeInput struct {
 	// TaxableAllowances is additional TAXABLE cash income for the period — taxable cash allowances
 	// plus the taxable EXCESS of per-diem/mileage over their KRA caps. It is added to gross for
 	// PAYE/statutory and to net pay (the employee receives this cash). NON-taxable reimbursements
-	// must NOT be put here — they are paid via AP (treasury), never through payroll gross, so they
-	// don't inflate PAYE. Additive: zero by default (no change to existing callers).
+	// must NOT be put here: they go in Reimbursements so they never inflate gross or PAYE.
+	// Additive: zero by default (no change to existing callers).
 	TaxableAllowances decimal.Decimal
+	// Reimbursements are approved non-taxable expense claims repaid with this payslip. They stay
+	// out of gross, statutory deductions and PAYE and are added to net pay only. Zero by default.
+	Reimbursements decimal.Decimal
 	// UnpaidTime is pay withheld for approved attendance deductions (lateness, unexcused absence).
 	// It is loss of pay, not a recovery: it comes off gross BEFORE statutory deductions and PAYE,
 	// so the employee is not taxed on pay they did not earn. Capped at gross. Zero by default.

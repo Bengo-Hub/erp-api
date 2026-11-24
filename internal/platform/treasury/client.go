@@ -28,6 +28,65 @@ import (
 // published; the operator re-triggers disburse once the batch is approved (with OTP) in treasury.
 var ErrApprovalPending = errors.New("treasury: payroll disbursement pending finance approval")
 
+// The other 409 answers to a disbursement. None of them paid anything.
+var (
+	// ErrApprovalRejected: finance rejected the batch in treasury (approval state rejected).
+	ErrApprovalRejected = errors.New("treasury: finance rejected this payroll disbursement")
+	// ErrApprovalNotConfigured: treasury has no approval rule for payroll payouts
+	// (approval state no_rule_configured), so the batch cannot be approved until one is set up.
+	ErrApprovalNotConfigured = errors.New("treasury: no finance approval rule is set up for payroll payouts")
+	// ErrNoPayoutAccount: the tenant has not connected its own payout account in treasury.
+	ErrNoPayoutAccount = errors.New("treasury: no payout account is connected for this organisation")
+	// ErrDuplicateRequest: treasury is still processing the same batch (same Idempotency-Key);
+	// retrying later is safe.
+	ErrDuplicateRequest = errors.New("treasury: this batch is already being processed; try again shortly")
+)
+
+// conflictBody is treasury's 409 body. A batch-wide approval carries state at the top level; a
+// per-item gate lists the blocked items with their own state.
+type conflictBody struct {
+	Code    string `json:"code"`
+	Error   string `json:"error"`
+	State   string `json:"state"`
+	Blocked []struct {
+		State string `json:"state"`
+	} `json:"blocked"`
+}
+
+// conflictError maps a 409 body to its error. A body without a code (treasury before coded 409s)
+// is read from its error field, and an approval without a known state counts as pending.
+func conflictError(body []byte) error {
+	var b conflictBody
+	_ = json.Unmarshal(body, &b)
+	code := b.Code
+	if code == "" {
+		code = b.Error
+	}
+	switch code {
+	case "no_tenant_payout_account":
+		return ErrNoPayoutAccount
+	case "duplicate_request", "duplicate request":
+		return ErrDuplicateRequest
+	}
+	states := []string{b.State}
+	for _, it := range b.Blocked {
+		states = append(states, it.State)
+	}
+	notConfigured := false
+	for _, s := range states {
+		switch s {
+		case "rejected":
+			return ErrApprovalRejected
+		case "no_rule_configured":
+			notConfigured = true
+		}
+	}
+	if notConfigured {
+		return ErrApprovalNotConfigured
+	}
+	return ErrApprovalPending
+}
+
 // Payout is one net-pay disbursement line. Amounts are decimal STRINGS, never
 // float, across the disburse boundary.
 type Payout struct {
@@ -192,7 +251,8 @@ func (b BatchResult) DispatchedRefs() map[string]bool {
 // DisburseBatch POSTs the payouts to treasury and returns the per-item outcome. idempotencyKey
 // is sent as Idempotency-Key: treasury binds its finance approval to that key and the exact
 // items, and refuses a second payout for any reference it already holds, so a re-sent batch
-// never pays an item twice. A blocked batch returns ErrApprovalPending.
+// never pays an item twice. A 409 returns ErrApprovalPending, ErrApprovalRejected,
+// ErrApprovalNotConfigured, ErrNoPayoutAccount or ErrDuplicateRequest (see conflictError).
 func (c *Client) DisburseBatch(ctx context.Context, tenantID uuid.UUID, payouts []Payout, idempotencyKey string) (BatchResult, error) {
 	if !c.enabled {
 		return BatchResult{}, ErrNotConfigured
@@ -210,7 +270,7 @@ func (c *Client) DisburseBatch(ctx context.Context, tenantID uuid.UUID, payouts 
 		return BatchResult{}, fmt.Errorf("treasury: disburse: %w", err)
 	}
 	if resp.StatusCode == http.StatusConflict {
-		return BatchResult{}, ErrApprovalPending
+		return BatchResult{}, conflictError(resp.Body)
 	}
 	if !resp.IsSuccess() {
 		return BatchResult{}, fmt.Errorf("treasury: disburse: status %d", resp.StatusCode)

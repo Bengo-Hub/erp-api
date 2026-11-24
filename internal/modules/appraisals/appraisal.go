@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
@@ -16,11 +17,13 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalresponse"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
+	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 )
 
-// ListAppraisals returns appraisals filtered by tenant (+ optional cycle/employee).
-func (s *Service) ListAppraisals(ctx context.Context, tenantID uuid.UUID, cycleID, employeeID *uuid.UUID) ([]*ent.Appraisal, error) {
+// ListAppraisals returns appraisals filtered by tenant (+ optional cycle/employee). A search
+// term keeps the appraisals whose employee's name or staff number contains every word of it.
+func (s *Service) ListAppraisals(ctx context.Context, tenantID uuid.UUID, cycleID, employeeID *uuid.UUID, search string) ([]*ent.Appraisal, error) {
 	q := s.orm.Appraisal.Query().Where(appraisal.TenantID(tenantID))
 	if cycleID != nil {
 		q = q.Where(appraisal.CycleID(*cycleID))
@@ -28,7 +31,48 @@ func (s *Service) ListAppraisals(ctx context.Context, tenantID uuid.UUID, cycleI
 	if employeeID != nil {
 		q = q.Where(appraisal.EmployeeID(*employeeID))
 	}
+	if words := searchWords(search); len(words) > 0 {
+		q = q.Where(employeeMatches(tenantID, words))
+	}
 	return q.Order(ent.Desc(appraisal.FieldCreatedAt)).All(ctx)
+}
+
+// Search bounds: longer input is cut, extra words are ignored.
+const (
+	maxSearchLen   = 100
+	maxSearchWords = 4
+)
+
+// searchWords splits a search term into at most maxSearchWords words.
+func searchWords(search string) []string {
+	search = strings.TrimSpace(search)
+	if len(search) > maxSearchLen {
+		search = search[:maxSearchLen]
+	}
+	words := strings.Fields(search)
+	if len(words) > maxSearchWords {
+		words = words[:maxSearchWords]
+	}
+	return words
+}
+
+// employeeMatches keeps appraisals whose employee (same tenant) has every word in the first
+// name, last name or staff number, case-insensitively (ILIKE on Postgres), as one
+// "employee_id IN (SELECT ...)" subquery.
+func employeeMatches(tenantID uuid.UUID, words []string) predicate.Appraisal {
+	return func(s *entsql.Selector) {
+		t := entsql.Table(employee.Table)
+		sub := entsql.Select(t.C(employee.FieldID)).From(t)
+		employee.TenantID(tenantID)(sub)
+		for _, w := range words {
+			employee.Or(
+				employee.FirstNameContainsFold(w),
+				employee.LastNameContainsFold(w),
+				employee.EmployeeNumberContainsFold(w),
+			)(sub)
+		}
+		s.Where(entsql.In(s.C(appraisal.FieldEmployeeID), sub))
+	}
 }
 
 // AppraisalView is an appraisal with the employee, evaluator, cycle and template names a

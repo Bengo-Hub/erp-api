@@ -72,3 +72,21 @@ func TestPipelineStages(t *testing.T) {
 		}
 	}
 }
+
+func TestOfferStartDate(t *testing.T) {
+	str := func(s string) *string { return &s }
+	cases := map[*string]string{
+		nil: "",
+		str("KES 80,000. Start date: 2026-12-01"):     "2026-12-01",
+		str("starting 2027-01-04, 3 month probation"): "2027-01-04",
+		str("Start=2026-11-30"):                       "2026-11-30",
+		str("Offer sent 2026-10-01, salary 50k"):      "",
+		str("Start date: 2026-13-45"):                 "",
+	}
+	for in, want := range cases {
+		got := offerStartDate(in)
+		if (got == nil) != (want == "") || (got != nil && got.Format("2006-01-02") != want) {
+			t.Errorf("%v: got %v, want %q", in, got, want)
+		}
+	}
+}

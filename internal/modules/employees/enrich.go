@@ -7,6 +7,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/authoutlet"
+	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
@@ -32,6 +33,8 @@ type EmployeeView struct {
 	// Outlet is the branch/outlet NAME (resolved from the local AuthOutlet shadow), so the UI
 	// never has to fall back to rendering the raw outlet_id uuid.
 	Outlet string `json:"outlet,omitempty"`
+	// PhoneNumber is the phone kept in contact_details (the employee form's phone_number).
+	PhoneNumber string `json:"phone_number,omitempty"`
 }
 
 // Enrich attaches each employee's hr_details (department/job-title names, employment type, manager)
@@ -55,6 +58,15 @@ func (s *Service) Enrich(ctx context.Context, tenantID uuid.UUID, emps []*ent.Em
 		Where(hrdetails.TenantID(tenantID), hrdetails.EmployeeIDIn(ids...)).All(ctx)
 	if err != nil {
 		return nil, err
+	}
+	contacts, err := s.orm.ContactDetails.Query().
+		Where(contactdetails.TenantID(tenantID), contactdetails.EmployeeIDIn(ids...), contactdetails.PhoneNotNil()).
+		Order(ent.Asc(contactdetails.FieldUpdatedAt)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range contacts { // ascending, so the latest row wins
+		out[idx[c.EmployeeID]].PhoneNumber = *c.Phone
 	}
 	outletIDs := map[uuid.UUID]bool{}
 	for _, e := range emps {

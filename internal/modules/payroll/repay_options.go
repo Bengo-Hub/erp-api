@@ -8,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 )
 
 // ensureRepayOption creates (or reuses) a RepayOption for an installment plan and returns its id.
@@ -16,8 +17,10 @@ import (
 // single lump-sum recovery, which needs no plan). When an existing optionID is passed it is updated
 // in place so editing a record's installment count doesn't orphan the row.
 func (s *Service) ensureRepayOption(ctx context.Context, tenantID uuid.UUID, optionID *uuid.UUID, amount decimal.Decimal, installments int) (*uuid.UUID, error) {
-	if installments <= 1 || amount.LessThanOrEqual(decimal.Zero) {
-		return optionID, nil // keep any existing option; no new plan needed
+	// No plan needed (or no count sent): keep any existing option. An existing plan edited
+	// down to one installment is updated below, so the record stops showing the old count.
+	if installments < 1 || amount.LessThanOrEqual(decimal.Zero) || (installments == 1 && optionID == nil) {
+		return optionID, nil
 	}
 	per := amount.DivRound(decimal.NewFromInt(int64(installments)), 4)
 	if optionID != nil {
@@ -51,4 +54,22 @@ func (s *Service) ensureRepayOption(ctx context.Context, tenantID uuid.UUID, opt
 // GetRepayOption returns a tenant-scoped repay option (for the schedule preview / view).
 func (s *Service) GetRepayOption(ctx context.Context, id uuid.UUID) (*ent.RepayOption, error) {
 	return s.orm.RepayOption.Get(ctx, id)
+}
+
+// RepayPlans loads the tenant's repay options with the given ids in one query, keyed by id
+// (the advances and losses lists show each record's installment plan).
+func (s *Service) RepayPlans(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]*ent.RepayOption, error) {
+	out := make(map[uuid.UUID]*ent.RepayOption, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := s.orm.RepayOption.Query().
+		Where(repayoption.TenantID(tenantID), repayoption.IDIn(ids...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("payroll: load repay options: %w", err)
+	}
+	for _, r := range rows {
+		out[r.ID] = r
+	}
+	return out, nil
 }

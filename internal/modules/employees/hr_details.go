@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/contactdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
@@ -109,6 +110,31 @@ func (s *Service) UpsertHR(ctx context.Context, tenantID, empID uuid.UUID, in HR
 	}
 	if in.DateJoined != nil {
 		u.SetDateJoined(*in.DateJoined)
+	}
+	return u.Exec(ctx)
+}
+
+// SetPhone stores the employee's phone number in their contact details row, creating the
+// row when missing; a blank phone clears it.
+func (s *Service) SetPhone(ctx context.Context, tenantID, empID uuid.UUID, phone string) error {
+	phone = strings.TrimSpace(phone)
+	row, err := s.orm.ContactDetails.Query().
+		Where(contactdetails.TenantID(tenantID), contactdetails.EmployeeID(empID)).
+		Order(ent.Desc(contactdetails.FieldUpdatedAt)).First(ctx)
+	if ent.IsNotFound(err) {
+		if phone == "" {
+			return nil
+		}
+		return s.orm.ContactDetails.Create().SetTenantID(tenantID).SetEmployeeID(empID).SetPhone(phone).Exec(ctx)
+	}
+	if err != nil {
+		return fmt.Errorf("load contact details: %w", err)
+	}
+	u := row.Update()
+	if phone == "" {
+		u.ClearPhone()
+	} else {
+		u.SetPhone(phone)
 	}
 	return u.Exec(ctx)
 }

@@ -275,6 +275,30 @@ func TestTaxableAllowances_IncreaseGrossAndPAYE(t *testing.T) {
 	}
 }
 
+// TestReimbursements_AddToNetOnly verifies that non-taxable reimbursements leave gross, taxable
+// pay, statutory deductions and PAYE unchanged and raise net pay by exactly their amount.
+func TestReimbursements_AddToNetOnly(t *testing.T) {
+	cfg := kra2025Config()
+	base, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatalf("base compute: %v", err)
+	}
+	res, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), Reimbursements: d("900.50"), TaxCategory: "primary"})
+	if err != nil {
+		t.Fatalf("reimbursement compute: %v", err)
+	}
+	if !res.GrossPay.Equal(base.GrossPay) || !res.TaxablePay.Equal(base.TaxablePay) || !res.PAYE.Equal(base.PAYE) ||
+		!res.DeductionsBeforeTax.Equal(base.DeductionsBeforeTax) {
+		t.Fatalf("reimbursement changed gross/tax/statutory: base %+v vs %+v", base, res)
+	}
+	if !res.Reimbursements.Equal(d("900.50")) {
+		t.Fatalf("reimbursements: got %s want 900.50", res.Reimbursements)
+	}
+	if !res.NetPay.Equal(base.NetPay.Add(d("900.50"))) {
+		t.Fatalf("net: got %s want %s", res.NetPay, base.NetPay.Add(d("900.50")))
+	}
+}
+
 // TestDisabled_NSSF: a deliberate tenant opt-out (Disabled) skips the component silently even
 // with no rates configured — distinct from the fail-loud missing-formula path.
 func TestDisabled_NSSF(t *testing.T) {

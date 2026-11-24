@@ -59,7 +59,7 @@ func (h *PayrollHandler) setAdvanceApproval(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, a.EmployeeID)
-	writeJSON(w, http.StatusOK, advanceView(a, name))
+	writeJSON(w, http.StatusOK, h.withRepayPlans(r.Context(), scope.TenantID, advanceView(a, name))[0])
 }
 
 func (h *PayrollHandler) ApproveLossDamage(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +90,7 @@ func (h *PayrollHandler) setLossDamageApproval(w http.ResponseWriter, r *http.Re
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, l.EmployeeID)
-	writeJSON(w, http.StatusOK, lossDamageView(l, name))
+	writeJSON(w, http.StatusOK, h.withRepayPlans(r.Context(), scope.TenantID, lossDamageView(l, name))[0])
 }
 
 // LabourCost returns a payroll month's gross pay split by project (?month=YYYY-MM, default this

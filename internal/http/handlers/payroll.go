@@ -825,7 +825,7 @@ func (h *PayrollHandler) ListAdvances(w http.ResponseWriter, r *http.Request) {
 		name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, a.EmployeeID)
 		out = append(out, advanceView(a, name))
 	}
-	writePaginated(w, out, total, p)
+	writePaginated(w, h.withRepayPlans(r.Context(), scope.TenantID, out...), total, p)
 }
 
 func (h *PayrollHandler) CreateAdvance(w http.ResponseWriter, r *http.Request) {
@@ -843,7 +843,7 @@ func (h *PayrollHandler) CreateAdvance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, a.EmployeeID)
-	writeJSON(w, http.StatusCreated, advanceView(a, name))
+	writeJSON(w, http.StatusCreated, h.withRepayPlans(r.Context(), scope.TenantID, advanceView(a, name))[0])
 }
 
 func (h *PayrollHandler) UpdateAdvance(w http.ResponseWriter, r *http.Request) {
@@ -870,7 +870,7 @@ func (h *PayrollHandler) UpdateAdvance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, a.EmployeeID)
-	writeJSON(w, http.StatusOK, advanceView(a, name))
+	writeJSON(w, http.StatusOK, h.withRepayPlans(r.Context(), scope.TenantID, advanceView(a, name))[0])
 }
 
 func (h *PayrollHandler) DeleteAdvance(w http.ResponseWriter, r *http.Request) {
@@ -888,6 +888,33 @@ func (h *PayrollHandler) DeleteAdvance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// withRepayPlans adds each advance or loss view's installment plan, loaded in one query:
+// no_of_installments and the per-installment amount. A record without a plan is recovered
+// in one installment of the full amount. A failed lookup leaves the views as they are.
+func (h *PayrollHandler) withRepayPlans(ctx context.Context, tenantID uuid.UUID, views ...map[string]any) []map[string]any {
+	var ids []uuid.UUID
+	for _, v := range views {
+		if id, ok := v["repay_option_id"].(*uuid.UUID); ok && id != nil {
+			ids = append(ids, *id)
+		}
+	}
+	plans, err := h.svc.RepayPlans(ctx, tenantID, ids)
+	if err != nil {
+		h.log.Warn("repay plans not loaded", zap.Error(err))
+		return views
+	}
+	for _, v := range views {
+		v["no_of_installments"], v["installment_amount"] = 1, v["amount"]
+		if id, ok := v["repay_option_id"].(*uuid.UUID); ok && id != nil {
+			if p := plans[*id]; p != nil && p.NoOfInstallments > 1 {
+				v["no_of_installments"] = p.NoOfInstallments
+				v["installment_amount"] = p.InstallmentAmount.StringFixed(2)
+			}
+		}
+	}
+	return views
 }
 
 func lossDamageView(l *ent.LossAndDamage, name string) map[string]any {
@@ -932,7 +959,7 @@ func (h *PayrollHandler) ListLossDamages(w http.ResponseWriter, r *http.Request)
 		name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, l.EmployeeID)
 		out = append(out, lossDamageView(l, name))
 	}
-	writePaginated(w, out, total, p)
+	writePaginated(w, h.withRepayPlans(r.Context(), scope.TenantID, out...), total, p)
 }
 
 func (h *PayrollHandler) CreateLossDamage(w http.ResponseWriter, r *http.Request) {
@@ -950,7 +977,7 @@ func (h *PayrollHandler) CreateLossDamage(w http.ResponseWriter, r *http.Request
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, l.EmployeeID)
-	writeJSON(w, http.StatusCreated, lossDamageView(l, name))
+	writeJSON(w, http.StatusCreated, h.withRepayPlans(r.Context(), scope.TenantID, lossDamageView(l, name))[0])
 }
 
 func (h *PayrollHandler) UpdateLossDamage(w http.ResponseWriter, r *http.Request) {
@@ -977,7 +1004,7 @@ func (h *PayrollHandler) UpdateLossDamage(w http.ResponseWriter, r *http.Request
 		return
 	}
 	name, _ := h.svc.EmployeeLabel(r.Context(), scope.TenantID, l.EmployeeID)
-	writeJSON(w, http.StatusOK, lossDamageView(l, name))
+	writeJSON(w, http.StatusOK, h.withRepayPlans(r.Context(), scope.TenantID, lossDamageView(l, name))[0])
 }
 
 func (h *PayrollHandler) DeleteLossDamage(w http.ResponseWriter, r *http.Request) {

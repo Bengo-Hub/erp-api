@@ -2,6 +2,7 @@ package payroll
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/outboxevent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
+	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 	"github.com/Bengo-Hub/erp-api/internal/platform/treasury"
 )
 
@@ -21,6 +23,7 @@ import (
 // for finance approval; fail lists references it reports as not dispatched.
 type fakeTreasury struct {
 	pending bool
+	err     error // any other refusal of the whole batch
 	fail    map[string]bool
 	keys    []string
 	batches [][]treasury.Payout
@@ -31,6 +34,9 @@ func (f *fakeTreasury) DisburseBatch(_ context.Context, _ uuid.UUID, payouts []t
 	f.batches = append(f.batches, payouts)
 	if f.pending {
 		return treasury.BatchResult{}, treasury.ErrApprovalPending
+	}
+	if f.err != nil {
+		return treasury.BatchResult{}, f.err
 	}
 	res := treasury.BatchResult{Count: len(payouts)}
 	for _, p := range payouts {
@@ -185,6 +191,45 @@ func TestIntegration_DisburseRetryAfterTreasuryApproval(t *testing.T) {
 	}
 }
 
+// Each treasury refusal leaves the batch posted and unpaid and reports its own code, so the screen
+// can say what to do; only a pending approval sets PendingApproval. The next disburse after the
+// cause is fixed pays the batch.
+func TestIntegration_DisburseTreasuryRefusals(t *testing.T) {
+	f := newDisburseFixture(t)
+	f.approveRun(t)
+	cases := []struct {
+		err     error
+		code    string
+		pending bool
+	}{
+		{treasury.ErrApprovalPending, DisburseApprovalPending, true},
+		{treasury.ErrApprovalRejected, DisburseApprovalRejected, false},
+		{treasury.ErrApprovalNotConfigured, DisburseApprovalNotConfigured, false},
+		{treasury.ErrNoPayoutAccount, DisburseNoPayoutAccount, false},
+		{treasury.ErrDuplicateRequest, DisburseDuplicateRequest, false},
+		{errors.New("treasury: disburse: status 502"), DisburseFailed, false},
+	}
+	for _, tc := range cases {
+		f.tr.err = tc.err
+		res, err := f.d.Disburse(f.context, f.params)
+		if err != nil || !res.Published || res.Disbursed || res.DisburseCode != tc.code ||
+			res.PendingApproval != tc.pending || res.DisburseError == "" {
+			t.Fatalf("%v: result = %+v, %v; want code %s", tc.err, res, err, tc.code)
+		}
+		if f.paid(t) != 0 {
+			t.Fatalf("%v: payslips marked paid", tc.err)
+		}
+	}
+	f.tr.err = nil
+	res, err := f.d.Disburse(f.context, f.params)
+	if err != nil || !res.Disbursed || res.DisburseCode != "" {
+		t.Fatalf("disburse after the cause is fixed = %+v, %v", res, err)
+	}
+	if n := f.events(t, "payroll.processed"); n != 1 {
+		t.Fatalf("payroll.processed events = %d, want 1", n)
+	}
+}
+
 // A posted, unpaid batch can be reversed once; the payslips go back for approval and a new
 // posting cycle uses a new batch ref so treasury books it again.
 func TestIntegration_ReverseUnpaidBatch(t *testing.T) {
@@ -230,25 +275,36 @@ func TestIntegration_ReverseUnpaidBatch(t *testing.T) {
 	}
 }
 
-// Taxable approved claims are paid once, through the payslip of the period that carries them,
-// and are marked paid when that payslip's net pay is dispatched.
-func TestIntegration_TaxableClaimsPaidThroughPayroll(t *testing.T) {
+// Approved claims are paid once, through the payslip of the period that carries them: a taxable
+// claim is a taxable earning, a non-taxable one is added to net pay only and reported as
+// totals.reimbursements. Both are marked paid when that payslip's net pay is dispatched.
+func TestIntegration_ClaimsPaidThroughPayroll(t *testing.T) {
 	f := newDisburseFixture(t)
 	ctx := f.context
 	emp := f.slips[0].EmployeeID
 	taxable := f.client.ExpenseClaim.Create().SetTenantID(f.tenant).SetEmployeeID(emp).SetApproved(true).
 		SetTaxable(true).SetAmount(decimal.NewFromInt(3000)).SaveX(ctx)
-	f.client.ExpenseClaim.Create().SetTenantID(f.tenant).SetEmployeeID(emp).SetApproved(true).
+	nonTaxable := f.client.ExpenseClaim.Create().SetTenantID(f.tenant).SetEmployeeID(emp).SetApproved(true).
 		SetTaxable(false).SetAmount(decimal.NewFromInt(900)).SaveX(ctx)
 	f.client.ExpenseClaim.Create().SetTenantID(f.tenant).SetEmployeeID(emp).SetApproved(false).
 		SetTaxable(true).SetAmount(decimal.NewFromInt(700)).SaveX(ctx)
 
 	emps := f.client.Employee.Query().AllX(ctx)
 	got, err := f.svc.loadPayrollClaims(ctx, f.tenant, f.period, emps)
-	if err != nil || len(got[emp]) != 1 || got[emp][0].ID != taxable.ID {
-		t.Fatalf("claims for the run = %v, %v; want only the approved taxable claim", got[emp], err)
+	if err != nil || len(got[emp]) != 2 {
+		t.Fatalf("claims for the run = %v, %v; want the two approved claims", got[emp], err)
 	}
-	if err := f.svc.linkClaimsToPayslip(ctx, f.tenant, f.slips[0].ID, f.period, []uuid.UUID{taxable.ID}); err != nil {
+	var in payrollengine.EmployeeInput
+	var items EmployeeItemized
+	applyClaims(got[emp], &in, &items)
+	if !in.TaxableAllowances.Equal(decimal.NewFromInt(3000)) || !in.Reimbursements.Equal(decimal.NewFromInt(900)) {
+		t.Fatalf("taxable %s / reimbursements %s, want 3000 / 900", in.TaxableAllowances, in.Reimbursements)
+	}
+	res := payrollengine.PayslipResult{GrossPay: decimal.NewFromInt(53000), Reimbursements: in.Reimbursements}
+	if err := f.svc.writePayslipLines(ctx, f.tenant, f.slips[0].ID, decimal.NewFromInt(50000), res, items); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.linkClaimsToPayslip(ctx, f.tenant, f.slips[0].ID, f.period, items.ClaimIDs); err != nil {
 		t.Fatal(err)
 	}
 	// The next period does not pick up a claim already carried by this period's payslip.
@@ -260,7 +316,27 @@ func TestIntegration_TaxableClaimsPaidThroughPayroll(t *testing.T) {
 	if _, err := f.d.Disburse(ctx, f.params); err != nil {
 		t.Fatal(err)
 	}
-	if c := f.client.ExpenseClaim.GetX(ctx, taxable.ID); !c.IsPaid || c.PaymentDate == nil {
-		t.Fatalf("taxable claim not marked paid after payout: %+v", c)
+	for _, id := range []uuid.UUID{taxable.ID, nonTaxable.ID} {
+		if c := f.client.ExpenseClaim.GetX(ctx, id); !c.IsPaid || c.PaymentDate == nil {
+			t.Fatalf("claim not marked paid after payout: %+v", c)
+		}
+	}
+	ev := f.client.OutboxEvent.Query().Where(outboxevent.TenantID(f.tenant), outboxevent.EventType("payroll.processed")).OnlyX(ctx)
+	var env struct {
+		Payload struct {
+			Totals map[string]string `json:"totals"`
+		} `json:"payload"`
+	}
+	if err := json.Unmarshal(ev.Payload, &env); err != nil {
+		t.Fatal(err)
+	}
+	// Fixture payslips: gross 2 x 50000, net 2 x 40000.
+	if tot := env.Payload.Totals; tot["reimbursements"] != "900.00" || tot["deductions"] != "20900.00" {
+		t.Fatalf("totals = %v, want reimbursements 900.00 and deductions 20900.00", tot)
+	}
+	// Paid claims are never picked up again, even by a re-run of the same period.
+	again, _ := f.svc.loadPayrollClaims(ctx, f.tenant, f.period, emps)
+	if len(again[emp]) != 0 {
+		t.Fatalf("paid claims picked up again: %v", again[emp])
 	}
 }

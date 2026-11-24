@@ -4,6 +4,7 @@ package recruitment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/application"
 	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobposting"
+	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
 )
 
@@ -22,6 +24,8 @@ import (
 type Service struct {
 	orm    *ent.Client
 	notify *events.Notifications // optional: candidate emails on apply/transition
+	// staffNumbers issues staff numbers for employees created on hire (optional).
+	staffNumbers employees.StaffNumberer
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
@@ -294,6 +298,30 @@ func (s *Service) UpdateCandidate(ctx context.Context, tenantID, id uuid.UUID, i
 		return nil, fmt.Errorf("recruitment: update candidate: %w", err)
 	}
 	return row, nil
+}
+
+// ErrCandidateInUse is returned when a candidate with applications is deleted.
+var ErrCandidateInUse = errors.New("this candidate has applications; reject or delete them first, or mark the candidate withdrawn")
+
+// DeleteCandidate removes a candidate who has no applications (ErrCandidateInUse otherwise)
+// and returns the removed row, so the caller can release its stored resume.
+func (s *Service) DeleteCandidate(ctx context.Context, tenantID, id uuid.UUID) (*ent.Candidate, error) {
+	c, err := s.GetCandidate(ctx, tenantID, id)
+	if err != nil {
+		return nil, err
+	}
+	used, err := s.orm.Application.Query().
+		Where(application.TenantID(tenantID), application.CandidateID(c.ID)).Exist(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("recruitment: check applications: %w", err)
+	}
+	if used {
+		return nil, ErrCandidateInUse
+	}
+	if err := s.orm.Candidate.DeleteOne(c).Exec(ctx); err != nil {
+		return nil, fmt.Errorf("recruitment: delete candidate: %w", err)
+	}
+	return c, nil
 }
 
 // GetCandidate loads one tenant-scoped candidate.

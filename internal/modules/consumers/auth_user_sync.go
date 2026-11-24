@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	sharedevents "github.com/Bengo-Hub/shared-events"
 	"github.com/google/uuid"
@@ -53,59 +52,12 @@ func (c *AuthUserSyncConsumer) Start(ctx context.Context, nc *nats.Conn) error {
 	}
 
 	// Guard against a startup race with auth-api: ensure the auth stream exists.
-	if _, err := js.StreamInfo(authStream); err != nil {
-		if _, addErr := js.AddStream(&nats.StreamConfig{
-			Name:      authStream,
-			Subjects:  []string{"auth.>"},
-			Retention: nats.LimitsPolicy,
-			MaxAge:    72 * time.Hour,
-			Storage:   nats.FileStorage,
-		}); addErr != nil && addErr != nats.ErrStreamNameAlreadyInUse {
-			c.log.Warn("auth-user-sync: ensure auth stream failed", zap.Error(addErr))
-		}
-	}
-
-	specs := []subSpec{
+	ensureStream(c.log, js, authStream)
+	subscribeAll(ctx, c.log, js, authStream, c.idem, []subSpec{
 		{"auth.user.created", "erp-auth-user-created", c.handleUserEvent},
 		{"auth.user.updated", "erp-auth-user-updated", c.handleUserEvent},
 		{"auth.user.deleted", "erp-auth-user-deleted", c.handleUserDeleted},
-	}
-
-	for _, s := range specs {
-		s := s
-		consumerName := s.durable
-		sharedevents.SubscribeQueueWithRebind(c.log, js, authStream, s.subject, s.durable, func(msg *nats.Msg) {
-			evt, err := sharedevents.FromJSON(msg.Data)
-			if err != nil {
-				c.log.Error("auth-user-sync: bad event", zap.String("subject", s.subject), zap.Error(err))
-				_ = msg.Ack() // poison message: drop, don't redeliver forever
-				return
-			}
-			// Idempotency: skip if already processed by this consumer.
-			if c.idem != nil && evt.ID != uuid.Nil {
-				if done, _ := c.idem.AlreadyProcessed(ctx, evt.ID, consumerName); done {
-					_ = msg.Ack()
-					return
-				}
-			}
-			if err := s.handler(ctx, evt); err != nil {
-				c.log.Error("auth-user-sync: handler failed", zap.String("subject", s.subject), zap.Error(err))
-				_ = msg.Nak()
-				return
-			}
-			if c.idem != nil && evt.ID != uuid.Nil {
-				_ = c.idem.MarkProcessed(ctx, evt.ID, consumerName)
-			}
-			_ = msg.Ack()
-		},
-			nats.Durable(s.durable),
-			nats.AckExplicit(),
-			nats.AckWait(30*time.Second),
-			nats.MaxDeliver(5),
-			nats.DeliverAll(),
-		)
-		c.log.Info("auth-user-sync: subscription active", zap.String("subject", s.subject), zap.String("durable", s.durable))
-	}
+	})
 	return nil
 }
 

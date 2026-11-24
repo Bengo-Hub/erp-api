@@ -51,7 +51,9 @@ type EmployeeItemized struct {
 	// PieceOutputIDs the piece output rows (marked paid once the payslip is written).
 	Earnings       []EarningLine
 	PieceOutputIDs []uuid.UUID
-	// ClaimIDs are the taxable expense claims paid through this payslip (claims_payroll.go).
+	// Reimbursements are the non-taxable expense claims added to net pay (never to gross).
+	Reimbursements []LabeledAmount
+	// ClaimIDs are the expense claims, taxable or not, paid through this payslip (claims_payroll.go).
 	ClaimIDs []uuid.UUID
 }
 
@@ -64,6 +66,9 @@ const (
 	secRelief         = "relief"
 	secAfterPaye      = "deduction_after_tax"
 	secEmployer       = "employer_contribution"
+	// secReimbursement is a non-taxable expense claim repaid with net pay. It is not part of
+	// gross, so earnings plus reimbursements minus deductions equals net pay.
+	secReimbursement = "reimbursement"
 )
 
 // LoadPayslipLines returns a payslip's itemised lines in display order (empty for old payslips).
@@ -131,6 +136,11 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 		} else {
 			add(secEarningCash, "attendance_deduction", "Unpaid time (attendance)", res.UnpaidTime.Neg(), res.UnpaidTime.Neg(), decimal.Zero, false, true, "", nil)
 		}
+	}
+
+	// Non-taxable expense claims repaid with net pay.
+	for _, r := range items.Reimbursements {
+		add(secReimbursement, claimEarningCode, r.Label, r.Amount, decimal.Zero, decimal.Zero, false, false, "", nil)
 	}
 
 	// Statutory (before-tax) — NSSF split into tiers + employer, SHIF, housing levy.

@@ -197,6 +197,13 @@ func run() error {
 		if err := authUserConsumer.Start(ctx, natsConn); err != nil {
 			log.Warn("auth-user-sync consumer start failed", zap.Error(err))
 		}
+		// Expense claims treasury pays with a payment voucher: marked paid (and unpaid again when
+		// the voucher is reversed), so a payroll run never repays them. Settlement needs no
+		// payroll settings.
+		claimConsumer := consumers.NewTreasuryClaimConsumer(log, payroll.NewService(orm, nil), idem)
+		if err := claimConsumer.Start(ctx, natsConn); err != nil {
+			log.Warn("treasury claim consumer start failed", zap.Error(err))
+		}
 		// tenant.purge (dormancy, a deleted tenant, a declined registration): delete every row
 		// erp holds for the tenant (auth_tenants included), by the shared schema-driven purger.
 		if js, err := natsConn.JetStream(); err == nil {
@@ -306,6 +313,7 @@ func run() error {
 	// Auto-issue meaningful staff numbers (SLUG/YYYY/###) for new + JIT-provisioned employees.
 	employeesSvc.WithSequence(docSeq)
 	authUserEmployeesSvc.WithSequence(docSeq)
+	recruitmentSvc.WithStaffNumbers(docSeq) // employees created on hire
 	documentsHandler := handlers.NewDocumentsHandler(log, orm, brandingClient, payrollSvc, docService, docSeq).
 		WithNotifications(events.NewNotifications(notifyPublisher)).
 		WithTreasury(treasuryClient)

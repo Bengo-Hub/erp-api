@@ -15,11 +15,21 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/goalprogress"
 )
 
-// ListGoals returns goals filtered by tenant (+ optional employee; templates included).
-func (s *Service) ListGoals(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID) ([]*ent.Goal, error) {
+// GoalFilter narrows ListGoals. Nil fields do not filter.
+type GoalFilter struct {
+	EmployeeID *uuid.UUID
+	// IsTemplate true lists only the goal library (reusable templates), false only employee goals.
+	IsTemplate *bool
+}
+
+// ListGoals returns the tenant's goals, newest first, narrowed by the filter.
+func (s *Service) ListGoals(ctx context.Context, tenantID uuid.UUID, f GoalFilter) ([]*ent.Goal, error) {
 	q := s.orm.Goal.Query().Where(goal.TenantID(tenantID))
-	if employeeID != nil {
-		q = q.Where(goal.EmployeeID(*employeeID))
+	if f.EmployeeID != nil {
+		q = q.Where(goal.EmployeeID(*f.EmployeeID))
+	}
+	if f.IsTemplate != nil {
+		q = q.Where(goal.IsTemplate(*f.IsTemplate))
 	}
 	return q.Order(ent.Desc(goal.FieldCreatedAt)).All(ctx)
 }
@@ -82,9 +92,15 @@ type GoalInput struct {
 	Weight      string
 }
 
-// CreateGoal inserts a tenant-scoped goal (status not_started, progress 0).
-func (s *Service) CreateGoal(ctx context.Context, tenantID uuid.UUID, in GoalInput) (*ent.Goal, error) {
+// metadata merges category and weight into existing goal metadata; a blank value removes
+// the key, other keys are kept.
+func (in GoalInput) metadata(existing map[string]any) (map[string]any, error) {
 	md := map[string]any{}
+	for k, v := range existing {
+		md[k] = v
+	}
+	delete(md, "category")
+	delete(md, "weight")
 	if c := strings.TrimSpace(in.Category); c != "" {
 		md["category"] = c
 	}
@@ -94,6 +110,77 @@ func (s *Service) CreateGoal(ctx context.Context, tenantID uuid.UUID, in GoalInp
 			return nil, fmt.Errorf("appraisals: weight must be a number of zero or more")
 		}
 		md["weight"] = w.String()
+	}
+	return md, nil
+}
+
+// UpdateGoal changes a goal's employee, title, description, dates, category and weight.
+// Progress and status move only through AddProgress.
+func (s *Service) UpdateGoal(ctx context.Context, tenantID, id uuid.UUID, in GoalInput) (*ent.Goal, error) {
+	if strings.TrimSpace(in.Title) == "" {
+		return nil, fmt.Errorf("appraisals: title is required")
+	}
+	g, err := s.orm.Goal.Query().Where(goal.TenantID(tenantID), goal.ID(id)).Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	md, err := in.metadata(g.Metadata)
+	if err != nil {
+		return nil, err
+	}
+	if in.EmployeeID != nil {
+		ok, eerr := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.ID(*in.EmployeeID)).Exist(ctx)
+		if eerr != nil {
+			return nil, fmt.Errorf("appraisals: check employee: %w", eerr)
+		}
+		if !ok {
+			return nil, fmt.Errorf("appraisals: employee not found")
+		}
+	} else if !g.IsTemplate {
+		return nil, fmt.Errorf("appraisals: employee_id is required for a non-template goal")
+	}
+	u := g.Update().SetNillableEmployeeID(in.EmployeeID).
+		SetTitle(strings.TrimSpace(in.Title)).SetDescription(in.Description).SetMetadata(md)
+	if in.StartDate != nil {
+		u = u.SetStartDate(*in.StartDate)
+	}
+	if in.EndDate != nil {
+		u = u.SetEndDate(*in.EndDate)
+	}
+	row, err := u.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("appraisals: update goal: %w", err)
+	}
+	return row, nil
+}
+
+// DeleteGoal removes a goal together with its own progress updates (they mean nothing
+// without the goal), in one transaction.
+func (s *Service) DeleteGoal(ctx context.Context, tenantID, id uuid.UUID) error {
+	tx, err := s.orm.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("appraisals: begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	g, err := tx.Goal.Query().Where(goal.TenantID(tenantID), goal.ID(id)).Only(ctx)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.GoalProgress.Delete().
+		Where(goalprogress.TenantID(tenantID), goalprogress.GoalID(g.ID)).Exec(ctx); err != nil {
+		return fmt.Errorf("appraisals: delete goal progress: %w", err)
+	}
+	if err := tx.Goal.DeleteOne(g).Exec(ctx); err != nil {
+		return fmt.Errorf("appraisals: delete goal: %w", err)
+	}
+	return tx.Commit()
+}
+
+// CreateGoal inserts a tenant-scoped goal (status not_started, progress 0).
+func (s *Service) CreateGoal(ctx context.Context, tenantID uuid.UUID, in GoalInput) (*ent.Goal, error) {
+	md, err := in.metadata(nil)
+	if err != nil {
+		return nil, err
 	}
 	b := s.orm.Goal.Create().
 		SetTenantID(tenantID).SetNillableEmployeeID(in.EmployeeID).

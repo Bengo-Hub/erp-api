@@ -33,6 +33,8 @@ type PayslipResult struct {
 	// NITAEmployer is the employer-only industrial training levy (flat per employee/month).
 	// It never enters deductions or net pay.
 	NITAEmployer decimal.Decimal
+	// Reimbursements is the non-taxable expense claim repayment added to net pay (never to gross).
+	Reimbursements decimal.Decimal
 
 	DeductionsBeforeTax decimal.Decimal
 	DeductionsAfterTax  decimal.Decimal
@@ -61,7 +63,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 	}
 
 	// Effective cash gross = base salary + taxable cash allowances (per-diem/mileage excess, taxable
-	// allowances). Non-taxable reimbursements are NEVER here (they go via AP). Statutory + PAYE +
+	// allowances). Non-taxable reimbursements are NEVER here (they are added to net pay at the end). Statutory + PAYE +
 	// net pay all use this gross. Additive: TaxableAllowances defaults to zero.
 	gross := in.GrossPay.Add(in.TaxableAllowances)
 	// Approved attendance deductions are unearned pay: they reduce gross before anything is
@@ -170,7 +172,11 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 		Add(res.DeductionsAfterTax).
 		Add(res.DeductionsAfterPAYE).
 		Add(res.DeductionsFinal)
-	res.NetPay = round2(gross.Sub(totalDeductions))
+	// Non-taxable reimbursements are repaid with the salary: they add to net pay only.
+	if in.Reimbursements.IsPositive() {
+		res.Reimbursements = round2(in.Reimbursements)
+	}
+	res.NetPay = round2(gross.Sub(totalDeductions).Add(res.Reimbursements))
 	return res, nil
 }
 
