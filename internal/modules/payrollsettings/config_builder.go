@@ -100,7 +100,14 @@ func (s *Service) BuildEngineConfig(ctx context.Context, tenantID uuid.UUID, per
 	}
 	for i, w := range wants {
 		if f := chosen[i]; f != nil {
-			*w.target = ratesFrom(f, items[f.ID], splits[f.ID])
+			rates := ratesFrom(f, items[f.ID], splits[f.ID])
+			// A tenant version that records no minimum (customised before minimums existed)
+			// inherits the platform version's; a recorded value, zero included, is its own choice.
+			if !hasMinimumContribution(f) && f.TenantID == tenantID {
+				k := formulaKey{w.ftype, w.category}
+				rates.MinimumContribution = FormulaMinimumContribution(resolveEffective(nil, set.platform[k], period))
+			}
+			*w.target = rates
 		}
 	}
 	if toggles.shif && cfg.SHIF == nil && cfg.NHIF == nil {
@@ -259,6 +266,7 @@ func ratesFrom(f *ent.PayrollFormula, items []*ent.PayrollFormulaItem, split *en
 	if f.Type == "income" && f.Category == "primary" {
 		rates.PersonalRelief = f.PersonalRelief
 	}
+	rates.MinimumContribution = FormulaMinimumContribution(f)
 	if split != nil {
 		rates.EmployeePercentage = split.EmployeePercentage.Div(hundred)
 		rates.EmployerPercentage = split.EmployerPercentage.Div(hundred)

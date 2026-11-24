@@ -1066,6 +1066,16 @@ func DeductionOrderNotNil() predicate.PayrollFormula {
 	return predicate.PayrollFormula(sql.FieldNotNull(FieldDeductionOrder))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.PayrollFormula {
+	return predicate.PayrollFormula(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.PayrollFormula {
+	return predicate.PayrollFormula(sql.FieldNotNull(FieldMetadata))
+}
+
 // IsCurrentEQ applies the EQ predicate on the "is_current" field.
 func IsCurrentEQ(v bool) predicate.PayrollFormula {
 	return predicate.PayrollFormula(sql.FieldEQ(FieldIsCurrent, v))

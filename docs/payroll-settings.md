@@ -36,6 +36,48 @@ advances, losses and damages, staff purchases) are on: their amounts and lines c
 approved records. Every other component is opt-in. A benefit assigned to a component the tenant has
 switched off is not paid. A platform component the platform owner switched off is off for everyone.
 
+**Per-employee earnings and deductions.** A component the organisation has switched on (not
+statutory and not driven by its own module) can be given to individual employees on the employee
+page, tab **Earnings and deductions**. Each assignment is an `employee_benefits` row (the table the
+legacy system used for per-employee benefits) with `component_id`, `amount`, `effective_date` and
+`end_date` (first day of the start and end months), `is_active`, and `metadata` holding
+`percentage`, `percent_of` (`basic` or `gross`) and `reference` (the scheme, membership or policy
+number). HELB, SACCO, union dues, pension, provident fund, insurance premium and court orders need a
+reference (`reference_label` on the component says which number). A payroll run applies them as follows:
+
+- Only assignments whose months cover the period, on components still switched on. Switching a
+  component off stops it for every employee it was assigned to; the assignment is kept and shows as
+  switched off.
+- Amount: the assignment's own percentage or amount, else the component's default amount, else its
+  default rate. A percentage applies to basic pay, or to gross pay (basic plus the fixed and
+  basic-based earnings assigned) when `percent_of` is `gross`.
+- Earnings: a taxable component is a taxable allowance (gross, NSSF, SHIF, Housing Levy and PAYE); a
+  non-taxable one (per diem) adds to gross and net pay only.
+- Deductions come off after the statutory deductions, PAYE and the recoverables (loans, advances,
+  losses, staff purchases), in the deduction order's phase and then component priority. They are
+  listed and totalled with the non-statutory deductions. Pension and provident fund count towards
+  the pension relief and an insurance premium towards the insurance relief; when the salary tab
+  records the same contribution the larger figure counts, not the sum. Relief follows the assigned
+  amount even when net pay could not cover all of it. Only these codes change PAYE.
+- Rule for a deduction larger than net pay: it is capped at the net pay left and the remainder is
+  reported (`DeductionShortfall` on the run result, `deduction_shortfall` in the preview, and
+  a `deduction_shortfall` payslip line that no total counts); it is not carried forward. The engine has no cap for
+  loans (they can still take net pay below zero, unchanged), so these deductions never take
+  anything from a loan or advance recovery.
+- Payslip lines carry the component title the organisation sees and its `component_id`.
+
+Endpoints: `GET|POST /employees/{employeeId}/components`, `PUT|DELETE
+/employees/{employeeId}/components/{id}` (view needs `hrm.payroll.view`, changes `hrm.payroll.manage`).
+Each component in `GET /payroll-components` carries `assignable` and `reference_label`.
+
+**SHIF minimum.** SHIF is 2.75% of gross with a KES 300 monthly minimum. A band cannot express a
+floor, so the minimum is `metadata.minimum_contribution` on the platform SHIF formula and the engine
+charges it whenever there is pay (`FormulaRates.MinimumContribution`). It is inherited like the rest:
+a tenant that customises SHIF gets the minimum on its copy, a tenant version that records none (an
+older copy) uses the platform's, and a platform change reaches every tenant that records none. `cmd/seed-payroll` sets 300 on platform SHIF versions that record no
+minimum and leaves a recorded value alone (zero included). The formula editor shows it as **Minimum
+Monthly Contribution**; `minimum_contribution` on the formula endpoints (omitted on update keeps it).
+
 **Reliefs.** Personal and insurance relief are statutory and on by default. Switching Personal
 Relief off removes it from PAYE for that tenant only.
 
@@ -74,8 +116,8 @@ it when the platform owner creates it or approves a tax advisor proposal, and
 deploy and on demand, maps PAYE bands and personal relief, NSSF tiers, SHIF and the Housing Levy onto
 the platform formulas, and applies a change only when treasury's set is newer (later effective date)
 and different. The change becomes a new current platform version from treasury's date; tenant
-versions are never touched. SHIF's minimum contribution is not representable in a formula band and
-is not synced.
+versions are never touched. Treasury does not publish SHIF's minimum contribution, so a synced SHIF
+version keeps the minimum of the version it replaces (see "SHIF minimum" below).
 
 Treasury publishes no event when a rate is approved, so the sync pulls. The proposed event contract
 for treasury is `treasury.statutory_rate.approved` with `{category, code, rate, rate_type,

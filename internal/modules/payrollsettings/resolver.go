@@ -303,6 +303,7 @@ func (s *Service) CustomiseFormula(ctx context.Context, tenantID, platformFormul
 		EffectiveFrom: src.EffectiveFrom, EffectiveTo: src.EffectiveTo, IsCurrent: true,
 		Progressive: src.Progressive, PersonalRelief: src.PersonalRelief,
 	}
+	in.MinimumContribution = RecordedMinimumContribution(src)
 	if src.RegulatorySource != nil {
 		in.RegulatorySource = *src.RegulatorySource
 	}

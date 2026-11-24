@@ -34,8 +34,12 @@ type runInputs struct {
 	installments   map[uuid.UUID]decimal.Decimal // repay option id -> per-period installment
 	titles         map[uuid.UUID]string          // payroll component id -> title the tenant sees
 	// inactive marks components the tenant has switched off (an opt-in catalogue item it never
-	// enabled, or its own component deactivated): benefits on them are not paid.
+	// enabled, or its own component deactivated): benefits, earnings and deductions assigned on
+	// them are not applied.
 	inactive map[uuid.UUID]bool
+	// components is every assigned component as the tenant sees it (category, taxability, phase,
+	// default amount or rate).
+	components map[uuid.UUID]payrollsettings.ResolvedComponent
 }
 
 // loadRunInputs reads salaries, active recoverables, non-cash benefits, their repay options and
@@ -51,6 +55,7 @@ func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []
 		installments:   map[uuid.UUID]decimal.Decimal{},
 		titles:         map[uuid.UUID]string{},
 		inactive:       map[uuid.UUID]bool{},
+		components:     map[uuid.UUID]payrollsettings.ResolvedComponent{},
 	}
 	repayIDs := map[uuid.UUID]bool{}
 	componentIDs := map[uuid.UUID]bool{}
@@ -117,9 +122,12 @@ func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []
 			in.staffPurchases[sp.EmployeeID] = append(in.staffPurchases[sp.EmployeeID], sp)
 		}
 
+		// Every active assignment: non-cash benefits, and earnings and deductions given to the
+		// employee from the components the tenant switched on. Which is which comes from the
+		// component's category below.
 		bens, err := s.orm.EmployeeBenefit.Query().
 			Where(employeebenefit.TenantID(tenantID), employeebenefit.EmployeeIDIn(ids...),
-				employeebenefit.IsActive(true), employeebenefit.NonCash(true)).All(ctx)
+				employeebenefit.IsActive(true)).All(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("benefits: %w", err)
 		}
@@ -156,6 +164,7 @@ func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []
 		}
 		for id, c := range rows {
 			in.titles[id] = c.Title
+			in.components[id] = c
 			if !c.Active {
 				in.inactive[id] = true
 			}
@@ -258,9 +267,15 @@ func (s *Service) buildEmployeeInput(p RunParams, emp *ent.Employee, pre *runInp
 		}
 	}
 
+	// Assigned earnings and deductions (opt-in components given to this employee).
+	pre.applyAssignedComponents(p, emp.ID, sal.MonthlySalary, &in, &items)
+
 	// Non-cash benefits (fed to the engine as an aggregate; itemised for the payslip lines).
 	total := decimal.Zero
 	for _, b := range pre.benefits[emp.ID] {
+		if !b.NonCash || pre.assignedPay(b) {
+			continue // cash rows are earnings or deductions (handled above) or unused legacy rows
+		}
 		if !dateActive(b.EffectiveDate, b.EndDate, p.Period) {
 			continue
 		}

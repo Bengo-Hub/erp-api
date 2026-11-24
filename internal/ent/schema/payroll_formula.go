@@ -47,6 +47,8 @@ func (PayrollFormula) Fields() []ent.Field {
 		field.Text("notes").Optional().Nillable(),
 		field.JSON("deduction_order", []DeductionPhase{}).Optional().
 			Comment("Ordered deduction phases: before_tax -> after_tax -> after_paye -> final"),
+		field.JSON("metadata", map[string]any{}).Optional().
+			Comment("Settings a band cannot express, e.g. minimum_contribution (SHIF KES 300 a month)"),
 
 		field.Bool("is_current").Default(false),
 		field.Time("created_at").Default(time.Now).Immutable(),

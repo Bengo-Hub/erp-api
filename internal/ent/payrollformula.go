@@ -59,6 +59,8 @@ type PayrollFormula struct {
 	Notes *string `json:"notes,omitempty"`
 	// Ordered deduction phases: before_tax -> after_tax -> after_paye -> final
 	DeductionOrder []schema.DeductionPhase `json:"deduction_order,omitempty"`
+	// Settings a band cannot express, e.g. minimum_contribution (SHIF KES 300 a month)
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// IsCurrent holds the value of the "is_current" field.
 	IsCurrent bool `json:"is_current,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -75,7 +77,7 @@ func (*PayrollFormula) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case payrollformula.FieldComponentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case payrollformula.FieldDeductionOrder:
+		case payrollformula.FieldDeductionOrder, payrollformula.FieldMetadata:
 			values[i] = new([]byte)
 		case payrollformula.FieldUpperLimit, payrollformula.FieldUpperLimitAmount, payrollformula.FieldUpperLimitPercentage, payrollformula.FieldPersonalRelief, payrollformula.FieldMinTaxableIncome:
 			values[i] = new(decimal.Decimal)
@@ -229,6 +231,14 @@ func (_m *PayrollFormula) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field deduction_order: %w", err)
 				}
 			}
+		case payrollformula.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
+			}
 		case payrollformula.FieldIsCurrent:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_current", values[i])
@@ -349,6 +359,9 @@ func (_m *PayrollFormula) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("deduction_order=")
 	builder.WriteString(fmt.Sprintf("%v", _m.DeductionOrder))
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("is_current=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsCurrent))

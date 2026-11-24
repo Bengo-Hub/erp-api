@@ -2,6 +2,7 @@ package payrollsettings
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformula"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollformulaitem"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollsplitratio"
+	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 )
 
 // FormulaItemInput is one band/bracket of a formula (percentages are stored as e.g. 30.00 = 30%).
@@ -39,6 +41,89 @@ type FormulaInput struct {
 	// Split is applied when either percentage is set; nil leaves the category default in effect.
 	EmployeePercentage *decimal.Decimal
 	EmployerPercentage *decimal.Decimal
+	// MinimumContribution is the least employee contribution per month (SHIF: KES 300), kept in
+	// the formula's metadata. Nil keeps the stored value on update and sets none on create; zero
+	// removes it.
+	MinimumContribution *decimal.Decimal
+}
+
+// metaMinimumContribution is the formula metadata key of the minimum monthly contribution.
+const metaMinimumContribution = "minimum_contribution"
+
+// FormulaMinimumContribution reads a formula's minimum monthly contribution from its metadata
+// (zero when unset or unreadable).
+func FormulaMinimumContribution(f *ent.PayrollFormula) decimal.Decimal {
+	if f == nil || f.Metadata == nil {
+		return decimal.Zero
+	}
+	return metaDecimal(f.Metadata[metaMinimumContribution])
+}
+
+// hasMinimumContribution reports whether the formula records a minimum (zero counts).
+func hasMinimumContribution(f *ent.PayrollFormula) bool {
+	_, ok := f.Metadata[metaMinimumContribution]
+	return ok
+}
+
+// RecordedMinimumContribution is the formula's own minimum, or nil when it records none.
+func RecordedMinimumContribution(f *ent.PayrollFormula) *decimal.Decimal {
+	if !hasMinimumContribution(f) {
+		return nil
+	}
+	m := FormulaMinimumContribution(f)
+	return &m
+}
+
+// metaDecimal reads a decimal stored in a JSON metadata map as a string or a number.
+func metaDecimal(v any) decimal.Decimal {
+	switch x := v.(type) {
+	case string:
+		if d, err := decimal.NewFromString(x); err == nil {
+			return d
+		}
+	case float64:
+		return decimal.NewFromFloat(x)
+	case json.Number:
+		if d, err := decimal.NewFromString(x.String()); err == nil {
+			return d
+		}
+	}
+	return decimal.Zero
+}
+
+// withMinimumContribution returns metadata with the minimum set, leaving every other key as it
+// was. Zero is stored too, so a minimum someone removed on purpose is not seeded back.
+func withMinimumContribution(meta map[string]any, min decimal.Decimal) map[string]any {
+	out := map[string]any{}
+	for k, v := range meta {
+		out[k] = v
+	}
+	out[metaMinimumContribution] = min.StringFixed(2)
+	return out
+}
+
+// EnsureSHIFMinimum gives every platform SHIF formula version without a minimum contribution the
+// statutory KES 300 (payrollengine.SHIFMinimumContribution). Idempotent: a version that already
+// records a minimum, including zero, is left alone. Tenant versions are never touched: a
+// tenant version without a recorded minimum inherits the platform's. Returns how many changed.
+func EnsureSHIFMinimum(ctx context.Context, orm *ent.Client, systemTenant uuid.UUID) (int, error) {
+	rows, err := orm.PayrollFormula.Query().Where(
+		payrollformula.TenantID(systemTenant), payrollformula.TypeEQ("deduction"),
+		payrollformula.CategoryEQ("shif")).All(ctx)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, f := range rows {
+		if _, ok := f.Metadata[metaMinimumContribution]; ok {
+			continue
+		}
+		if err := f.Update().SetMetadata(withMinimumContribution(f.Metadata, payrollengine.SHIFMinimumContribution)).Exec(ctx); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
 }
 
 // FormulaDetail is the full read model: the formula row + its bands + split ratio.
@@ -76,6 +161,9 @@ func (s *Service) UpsertFormula(ctx context.Context, tenantID uuid.UUID, in Form
 	}
 	if in.EffectiveFrom != nil && in.EffectiveTo != nil && in.EffectiveTo.Before(*in.EffectiveFrom) {
 		return nil, fmt.Errorf("effective_to is before effective_from")
+	}
+	if in.MinimumContribution != nil && in.MinimumContribution.IsNegative() {
+		return nil, fmt.Errorf("minimum contribution cannot be negative")
 	}
 	for i, it := range in.Items {
 		if it.AmountFrom.IsNegative() || it.AmountTo.IsNegative() || it.DeductAmount.IsNegative() || it.DeductPercentage.IsNegative() {
@@ -149,6 +237,9 @@ func (s *Service) UpsertFormula(ctx context.Context, tenantID uuid.UUID, in Form
 		if in.RegulatorySource != "" {
 			c = c.SetRegulatorySource(in.RegulatorySource)
 		}
+		if in.MinimumContribution != nil {
+			c = c.SetMetadata(withMinimumContribution(nil, *in.MinimumContribution))
+		}
 		formula, err = c.Save(ctx)
 	} else {
 		u := tx.PayrollFormula.UpdateOneID(*in.ID).
@@ -166,6 +257,13 @@ func (s *Service) UpsertFormula(ctx context.Context, tenantID uuid.UUID, in Form
 		}
 		if in.RegulatorySource != "" {
 			u = u.SetRegulatorySource(in.RegulatorySource)
+		}
+		if in.MinimumContribution != nil {
+			cur, gerr := tx.PayrollFormula.Get(ctx, *in.ID)
+			if gerr != nil {
+				return nil, fmt.Errorf("load formula: %w", gerr)
+			}
+			u = u.SetMetadata(withMinimumContribution(cur.Metadata, *in.MinimumContribution))
 		}
 		formula, err = u.Save(ctx)
 	}

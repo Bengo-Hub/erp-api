@@ -160,6 +160,18 @@ func (_u *EmployeeBenefitUpdate) ClearEndDate() *EmployeeBenefitUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *EmployeeBenefitUpdate) SetMetadata(v map[string]interface{}) *EmployeeBenefitUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *EmployeeBenefitUpdate) ClearMetadata() *EmployeeBenefitUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *EmployeeBenefitUpdate) SetUpdatedAt(v time.Time) *EmployeeBenefitUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -248,6 +260,12 @@ func (_u *EmployeeBenefitUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if _u.mutation.EndDateCleared() {
 		_spec.ClearField(employeebenefit.FieldEndDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(employeebenefit.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(employeebenefit.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(employeebenefit.FieldUpdatedAt, field.TypeTime, value)
@@ -402,6 +420,18 @@ func (_u *EmployeeBenefitUpdateOne) ClearEndDate() *EmployeeBenefitUpdateOne {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *EmployeeBenefitUpdateOne) SetMetadata(v map[string]interface{}) *EmployeeBenefitUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *EmployeeBenefitUpdateOne) ClearMetadata() *EmployeeBenefitUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *EmployeeBenefitUpdateOne) SetUpdatedAt(v time.Time) *EmployeeBenefitUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -520,6 +550,12 @@ func (_u *EmployeeBenefitUpdateOne) sqlSave(ctx context.Context) (_node *Employe
 	}
 	if _u.mutation.EndDateCleared() {
 		_spec.ClearField(employeebenefit.FieldEndDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(employeebenefit.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(employeebenefit.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(employeebenefit.FieldUpdatedAt, field.TypeTime, value)

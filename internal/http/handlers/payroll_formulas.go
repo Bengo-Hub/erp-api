@@ -37,6 +37,9 @@ type formulaBody struct {
 	Items              []formulaItemBody `json:"items"`
 	EmployeePercentage *string           `json:"employee_percentage"`
 	EmployerPercentage *string           `json:"employer_percentage"`
+	// MinimumContribution is the least monthly employee contribution (SHIF: 300). Omitted keeps
+	// the stored value.
+	MinimumContribution *string `json:"minimum_contribution"`
 }
 
 func decOrZero(s string) decimal.Decimal {
@@ -90,6 +93,10 @@ func (b formulaBody) toInput(id *uuid.UUID) payrollsettings.FormulaInput {
 		v := decOrZero(*b.EmployerPercentage)
 		in.EmployerPercentage = &v
 	}
+	if b.MinimumContribution != nil {
+		v := decOrZero(*b.MinimumContribution)
+		in.MinimumContribution = &v
+	}
 	return in
 }
 
@@ -109,6 +116,10 @@ func formulaDetailView(d *payrollsettings.FormulaDetail, source string) map[stri
 		"progressive":     f.Progressive,
 		"personal_relief": f.PersonalRelief.StringFixed(2),
 		"version":         f.Version,
+	}
+	// Least monthly employee contribution (SHIF KES 300), only when the formula records one.
+	if m := payrollsettings.RecordedMinimumContribution(f); m != nil {
+		v["minimum_contribution"] = m.StringFixed(2)
 	}
 	if f.RegulatorySource != nil {
 		v["regulatory_source"] = *f.RegulatorySource

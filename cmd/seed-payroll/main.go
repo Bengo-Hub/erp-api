@@ -125,6 +125,12 @@ func seed(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
 		}
 		log.Printf("  seeded %s/%s (%d bands)", f.ftype, f.category, len(f.rates.Bands))
 	}
+	// SHIF's KES 300 monthly minimum lives in the formula metadata (a band cannot express it).
+	if n, err := payrollsettings.EnsureSHIFMinimum(ctx, client, tenantID); err != nil {
+		return err
+	} else if n > 0 {
+		log.Printf("  set the SHIF minimum contribution on %d platform formula version(s)", n)
+	}
 
 	// Seed the default KRA reliefs (personal, insurance, AHL, disability, pension) under the
 	// system tenant. Idempotent (skips by title). Per-tenant reuse via defaults.EnsureReliefs.
@@ -251,6 +257,9 @@ func seedFormula(ctx context.Context, client *ent.Client, tenantID uuid.UUID, f 
 		SetVersion("1.0")
 	if f.withRelief {
 		create = create.SetPersonalRelief(f.rates.PersonalRelief)
+	}
+	if f.rates.MinimumContribution.IsPositive() {
+		create = create.SetMetadata(map[string]any{"minimum_contribution": f.rates.MinimumContribution.StringFixed(2)})
 	}
 	formula, err := create.Save(ctx)
 	if err != nil {

@@ -121,6 +121,12 @@ func (_c *EmployeeBenefitCreate) SetNillableEndDate(v *time.Time) *EmployeeBenef
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *EmployeeBenefitCreate) SetMetadata(v map[string]interface{}) *EmployeeBenefitCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *EmployeeBenefitCreate) SetCreatedAt(v time.Time) *EmployeeBenefitCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -315,6 +321,10 @@ func (_c *EmployeeBenefitCreate) createSpec() (*EmployeeBenefit, *sqlgraph.Creat
 		_spec.SetField(employeebenefit.FieldEndDate, field.TypeTime, value)
 		_node.EndDate = &value
 	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(employeebenefit.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(employeebenefit.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -486,6 +496,24 @@ func (u *EmployeeBenefitUpsert) UpdateEndDate() *EmployeeBenefitUpsert {
 // ClearEndDate clears the value of the "end_date" field.
 func (u *EmployeeBenefitUpsert) ClearEndDate() *EmployeeBenefitUpsert {
 	u.SetNull(employeebenefit.FieldEndDate)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *EmployeeBenefitUpsert) SetMetadata(v map[string]interface{}) *EmployeeBenefitUpsert {
+	u.Set(employeebenefit.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *EmployeeBenefitUpsert) UpdateMetadata() *EmployeeBenefitUpsert {
+	u.SetExcluded(employeebenefit.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *EmployeeBenefitUpsert) ClearMetadata() *EmployeeBenefitUpsert {
+	u.SetNull(employeebenefit.FieldMetadata)
 	return u
 }
 
@@ -682,6 +710,27 @@ func (u *EmployeeBenefitUpsertOne) UpdateEndDate() *EmployeeBenefitUpsertOne {
 func (u *EmployeeBenefitUpsertOne) ClearEndDate() *EmployeeBenefitUpsertOne {
 	return u.Update(func(s *EmployeeBenefitUpsert) {
 		s.ClearEndDate()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *EmployeeBenefitUpsertOne) SetMetadata(v map[string]interface{}) *EmployeeBenefitUpsertOne {
+	return u.Update(func(s *EmployeeBenefitUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *EmployeeBenefitUpsertOne) UpdateMetadata() *EmployeeBenefitUpsertOne {
+	return u.Update(func(s *EmployeeBenefitUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *EmployeeBenefitUpsertOne) ClearMetadata() *EmployeeBenefitUpsertOne {
+	return u.Update(func(s *EmployeeBenefitUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -1047,6 +1096,27 @@ func (u *EmployeeBenefitUpsertBulk) UpdateEndDate() *EmployeeBenefitUpsertBulk {
 func (u *EmployeeBenefitUpsertBulk) ClearEndDate() *EmployeeBenefitUpsertBulk {
 	return u.Update(func(s *EmployeeBenefitUpsert) {
 		s.ClearEndDate()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *EmployeeBenefitUpsertBulk) SetMetadata(v map[string]interface{}) *EmployeeBenefitUpsertBulk {
+	return u.Update(func(s *EmployeeBenefitUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *EmployeeBenefitUpsertBulk) UpdateMetadata() *EmployeeBenefitUpsertBulk {
+	return u.Update(func(s *EmployeeBenefitUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *EmployeeBenefitUpsertBulk) ClearMetadata() *EmployeeBenefitUpsertBulk {
+	return u.Update(func(s *EmployeeBenefitUpsert) {
+		s.ClearMetadata()
 	})
 }
 

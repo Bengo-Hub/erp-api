@@ -56,6 +56,12 @@ func (h *PayrollSettingsHandler) RegisterRoutes(r chi.Router) {
 		pr.Post("/payroll-components/{id}/activation", h.SetComponentActive)
 		pr.Post("/payroll-components/{id}/revert", h.RevertComponent)
 
+		// Earnings and deductions given to one employee (employee_pay_components.go).
+		pr.Get("/employees/{employeeId}/components", h.ListEmployeeComponents)
+		pr.Post("/employees/{employeeId}/components", h.SaveEmployeeComponent)
+		pr.Put("/employees/{employeeId}/components/{id}", h.SaveEmployeeComponent)
+		pr.Delete("/employees/{employeeId}/components/{id}", h.DeleteEmployeeComponent)
+
 		pr.Get("/loans", h.ListLoans)
 		pr.Post("/loans", h.CreateLoan)
 		pr.Get("/loans/{id}", h.GetLoan)
@@ -108,9 +114,13 @@ func componentView(rc payrollsettings.ResolvedComponent) map[string]any {
 		"customised":     rc.Customised,
 		"managed_by":     rc.ManagedBy,
 		"opt_in":         platformRow && !rc.Statutory && rc.ManagedBy == "",
-		"non_cash":       c.NonCash,
-		"statutory":      rc.Statutory,
-		"checkoff":       c.Checkoff,
+		// assignable: switched on and given to employees one by one (not statutory, not driven by
+		// its own module); reference_label names the number an assignment must carry, if any.
+		"assignable":      payrollsettings.Assignable(rc),
+		"reference_label": payrollsettings.ReferenceLabel(rc.Code),
+		"non_cash":        c.NonCash,
+		"statutory":       rc.Statutory,
+		"checkoff":        c.Checkoff,
 		// Default monetary config (employee + employer side) so the UI shows the rate/amount.
 		"amount":              rc.Amount.StringFixed(2),
 		"percentage":          rc.Percentage.StringFixed(2),

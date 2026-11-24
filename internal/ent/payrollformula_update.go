@@ -338,6 +338,18 @@ func (_u *PayrollFormulaUpdate) ClearDeductionOrder() *PayrollFormulaUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *PayrollFormulaUpdate) SetMetadata(v map[string]interface{}) *PayrollFormulaUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *PayrollFormulaUpdate) ClearMetadata() *PayrollFormulaUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetIsCurrent sets the "is_current" field.
 func (_u *PayrollFormulaUpdate) SetIsCurrent(v bool) *PayrollFormulaUpdate {
 	_u.mutation.SetIsCurrent(v)
@@ -503,6 +515,12 @@ func (_u *PayrollFormulaUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if _u.mutation.DeductionOrderCleared() {
 		_spec.ClearField(payrollformula.FieldDeductionOrder, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(payrollformula.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(payrollformula.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.IsCurrent(); ok {
 		_spec.SetField(payrollformula.FieldIsCurrent, field.TypeBool, value)
@@ -836,6 +854,18 @@ func (_u *PayrollFormulaUpdateOne) ClearDeductionOrder() *PayrollFormulaUpdateOn
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *PayrollFormulaUpdateOne) SetMetadata(v map[string]interface{}) *PayrollFormulaUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *PayrollFormulaUpdateOne) ClearMetadata() *PayrollFormulaUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetIsCurrent sets the "is_current" field.
 func (_u *PayrollFormulaUpdateOne) SetIsCurrent(v bool) *PayrollFormulaUpdateOne {
 	_u.mutation.SetIsCurrent(v)
@@ -1031,6 +1061,12 @@ func (_u *PayrollFormulaUpdateOne) sqlSave(ctx context.Context) (_node *PayrollF
 	}
 	if _u.mutation.DeductionOrderCleared() {
 		_spec.ClearField(payrollformula.FieldDeductionOrder, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(payrollformula.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(payrollformula.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.IsCurrent(); ok {
 		_spec.SetField(payrollformula.FieldIsCurrent, field.TypeBool, value)

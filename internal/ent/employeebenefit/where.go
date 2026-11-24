@@ -396,6 +396,16 @@ func EndDateNotNil() predicate.EmployeeBenefit {
 	return predicate.EmployeeBenefit(sql.FieldNotNull(FieldEndDate))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.EmployeeBenefit {
+	return predicate.EmployeeBenefit(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.EmployeeBenefit {
+	return predicate.EmployeeBenefit(sql.FieldNotNull(FieldMetadata))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.EmployeeBenefit {
 	return predicate.EmployeeBenefit(sql.FieldEQ(FieldCreatedAt, v))

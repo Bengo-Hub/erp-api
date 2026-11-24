@@ -464,6 +464,9 @@ func (h *PayrollHandler) Preview(w http.ResponseWriter, r *http.Request) {
 			"housing_levy":     res.HousingLevy.StringFixed(2),
 			"total_deductions": res.GrossPay.Sub(res.NetPay).StringFixed(2),
 			"net_pay":          res.NetPay.StringFixed(2),
+			// Assigned opt-in deductions taken, and what could not be taken because net pay ran out.
+			"other_deductions":    res.OtherDeductions.StringFixed(2),
+			"deduction_shortfall": res.DeductionShortfall.StringFixed(2),
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"results": rows, "data": rows})

@@ -9,8 +9,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// EmployeeBenefit is a benefit assigned to an employee (legacy hrm.payroll.Benefits).
-// Non-cash benefits feed the "final" deduction phase.
+// EmployeeBenefit is a payroll component assigned to an employee (legacy hrm.payroll.Benefits,
+// Earnings and Deductions). The component's category decides how a run applies it: non-cash
+// benefits feed the "final" deduction phase, earnings add to gross and deductions come off net
+// pay. Values the row has no column for live in metadata (percentage, percent_of, reference).
 type EmployeeBenefit struct {
 	ent.Schema
 }
@@ -27,6 +29,8 @@ func (EmployeeBenefit) Fields() []ent.Field {
 		field.Bool("is_active").Default(true),
 		field.Time("effective_date").Optional().Nillable(),
 		field.Time("end_date").Optional().Nillable(),
+		field.JSON("metadata", map[string]any{}).Optional().
+			Comment("percentage, percent_of (basic | gross) and reference (scheme or membership number)"),
 
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),

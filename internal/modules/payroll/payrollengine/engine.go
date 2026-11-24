@@ -2,6 +2,7 @@ package payrollengine
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/shopspring/decimal"
 )
@@ -35,6 +36,15 @@ type PayslipResult struct {
 	NITAEmployer decimal.Decimal
 	// Reimbursements is the non-taxable expense claim repayment added to net pay (never to gross).
 	Reimbursements decimal.Decimal
+	// NonTaxableEarnings is the non-taxable component pay included in GrossPay.
+	NonTaxableEarnings decimal.Decimal
+	// OtherDeductions is the total of the opt-in component deductions taken, and
+	// OtherDeductionsApplied the amount taken for each EmployeeInput.OtherDeductions entry (same
+	// order). DeductionShortfall is what could not be taken because net pay ran out: an opt-in
+	// deduction never takes net pay below zero, the remainder is reported here, not carried.
+	OtherDeductions        decimal.Decimal
+	OtherDeductionsApplied []decimal.Decimal
+	DeductionShortfall     decimal.Decimal
 
 	DeductionsBeforeTax decimal.Decimal
 	DeductionsAfterTax  decimal.Decimal
@@ -168,6 +178,15 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 	}
 
 	_ = nssf
+	// Non-taxable component earnings are pay, so they are part of gross and net pay, but they were
+	// kept out of the statutory bases and PAYE above.
+	if in.NonTaxableEarnings.IsPositive() {
+		res.NonTaxableEarnings = round2(in.NonTaxableEarnings)
+		gross = gross.Add(res.NonTaxableEarnings)
+		res.GrossPay = gross
+	}
+	applyOtherDeductions(&res, order, gross, in.OtherDeductions)
+
 	totalDeductions := res.DeductionsBeforeTax.
 		Add(res.DeductionsAfterTax).
 		Add(res.DeductionsAfterPAYE).
@@ -178,6 +197,64 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 	}
 	res.NetPay = round2(gross.Sub(totalDeductions).Add(res.Reimbursements))
 	return res, nil
+}
+
+// applyOtherDeductions takes the opt-in component deductions after everything else (statutory,
+// PAYE, loans, advances and the other recoverables), in deduction-order phase then priority
+// order. Each is capped at the cash net pay still left, so these deductions never push net pay
+// below zero; whatever could not be taken is reported in DeductionShortfall and is not carried
+// to the next period. Loans and advances are untouched by this rule.
+func applyOtherDeductions(res *PayslipResult, order []Phase, gross decimal.Decimal, ds []Deduction) {
+	if len(ds) == 0 {
+		return
+	}
+	phaseRank := map[string]int{}
+	for i, p := range order {
+		phaseRank[p.Name] = i
+	}
+	rank := func(phase string) int {
+		if r, ok := phaseRank[phase]; ok {
+			return r
+		}
+		return len(order) // unknown phase: after the known ones
+	}
+	idx := make([]int, len(ds))
+	for i := range idx {
+		idx[i] = i
+	}
+	sort.SliceStable(idx, func(a, b int) bool {
+		da, db := ds[idx[a]], ds[idx[b]]
+		if ra, rb := rank(da.Phase), rank(db.Phase); ra != rb {
+			return ra < rb
+		}
+		return da.Priority < db.Priority
+	})
+
+	left := gross.Sub(res.DeductionsBeforeTax).Sub(res.DeductionsAfterTax).
+		Sub(res.DeductionsAfterPAYE).Sub(res.DeductionsFinal)
+	res.OtherDeductionsApplied = make([]decimal.Decimal, len(ds))
+	for _, i := range idx {
+		want := round2(ds[i].Amount)
+		if !want.IsPositive() {
+			res.OtherDeductionsApplied[i] = decimal.Zero
+			continue
+		}
+		take := want
+		if left.LessThan(take) {
+			take = decimal.Max(left, decimal.Zero)
+		}
+		take = round2(take)
+		res.OtherDeductionsApplied[i] = take
+		res.DeductionShortfall = res.DeductionShortfall.Add(want.Sub(take))
+		res.OtherDeductions = res.OtherDeductions.Add(take)
+		left = left.Sub(take)
+		// The before-tax and after-tax totals stay statutory only: those fed taxable pay.
+		phase := PhaseAfterPAYE
+		if ds[i].Phase == PhaseFinal {
+			phase = PhaseFinal
+		}
+		addPhase(res, phase, take)
+	}
 }
 
 // taxableNonCash returns the taxable portion of non-cash benefits for the period: the excess over

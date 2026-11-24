@@ -41413,6 +41413,7 @@ type EmployeeBenefitMutation struct {
 	is_active      *bool
 	effective_date *time.Time
 	end_date       *time.Time
+	metadata       *map[string]interface{}
 	created_at     *time.Time
 	updated_at     *time.Time
 	clearedFields  map[string]struct{}
@@ -41852,6 +41853,55 @@ func (m *EmployeeBenefitMutation) ResetEndDate() {
 	delete(m.clearedFields, employeebenefit.FieldEndDate)
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *EmployeeBenefitMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *EmployeeBenefitMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the EmployeeBenefit entity.
+// If the EmployeeBenefit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EmployeeBenefitMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *EmployeeBenefitMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[employeebenefit.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *EmployeeBenefitMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[employeebenefit.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *EmployeeBenefitMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, employeebenefit.FieldMetadata)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *EmployeeBenefitMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -41958,7 +42008,7 @@ func (m *EmployeeBenefitMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EmployeeBenefitMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.tenant_id != nil {
 		fields = append(fields, employeebenefit.FieldTenantID)
 	}
@@ -41982,6 +42032,9 @@ func (m *EmployeeBenefitMutation) Fields() []string {
 	}
 	if m.end_date != nil {
 		fields = append(fields, employeebenefit.FieldEndDate)
+	}
+	if m.metadata != nil {
+		fields = append(fields, employeebenefit.FieldMetadata)
 	}
 	if m.created_at != nil {
 		fields = append(fields, employeebenefit.FieldCreatedAt)
@@ -42013,6 +42066,8 @@ func (m *EmployeeBenefitMutation) Field(name string) (ent.Value, bool) {
 		return m.EffectiveDate()
 	case employeebenefit.FieldEndDate:
 		return m.EndDate()
+	case employeebenefit.FieldMetadata:
+		return m.Metadata()
 	case employeebenefit.FieldCreatedAt:
 		return m.CreatedAt()
 	case employeebenefit.FieldUpdatedAt:
@@ -42042,6 +42097,8 @@ func (m *EmployeeBenefitMutation) OldField(ctx context.Context, name string) (en
 		return m.OldEffectiveDate(ctx)
 	case employeebenefit.FieldEndDate:
 		return m.OldEndDate(ctx)
+	case employeebenefit.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case employeebenefit.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case employeebenefit.FieldUpdatedAt:
@@ -42111,6 +42168,13 @@ func (m *EmployeeBenefitMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetEndDate(v)
 		return nil
+	case employeebenefit.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
+		return nil
 	case employeebenefit.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -42164,6 +42228,9 @@ func (m *EmployeeBenefitMutation) ClearedFields() []string {
 	if m.FieldCleared(employeebenefit.FieldEndDate) {
 		fields = append(fields, employeebenefit.FieldEndDate)
 	}
+	if m.FieldCleared(employeebenefit.FieldMetadata) {
+		fields = append(fields, employeebenefit.FieldMetadata)
+	}
 	return fields
 }
 
@@ -42186,6 +42253,9 @@ func (m *EmployeeBenefitMutation) ClearField(name string) error {
 		return nil
 	case employeebenefit.FieldEndDate:
 		m.ClearEndDate()
+		return nil
+	case employeebenefit.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	}
 	return fmt.Errorf("unknown EmployeeBenefit nullable field %s", name)
@@ -42218,6 +42288,9 @@ func (m *EmployeeBenefitMutation) ResetField(name string) error {
 		return nil
 	case employeebenefit.FieldEndDate:
 		m.ResetEndDate()
+		return nil
+	case employeebenefit.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case employeebenefit.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -75024,6 +75097,7 @@ type PayrollFormulaMutation struct {
 	notes                  *string
 	deduction_order        *[]schema.DeductionPhase
 	appenddeduction_order  []schema.DeductionPhase
+	metadata               *map[string]interface{}
 	is_current             *bool
 	created_at             *time.Time
 	updated_at             *time.Time
@@ -75928,6 +76002,55 @@ func (m *PayrollFormulaMutation) ResetDeductionOrder() {
 	delete(m.clearedFields, payrollformula.FieldDeductionOrder)
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *PayrollFormulaMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *PayrollFormulaMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the PayrollFormula entity.
+// If the PayrollFormula object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PayrollFormulaMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *PayrollFormulaMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[payrollformula.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *PayrollFormulaMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[payrollformula.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *PayrollFormulaMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, payrollformula.FieldMetadata)
+}
+
 // SetIsCurrent sets the "is_current" field.
 func (m *PayrollFormulaMutation) SetIsCurrent(b bool) {
 	m.is_current = &b
@@ -76070,7 +76193,7 @@ func (m *PayrollFormulaMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PayrollFormulaMutation) Fields() []string {
-	fields := make([]string, 0, 22)
+	fields := make([]string, 0, 23)
 	if m.tenant_id != nil {
 		fields = append(fields, payrollformula.FieldTenantID)
 	}
@@ -76128,6 +76251,9 @@ func (m *PayrollFormulaMutation) Fields() []string {
 	if m.deduction_order != nil {
 		fields = append(fields, payrollformula.FieldDeductionOrder)
 	}
+	if m.metadata != nil {
+		fields = append(fields, payrollformula.FieldMetadata)
+	}
 	if m.is_current != nil {
 		fields = append(fields, payrollformula.FieldIsCurrent)
 	}
@@ -76183,6 +76309,8 @@ func (m *PayrollFormulaMutation) Field(name string) (ent.Value, bool) {
 		return m.Notes()
 	case payrollformula.FieldDeductionOrder:
 		return m.DeductionOrder()
+	case payrollformula.FieldMetadata:
+		return m.Metadata()
 	case payrollformula.FieldIsCurrent:
 		return m.IsCurrent()
 	case payrollformula.FieldCreatedAt:
@@ -76236,6 +76364,8 @@ func (m *PayrollFormulaMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldNotes(ctx)
 	case payrollformula.FieldDeductionOrder:
 		return m.OldDeductionOrder(ctx)
+	case payrollformula.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case payrollformula.FieldIsCurrent:
 		return m.OldIsCurrent(ctx)
 	case payrollformula.FieldCreatedAt:
@@ -76384,6 +76514,13 @@ func (m *PayrollFormulaMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDeductionOrder(v)
 		return nil
+	case payrollformula.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
+		return nil
 	case payrollformula.FieldIsCurrent:
 		v, ok := value.(bool)
 		if !ok {
@@ -76456,6 +76593,9 @@ func (m *PayrollFormulaMutation) ClearedFields() []string {
 	if m.FieldCleared(payrollformula.FieldDeductionOrder) {
 		fields = append(fields, payrollformula.FieldDeductionOrder)
 	}
+	if m.FieldCleared(payrollformula.FieldMetadata) {
+		fields = append(fields, payrollformula.FieldMetadata)
+	}
 	return fields
 }
 
@@ -76490,6 +76630,9 @@ func (m *PayrollFormulaMutation) ClearField(name string) error {
 		return nil
 	case payrollformula.FieldDeductionOrder:
 		m.ClearDeductionOrder()
+		return nil
+	case payrollformula.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	}
 	return fmt.Errorf("unknown PayrollFormula nullable field %s", name)
@@ -76555,6 +76698,9 @@ func (m *PayrollFormulaMutation) ResetField(name string) error {
 		return nil
 	case payrollformula.FieldDeductionOrder:
 		m.ResetDeductionOrder()
+		return nil
+	case payrollformula.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case payrollformula.FieldIsCurrent:
 		m.ResetIsCurrent()

@@ -1172,11 +1172,11 @@ func init() {
 	// employeebenefit.DefaultIsActive holds the default value on creation for the is_active field.
 	employeebenefit.DefaultIsActive = employeebenefitDescIsActive.Default.(bool)
 	// employeebenefitDescCreatedAt is the schema descriptor for created_at field.
-	employeebenefitDescCreatedAt := employeebenefitFields[9].Descriptor()
+	employeebenefitDescCreatedAt := employeebenefitFields[10].Descriptor()
 	// employeebenefit.DefaultCreatedAt holds the default value on creation for the created_at field.
 	employeebenefit.DefaultCreatedAt = employeebenefitDescCreatedAt.Default.(func() time.Time)
 	// employeebenefitDescUpdatedAt is the schema descriptor for updated_at field.
-	employeebenefitDescUpdatedAt := employeebenefitFields[10].Descriptor()
+	employeebenefitDescUpdatedAt := employeebenefitFields[11].Descriptor()
 	// employeebenefit.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	employeebenefit.DefaultUpdatedAt = employeebenefitDescUpdatedAt.Default.(func() time.Time)
 	// employeebenefit.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -2138,15 +2138,15 @@ func init() {
 	// payrollformula.DefaultVersion holds the default value on creation for the version field.
 	payrollformula.DefaultVersion = payrollformulaDescVersion.Default.(string)
 	// payrollformulaDescIsCurrent is the schema descriptor for is_current field.
-	payrollformulaDescIsCurrent := payrollformulaFields[20].Descriptor()
+	payrollformulaDescIsCurrent := payrollformulaFields[21].Descriptor()
 	// payrollformula.DefaultIsCurrent holds the default value on creation for the is_current field.
 	payrollformula.DefaultIsCurrent = payrollformulaDescIsCurrent.Default.(bool)
 	// payrollformulaDescCreatedAt is the schema descriptor for created_at field.
-	payrollformulaDescCreatedAt := payrollformulaFields[21].Descriptor()
+	payrollformulaDescCreatedAt := payrollformulaFields[22].Descriptor()
 	// payrollformula.DefaultCreatedAt holds the default value on creation for the created_at field.
 	payrollformula.DefaultCreatedAt = payrollformulaDescCreatedAt.Default.(func() time.Time)
 	// payrollformulaDescUpdatedAt is the schema descriptor for updated_at field.
-	payrollformulaDescUpdatedAt := payrollformulaFields[22].Descriptor()
+	payrollformulaDescUpdatedAt := payrollformulaFields[23].Descriptor()
 	// payrollformula.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	payrollformula.DefaultUpdatedAt = payrollformulaDescUpdatedAt.Default.(func() time.Time)
 	// payrollformula.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

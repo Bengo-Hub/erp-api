@@ -4,6 +4,11 @@ import "github.com/shopspring/decimal"
 
 func mustDec(s string) decimal.Decimal { return decimal.RequireFromString(s) }
 
+// SHIFMinimumContribution is the Social Health Insurance Act monthly minimum (KES 300). It is the
+// seed value for the platform SHIF formula's metadata; runs read it from the resolved formula, so
+// a platform or tenant change to the formula takes effect without a code change.
+var SHIFMinimumContribution = mustDec("300")
+
 // KRADefaults returns the canonical Kenyan statutory rate set used as BOTH the golden-master
 // test oracle AND the global system-tenant seed (cmd/seed-payroll). Keeping a single source of
 // truth means the seeded national defaults and the verified engine test can never diverge.
@@ -11,7 +16,7 @@ func mustDec(s string) decimal.Decimal { return decimal.RequireFromString(s) }
 // Rates (Finance Act 2023 PAYE; NSSF/SHIF/Housing as effective for the golden master):
 //   - PAYE bands 10/25/30/32.5/35, monthly personal relief 2,400
 //   - NSSF tiers 0–8,000 and 8,000–72,000 @ 6% (employee + employer matched 100%)
-//   - SHIF 2.75% of gross (employee only)
+//   - SHIF 2.75% of gross (employee only), at least KES 300 a month
 //   - Housing Levy 1.5% (employee + employer matched)
 func KRADefaults() Config {
 	return Config{
@@ -40,8 +45,9 @@ func KRADefaults() Config {
 			EmployerPercentage: mustDec("1"),
 		},
 		SHIF: &FormulaRates{
-			Bands:              []Band{{From: mustDec("0"), To: Inf, Rate: mustDec("0.0275")}},
-			EmployeePercentage: mustDec("1"),
+			Bands:               []Band{{From: mustDec("0"), To: Inf, Rate: mustDec("0.0275")}},
+			EmployeePercentage:  mustDec("1"),
+			MinimumContribution: SHIFMinimumContribution,
 		},
 		HousingLevy: &FormulaRates{
 			Bands:              []Band{{From: mustDec("0"), To: Inf, Rate: mustDec("0.015")}},

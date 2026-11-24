@@ -102,13 +102,18 @@ type ContributionResult struct {
 	Relief   decimal.Decimal
 }
 
-// CalculateSHIF computes SHIF (% of gross, with a configured minimum encoded as a band
-// floor). Port of calculate_shif_contribution; relief repealed (Dec 2024) => 0.
+// CalculateSHIF computes SHIF (% of gross) with the formula's minimum contribution (KES 300 a
+// month) applied whenever there is pay. Port of calculate_shif_contribution; relief repealed
+// (Dec 2024) => 0.
 func CalculateSHIF(rates *FormulaRates, salary decimal.Decimal) (ContributionResult, error) {
 	if rates == nil || len(rates.Bands) == 0 {
 		return ContributionResult{}, fmt.Errorf("%w: SHIF", ErrFormulaNotConfigured)
 	}
-	return percentContribution(rates, salary), nil
+	res := percentContribution(rates, salary)
+	if salary.IsPositive() && rates.MinimumContribution.IsPositive() && res.Employee.LessThan(rates.MinimumContribution) {
+		res.Employee = round2(rates.MinimumContribution)
+	}
+	return res, nil
 }
 
 // CalculateHousingLevy computes the housing levy (% of gross). Relief repealed => 0.

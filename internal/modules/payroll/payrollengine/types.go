@@ -35,6 +35,18 @@ type FormulaRates struct {
 	EmployerPercentage decimal.Decimal // fraction
 	ApplicableRelief   decimal.Decimal // fraction of the contribution that is relieved
 	PersonalRelief     decimal.Decimal // absolute amount (income formula only)
+	// MinimumContribution is the least employee contribution charged when there is any pay (SHIF:
+	// KES 300 a month). A band cannot express a floor, so it comes from the formula's metadata.
+	// Zero means no minimum.
+	MinimumContribution decimal.Decimal
+}
+
+// Deduction is one opt-in component deduction assigned to the employee (SACCO, HELB, union dues,
+// pension and so on), already resolved to an amount for the period by the caller.
+type Deduction struct {
+	Phase    string // the component's deduction phase; orders it after the statutory deductions
+	Priority int    // order within the phase (lower first)
+	Amount   decimal.Decimal
 }
 
 // EmployeeInput is the per-employee data the engine needs for one period. All amounts
@@ -62,6 +74,14 @@ type EmployeeInput struct {
 	// in the after-PAYE phase like loans/advances. Filtered/effective-dated by the caller.
 	StaffPurchases  []Recoverable
 	NonCashBenefits decimal.Decimal // sum of effective non-cash benefit amounts
+	// NonTaxableEarnings are cash earnings the component marks non-taxable (a per diem within the
+	// KRA limit, for example). They add to gross and net pay but not to taxable pay or the
+	// statutory bases. Taxable component earnings go in TaxableAllowances. Zero by default.
+	NonTaxableEarnings decimal.Decimal
+	// OtherDeductions are the opt-in component deductions assigned to the employee. They come off
+	// after the statutory deductions, PAYE and the recoverables, in phase then priority order, and
+	// each is capped at the net pay left (see PayslipResult.DeductionShortfall).
+	OtherDeductions []Deduction
 
 	// --- KRA reliefs (per-employee actual amounts; all additive, zero by default) ---
 	// InsurancePremium is the monthly life/health/education premium the employee pays. It yields

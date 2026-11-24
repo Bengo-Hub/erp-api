@@ -260,6 +260,12 @@ func (_c *PayrollFormulaCreate) SetDeductionOrder(v []schema.DeductionPhase) *Pa
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *PayrollFormulaCreate) SetMetadata(v map[string]interface{}) *PayrollFormulaCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetIsCurrent sets the "is_current" field.
 func (_c *PayrollFormulaCreate) SetIsCurrent(v bool) *PayrollFormulaCreate {
 	_c.mutation.SetIsCurrent(v)
@@ -568,6 +574,10 @@ func (_c *PayrollFormulaCreate) createSpec() (*PayrollFormula, *sqlgraph.CreateS
 	if value, ok := _c.mutation.DeductionOrder(); ok {
 		_spec.SetField(payrollformula.FieldDeductionOrder, field.TypeJSON, value)
 		_node.DeductionOrder = value
+	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(payrollformula.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
 	}
 	if value, ok := _c.mutation.IsCurrent(); ok {
 		_spec.SetField(payrollformula.FieldIsCurrent, field.TypeBool, value)
@@ -900,6 +910,24 @@ func (u *PayrollFormulaUpsert) UpdateDeductionOrder() *PayrollFormulaUpsert {
 // ClearDeductionOrder clears the value of the "deduction_order" field.
 func (u *PayrollFormulaUpsert) ClearDeductionOrder() *PayrollFormulaUpsert {
 	u.SetNull(payrollformula.FieldDeductionOrder)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *PayrollFormulaUpsert) SetMetadata(v map[string]interface{}) *PayrollFormulaUpsert {
+	u.Set(payrollformula.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *PayrollFormulaUpsert) UpdateMetadata() *PayrollFormulaUpsert {
+	u.SetExcluded(payrollformula.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *PayrollFormulaUpsert) ClearMetadata() *PayrollFormulaUpsert {
+	u.SetNull(payrollformula.FieldMetadata)
 	return u
 }
 
@@ -1290,6 +1318,27 @@ func (u *PayrollFormulaUpsertOne) UpdateDeductionOrder() *PayrollFormulaUpsertOn
 func (u *PayrollFormulaUpsertOne) ClearDeductionOrder() *PayrollFormulaUpsertOne {
 	return u.Update(func(s *PayrollFormulaUpsert) {
 		s.ClearDeductionOrder()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *PayrollFormulaUpsertOne) SetMetadata(v map[string]interface{}) *PayrollFormulaUpsertOne {
+	return u.Update(func(s *PayrollFormulaUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *PayrollFormulaUpsertOne) UpdateMetadata() *PayrollFormulaUpsertOne {
+	return u.Update(func(s *PayrollFormulaUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *PayrollFormulaUpsertOne) ClearMetadata() *PayrollFormulaUpsertOne {
+	return u.Update(func(s *PayrollFormulaUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -1851,6 +1900,27 @@ func (u *PayrollFormulaUpsertBulk) UpdateDeductionOrder() *PayrollFormulaUpsertB
 func (u *PayrollFormulaUpsertBulk) ClearDeductionOrder() *PayrollFormulaUpsertBulk {
 	return u.Update(func(s *PayrollFormulaUpsert) {
 		s.ClearDeductionOrder()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *PayrollFormulaUpsertBulk) SetMetadata(v map[string]interface{}) *PayrollFormulaUpsertBulk {
+	return u.Update(func(s *PayrollFormulaUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *PayrollFormulaUpsertBulk) UpdateMetadata() *PayrollFormulaUpsertBulk {
+	return u.Update(func(s *PayrollFormulaUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *PayrollFormulaUpsertBulk) ClearMetadata() *PayrollFormulaUpsertBulk {
+	return u.Update(func(s *PayrollFormulaUpsert) {
+		s.ClearMetadata()
 	})
 }
 

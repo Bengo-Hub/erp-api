@@ -53,6 +53,8 @@ const (
 	FieldNotes = "notes"
 	// FieldDeductionOrder holds the string denoting the deduction_order field in the database.
 	FieldDeductionOrder = "deduction_order"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldIsCurrent holds the string denoting the is_current field in the database.
 	FieldIsCurrent = "is_current"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -85,6 +87,7 @@ var Columns = []string{
 	FieldRegulatorySource,
 	FieldNotes,
 	FieldDeductionOrder,
+	FieldMetadata,
 	FieldIsCurrent,
 	FieldCreatedAt,
 	FieldUpdatedAt,

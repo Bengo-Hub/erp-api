@@ -128,6 +128,23 @@ func PlatformCatalogue() []CatalogueItem {
 	}
 }
 
+// referenceLabels names the scheme or registration number an employee assignment of these opt-in
+// deductions must carry (remittance schedules to HELB, SACCOs, unions, schemes and insurers list
+// each employee by it). Components not listed take an optional reference.
+var referenceLabels = map[string]string{
+	"helb":              "HELB account number",
+	"sacco":             "SACCO membership number",
+	"union_dues":        "Union membership number",
+	"pension":           "Pension scheme membership number",
+	"provident_fund":    "Provident fund membership number",
+	"insurance_premium": "Policy number",
+	"court_order":       "Court case number",
+}
+
+// ReferenceLabel returns the label of the reference an employee assignment of the component code
+// needs, or "" when none is required.
+func ReferenceLabel(code string) string { return referenceLabels[code] }
+
 var catalogueByCode = func() map[string]CatalogueItem {
 	m := map[string]CatalogueItem{}
 	for _, it := range PlatformCatalogue() {

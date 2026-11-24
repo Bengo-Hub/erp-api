@@ -55,6 +55,10 @@ type EmployeeItemized struct {
 	Reimbursements []LabeledAmount
 	// ClaimIDs are the expense claims, taxable or not, paid through this payslip (claims_payroll.go).
 	ClaimIDs []uuid.UUID
+	// Allowances are the opt-in earnings assigned to the employee (Taxable zero when the component
+	// is non-taxable), and OtherDeductions the opt-in deductions (assigned_components.go).
+	Allowances      []LabeledAmount
+	OtherDeductions []DeductionLine
 }
 
 // payslip_line sections (mirror schema).
@@ -69,6 +73,9 @@ const (
 	// secReimbursement is a non-taxable expense claim repaid with net pay. It is not part of
 	// gross, so earnings plus reimbursements minus deductions equals net pay.
 	secReimbursement = "reimbursement"
+	// secShortfall records the part of an assigned deduction net pay could not cover. It is
+	// informational: breakdowns and reports do not count it.
+	secShortfall = "deduction_shortfall"
 )
 
 // LoadPayslipLines returns a payslip's itemised lines in display order (empty for old payslips).
@@ -116,6 +123,10 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 			sec = secBenefitNonCash
 		}
 		add(sec, "benefit", b.Label, b.Amount, b.Taxable, decimal.Zero, b.NonCash, true, "", b.ComponentID)
+	}
+	// Opt-in earnings assigned to the employee, under the component title the tenant sees.
+	for _, a := range items.Allowances {
+		add(secEarningCash, "earning", a.Label, a.Amount, a.Taxable, decimal.Zero, false, a.Taxable.IsPositive(), "", a.ComponentID)
 	}
 	// Overtime, holiday work and piece pay are taxable cash earnings.
 	for _, e := range items.Earnings {
@@ -180,6 +191,23 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 	}
 	for _, sp := range items.StaffPurchases {
 		add(secAfterPaye, "staff_purchase", sp.Label, sp.Amount, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseAfterPAYE, sp.ComponentID)
+	}
+	// Opt-in deductions assigned to the employee, at the amount the engine took (capped at the
+	// net pay left). They sit with the non-statutory deductions whatever their phase. What could
+	// not be taken is kept as an informational line that no total counts.
+	for _, d := range items.OtherDeductions {
+		taken := res.OtherDeductionsApplied[d.Index]
+		code := d.Code
+		if code == "" {
+			code = "deduction"
+		}
+		cid := d.ComponentID
+		if taken.IsPositive() {
+			add(secAfterPaye, code, d.Label, taken, decimal.Zero, decimal.Zero, false, false, d.Phase, &cid)
+		}
+		if short := d.Amount.Sub(taken); short.IsPositive() {
+			add(secShortfall, code, d.Label+" (not deducted)", short, decimal.Zero, decimal.Zero, false, false, d.Phase, &cid)
+		}
 	}
 
 	// Employer contributions (not deducted from net; for muster roll / GL / P9).
