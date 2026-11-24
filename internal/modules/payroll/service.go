@@ -4,6 +4,7 @@ package payroll
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -23,6 +24,9 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
 )
 
+// errPayslipLocked marks a payslip a re-run must not change: it is posted for payment or paid.
+var errPayslipLocked = errors.New("payroll: payslip is posted for payment")
+
 // Service generates and stores payslips.
 type Service struct {
 	orm       *ent.Client
@@ -30,6 +34,7 @@ type Service struct {
 	publisher *events.Publisher
 	log       *zap.Logger
 	budgets   BudgetChecker
+	approvals ApprovalEngine // run approval (payslip_approval.go)
 }
 
 func NewService(orm *ent.Client, settings *payrollsettings.Service) *Service {
@@ -96,6 +101,11 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("payroll: attendance earnings: %w", err)
 	}
+	// Approved taxable expense claims are paid through the payslip as taxable earnings.
+	claims, err := s.loadPayrollClaims(ctx, p.TenantID, p.Period, emps)
+	if err != nil {
+		return nil, err
+	}
 	if p.OnProgress != nil {
 		p.OnProgress(0, len(emps))
 	}
@@ -115,6 +125,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 			items.AttendanceIDs = append(items.AttendanceIDs, d.ID)
 		}
 		earnings.apply(emp.ID, &in, &items)
+		applyClaims(claims[emp.ID], &in, &items)
 		res, cerr := payrollengine.Compute(cfg, in)
 		if cerr != nil {
 			return nil, fmt.Errorf("payroll: employee %s: %w", emp.ID, cerr)
@@ -122,6 +133,15 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 		line := LineResult{EmployeeID: emp.ID, Result: res}
 		if p.Persist {
 			id, perr := s.persistPayslip(ctx, p, emp, res)
+			if errors.Is(perr, errPayslipLocked) {
+				// Posted or paid: leave the payslip and its lines as they are.
+				line.PayslipID = &id
+				out = append(out, line)
+				if p.OnProgress != nil {
+					p.OnProgress(i+1, len(emps))
+				}
+				continue
+			}
 			if perr != nil {
 				return nil, fmt.Errorf("payroll: persist %s: %w", emp.ID, perr)
 			}
@@ -141,6 +161,9 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 			}
 			if perr := s.markPieceOutputsPaid(ctx, p.TenantID, id, items.PieceOutputIDs); perr != nil {
 				return nil, fmt.Errorf("payroll: piece output %s: %w", emp.ID, perr)
+			}
+			if cerr := s.linkClaimsToPayslip(ctx, p.TenantID, id, p.Period, items.ClaimIDs); cerr != nil {
+				return nil, fmt.Errorf("payroll: expense claims %s: %w", emp.ID, cerr)
 			}
 		}
 		out = append(out, line)
@@ -331,8 +354,15 @@ func (s *Service) persistPayslip(ctx context.Context, p RunParams, emp *ent.Empl
 	if err != nil {
 		return uuid.Nil, err
 	}
+	// A payslip posted for payment or paid keeps its figures; corrections go through a reversal
+	// or the next run.
+	if existing.Published || (existing.BatchRef != nil && existing.ApprovalStatus == "approved") {
+		return existing.ID, errPayslipLocked
+	}
 
+	// New figures need a new approval.
 	row, uerr := existing.Update().
+		SetApprovalStatus("draft").
 		SetPayrollStatus("complete").
 		SetGrossPay(res.GrossPay).
 		SetTaxablePay(res.TaxablePay).

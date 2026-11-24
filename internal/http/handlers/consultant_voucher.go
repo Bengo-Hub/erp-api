@@ -141,6 +141,53 @@ func (h *DocumentsHandler) GetConsultantVoucher(w http.ResponseWriter, r *http.R
 	writeJSON(w, http.StatusOK, h.consultantVoucherView(r.Context(), scope.TenantID, v))
 }
 
+// whtRatesView renders the tenant's WHT rates as percentage strings.
+func whtRatesView(r payroll.WHTRates) map[string]string {
+	return map[string]string{"resident_rate": r.Resident.String(), "non_resident_rate": r.NonResident.String()}
+}
+
+// GetWHTRates returns the tenant's resident and non-resident WHT rates on consultancy fees.
+func (h *DocumentsHandler) GetWHTRates(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollView) {
+		return
+	}
+	rates, err := h.payroll.GetWHTRates(r.Context(), scope.TenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to load WHT rates")
+		return
+	}
+	writeJSON(w, http.StatusOK, whtRatesView(rates))
+}
+
+// SaveWHTRates stores the tenant's WHT rates (percent). Both rates are required.
+func (h *DocumentsHandler) SaveWHTRates(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	var body struct {
+		Resident    string `json:"resident_rate"`
+		NonResident string `json:"non_resident_rate"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	res, err1 := decimal.NewFromString(body.Resident)
+	non, err2 := decimal.NewFromString(body.NonResident)
+	if err1 != nil || err2 != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "resident_rate and non_resident_rate are required numbers")
+		return
+	}
+	rates, err := h.payroll.SaveWHTRates(r.Context(), scope.TenantID, payroll.WHTRates{Resident: res, NonResident: non})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_rates", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, whtRatesView(rates))
+}
+
 func (h *DocumentsHandler) DeleteConsultantVoucher(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permPayrollManage) {

@@ -196,14 +196,6 @@ func (s *Service) nitaLineAmounts(ctx context.Context, tenantID uuid.UUID, slips
 	return out, nil
 }
 
-// WithholdingTax is the WHT return: per-employee PAYE withheld (the ERP withholds PAYE on
-// emoluments; non-payroll WHT is treasury-owned and is NOT reported here).
-func (s *Service) WithholdingTax(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
-	return s.singleStatutory(ctx, tenantID, f, "withholding_tax", "withheld", func(p *ent.Payslip) decimal.Decimal {
-		return p.Paye
-	})
-}
-
 // singleStatutory is the shared per-employee single-amount statutory report builder.
 func (s *Service) singleStatutory(ctx context.Context, tenantID uuid.UUID, f Filter, name, amountKey string, amount func(*ent.Payslip) decimal.Decimal) (*Report, error) {
 	slips, err := s.fetchPayslips(ctx, tenantID, f)

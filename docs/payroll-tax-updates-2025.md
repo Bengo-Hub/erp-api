@@ -17,9 +17,12 @@ Reference for the national rate set that `cmd/seed-payroll` writes under the sys
 
 Personal relief: KES 2,400 per month, the only relief that remains.
 
-### NSSF (February 2025 onwards)
-- Tier 1 and Tier 2: 6% on pensionable pay between KES 8,000 and 72,000, up to KES 4,800 each.
-- Maximum KES 9,600 for the employee and the same for the employer.
+### NSSF (Year 4 limits, 1 February 2026 onwards)
+- Lower earnings limit KES 9,000 and upper earnings limit KES 108,000, 6% employee matched 100% by
+  the employer.
+- Tier 1: 6% of pensionable pay up to KES 9,000, at most KES 540.
+- Tier 2: 6% of pensionable pay from KES 9,001 to 108,000, at most KES 5,940.
+- Maximum KES 6,480 for the employee and the same for the employer.
 
 ### SHIF (October 2024 onwards)
 - 2.75% of gross salary, minimum KES 300 per month. It replaced NHIF; the engine still supports NHIF

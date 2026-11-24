@@ -70,6 +70,7 @@ func (h *PayrollHandler) RegisterRoutes(r chi.Router) {
 		pr.Post("/calculation-preview", h.Preview)
 		pr.Post("/process-with-formulas", h.Process)
 		pr.Get("/task_status", h.TaskStatus)
+		pr.Get("/run-status", h.RunStatus)
 		// Background runs: history, state and a progress stream (Server-Sent Events).
 		h.registerRunRoutes(pr)
 		// /hrm/payroll/email-payslips is served by DocumentsHandler (it owns PDF rendering).
@@ -578,72 +579,121 @@ func (h *PayrollHandler) Command(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.reverse(w, r, scope, body)
-	case "approve":
-		if !requirePermission(w, scope, permPayrollManage) {
+	case "submit_approval", "approve":
+		// "approve" is the older name of this step. The run is decided in the approvals engine
+		// (the tenant's payroll workflow, or any holder of the payroll manage permission).
+		if !requirePermission(w, scope, permPayrollProcess) {
 			return
 		}
-		h.setApproval(w, r, scope, body, "approved")
+		h.submitApproval(w, r, scope, body)
 	case "reject":
 		if !requirePermission(w, scope, permPayrollManage) {
 			return
 		}
-		h.setApproval(w, r, scope, body, "rejected")
+		h.rejectRun(w, r, scope, body)
 	default:
 		writeError(w, http.StatusBadRequest, "bad_request", "unknown command")
 	}
 }
 
-// setApproval transitions the period's payslips to approved/rejected — the explicit review step
-// between process and disburse (the disburser then only pays out approved+complete payslips).
-func (h *PayrollHandler) setApproval(w http.ResponseWriter, r *http.Request, scope RequestScope, body commandBody, status string) {
-	period := body.PaymentPeriod
-	if period == "" {
-		period = body.FromDate
+// runTarget resolves the period and outlet a payroll command acts on.
+func runTarget(w http.ResponseWriter, scope RequestScope, body commandBody) (time.Time, uuid.UUID, bool) {
+	// payment_period is YYYY-MM or a date; from_date covers older clients that sent a range label.
+	p, ok := parsePeriod(body.PaymentPeriod)
+	if !ok {
+		p, ok = parsePeriod(body.FromDate)
 	}
-	p, ok := parsePeriod(period)
 	if !ok {
 		writeError(w, http.StatusBadRequest, "bad_request", "payment_period is required")
-		return
+		return time.Time{}, uuid.Nil, false
 	}
-	var outlet *uuid.UUID
+	outlet := scope.OutletID
 	if body.OutletID != "" {
 		if oid, err := uuid.Parse(body.OutletID); err == nil {
-			outlet = &oid
+			outlet = oid
 		}
-	} else if scope.OutletID != uuid.Nil {
-		outlet = &scope.OutletID
 	}
-	n, err := h.svc.SetPayslipsApproval(r.Context(), scope.TenantID, p, outlet, status)
+	return p, outlet, true
+}
+
+// submitApproval puts the processed run up for approval (the step between process and disburse).
+func (h *PayrollHandler) submitApproval(w http.ResponseWriter, r *http.Request, scope RequestScope, body commandBody) {
+	p, outlet, ok := runTarget(w, scope, body)
+	if !ok {
+		return
+	}
+	uid := scope.UserID
+	ra, err := h.svc.SubmitRunForApproval(r.Context(), scope.TenantID, p, outlet, &uid)
+	switch {
+	case errors.Is(err, payroll.ErrNothingToApprove):
+		writeError(w, http.StatusConflict, "nothing_to_approve", err.Error())
+		return
+	case err != nil:
+		h.log.Error("submit payroll for approval", zap.Error(err))
+		writeError(w, http.StatusBadRequest, "approval_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status": ra.Status, "approval_status": ra.Status, "approval_request_id": ra.RequestID,
+		"count": ra.Count, "payment_period": p.Format("2006-01"),
+	})
+}
+
+// rejectRun sends an unposted run back for correction.
+func (h *PayrollHandler) rejectRun(w http.ResponseWriter, r *http.Request, scope RequestScope, body commandBody) {
+	p, outlet, ok := runTarget(w, scope, body)
+	if !ok {
+		return
+	}
+	n, err := h.svc.RejectRun(r.Context(), scope.TenantID, p, outlet)
+	if errors.Is(err, payroll.ErrRunPosted) {
+		writeError(w, http.StatusConflict, "run_posted", err.Error())
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "approval_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": status, "count": n, "payment_period": p.Format("2006-01")})
+	writeJSON(w, http.StatusOK, map[string]any{"status": "rejected", "count": n, "payment_period": p.Format("2006-01")})
 }
 
-// reverse reverses a disbursed payroll batch (emits erp.payroll.reversed for treasury GL reversal).
+// RunStatus reports where a period's run is: approval, posting and payment, and which actions
+// are open (GET /hrm/payroll/run-status?payment_period=YYYY-MM).
+func (h *PayrollHandler) RunStatus(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollView) {
+		return
+	}
+	p, outlet, ok := runTarget(w, scope, commandBody{PaymentPeriod: r.URL.Query().Get("payment_period"), OutletID: r.URL.Query().Get("outlet_id")})
+	if !ok {
+		return
+	}
+	st, err := h.svc.GetRunStatus(r.Context(), scope.TenantID, p, outlet)
+	if err != nil {
+		h.log.Error("payroll run status", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to load run status")
+		return
+	}
+	writeJSON(w, http.StatusOK, st)
+}
+
+// reverse reverses a posted, unpaid payroll batch (emits erp.payroll.reversed for the treasury
+// GL reversal).
 func (h *PayrollHandler) reverse(w http.ResponseWriter, r *http.Request, scope RequestScope, body commandBody) {
 	if h.disburser == nil {
 		writeError(w, http.StatusServiceUnavailable, "unavailable", "disbursement not configured")
 		return
 	}
-	period := body.PaymentPeriod
-	if period == "" {
-		period = body.FromDate
-	}
-	p, ok := parsePeriod(period)
+	p, outlet, ok := runTarget(w, scope, body)
 	if !ok {
-		writeError(w, http.StatusBadRequest, "bad_request", "payment_period is required")
 		return
 	}
-	dp := payroll.DisburseParams{TenantID: scope.TenantID, OutletID: scope.OutletID, Period: p, IdemKey: r.Header.Get("Idempotency-Key")}
-	if body.OutletID != "" {
-		if oid, err := uuid.Parse(body.OutletID); err == nil {
-			dp.OutletID = oid
-		}
-	}
-	res, err := h.disburser.Reverse(r.Context(), dp)
-	if err != nil {
+	res, err := h.disburser.Reverse(r.Context(), payroll.DisburseParams{TenantID: scope.TenantID, OutletID: outlet, Period: p})
+	switch {
+	case errors.Is(err, payroll.ErrNothingToReverse), errors.Is(err, payroll.ErrBatchPaid):
+		writeError(w, http.StatusConflict, "cannot_reverse", err.Error())
+		return
+	case err != nil:
 		writeError(w, http.StatusBadRequest, "reverse_failed", err.Error())
 		return
 	}
@@ -655,28 +705,16 @@ func (h *PayrollHandler) disburse(w http.ResponseWriter, r *http.Request, scope 
 		writeError(w, http.StatusServiceUnavailable, "unavailable", "disbursement not configured")
 		return
 	}
-	period := body.PaymentPeriod
-	if period == "" {
-		period = body.FromDate
-	}
-	p, ok := parsePeriod(period)
+	p, outlet, ok := runTarget(w, scope, body)
 	if !ok {
-		writeError(w, http.StatusBadRequest, "bad_request", "payment_period is required")
 		return
 	}
-	dp := payroll.DisburseParams{
-		TenantID: scope.TenantID,
-		OutletID: scope.OutletID,
-		Period:   p,
-		IdemKey:  r.Header.Get("Idempotency-Key"),
-	}
-	if body.OutletID != "" {
-		if oid, err := uuid.Parse(body.OutletID); err == nil {
-			dp.OutletID = oid
-		}
-	}
-	res, err := h.disburser.Disburse(r.Context(), dp)
-	if err != nil {
+	res, err := h.disburser.Disburse(r.Context(), payroll.DisburseParams{TenantID: scope.TenantID, OutletID: outlet, Period: p})
+	switch {
+	case errors.Is(err, payroll.ErrRunNotApproved), errors.Is(err, payroll.ErrPostingInProgress):
+		writeError(w, http.StatusConflict, "not_approved", err.Error())
+		return
+	case err != nil:
 		writeError(w, http.StatusBadRequest, "disburse_failed", err.Error())
 		return
 	}
@@ -716,9 +754,10 @@ func (b recoverableBody) toInput() (payroll.RecoverableInput, error) {
 		}
 		in.Amount = amt
 	}
-	in.Description = b.Description
+	// The short reason is what the lists show; the longer notes are kept when no reason is given.
+	in.Description = strings.TrimSpace(b.Reason)
 	if in.Description == "" {
-		in.Description = b.Reason
+		in.Description = b.Description
 	}
 	if b.Date != "" {
 		if d, err := parseDate(b.Date); err == nil {
@@ -757,9 +796,13 @@ func advanceView(a *ent.Advance, name string) map[string]any {
 		"status":          recoverableStatus(a.Approved, a.IsActive),
 		"repay_option_id": a.RepayOptionID,
 		"created_at":      a.CreatedAt.Format(time.RFC3339),
+		"date":            a.CreatedAt.Format("2006-01-02"),
 	}
 	if a.IssueDate != nil {
 		v["date"] = a.IssueDate.Format("2006-01-02")
+	}
+	if reason, _ := a.Metadata["reason"].(string); reason != "" {
+		v["reason"] = reason
 	}
 	return v
 }
@@ -860,9 +903,10 @@ func lossDamageView(l *ent.LossAndDamage, name string) map[string]any {
 		"status":          recoverableStatus(l.Approved, l.IsActive),
 		"repay_option_id": l.RepayOptionID,
 		"created_at":      l.CreatedAt.Format(time.RFC3339),
+		"date":            l.CreatedAt.Format("2006-01-02"),
 	}
 	if l.Description != nil {
-		v["description"] = *l.Description
+		v["reason"], v["description"] = *l.Description, *l.Description
 	}
 	if l.IssueDate != nil {
 		v["date"] = l.IssueDate.Format("2006-01-02")

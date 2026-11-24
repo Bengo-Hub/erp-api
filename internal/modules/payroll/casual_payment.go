@@ -234,9 +234,12 @@ func (s *Service) ApproveCasualPayment(ctx context.Context, tenantID, id, approv
 		if updated.ProjectID != nil {
 			projectID = updated.ProjectID.String()
 		}
-		// Inner payload MUST match treasury casualLaborPayload exactly
-		// (record_id/tenant_id/worker_name/amount/currency/project_id). The settlement_mode/
-		// wage_type/employee_id/cost_center_id fields are additive context (treasury ignores them).
+		// Inner payload MUST match treasury casualLaborPayload (record_id, tenant_id, worker_name,
+		// amount, currency, project_id, cost_center_id). Treasury posts every approved casual
+		// payment the same way, DR 6300 Casual Labour and CR 2600 Employee Reimbursements Payable,
+		// whatever the settlement mode, and the payable is then settled through accounts payable.
+		// settlement_mode, wage_type and employee_id travel with the event so treasury can book a
+		// direct payout differently once its subscriber reads them; today it does not.
 		payload := map[string]any{
 			"record_id":       updated.ID.String(),
 			"tenant_id":       tenantID.String(),

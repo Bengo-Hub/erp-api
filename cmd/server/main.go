@@ -290,6 +290,8 @@ func run() error {
 	// Attendance regularisations and overtime requests decide through the approvals engine;
 	// their hooks apply the change when /approvals finishes a request.
 	attendanceSvc.SetApprovals(approvalsSvc)
+	// A payroll run is approved through the engine before it can be disbursed.
+	payrollSvc.SetApprovals(approvalsSvc)
 
 	// Sprint 4: internal task tracker (distinct from projects-service).
 	tasksHandler := handlers.NewTasksHandler(log, tasks.NewService(orm))

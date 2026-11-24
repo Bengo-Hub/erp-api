@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -12,10 +13,13 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeloan"
+	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/loantype"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollcomponent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payrollrelief"
-	"github.com/Bengo-Hub/erp-api/internal/ent/generalhrsettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/recoveryline"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
 )
 
@@ -45,6 +49,13 @@ func (h *PayrollSettingsHandler) RegisterRoutes(r chi.Router) {
 		pr.Get("/loans/{id}", h.GetLoan)
 		pr.Put("/loans/{id}", h.UpdateLoan)
 		pr.Delete("/loans/{id}", h.DeleteLoan)
+		pr.Get("/loans/{id}/recoveries", h.LoanRecoveries)
+
+		// Loan types (the products an employee loan is issued under).
+		pr.Get("/loan-types", h.ListLoanTypes)
+		pr.Post("/loan-types", h.CreateLoanType)
+		pr.Put("/loan-types/{id}", h.UpdateLoanType)
+		pr.Delete("/loan-types/{id}", h.DeleteLoanType)
 
 		pr.Get("/formulas", h.ListFormulas)
 		pr.Get("/formulas/relief-status", h.ReliefStatus)
@@ -63,15 +74,15 @@ func (h *PayrollSettingsHandler) RegisterRoutes(r chi.Router) {
 
 func componentView(c *ent.PayrollComponent) map[string]any {
 	v := map[string]any{
-		"id":         c.ID,
-		"name":       c.Title,
-		"title":      c.Title,
-		"category":   c.Category,
-		"mode":       c.Mode,
-		"is_active":  c.IsActive,
-		"non_cash":   c.NonCash,
-		"statutory":  c.Statutory,
-		"checkoff":   c.Checkoff,
+		"id":        c.ID,
+		"name":      c.Title,
+		"title":     c.Title,
+		"category":  c.Category,
+		"mode":      c.Mode,
+		"is_active": c.IsActive,
+		"non_cash":  c.NonCash,
+		"statutory": c.Statutory,
+		"checkoff":  c.Checkoff,
 		// Default monetary config (employee + employer side) so the UI shows the rate/amount.
 		"amount":              c.Amount.StringFixed(2),
 		"percentage":          c.Percentage.StringFixed(2),
@@ -369,6 +380,14 @@ func loanView(l *ent.EmployeeLoan) map[string]any {
 		"interest_rate":       l.InterestRate.String(),
 		"is_active":           l.IsActive,
 		"created_at":          l.CreatedAt.Format(time.RFC3339),
+		"balance":             decimal.Max(l.PrincipalAmount.Sub(l.AmountRepaid), decimal.Zero).StringFixed(2),
+		"installments_paid":   l.NoOfInstallmentsPaid,
+	}
+	if l.MonthlyInstallment.IsPositive() {
+		v["installments"] = l.PrincipalAmount.Div(l.MonthlyInstallment).Ceil().IntPart()
+	}
+	if l.LoanTypeID != nil {
+		v["loan_type_id"] = *l.LoanTypeID
 	}
 	if l.StartDate != nil {
 		v["start_date"] = l.StartDate.Format("2006-01-02")
@@ -433,6 +452,35 @@ type loanBody struct {
 	IsActive           *bool  `json:"is_active"`
 	StartDate          string `json:"start_date"`
 	EndDate            string `json:"end_date"`
+	LoanTypeID         string `json:"loan_type_id"`
+	// NoOfInstallments sets the monthly installment to principal / installments when no
+	// monthly_installment is given.
+	NoOfInstallments int `json:"no_of_installments"`
+}
+
+// installment is the monthly installment from the body: the explicit amount, else the principal
+// spread over the number of installments.
+func (b loanBody) installment(principal decimal.Decimal) (decimal.Decimal, error) {
+	if b.MonthlyInstallment == "" && b.NoOfInstallments > 0 {
+		return principal.Div(decimal.NewFromInt(int64(b.NoOfInstallments))).RoundUp(2), nil
+	}
+	return parseRequiredDecimal(b.MonthlyInstallment, "monthly_installment")
+}
+
+// loanTypeOf validates an optional loan type id against the tenant's loan types.
+func (h *PayrollSettingsHandler) loanTypeOf(r *http.Request, tenantID uuid.UUID, raw string) (*uuid.UUID, error) {
+	if raw == "" {
+		return nil, nil
+	}
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return nil, errors.New("loan_type_id is invalid")
+	}
+	ok, err := h.orm.LoanType.Query().Where(loantype.ID(id), loantype.TenantID(tenantID)).Exist(r.Context())
+	if err != nil || !ok {
+		return nil, errors.New("loan type not found")
+	}
+	return &id, nil
 }
 
 func (h *PayrollSettingsHandler) CreateLoan(w http.ResponseWriter, r *http.Request) {
@@ -463,9 +511,18 @@ func (h *PayrollSettingsHandler) CreateLoan(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	install, err := parseRequiredDecimal(b.MonthlyInstallment, "monthly_installment")
+	install, err := b.installment(principal)
+	if err != nil || !install.IsPositive() {
+		writeError(w, http.StatusBadRequest, "bad_request", "monthly_installment or no_of_installments is required")
+		return
+	}
+	loanType, err := h.loanTypeOf(r, scope.TenantID, b.LoanTypeID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	if ok, eerr := h.orm.Employee.Query().Where(employee.ID(empID), employee.TenantID(scope.TenantID)).Exist(r.Context()); eerr != nil || !ok {
+		writeError(w, http.StatusBadRequest, "bad_request", "employee not found")
 		return
 	}
 	// Interest rate is optional (0 = interest-free loan); only reject if present and invalid.
@@ -484,6 +541,7 @@ func (h *PayrollSettingsHandler) CreateLoan(w http.ResponseWriter, r *http.Reque
 		SetPrincipalAmount(principal).
 		SetMonthlyInstallment(install).
 		SetInterestRate(rate).
+		SetNillableLoanTypeID(loanType).
 		SetIsActive(b.IsActive == nil || *b.IsActive)
 	if d, derr := parseDate(b.StartDate); derr == nil {
 		c = c.SetStartDate(d)
@@ -556,6 +614,14 @@ func (h *PayrollSettingsHandler) UpdateLoan(w http.ResponseWriter, r *http.Reque
 	if b.IsActive != nil {
 		u = u.SetIsActive(*b.IsActive)
 	}
+	if b.LoanTypeID != "" {
+		lt, lerr := h.loanTypeOf(r, scope.TenantID, b.LoanTypeID)
+		if lerr != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", lerr.Error())
+			return
+		}
+		u = u.SetNillableLoanTypeID(lt)
+	}
 	if d, derr := parseDate(b.StartDate); derr == nil {
 		u = u.SetStartDate(d)
 	}
@@ -578,6 +644,15 @@ func (h *PayrollSettingsHandler) DeleteLoan(w http.ResponseWriter, r *http.Reque
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	// A loan with recoveries on a payslip keeps its history; deactivate it instead.
+	if used, uerr := h.orm.RecoveryLine.Query().Where(recoveryline.TenantID(scope.TenantID),
+		recoveryline.RecoverableTypeEQ(recoveryline.RecoverableTypeLoan), recoveryline.RecoverableID(id)).Exist(r.Context()); uerr != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to check loan recoveries")
+		return
+	} else if used {
+		writeError(w, http.StatusConflict, "loan_in_use", "this loan has payroll recoveries; deactivate it instead of deleting it")
 		return
 	}
 	n, err := h.orm.EmployeeLoan.Delete().

@@ -39,7 +39,8 @@ func (d *Disburser) loadPayoutPrefs(ctx context.Context, tenantID uuid.UUID, sli
 }
 
 // buildBatchRef mirrors the legacy treasury_integration batch_ref format:
-//   payroll-{tenant}-{YYYY-MM}-{outlet|all}
+//
+//	payroll-{tenant}-{YYYY-MM}-{outlet|all}
 func buildBatchRef(tenantID uuid.UUID, period time.Time, outletID uuid.UUID) string {
 	outlet := "all"
 	if outletID != uuid.Nil {
@@ -94,6 +95,7 @@ func buildPayrollEvent(slips []*ent.Payslip, empByID map[uuid.UUID]*ent.Employee
 			method = "bank_transfer"
 		}
 		line := map[string]any{
+			"payslip_id":    s.ID.String(),
 			"employee_id":   recipientID,
 			"employee_ref":  empRef,
 			"gross":         s.GrossPay.StringFixed(2),
@@ -135,15 +137,25 @@ func buildPayrollEvent(slips []*ent.Payslip, empByID map[uuid.UUID]*ent.Employee
 }
 
 // buildPayouts converts the event lines into treasury payout requests (net pay > 0 only),
-// mirroring the legacy publish_and_disburse payout shape.
-func buildPayouts(payload map[string]any, batchRef string, period time.Time) []treasury.Payout {
+// mirroring the legacy publish_and_disburse payout shape. refToSlip maps each payout reference
+// to its payslip so a per-item treasury outcome can be recorded on the right payslip. The
+// reference is the period batch ref plus the recipient, and it never changes across retries or
+// reversals, so treasury never pays the same employee twice for one period.
+func buildPayouts(payload map[string]any, batchRef string, period time.Time) (out []treasury.Payout, refToSlip map[string]uuid.UUID) {
 	lines, _ := payload["lines"].([]map[string]any)
-	out := make([]treasury.Payout, 0, len(lines))
+	out = make([]treasury.Payout, 0, len(lines))
+	refToSlip = make(map[string]uuid.UUID, len(lines))
 	for _, l := range lines {
 		netStr, _ := l["net_pay"].(string)
 		net, err := decimal.NewFromString(netStr)
 		if err != nil || net.LessThanOrEqual(decimal.Zero) {
 			continue
+		}
+		if sid, ok := l["payslip_id"].(string); ok {
+			if id, perr := uuid.Parse(sid); perr == nil {
+				recipient, _ := l["employee_id"].(string)
+				refToSlip[fmt.Sprintf("%s-%s", batchRef, recipient)] = id
+			}
 		}
 		recipient, _ := l["employee_id"].(string)
 		ref, _ := l["employee_ref"].(string)
@@ -162,5 +174,5 @@ func buildPayouts(payload map[string]any, batchRef string, period time.Time) []t
 			Description:   fmt.Sprintf("Salary %s - %s", period.Format("2006-01"), ref),
 		})
 	}
-	return out
+	return out, refToSlip
 }

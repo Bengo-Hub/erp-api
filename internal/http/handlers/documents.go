@@ -75,6 +75,8 @@ func (h *DocumentsHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/hrm/payroll/{id}/pdf", h.PayslipPDF)
 	r.Post("/hrm/payroll/email-payslips", h.EmailPayslips)
 	// Consultant WHT payment vouchers (paid via treasury AP/payout, not PAYE).
+	r.Get("/hrm/payroll/wht-rates", h.GetWHTRates)
+	r.Put("/hrm/payroll/wht-rates", h.SaveWHTRates)
 	r.Get("/hrm/payroll/consultant-vouchers", h.ListConsultantVouchers)
 	r.Post("/hrm/payroll/consultant-vouchers", h.CreateConsultantVoucher)
 	r.Get("/hrm/payroll/consultant-vouchers/{id}", h.GetConsultantVoucher)

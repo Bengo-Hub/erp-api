@@ -154,16 +154,51 @@ func (c *Client) CheckClaimBudget(ctx context.Context, tenantID uuid.UUID, in Cl
 // Enabled reports whether the client is configured for S2S calls.
 func (c *Client) Enabled() bool { return c.enabled }
 
-// Disburse POSTs the payouts to treasury. idempotencyKey is sent as Idempotency-Key so
-// treasury can dedupe a re-sent batch (sprint §payroll→treasury flow). Best-effort: a
-// transport/5xx failure is returned to the caller but does NOT roll back the GL event.
-func (c *Client) Disburse(ctx context.Context, tenantID uuid.UUID, payouts []Payout, idempotencyKey string) error {
+// ErrNotConfigured is returned by DisburseBatch when the client has no treasury URL or key, so
+// nothing was sent and nothing may be recorded as paid.
+var ErrNotConfigured = errors.New("treasury: payouts are not configured")
+
+// ErrPartialDisburse is returned by Disburse when treasury accepted the batch but did not
+// dispatch every item. A retry with the same references pays only the failed items, because
+// treasury refuses a second payout for a reference that is not failed.
+var ErrPartialDisburse = errors.New("treasury: some payouts were not dispatched")
+
+// BatchResult is treasury's answer to a batch disbursement: one entry per item, keyed by the
+// item's reference. Status "dispatched" means treasury has sent (or already holds) that payout.
+type BatchResult struct {
+	Count      int           `json:"count"`
+	Dispatched int           `json:"dispatched"`
+	Results    []ItemOutcome `json:"results"`
+}
+
+// ItemOutcome is the outcome of one payout in a batch.
+type ItemOutcome struct {
+	Reference string `json:"reference"`
+	Status    string `json:"status"`
+	Error     string `json:"error,omitempty"`
+}
+
+// DispatchedRefs is the set of references treasury dispatched.
+func (b BatchResult) DispatchedRefs() map[string]bool {
+	out := make(map[string]bool, len(b.Results))
+	for _, r := range b.Results {
+		if r.Status == "dispatched" {
+			out[r.Reference] = true
+		}
+	}
+	return out
+}
+
+// DisburseBatch POSTs the payouts to treasury and returns the per-item outcome. idempotencyKey
+// is sent as Idempotency-Key: treasury binds its finance approval to that key and the exact
+// items, and refuses a second payout for any reference it already holds, so a re-sent batch
+// never pays an item twice. A blocked batch returns ErrApprovalPending.
+func (c *Client) DisburseBatch(ctx context.Context, tenantID uuid.UUID, payouts []Payout, idempotencyKey string) (BatchResult, error) {
 	if !c.enabled {
-		c.log.Debug("treasury disburse skipped: client not configured")
-		return nil
+		return BatchResult{}, ErrNotConfigured
 	}
 	if len(payouts) == 0 {
-		return nil
+		return BatchResult{}, nil
 	}
 	headers := map[string]string{"X-API-Key": c.apiKey}
 	if idempotencyKey != "" {
@@ -172,13 +207,30 @@ func (c *Client) Disburse(ctx context.Context, tenantID uuid.UUID, payouts []Pay
 	path := fmt.Sprintf("/api/v1/s2s/%s/payouts/disburse", tenantID.String())
 	resp, err := c.sc.Post(ctx, path, map[string]any{"payouts": payouts}, headers)
 	if err != nil {
-		return fmt.Errorf("treasury: disburse: %w", err)
+		return BatchResult{}, fmt.Errorf("treasury: disburse: %w", err)
 	}
 	if resp.StatusCode == http.StatusConflict {
-		return ErrApprovalPending
+		return BatchResult{}, ErrApprovalPending
 	}
 	if !resp.IsSuccess() {
-		return fmt.Errorf("treasury: disburse: status %d", resp.StatusCode)
+		return BatchResult{}, fmt.Errorf("treasury: disburse: status %d", resp.StatusCode)
+	}
+	var out BatchResult
+	if err := json.Unmarshal(resp.Body, &out); err != nil {
+		return BatchResult{}, fmt.Errorf("treasury: disburse: read result: %w", err)
+	}
+	return out, nil
+}
+
+// Disburse is DisburseBatch for callers that need all-or-nothing: it returns ErrPartialDisburse
+// unless every item was dispatched, and ErrNotConfigured when treasury is not set up.
+func (c *Client) Disburse(ctx context.Context, tenantID uuid.UUID, payouts []Payout, idempotencyKey string) error {
+	res, err := c.DisburseBatch(ctx, tenantID, payouts, idempotencyKey)
+	if err != nil {
+		return err
+	}
+	if len(payouts) > 0 && res.Dispatched < len(payouts) {
+		return fmt.Errorf("%w: %d of %d", ErrPartialDisburse, res.Dispatched, len(payouts))
 	}
 	return nil
 }

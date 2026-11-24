@@ -170,6 +170,9 @@ func (s *Service) CreateAdvance(ctx context.Context, tenantID uuid.UUID, in Reco
 	if in.IssueDate != nil {
 		b = b.SetIssueDate(*in.IssueDate)
 	}
+	if in.Description != "" {
+		b = b.SetMetadata(map[string]any{"reason": in.Description})
+	}
 	return b.Save(ctx)
 }
 
@@ -192,6 +195,14 @@ func (s *Service) UpdateAdvance(ctx context.Context, tenantID, id uuid.UUID, in 
 	}
 	if in.IssueDate != nil {
 		u = u.SetIssueDate(*in.IssueDate)
+	}
+	if in.Description != "" {
+		meta := map[string]any{}
+		for k, v := range existing.Metadata {
+			meta[k] = v
+		}
+		meta["reason"] = in.Description
+		u = u.SetMetadata(meta)
 	}
 	return u.Save(ctx)
 }

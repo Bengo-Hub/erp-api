@@ -2,6 +2,7 @@ package payroll
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -9,15 +10,77 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/consultantvoucher"
-	"github.com/Bengo-Hub/erp-api/internal/ent/withholdingtax"
 )
 
-// Default WHT rates on professional/consultancy fees (KRA): resident 5%, non-resident 20%.
-var (
-	whtResident    = decimal.RequireFromString("0.05")
-	whtNonResident = decimal.RequireFromString("0.20")
-)
+// WHTRatesKey is the app setting that holds the tenant's withholding tax rates on consultancy
+// fees. Resident and non-resident payees always have separate rates.
+const WHTRatesKey = "payroll.wht_rates"
+
+// WHTRates are the tenant's withholding tax rates on consultancy fees, in percent.
+type WHTRates struct {
+	Resident    decimal.Decimal `json:"resident_rate"`
+	NonResident decimal.Decimal `json:"non_resident_rate"`
+}
+
+// DefaultWHTRates are the KRA rates on professional and consultancy fees.
+func DefaultWHTRates() WHTRates {
+	return WHTRates{Resident: decimal.NewFromInt(5), NonResident: decimal.NewFromInt(20)}
+}
+
+// Validate checks both rates are percentages between 0 and 100.
+func (r WHTRates) Validate() error {
+	for name, v := range map[string]decimal.Decimal{"resident_rate": r.Resident, "non_resident_rate": r.NonResident} {
+		if v.IsNegative() || v.GreaterThan(decimal.NewFromInt(100)) {
+			return fmt.Errorf("%s must be between 0 and 100", name)
+		}
+	}
+	return nil
+}
+
+// fraction is the rate that applies to a payee, as a fraction of the gross.
+func (r WHTRates) fraction(resident bool) decimal.Decimal {
+	if resident {
+		return r.Resident.Div(decimal.NewFromInt(100))
+	}
+	return r.NonResident.Div(decimal.NewFromInt(100))
+}
+
+// GetWHTRates returns the tenant's WHT rates, or the defaults when none are saved.
+func (s *Service) GetWHTRates(ctx context.Context, tenantID uuid.UUID) (WHTRates, error) {
+	row, err := s.orm.AppSetting.Query().
+		Where(appsetting.TenantID(tenantID), appsetting.AppKey(WHTRatesKey)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return DefaultWHTRates(), nil
+	}
+	if err != nil {
+		return WHTRates{}, fmt.Errorf("payroll: load wht rates: %w", err)
+	}
+	r := DefaultWHTRates()
+	if err := json.Unmarshal([]byte(row.Value), &r); err != nil {
+		return WHTRates{}, fmt.Errorf("payroll: decode wht rates: %w", err)
+	}
+	return r, nil
+}
+
+// SaveWHTRates validates and stores the tenant's WHT rates.
+func (s *Service) SaveWHTRates(ctx context.Context, tenantID uuid.UUID, r WHTRates) (WHTRates, error) {
+	if err := r.Validate(); err != nil {
+		return WHTRates{}, err
+	}
+	raw, err := json.Marshal(r)
+	if err != nil {
+		return WHTRates{}, err
+	}
+	if err := s.orm.AppSetting.Create().
+		SetTenantID(tenantID).SetAppKey(WHTRatesKey).SetValue(string(raw)).
+		OnConflictColumns(appsetting.FieldTenantID, appsetting.FieldAppKey).
+		UpdateNewValues().Exec(ctx); err != nil {
+		return WHTRates{}, fmt.Errorf("payroll: save wht rates: %w", err)
+	}
+	return r, nil
+}
 
 // ConsultantVoucherInput is the create payload for a consultant payment voucher.
 type ConsultantVoucherInput struct {
@@ -33,26 +96,14 @@ type ConsultantVoucherInput struct {
 	CreatedBy        *uuid.UUID
 }
 
-// resolveWHTRate returns the configured active WHT rate for the tenant (as a fraction), falling
-// back to the statutory resident/non-resident professional-fee rate. A configured rate > 1 is
-// treated as a percentage (e.g. 5 → 0.05).
-func (s *Service) resolveWHTRate(ctx context.Context, tenantID uuid.UUID, resident bool) decimal.Decimal {
-	rows, err := s.orm.WithHoldingTax.Query().
-		Where(withholdingtax.TenantID(tenantID), withholdingtax.IsActive(true)).
-		Order(ent.Desc(withholdingtax.FieldCreatedAt)).Limit(1).All(ctx)
-	if err == nil && len(rows) == 1 {
-		r := rows[0].Rate
-		if r.GreaterThan(decimal.NewFromInt(1)) {
-			r = r.Div(decimal.NewFromInt(100))
-		}
-		if r.GreaterThan(decimal.Zero) {
-			return r
-		}
+// resolveWHTRate returns the WHT rate (as a fraction) for a resident or non-resident payee from
+// the tenant's rates.
+func (s *Service) resolveWHTRate(ctx context.Context, tenantID uuid.UUID, resident bool) (decimal.Decimal, error) {
+	rates, err := s.GetWHTRates(ctx, tenantID)
+	if err != nil {
+		return decimal.Zero, err
 	}
-	if resident {
-		return whtResident
-	}
-	return whtNonResident
+	return rates.fraction(resident), nil
 }
 
 // CreateConsultantVoucher computes WHT + net and persists a draft voucher.
@@ -63,7 +114,10 @@ func (s *Service) CreateConsultantVoucher(ctx context.Context, tenantID uuid.UUI
 	if in.GrossAmount.LessThanOrEqual(decimal.Zero) {
 		return nil, fmt.Errorf("gross amount must be greater than zero")
 	}
-	rate := s.resolveWHTRate(ctx, tenantID, in.IsResident)
+	rate, err := s.resolveWHTRate(ctx, tenantID, in.IsResident)
+	if err != nil {
+		return nil, err
+	}
 	wht := in.GrossAmount.Mul(rate).Round(2)
 	net := in.GrossAmount.Sub(wht).Sub(in.DeductionsAmount).Round(2)
 

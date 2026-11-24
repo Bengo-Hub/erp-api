@@ -51,6 +51,8 @@ type EmployeeItemized struct {
 	// PieceOutputIDs the piece output rows (marked paid once the payslip is written).
 	Earnings       []EarningLine
 	PieceOutputIDs []uuid.UUID
+	// ClaimIDs are the taxable expense claims paid through this payslip (claims_payroll.go).
+	ClaimIDs []uuid.UUID
 }
 
 // payslip_line sections (mirror schema).
