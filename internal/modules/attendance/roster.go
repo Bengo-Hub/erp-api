@@ -2,7 +2,9 @@ package attendance
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -164,8 +166,39 @@ type OverrideInput struct {
 	CreatedBy    *uuid.UUID
 }
 
+// validateOverride checks the override type and its times: a manual shift or half day needs a
+// start and end time (HH:MM), unless a named work shift supplies them; off duty carries none.
+func validateOverride(in *OverrideInput) error {
+	in.StartTime, in.EndTime = strings.TrimSpace(in.StartTime), strings.TrimSpace(in.EndTime)
+	switch in.OverrideType {
+	case "off_duty":
+		in.StartTime, in.EndTime, in.WorkShiftID = "", "", nil
+		return nil
+	case "manual_shift", "half_day":
+	default:
+		return errors.New("override type must be off duty, manual shift or half day")
+	}
+	if in.WorkShiftID == nil && (in.StartTime == "" || in.EndTime == "") {
+		return errors.New("start and end times are required unless the override is off duty")
+	}
+	for _, t := range []string{in.StartTime, in.EndTime} {
+		if t == "" {
+			continue
+		}
+		if _, err := time.Parse("15:04", t); err != nil {
+			if _, err2 := time.Parse("15:04:05", t); err2 != nil {
+				return fmt.Errorf("invalid time %q (want HH:MM)", t)
+			}
+		}
+	}
+	return nil
+}
+
 // CreateOverride inserts a tenant-scoped staff shift override (unique per employee/date).
 func (s *Service) CreateOverride(ctx context.Context, tenantID uuid.UUID, in OverrideInput) (*ent.StaffShiftOverride, error) {
+	if err := validateOverride(&in); err != nil {
+		return nil, err
+	}
 	status := in.Status
 	if status == "" {
 		status = "approved"
@@ -363,4 +396,71 @@ func (s *Service) ListOverrides(ctx context.Context, tenantID uuid.UUID, employe
 		q = q.Where(staffshiftoverride.EmployeeID(*employeeID))
 	}
 	return q.Order(ent.Desc(staffshiftoverride.FieldDate)).All(ctx)
+}
+
+// UpdateOverride edits a tenant-scoped override with the create validation. A row the weekly
+// shift planner wrote keeps its work shift while it stays a manual shift, so the planner cell
+// still shows that shift; turning it into off duty or a half day drops the shift. A blank status
+// keeps the current one. The planner reads the same rows, so the edit shows there at once.
+func (s *Service) UpdateOverride(ctx context.Context, tenantID, id uuid.UUID, in OverrideInput) (*ent.StaffShiftOverride, error) {
+	existing, err := s.orm.StaffShiftOverride.Query().
+		Where(staffshiftoverride.TenantID(tenantID), staffshiftoverride.ID(id)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return nil, fmt.Errorf("shift override %w", ErrNotFound)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("attendance: load override: %w", err)
+	}
+	in.WorkShiftID = nil
+	if in.OverrideType == "manual_shift" {
+		in.WorkShiftID = existing.WorkShiftID
+	}
+	if err := validateOverride(&in); err != nil {
+		return nil, err
+	}
+	u := existing.Update().
+		SetEmployeeID(in.EmployeeID).SetDate(in.Date).
+		SetOverrideType(staffshiftoverride.OverrideType(in.OverrideType))
+	if in.Status != "" {
+		u = u.SetStatus(staffshiftoverride.Status(in.Status))
+	}
+	if in.WorkShiftID != nil {
+		u = u.SetWorkShiftID(*in.WorkShiftID)
+	} else {
+		u = u.ClearWorkShiftID()
+	}
+	if in.StartTime != "" {
+		u = u.SetStartTime(in.StartTime)
+	} else {
+		u = u.ClearStartTime()
+	}
+	if in.EndTime != "" {
+		u = u.SetEndTime(in.EndTime)
+	} else {
+		u = u.ClearEndTime()
+	}
+	if r := strings.TrimSpace(in.Reason); r != "" {
+		u = u.SetReason(r)
+	} else {
+		u = u.ClearReason()
+	}
+	row, err := u.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("attendance: update override: %w", err)
+	}
+	return row, nil
+}
+
+// DeleteOverride removes a tenant-scoped override. Planner cells are these same rows, so
+// deleting one written by the weekly shift planner clears that cell.
+func (s *Service) DeleteOverride(ctx context.Context, tenantID, id uuid.UUID) error {
+	n, err := s.orm.StaffShiftOverride.Delete().
+		Where(staffshiftoverride.TenantID(tenantID), staffshiftoverride.ID(id)).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("attendance: delete override: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("shift override %w", ErrNotFound)
+	}
+	return nil
 }

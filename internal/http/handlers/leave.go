@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -48,6 +49,8 @@ func (h *LeaveHandler) RegisterRoutes(r chi.Router) {
 
 		lr.Get("/holidays", h.ListHolidays)
 		lr.Post("/holidays", h.CreateHoliday)
+		lr.Put("/holidays/{id}", h.UpdateHoliday)
+		lr.Patch("/holidays/{id}", h.UpdateHoliday)
 		lr.Delete("/holidays/{id}", h.DeleteHoliday)
 
 		lr.Get("/logs", h.ListLogs)
@@ -304,28 +307,67 @@ type holidayBody struct {
 	County     string `json:"county"`
 }
 
+// decodeHoliday reads a holiday body, writing the 400 itself on failure. is_national defaults
+// to true when it is left out.
+func decodeHoliday(w http.ResponseWriter, r *http.Request) (leave.HolidayInput, bool) {
+	var body holidayBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return leave.HolidayInput{}, false
+	}
+	date, err := parseDate(body.Date)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid date (want YYYY-MM-DD)")
+		return leave.HolidayInput{}, false
+	}
+	return leave.HolidayInput{
+		Name: body.Name, Date: date, County: body.County,
+		IsNational: body.IsNational == nil || *body.IsNational,
+	}, true
+}
+
 func (h *LeaveHandler) CreateHoliday(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permLeaveManage) {
 		return
 	}
-	var body holidayBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+	in, ok := decodeHoliday(w, r)
+	if !ok {
 		return
 	}
-	date, err := parseDate(body.Date)
+	row, err := h.svc.CreateHoliday(r.Context(), scope.TenantID, in)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid date (want YYYY-MM-DD)")
-		return
-	}
-	national := body.IsNational == nil || *body.IsNational
-	row, err := h.svc.CreateHoliday(r.Context(), scope.TenantID, body.Name, date, national, body.County)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
+}
+
+// UpdateHoliday edits one of the tenant's holidays (PUT and PATCH take the full body).
+func (h *LeaveHandler) UpdateHoliday(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	in, ok := decodeHoliday(w, r)
+	if !ok {
+		return
+	}
+	row, err := h.svc.UpdateHoliday(r.Context(), scope.TenantID, id, in)
+	if errors.Is(err, leave.ErrHolidayNotFound) {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", clientMessage(err))
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
 }
 
 func (h *LeaveHandler) DeleteHoliday(w http.ResponseWriter, r *http.Request) {

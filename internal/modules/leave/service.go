@@ -5,7 +5,9 @@ package leave
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -294,16 +296,72 @@ func (s *Service) ListHolidays(ctx context.Context, tenantID uuid.UUID, year int
 	return q.Order(ent.Desc(publicholiday.FieldDate)).All(ctx)
 }
 
+// ErrHolidayNotFound is returned when a holiday id does not exist for the tenant (another
+// tenant's row included), so handlers can answer 404.
+var ErrHolidayNotFound = errors.New("holiday not found")
+
+// HolidayInput is the create and update payload for a public holiday. A national holiday has no
+// county; a county holiday must name one.
+type HolidayInput struct {
+	Name       string
+	Date       time.Time
+	IsNational bool
+	County     string
+}
+
+func (in *HolidayInput) normalise() error {
+	in.Name = strings.TrimSpace(in.Name)
+	in.County = strings.TrimSpace(in.County)
+	if in.Name == "" {
+		return errors.New("name is required")
+	}
+	if in.IsNational {
+		in.County = ""
+	} else if in.County == "" {
+		return errors.New("county is required for a county holiday")
+	}
+	return nil
+}
+
 // CreateHoliday inserts a tenant-scoped public holiday.
-func (s *Service) CreateHoliday(ctx context.Context, tenantID uuid.UUID, name string, date time.Time, isNational bool, county string) (*ent.PublicHoliday, error) {
+func (s *Service) CreateHoliday(ctx context.Context, tenantID uuid.UUID, in HolidayInput) (*ent.PublicHoliday, error) {
+	if err := in.normalise(); err != nil {
+		return nil, err
+	}
 	b := s.orm.PublicHoliday.Create().
-		SetTenantID(tenantID).SetName(name).SetDate(date).SetIsNational(isNational)
-	if county != "" {
-		b = b.SetCounty(county)
+		SetTenantID(tenantID).SetName(in.Name).SetDate(in.Date).SetIsNational(in.IsNational)
+	if in.County != "" {
+		b = b.SetCounty(in.County)
 	}
 	row, err := b.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("leave: create holiday: %w", err)
+	}
+	return row, nil
+}
+
+// UpdateHoliday edits a tenant-scoped public holiday with the create validation.
+func (s *Service) UpdateHoliday(ctx context.Context, tenantID, id uuid.UUID, in HolidayInput) (*ent.PublicHoliday, error) {
+	if err := in.normalise(); err != nil {
+		return nil, err
+	}
+	existing, err := s.orm.PublicHoliday.Query().
+		Where(publicholiday.TenantID(tenantID), publicholiday.ID(id)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return nil, ErrHolidayNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("leave: load holiday: %w", err)
+	}
+	u := existing.Update().SetName(in.Name).SetDate(in.Date).SetIsNational(in.IsNational)
+	if in.County != "" {
+		u = u.SetCounty(in.County)
+	} else {
+		u = u.ClearCounty()
+	}
+	row, err := u.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("leave: update holiday: %w", err)
 	}
 	return row, nil
 }
@@ -316,7 +374,7 @@ func (s *Service) DeleteHoliday(ctx context.Context, tenantID, id uuid.UUID) err
 		return fmt.Errorf("leave: delete holiday: %w", err)
 	}
 	if n == 0 {
-		return fmt.Errorf("leave: holiday not found")
+		return ErrHolidayNotFound
 	}
 	return nil
 }

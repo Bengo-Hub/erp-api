@@ -23,6 +23,9 @@ func (h *AttendanceHandler) registerRosterRoutes(ar chi.Router) {
 	ar.Delete("/assignments/{id}", h.DeleteAssignment)
 	ar.Get("/overrides", h.ListOverrides)
 	ar.Post("/overrides", h.CreateOverride)
+	ar.Put("/overrides/{id}", h.UpdateOverride)
+	ar.Patch("/overrides/{id}", h.UpdateOverride)
+	ar.Delete("/overrides/{id}", h.DeleteOverride)
 
 	// Weekly shift planner (drawable per-cell roster).
 	ar.Get("/shift-planner", h.ResolvePlanner)
@@ -350,35 +353,87 @@ type overrideBody struct {
 	Status       string `json:"status"`
 }
 
+// decodeOverride reads an override body, writing the 400 itself on failure.
+func decodeOverride(w http.ResponseWriter, r *http.Request) (attendance.OverrideInput, bool) {
+	var b overrideBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return attendance.OverrideInput{}, false
+	}
+	empID, err := uuid.Parse(b.EmployeeID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
+		return attendance.OverrideInput{}, false
+	}
+	date, err := parseDate(b.Date)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid date")
+		return attendance.OverrideInput{}, false
+	}
+	return attendance.OverrideInput{
+		EmployeeID: empID, Date: date, OverrideType: b.OverrideType,
+		StartTime: b.StartTime, EndTime: b.EndTime, Reason: b.Reason, Status: b.Status,
+	}, true
+}
+
 func (h *AttendanceHandler) CreateOverride(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permAttendanceManage) {
 		return
 	}
-	var b overrideBody
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
-		return
-	}
-	empID, err := uuid.Parse(b.EmployeeID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid employee_id")
-		return
-	}
-	date, err := parseDate(b.Date)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid date")
+	in, ok := decodeOverride(w, r)
+	if !ok {
 		return
 	}
 	uid := scope.UserID
-	row, err := h.svc.CreateOverride(r.Context(), scope.TenantID, attendance.OverrideInput{
-		EmployeeID: empID, Date: date, OverrideType: b.OverrideType,
-		StartTime: b.StartTime, EndTime: b.EndTime, Reason: b.Reason,
-		Status: b.Status, CreatedBy: &uid,
-	})
+	in.CreatedBy = &uid
+	row, err := h.svc.CreateOverride(r.Context(), scope.TenantID, in)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
+}
+
+// UpdateOverride edits one of the tenant's shift overrides, planner rows included (PUT and
+// PATCH take the full body).
+func (h *AttendanceHandler) UpdateOverride(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAttendanceManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	in, ok := decodeOverride(w, r)
+	if !ok {
+		return
+	}
+	row, err := h.svc.UpdateOverride(r.Context(), scope.TenantID, id, in)
+	if err != nil {
+		writeUpdateError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+// DeleteOverride removes one of the tenant's shift overrides; for a planner row this clears
+// the planner cell.
+func (h *AttendanceHandler) DeleteOverride(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAttendanceManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	if err := h.svc.DeleteOverride(r.Context(), scope.TenantID, id); err != nil {
+		writeUpdateError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

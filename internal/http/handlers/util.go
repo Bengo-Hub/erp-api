@@ -58,8 +58,10 @@ func clientMessage(err error) string {
 
 // uniqueViolationMessages maps a unique index name to the message a user sees when a save breaks it.
 var uniqueViolationMessages = map[string]string{
-	"employee_tenant_id_national_id": "Another employee already has this national ID",
-	"employee_tenant_id_device_pin":  "Another employee already uses this device PIN",
+	"employee_tenant_id_national_id":                "Another employee already has this national ID",
+	"employee_tenant_id_device_pin":                 "Another employee already uses this device PIN",
+	"publicholiday_tenant_id_date_county":           "A holiday for this county already falls on that date",
+	"staffshiftoverride_tenant_id_employee_id_date": "This employee already has a shift override on that date",
 }
 
 // writePaginated writes a list response using the shared pagination envelope
