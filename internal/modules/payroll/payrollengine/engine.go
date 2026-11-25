@@ -31,6 +31,7 @@ type PayslipResult struct {
 	NSSFEmployeeTier1   decimal.Decimal
 	NSSFEmployeeTier2   decimal.Decimal
 	NSSFEmployer        decimal.Decimal
+	HousingLevyEmployer decimal.Decimal // employer match; never part of deductions or net pay
 	// NITAEmployer is the employer-only industrial training levy (flat per employee/month).
 	// It never enters deductions or net pay.
 	NITAEmployer decimal.Decimal
@@ -134,6 +135,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 					return PayslipResult{}, err
 				}
 				res.HousingLevy = c.Employee
+				res.HousingLevyEmployer = c.Employer
 				addPhase(&res, phase.Name, c.Employee)
 
 			case CompPAYE:

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/Bengo-Hub/pagination"
 	"github.com/go-chi/chi/v5"
@@ -50,6 +51,39 @@ type contractView struct {
 	Status            string    `json:"status,omitempty"`
 	ContractDuration  int       `json:"contract_duration"`
 	CreatedAt         string    `json:"created_at,omitempty"`
+	// IsCurrent: the contract is in force today. CurrentSalary is what payroll pays now (absent
+	// without a salary) and SalaryDiffers says an in-force contract states another amount.
+	IsCurrent     bool   `json:"is_current"`
+	CurrentSalary string `json:"current_salary,omitempty"`
+	SalaryDiffers bool   `json:"salary_differs"`
+}
+
+// withCurrentPay adds the current pay to contract views in one query. Pay is left out on error:
+// the contract itself is still valid.
+func (h *ContractsHandler) withCurrentPay(ctx context.Context, tenantID uuid.UUID, rows []*ent.Contract, views []contractView) {
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, c := range rows {
+		ids = append(ids, c.EmployeeID)
+	}
+	pay, err := h.svc.CurrentSalaries(ctx, tenantID, ids)
+	if err != nil {
+		h.log.Warn("contract current pay", zap.Error(err))
+	}
+	today := time.Now().UTC()
+	for i, c := range rows {
+		views[i].IsCurrent = contracts.InForce(c, today)
+		if s, ok := pay[c.EmployeeID]; ok {
+			views[i].CurrentSalary = s.StringFixed(2)
+			views[i].SalaryDiffers = views[i].IsCurrent && !c.Salary.IsZero() && !c.Salary.Equal(s)
+		}
+	}
+}
+
+// fullView is one contract with the current pay.
+func (h *ContractsHandler) fullView(ctx context.Context, tenantID uuid.UUID, c *ent.Contract) contractView {
+	views := []contractView{h.view(ctx, tenantID, c)}
+	h.withCurrentPay(ctx, tenantID, []*ent.Contract{c}, views)
+	return views[0]
 }
 
 func (h *ContractsHandler) view(ctx context.Context, tenantID uuid.UUID, c *ent.Contract) contractView {
@@ -166,6 +200,7 @@ func (h *ContractsHandler) List(w http.ResponseWriter, r *http.Request) {
 	for _, c := range rows {
 		out = append(out, h.view(r.Context(), scope.TenantID, c))
 	}
+	h.withCurrentPay(r.Context(), scope.TenantID, rows, out)
 	writePaginated(w, out, total, p)
 }
 
@@ -188,7 +223,7 @@ func (h *ContractsHandler) Get(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to fetch contract")
 		return
 	}
-	writeJSON(w, http.StatusOK, h.view(r.Context(), scope.TenantID, c))
+	writeJSON(w, http.StatusOK, h.fullView(r.Context(), scope.TenantID, c))
 }
 
 func (h *ContractsHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -215,7 +250,7 @@ func (h *ContractsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, h.view(r.Context(), scope.TenantID, c))
+	writeJSON(w, http.StatusCreated, h.fullView(r.Context(), scope.TenantID, c))
 }
 
 func (h *ContractsHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -247,7 +282,7 @@ func (h *ContractsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, h.view(r.Context(), scope.TenantID, c))
+	writeJSON(w, http.StatusOK, h.fullView(r.Context(), scope.TenantID, c))
 }
 
 func (h *ContractsHandler) Delete(w http.ResponseWriter, r *http.Request) {

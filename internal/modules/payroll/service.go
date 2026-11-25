@@ -71,6 +71,8 @@ type LineResult struct {
 	EmployeeID uuid.UUID                   `json:"employee_id"`
 	Result     payrollengine.PayslipResult `json:"result"`
 	PayslipID  *uuid.UUID                  `json:"payslip_id,omitempty"`
+	// Lines are the itemised payslip lines of the result (the ones a persisted run stores).
+	Lines []ComposedLine `json:"-"`
 }
 
 // Run computes (and optionally persists) payslips for the matching employees. It builds
@@ -131,6 +133,9 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 			return nil, fmt.Errorf("payroll: employee %s: %w", emp.ID, cerr)
 		}
 		line := LineResult{EmployeeID: emp.ID, Result: res}
+		if !p.Persist && len(p.EmployeeIDs) > 0 {
+			line.Lines = composeLines(in.GrossPay, res, items)
+		}
 		if p.Persist {
 			id, perr := s.persistPayslip(ctx, p, emp, res)
 			if errors.Is(perr, errPayslipLocked) {

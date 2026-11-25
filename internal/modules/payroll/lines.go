@@ -94,23 +94,44 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 		Where(payslipline.TenantID(tenantID), payslipline.PayslipID(payslipID)).Exec(ctx); err != nil {
 		return err
 	}
-
-	var builders []*ent.PayslipLineCreate
-	order := 0
-	add := func(section, code, label string, cash, taxable, employer decimal.Decimal, nonCash, taxable_ bool, phase string, comp *uuid.UUID) {
+	lines := composeLines(basic, res, items)
+	if len(lines) == 0 {
+		return nil
+	}
+	builders := make([]*ent.PayslipLineCreate, 0, len(lines))
+	for i, l := range lines {
 		b := s.orm.PayslipLine.Create().
 			SetTenantID(tenantID).SetPayslipID(payslipID).
-			SetSection(section).SetCode(code).SetLabel(label).
-			SetCashAmount(cash).SetTaxableAmount(taxable).SetEmployerAmount(employer).
-			SetNonCash(nonCash).SetTaxable(taxable_).SetSortOrder(order)
-		if phase != "" {
-			b = b.SetDeductionPhase(phase)
+			SetSection(l.Section).SetCode(l.Code).SetLabel(l.Label).
+			SetCashAmount(l.Cash).SetTaxableAmount(l.TaxableAmount).SetEmployerAmount(l.Employer).
+			SetNonCash(l.NonCash).SetTaxable(l.Taxable).SetSortOrder(i)
+		if l.Phase != "" {
+			b = b.SetDeductionPhase(l.Phase)
 		}
-		if comp != nil {
-			b = b.SetComponentID(*comp)
+		if l.ComponentID != nil {
+			b = b.SetComponentID(*l.ComponentID)
 		}
 		builders = append(builders, b)
-		order++
+	}
+	return s.orm.PayslipLine.CreateBulk(builders...).Exec(ctx)
+}
+
+// ComposedLine is one itemised payslip line before it is stored.
+type ComposedLine struct {
+	Section, Code, Label          string
+	Cash, TaxableAmount, Employer decimal.Decimal
+	NonCash, Taxable              bool
+	Phase                         string
+	ComponentID                   *uuid.UUID
+}
+
+// composeLines builds the ordered payslip lines from the engine result and the employee's items.
+// The stored payslip and the employee pay summary both use it, so they cannot differ.
+func composeLines(basic decimal.Decimal, res payrollengine.PayslipResult, items EmployeeItemized) []ComposedLine {
+	var lines []ComposedLine
+	add := func(section, code, label string, cash, taxable, employer decimal.Decimal, nonCash, taxable_ bool, phase string, comp *uuid.UUID) {
+		lines = append(lines, ComposedLine{Section: section, Code: code, Label: label, Cash: cash, TaxableAmount: taxable,
+			Employer: employer, NonCash: nonCash, Taxable: taxable_, Phase: phase, ComponentID: comp})
 	}
 
 	// Earnings: basic pay (cash) then each benefit/allowance.
@@ -218,10 +239,7 @@ func (s *Service) writePayslipLines(ctx context.Context, tenantID, payslipID uui
 		add(secEmployer, "nita", "NITA Levy", decimal.Zero, decimal.Zero, res.NITAEmployer, false, false, "", nil)
 	}
 
-	if len(builders) == 0 {
-		return nil
-	}
-	return s.orm.PayslipLine.CreateBulk(builders...).Exec(ctx)
+	return lines
 }
 
 // writeRecoveryLines freezes this run's per-recoverable recoveries as RecoveryLine snapshots for the
