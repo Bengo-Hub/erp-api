@@ -10,6 +10,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/permission"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
 	"github.com/Bengo-Hub/erp-api/internal/ent/userroleassignment"
@@ -197,8 +198,9 @@ func (s *Service) GetUserPermissions(ctx context.Context, tenantID, userID uuid.
 
 // ── Service-level RBAC management (erp owns its roles/permissions) ──────────────
 
-// ErrSystemRole is returned when a mutation targets a protected system role.
-var ErrSystemRole = fmt.Errorf("system roles cannot be modified or deleted")
+// ErrSystemRole is returned when a tenant tries to change a role shared by every tenant, or anyone
+// tries to delete one.
+var ErrSystemRole = fmt.Errorf("this is a built-in role shared by every company, so it cannot be changed or deleted here; create your own role instead")
 
 // ErrWildcardRole is returned when editing the permissions of the all-access role.
 var ErrWildcardRole = fmt.Errorf("the all-access role's permissions are not editable")
@@ -240,9 +242,7 @@ func (s *Service) ListPermissions(ctx context.Context) ([]*ent.Permission, error
 
 // GetRole returns a role (scoped to tenant or global) and its permission codes.
 func (s *Service) GetRole(ctx context.Context, tenantID, roleID uuid.UUID) (*ent.Role, []string, error) {
-	r, err := s.orm.Role.Query().
-		Where(role.ID(roleID), role.Or(role.TenantIDIsNil(), role.TenantID(tenantID))).
-		Only(ctx)
+	r, err := s.visibleRole(ctx, tenantID, roleID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -273,14 +273,32 @@ func (s *Service) CreateRole(ctx context.Context, tenantID uuid.UUID, code, name
 		Save(ctx)
 }
 
-// UpdateRole edits a non-system role's name/description.
-func (s *Service) UpdateRole(ctx context.Context, tenantID, roleID uuid.UUID, name, description string) (*ent.Role, error) {
-	r, err := s.orm.Role.Get(ctx, roleID)
+// visibleRole is a role the tenant can see: its own or a global one. Another tenant's role is
+// not found.
+func (s *Service) visibleRole(ctx context.Context, tenantID, roleID uuid.UUID) (*ent.Role, error) {
+	return s.orm.Role.Query().
+		Where(role.ID(roleID), role.Or(role.TenantIDIsNil(), role.TenantID(tenantID))).
+		Only(ctx)
+}
+
+// editableRole is a role the caller may change. Global and system roles serve every tenant, so
+// only the platform owner changes them.
+func (s *Service) editableRole(ctx context.Context, tenantID, roleID uuid.UUID, platformOwner bool) (*ent.Role, error) {
+	r, err := s.visibleRole(ctx, tenantID, roleID)
 	if err != nil {
 		return nil, err
 	}
-	if r.IsSystemRole {
+	if (r.TenantID == nil || r.IsSystemRole) && !platformOwner {
 		return nil, ErrSystemRole
+	}
+	return r, nil
+}
+
+// UpdateRole edits a role's name/description (see editableRole).
+func (s *Service) UpdateRole(ctx context.Context, tenantID, roleID uuid.UUID, name, description string, platformOwner bool) (*ent.Role, error) {
+	r, err := s.editableRole(ctx, tenantID, roleID, platformOwner)
+	if err != nil {
+		return nil, err
 	}
 	upd := r.Update()
 	if strings.TrimSpace(name) != "" {
@@ -290,14 +308,12 @@ func (s *Service) UpdateRole(ctx context.Context, tenantID, roleID uuid.UUID, na
 	return upd.Save(ctx)
 }
 
-// DeleteRole removes a non-system role and its permission + user assignments.
-func (s *Service) DeleteRole(ctx context.Context, roleID uuid.UUID) error {
-	r, err := s.orm.Role.Get(ctx, roleID)
+// DeleteRole removes one of the tenant's own roles and its permission + user assignments. Global
+// and system roles are never deleted here, whoever asks.
+func (s *Service) DeleteRole(ctx context.Context, tenantID, roleID uuid.UUID) error {
+	r, err := s.editableRole(ctx, tenantID, roleID, false)
 	if err != nil {
 		return err
-	}
-	if r.IsSystemRole {
-		return ErrSystemRole
 	}
 	if _, err := s.orm.UserRoleAssignment.Delete().Where(userroleassignment.RoleID(roleID)).Exec(ctx); err != nil {
 		return fmt.Errorf("clear assignments: %w", err)
@@ -309,10 +325,10 @@ func (s *Service) DeleteRole(ctx context.Context, roleID uuid.UUID) error {
 	return s.orm.Role.DeleteOne(r).Exec(ctx)
 }
 
-// SetRolePermissions reconciles a role's permissions to exactly the given codes.
-// The all-access role (erp_admin) is protected. Unknown codes are skipped.
-func (s *Service) SetRolePermissions(ctx context.Context, roleID uuid.UUID, codes []string) error {
-	r, err := s.orm.Role.Get(ctx, roleID)
+// SetRolePermissions reconciles a role's permissions to exactly the given codes (see
+// editableRole). The all-access role (erp_admin) is protected. Unknown codes are skipped.
+func (s *Service) SetRolePermissions(ctx context.Context, tenantID, roleID uuid.UUID, codes []string, platformOwner bool) error {
+	r, err := s.editableRole(ctx, tenantID, roleID, platformOwner)
 	if err != nil {
 		return err
 	}
@@ -330,8 +346,34 @@ func (s *Service) SetRolePermissions(ctx context.Context, roleID uuid.UUID, code
 	return r.Update().ClearPermissions().AddPermissionIDs(ids...).Exec(ctx)
 }
 
-// AssignUserRole idempotently grants a service role to a user within a tenant.
+// ErrUserNotFound is returned when a user does not belong to the tenant.
+var ErrUserNotFound = fmt.Errorf("user not found")
+
+// userInTenant reports whether a user belongs to the tenant: its home tenant, an employee record
+// or a role assignment there (one person may work for several tenants).
+func (s *Service) userInTenant(ctx context.Context, tenantID, userID uuid.UUID) (bool, error) {
+	ok, err := s.orm.CustomUser.Query().Where(customuser.ID(userID), customuser.TenantID(tenantID)).Exist(ctx)
+	if ok || err != nil {
+		return ok, err
+	}
+	ok, err = s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.UserID(userID), employee.Deleted(false)).Exist(ctx)
+	if ok || err != nil {
+		return ok, err
+	}
+	return s.orm.UserRoleAssignment.Query().
+		Where(userroleassignment.TenantID(tenantID), userroleassignment.UserID(userID)).Exist(ctx)
+}
+
+// AssignUserRole idempotently grants a role the tenant can see to one of its users.
 func (s *Service) AssignUserRole(ctx context.Context, tenantID, userID, roleID uuid.UUID) error {
+	if _, err := s.visibleRole(ctx, tenantID, roleID); err != nil {
+		return err
+	}
+	if ok, err := s.userInTenant(ctx, tenantID, userID); err != nil {
+		return err
+	} else if !ok {
+		return ErrUserNotFound
+	}
 	exists, err := s.orm.UserRoleAssignment.Query().
 		Where(userroleassignment.TenantID(tenantID), userroleassignment.UserID(userID), userroleassignment.RoleID(roleID)).
 		Exist(ctx)

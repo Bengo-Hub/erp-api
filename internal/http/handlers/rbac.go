@@ -44,6 +44,11 @@ func (h *RBACHandler) RegisterRoutes(r chi.Router) {
 	})
 }
 
+// isPlatformOwner reports whether the caller may change roles shared by every tenant.
+func isPlatformOwner(scope RequestScope) bool {
+	return scope.Claims != nil && scope.Claims.IsPlatformOwner
+}
+
 func roleView(r *ent.Role, permCount, memberCount int) map[string]any {
 	var tenantID any
 	if r.TenantID != nil {
@@ -154,7 +159,7 @@ func (h *RBACHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	role, err := h.svc.UpdateRole(r.Context(), scope.TenantID, id, b.Name, b.Description)
+	role, err := h.svc.UpdateRole(r.Context(), scope.TenantID, id, b.Name, b.Description, isPlatformOwner(scope))
 	if errors.Is(err, rbac.ErrSystemRole) {
 		writeError(w, http.StatusForbidden, "system_role", err.Error())
 		return
@@ -180,7 +185,7 @@ func (h *RBACHandler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	err = h.svc.DeleteRole(r.Context(), id)
+	err = h.svc.DeleteRole(r.Context(), scope.TenantID, id)
 	if errors.Is(err, rbac.ErrSystemRole) {
 		writeError(w, http.StatusForbidden, "system_role", err.Error())
 		return
@@ -215,7 +220,11 @@ func (h *RBACHandler) SetRolePermissions(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	err = h.svc.SetRolePermissions(r.Context(), id, b.PermissionCodes)
+	err = h.svc.SetRolePermissions(r.Context(), scope.TenantID, id, b.PermissionCodes, isPlatformOwner(scope))
+	if errors.Is(err, rbac.ErrSystemRole) {
+		writeError(w, http.StatusForbidden, "system_role", err.Error())
+		return
+	}
 	if errors.Is(err, rbac.ErrWildcardRole) {
 		writeError(w, http.StatusForbidden, "wildcard_role", err.Error())
 		return
@@ -256,6 +265,14 @@ func (h *RBACHandler) AssignUserRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.AssignUserRole(r.Context(), scope.TenantID, userID, roleID); err != nil {
+		if errors.Is(err, rbac.ErrUserNotFound) {
+			writeError(w, http.StatusNotFound, "not_found", err.Error())
+			return
+		}
+		if ent.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "not_found", "role not found")
+			return
+		}
 		writeError(w, http.StatusBadRequest, "assign_failed", err.Error())
 		return
 	}
