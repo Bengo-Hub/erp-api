@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
 )
@@ -85,12 +86,28 @@ func (h *LeaveHandler) PreviewRequest(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-type countModeBody struct {
-	CountMode string `json:"count_mode"`
+type typeSettingBody struct {
+	CountMode   string `json:"count_mode"`
+	BalanceRule string `json:"balance_rule"`
 }
 
 // SetCountMode changes how a leave type's days are counted.
 func (h *LeaveHandler) SetCountMode(w http.ResponseWriter, r *http.Request) {
+	h.setTypeSetting(w, r, func(scope RequestScope, id uuid.UUID, b typeSettingBody) (*leave.CategoryView, error) {
+		return h.svc.SetCountMode(r.Context(), scope.TenantID, id, b.CountMode)
+	})
+}
+
+// SetBalanceRule changes whether a leave type refuses requests beyond the balance.
+func (h *LeaveHandler) SetBalanceRule(w http.ResponseWriter, r *http.Request) {
+	h.setTypeSetting(w, r, func(scope RequestScope, id uuid.UUID, b typeSettingBody) (*leave.CategoryView, error) {
+		return h.svc.SetBalanceRule(r.Context(), scope.TenantID, id, b.BalanceRule)
+	})
+}
+
+// DeleteEntitlement removes a person's own entitlement; their balance goes back to the leave
+// type's default days.
+func (h *LeaveHandler) DeleteEntitlement(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permLeaveManage) {
 		return
@@ -100,12 +117,35 @@ func (h *LeaveHandler) SetCountMode(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	var b countModeBody
+	err = h.svc.DeleteEntitlement(r.Context(), scope.TenantID, id)
+	if errors.Is(err, leave.ErrEntitlementNotFound) {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		return
+	}
+	if err != nil {
+		h.log.Error("delete entitlement", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to delete the entitlement")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LeaveHandler) setTypeSetting(w http.ResponseWriter, r *http.Request, save func(RequestScope, uuid.UUID, typeSettingBody) (*leave.CategoryView, error)) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var b typeSettingBody
 	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	row, err := h.svc.SetCountMode(r.Context(), scope.TenantID, id, b.CountMode)
+	row, err := save(scope, id, b)
 	if errors.Is(err, leave.ErrUnknownCategory) {
 		writeError(w, http.StatusNotFound, "not_found", err.Error())
 		return

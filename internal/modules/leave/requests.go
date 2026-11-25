@@ -3,8 +3,10 @@ package leave
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavelog"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
+	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 )
 
@@ -28,6 +31,37 @@ type RequestFilter struct {
 	EmployeeID *uuid.UUID
 	Status     string
 	From, To   *time.Time
+	// Search keeps employees whose first name, last name or staff number holds every word.
+	Search string
+}
+
+// searchWords splits a search, bounded so it cannot grow the query without limit.
+func searchWords(search string) []string {
+	if len(search) > 100 {
+		search = search[:100]
+	}
+	words := strings.Fields(strings.ToValidUTF8(search, ""))
+	if len(words) > 6 {
+		words = words[:6]
+	}
+	return words
+}
+
+// employeeMatches is the search as one "employee_id IN (SELECT ...)" subquery.
+func employeeMatches(tenantID uuid.UUID, words []string) predicate.LeaveRequest {
+	return func(s *entsql.Selector) {
+		t := entsql.Table(employee.Table)
+		sub := entsql.Select(t.C(employee.FieldID)).From(t)
+		employee.TenantID(tenantID)(sub)
+		for _, w := range words {
+			employee.Or(
+				employee.FirstNameContainsFold(w),
+				employee.LastNameContainsFold(w),
+				employee.EmployeeNumberContainsFold(w),
+			)(sub)
+		}
+		s.Where(entsql.In(s.C(leaverequest.FieldEmployeeID), sub))
+	}
 }
 
 // ListRequests returns one page of tenant leave requests, newest first, paged in SQL over a
@@ -52,6 +86,9 @@ func (s *Service) ListRequests(ctx context.Context, tenantID uuid.UUID, f Reques
 	}
 	if f.Status != "" {
 		q = q.Where(leaverequest.StatusEQ(leaverequest.Status(f.Status)))
+	}
+	if words := searchWords(f.Search); len(words) > 0 {
+		q = q.Where(employeeMatches(tenantID, words))
 	}
 	total, err := q.Clone().Count(ctx)
 	if err != nil {
@@ -119,6 +156,13 @@ func (s *Service) CreateRequest(ctx context.Context, tenantID uuid.UUID, in Crea
 	if err := refuseOverlap(ctx, tx, tenantID, in.EmployeeID, in.StartDate, in.EndDate); err != nil {
 		return nil, err
 	}
+	chk, err := s.checkBalance(ctx, tx.Client(), tenantID, in.EmployeeID, count.category, count.BalanceYear, count.Days, true)
+	if err != nil {
+		return nil, err
+	}
+	if err := chk.refusal(); err != nil {
+		return nil, err
+	}
 	row, err := tx.LeaveRequest.Create().
 		SetTenantID(tenantID).
 		SetEmployeeID(in.EmployeeID).
@@ -161,11 +205,21 @@ func (s *Service) Approve(ctx context.Context, tenantID, id uuid.UUID, approverE
 	// Sprint 4: route through the approvals engine when this leave request has an open
 	// approval workflow. Only apply the leave side-effect (status flip + balance deduction)
 	// once the multi-step chain is fully approved; intermediate steps just advance the chain.
+	// The balance is checked first, so a refused approval is not recorded on the chain.
+	if err := s.checkApprovable(ctx, tenantID, id); err != nil {
+		return nil, err
+	}
 	if proceed, out, err := s.routeDecision(ctx, tenantID, id, true, "", actingUserID); err != nil {
 		return nil, err
 	} else if !proceed {
 		return out, nil
 	}
+	return s.approve(ctx, tenantID, id, approverEmployeeID, actingUserID)
+}
+
+// approve applies the approval itself. The request and the employee are locked, so approvals of
+// one person's requests queue and each sees the balance the one before it left.
+func (s *Service) approve(ctx context.Context, tenantID, id uuid.UUID, approverEmployeeID *uuid.UUID, actingUserID *uuid.UUID) (*ent.LeaveRequest, error) {
 	tx, err := s.orm.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("leave: begin tx: %w", err)
@@ -178,7 +232,14 @@ func (s *Service) Approve(ctx context.Context, tenantID, id uuid.UUID, approverE
 		return nil, fmt.Errorf("leave: load request: %w", err)
 	}
 	if req.Status != leaverequest.StatusPending {
-		return nil, fmt.Errorf("leave: cannot approve a %s request", req.Status)
+		return nil, fmt.Errorf("leave: cannot approve a %s request: it %w", req.Status, errNotPending)
+	}
+	if _, err := tx.Employee.Query().Where(employee.TenantID(tenantID), employee.ID(req.EmployeeID)).
+		ForUpdate().All(ctx); err != nil {
+		return nil, fmt.Errorf("leave: lock employee: %w", err)
+	}
+	if err := s.refuseOverBalance(ctx, tx.Client(), tenantID, req); err != nil {
+		return nil, err
 	}
 
 	upd := req.Update().SetStatus(leaverequest.StatusApproved).SetApprovedAt(time.Now().UTC())
@@ -212,12 +273,23 @@ func (s *Service) Reject(ctx context.Context, tenantID, id uuid.UUID, reason str
 	} else if !proceed {
 		return out, nil
 	}
-	req, err := s.Get(ctx, tenantID, id)
+	return s.reject(ctx, tenantID, id, reason, actingUserID)
+}
+
+// reject applies the rejection itself, under the request lock.
+func (s *Service) reject(ctx context.Context, tenantID, id uuid.UUID, reason string, actingUserID *uuid.UUID) (*ent.LeaveRequest, error) {
+	tx, err := s.orm.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("leave: begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	req, err := tx.LeaveRequest.Query().
+		Where(leaverequest.TenantID(tenantID), leaverequest.ID(id)).ForUpdate().Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("leave: load request: %w", err)
 	}
 	if req.Status != leaverequest.StatusPending {
-		return nil, fmt.Errorf("leave: cannot reject a %s request", req.Status)
+		return nil, fmt.Errorf("leave: cannot reject a %s request: it %w", req.Status, errNotPending)
 	}
 	updated, err := req.Update().
 		SetStatus(leaverequest.StatusRejected).
@@ -226,7 +298,10 @@ func (s *Service) Reject(ctx context.Context, tenantID, id uuid.UUID, reason str
 	if err != nil {
 		return nil, fmt.Errorf("leave: reject update: %w", err)
 	}
-	logAction(ctx, s.orm, tenantID, id, leavelog.ActionReject, "leave request rejected: "+reason, actingUserID)
+	logAction(ctx, tx.Client(), tenantID, id, leavelog.ActionReject, "leave request rejected: "+reason, actingUserID)
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("leave: commit reject: %w", err)
+	}
 	s.emitDecision(ctx, tenantID, updated)
 	return updated, nil
 }

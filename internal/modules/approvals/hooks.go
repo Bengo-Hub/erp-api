@@ -17,9 +17,40 @@ import (
 // committed, so it must be idempotent: a retry of a failed apply calls it again.
 type Hook func(ctx context.Context, tenantID uuid.UUID, req *ent.ApprovalRequest) error
 
+// Guard may refuse an approval or escalation made through the generic /approvals decide routes,
+// before anything is recorded. Rejections are never guarded.
+type Guard func(ctx context.Context, tenantID uuid.UUID, req *ent.ApprovalRequest) error
+
 type hookRegistry struct {
 	mu sync.RWMutex
 	m  map[string]Hook
+	g  map[string]Guard
+}
+
+// RegisterGuard sets the check for a module (one per module; the last one wins).
+func (s *Service) RegisterGuard(module string, g Guard) {
+	s.hooks.mu.Lock()
+	defer s.hooks.mu.Unlock()
+	if s.hooks.g == nil {
+		s.hooks.g = map[string]Guard{}
+	}
+	s.hooks.g[module] = g
+}
+
+// runGuard applies the module's guard to a pending request, if one is registered.
+func (s *Service) runGuard(ctx context.Context, tenantID, requestID uuid.UUID) error {
+	req, err := s.orm.ApprovalRequest.Query().
+		Where(approvalrequest.TenantID(tenantID), approvalrequest.ID(requestID)).Only(ctx)
+	if err != nil {
+		return fmt.Errorf("approvals: load request: %w", err)
+	}
+	s.hooks.mu.RLock()
+	g := s.hooks.g[string(req.Module)]
+	s.hooks.mu.RUnlock()
+	if g == nil || req.Status != approvalrequest.StatusPending {
+		return nil
+	}
+	return g(ctx, tenantID, req)
 }
 
 // RegisterHook sets the apply function for a module (one per module; the last one wins).
@@ -49,6 +80,11 @@ func (s *Service) runHook(ctx context.Context, tenantID uuid.UUID, req *ent.Appr
 // DecideAndApply is Decide followed by the module hook when the request finished. A hook
 // failure is reported in ApplyErr; the decision itself stays recorded.
 func (s *Service) DecideAndApply(ctx context.Context, tenantID uuid.UUID, in DecisionInput) (*Decision, error) {
+	if in.Approve || in.Escalate {
+		if err := s.runGuard(ctx, tenantID, in.RequestID); err != nil {
+			return nil, err
+		}
+	}
 	dec, err := s.Decide(ctx, tenantID, in)
 	if err != nil || !dec.Finished {
 		return dec, err

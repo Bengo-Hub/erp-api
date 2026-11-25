@@ -127,8 +127,10 @@ var roleGrants = map[string][]string{
 	// (POS/logistics/hospitality roles: cashier, rider, waiter, stylist, technician, a
 	// generic "manager", ...; see MapGlobalRolesToERP). Grants only Employee Self-Service:
 	// view own profile, apply for + view own leave, view own attendance, view own payslips.
-	// No management/approval/admin permissions.
-	"staff": bundle([]string{"hrm.employee.view", "hrm.leave.view", "hrm.leave.manage", "hrm.attendance.view", "hrm.payroll.view", "tasks.view"}),
+	// No management/approval/admin permissions: filing and cancelling one's own leave needs none
+	// (hrm.leave.manage acts for anyone). The seed resets this role on every start, so a code
+	// dropped here is dropped from the one global row; tenants' own roles are not touched.
+	"staff": bundle([]string{"hrm.employee.view", "hrm.leave.view", "hrm.attendance.view", "hrm.payroll.view", "tasks.view"}),
 }
 
 func main() {

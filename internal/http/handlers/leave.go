@@ -41,9 +41,11 @@ func (h *LeaveHandler) RegisterRoutes(r chi.Router) {
 		lr.Put("/categories/{id}", h.UpdateCategory)
 		lr.Delete("/categories/{id}", h.DeleteCategory)
 		lr.Put("/categories/{id}/count-mode", h.SetCountMode)
+		lr.Put("/categories/{id}/balance-rule", h.SetBalanceRule)
 
 		lr.Get("/entitlements", h.ListEntitlements)
 		lr.Post("/entitlements", h.UpsertEntitlement)
+		lr.Delete("/entitlements/{id}", h.DeleteEntitlement)
 
 		lr.Get("/balances", h.ListBalances)
 		lr.Post("/accrue", h.Accrue)
@@ -441,6 +443,7 @@ func (h *LeaveHandler) ListRequests(w http.ResponseWriter, r *http.Request) {
 	f := leave.RequestFilter{
 		EmployeeID: selfOrParamEmployeeID(r, scope),
 		Status:     r.URL.Query().Get("status"),
+		Search:     r.URL.Query().Get("search"),
 	}
 	if d, err := parseDate(r.URL.Query().Get("from")); err == nil {
 		f.From = &d

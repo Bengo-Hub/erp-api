@@ -2,7 +2,6 @@ package leave
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,9 +11,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
-	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
-	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
 	"github.com/Bengo-Hub/erp-api/internal/modules/attendance"
 )
@@ -33,11 +30,13 @@ const CountModesKey = "leave.count_modes"
 var (
 	ErrEmployeeNotFound = errors.New("employee not found")
 	ErrUnknownCategory  = errors.New("unknown leave type")
-	ErrRequestNotFound  = errors.New("leave request not found")
-	ErrDateOrder        = errors.New("the end date must not be before the start date")
-	ErrNoDays           = errors.New("these dates have no working days for this employee, so there is nothing to apply for")
-	ErrCountMode        = errors.New("count mode must be working_days or calendar_days")
-	ErrNoCalendar       = errors.New("working days cannot be counted right now")
+	// ErrInheritedCategory refuses an edit or delete of a platform leave type.
+	ErrInheritedCategory = errors.New("this is a platform leave type and cannot be edited or deleted; you can change how its days are counted and its balance rule")
+	ErrRequestNotFound   = errors.New("leave request not found")
+	ErrDateOrder         = errors.New("the end date must not be before the start date")
+	ErrNoDays            = errors.New("these dates have no working days for this employee, so there is nothing to apply for")
+	ErrCountMode         = errors.New("count mode must be working_days or calendar_days")
+	ErrNoCalendar        = errors.New("working days cannot be counted right now")
 )
 
 // WorkCalendar answers an employee's planned days; the attendance service implements it. The
@@ -49,10 +48,13 @@ type WorkCalendar interface {
 // SetCalendar wires the working day source (called at startup).
 func (s *Service) SetCalendar(c WorkCalendar) { s.calendar = c }
 
-// CategoryView is a leave type with the way its days are counted for the tenant.
+// CategoryView is a leave type with the tenant's settings for it. Inherited marks a platform type,
+// which the tenant cannot edit beyond those settings.
 type CategoryView struct {
 	*ent.LeaveCategory
-	CountMode string `json:"count_mode"`
+	CountMode   string `json:"count_mode"`
+	BalanceRule string `json:"balance_rule"`
+	Inherited   bool   `json:"inherited"`
 }
 
 // SkippedDay is a date that does not count as a full day, with the reason.
@@ -64,13 +66,22 @@ type SkippedDay struct {
 }
 
 // Preview is what filing a request would count. RemainingBalance is nil when the employee has no
-// balance for the type in the year of the start date.
+// balance for the type in the year of the start date; AvailableBalance takes off their pending
+// requests. Refused tells whether filing would be refused for the balance; BalanceMessage is the
+// reason, or the warning when the type allows it.
 type Preview struct {
 	Days             decimal.Decimal  `json:"days"`
 	CountMode        string           `json:"count_mode"`
 	Skipped          []SkippedDay     `json:"skipped"`
 	BalanceYear      int              `json:"balance_year"`
+	BalanceRule      string           `json:"balance_rule"`
 	RemainingBalance *decimal.Decimal `json:"remaining_balance"`
+	PendingDays      decimal.Decimal  `json:"pending_days"`
+	AvailableBalance *decimal.Decimal `json:"available_balance"`
+	Refused          bool             `json:"refused"`
+	BalanceMessage   string           `json:"balance_message,omitempty"`
+
+	category *ent.LeaveCategory
 }
 
 func utcDay(t time.Time) time.Time {
@@ -88,23 +99,6 @@ func defaultCountMode(name string) string {
 	return CountWorkingDays
 }
 
-func (s *Service) countModes(ctx context.Context, c *ent.Client, tenantID uuid.UUID) (map[string]string, error) {
-	modes := map[string]string{}
-	row, err := c.AppSetting.Query().Where(appsetting.TenantID(tenantID), appsetting.AppKey(CountModesKey)).Only(ctx)
-	if ent.IsNotFound(err) {
-		return modes, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("leave: load count modes: %w", err)
-	}
-	if row.Value != "" {
-		if err := json.Unmarshal([]byte(row.Value), &modes); err != nil {
-			return nil, fmt.Errorf("leave: decode count modes: %w", err)
-		}
-	}
-	return modes, nil
-}
-
 func modeOf(modes map[string]string, c *ent.LeaveCategory) string {
 	if m := modes[c.ID.String()]; m == CountWorkingDays || m == CountCalendarDays {
 		return m
@@ -112,15 +106,19 @@ func modeOf(modes map[string]string, c *ent.LeaveCategory) string {
 	return defaultCountMode(c.Name)
 }
 
-// CategoryViews adds the count mode to leave types.
+// CategoryViews adds the tenant's settings to leave types.
 func (s *Service) CategoryViews(ctx context.Context, tenantID uuid.UUID, rows []*ent.LeaveCategory) ([]CategoryView, error) {
-	modes, err := s.countModes(ctx, s.orm, tenantID)
+	modes, err := typeSettings(ctx, s.orm, tenantID, CountModesKey)
+	if err != nil {
+		return nil, err
+	}
+	rules, err := typeSettings(ctx, s.orm, tenantID, BalanceRulesKey)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]CategoryView, len(rows))
 	for i, c := range rows {
-		out[i] = CategoryView{LeaveCategory: c, CountMode: modeOf(modes, c)}
+		out[i] = CategoryView{LeaveCategory: c, CountMode: modeOf(modes, c), BalanceRule: ruleOf(rules, c), Inherited: c.TenantID != tenantID}
 	}
 	return out, nil
 }
@@ -131,27 +129,7 @@ func (s *Service) SetCountMode(ctx context.Context, tenantID, categoryID uuid.UU
 	if mode != CountWorkingDays && mode != CountCalendarDays {
 		return nil, ErrCountMode
 	}
-	cat, err := s.usableCategory(ctx, tenantID, categoryID)
-	if err != nil {
-		return nil, err
-	}
-	modes, err := s.countModes(ctx, s.orm, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	modes[categoryID.String()] = mode
-	raw, err := json.Marshal(modes)
-	if err != nil {
-		return nil, err
-	}
-	err = s.orm.AppSetting.Create().
-		SetTenantID(tenantID).SetAppKey(CountModesKey).SetValue(string(raw)).
-		OnConflictColumns(appsetting.FieldTenantID, appsetting.FieldAppKey).
-		UpdateNewValues().Exec(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("leave: save count mode: %w", err)
-	}
-	return &CategoryView{LeaveCategory: cat, CountMode: mode}, nil
+	return s.saveTypeSetting(ctx, tenantID, categoryID, CountModesKey, mode)
 }
 
 // usableCategory is a leave type the tenant sees in its list (its own, or an inherited one).
@@ -188,11 +166,11 @@ func (s *Service) PreviewRequest(ctx context.Context, tenantID, employeeID, cate
 	if err != nil {
 		return nil, err
 	}
-	modes, err := s.countModes(ctx, s.orm, tenantID)
+	modes, err := typeSettings(ctx, s.orm, tenantID, CountModesKey)
 	if err != nil {
 		return nil, err
 	}
-	p := &Preview{CountMode: modeOf(modes, cat), Skipped: []SkippedDay{}, BalanceYear: start.Year()}
+	p := &Preview{category: cat, CountMode: modeOf(modes, cat), Skipped: []SkippedDay{}, BalanceYear: start.Year()}
 	if p.CountMode == CountCalendarDays {
 		p.Days = decimal.NewFromInt(int64(end.Sub(start).Hours()/24) + 1)
 	} else {
@@ -210,15 +188,12 @@ func (s *Service) PreviewRequest(ctx context.Context, tenantID, employeeID, cate
 			}
 		}
 	}
-	bal, err := s.orm.LeaveBalance.Query().Where(
-		leavebalance.TenantID(tenantID), leavebalance.EmployeeID(employeeID),
-		leavebalance.CategoryID(categoryID), leavebalance.Year(p.BalanceYear)).First(ctx)
-	if err != nil && !ent.IsNotFound(err) {
-		return nil, fmt.Errorf("leave: load balance: %w", err)
+	chk, err := s.checkBalance(ctx, s.orm, tenantID, employeeID, cat, p.BalanceYear, p.Days, true)
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		p.RemainingBalance = &bal.DaysRemaining
-	}
+	p.BalanceRule, p.RemainingBalance, p.PendingDays, p.AvailableBalance = chk.Rule, chk.Remaining, chk.Pending, chk.Available
+	p.Refused, p.BalanceMessage = chk.refusal() != nil, chk.Message
 	return p, nil
 }
 

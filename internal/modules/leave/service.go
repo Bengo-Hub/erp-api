@@ -52,9 +52,6 @@ func NewService(orm *ent.Client, notify Notifier) *Service {
 	return &Service{orm: orm, notify: notify}
 }
 
-// SetApprovals wires the approval engine into the leave module (called at startup).
-func (s *Service) SetApprovals(a Approver) { s.approvals = a }
-
 // WithSystemTenant sets the global-leave-types fallback tenant (chainable, startup wiring).
 func (s *Service) WithSystemTenant(id uuid.UUID) *Service { s.systemTenant = id; return s }
 
@@ -129,7 +126,7 @@ func (s *Service) UpdateCategory(ctx context.Context, tenantID, id uuid.UUID, in
 		return nil, fmt.Errorf("leave: update category: %w", err)
 	}
 	if n == 0 {
-		return nil, fmt.Errorf("leave: category not found")
+		return nil, s.missingCategory(ctx, tenantID, id)
 	}
 	return s.orm.LeaveCategory.Query().
 		Where(leavecategory.TenantID(tenantID), leavecategory.ID(id)).Only(ctx)
@@ -143,9 +140,17 @@ func (s *Service) DeleteCategory(ctx context.Context, tenantID, id uuid.UUID) er
 		return fmt.Errorf("leave: delete category: %w", err)
 	}
 	if n == 0 {
-		return fmt.Errorf("leave: category not found")
+		return s.missingCategory(ctx, tenantID, id)
 	}
 	return nil
+}
+
+// missingCategory explains an edit that matched none of the tenant's own leave types.
+func (s *Service) missingCategory(ctx context.Context, tenantID, id uuid.UUID) error {
+	if _, err := s.usableCategory(ctx, tenantID, id); err == nil {
+		return ErrInheritedCategory
+	}
+	return ErrUnknownCategory
 }
 
 // ---- Entitlements ----
