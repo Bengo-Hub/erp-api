@@ -738,7 +738,7 @@ type recoverableBody struct {
 }
 
 func (b recoverableBody) toInput() (payroll.RecoverableInput, error) {
-	in := payroll.RecoverableInput{IsActive: b.IsActive == nil || *b.IsActive, NoOfInstallments: b.NoOfInstallments}
+	in := payroll.RecoverableInput{IsActive: b.IsActive, NoOfInstallments: b.NoOfInstallments}
 	empStr := b.EmployeeID
 	if empStr == "" {
 		empStr = b.Employee
@@ -1053,6 +1053,8 @@ type claimBody struct {
 	ProjectID    string `json:"project_id"`
 	CostCenterID string `json:"cost_center_id"`
 	Taxable      *bool  `json:"taxable"`
+	// Description is kept in the claim's metadata; "" clears it.
+	Description *string `json:"description"`
 }
 
 func (b claimBody) toInput() (payroll.ClaimInput, error) {
@@ -1081,6 +1083,7 @@ func (b claimBody) toInput() (payroll.ClaimInput, error) {
 		in.Category = b.ClaimType
 	}
 	in.Taxable = b.Taxable
+	in.Description = b.Description
 	if b.ProjectID != "" {
 		if pid, err := uuid.Parse(b.ProjectID); err == nil {
 			in.ProjectID = &pid
@@ -1126,6 +1129,9 @@ func (h *PayrollHandler) claimView(c *ent.ExpenseClaim, name string) map[string]
 	if c.AttachmentURL != nil {
 		// Receipts are private: a short-lived presigned link (an older external link is kept).
 		v["attachment_url"] = h.media.URL(*c.AttachmentURL)
+	}
+	if d, _ := c.Metadata["description"].(string); d != "" {
+		v["description"] = d
 	}
 	// Claims raised by another service (POST /hrm/claims/external) say where they came from and
 	// what the trip was, so HR can see a logistics per diem next to the trip it pays for.

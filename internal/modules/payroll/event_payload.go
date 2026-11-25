@@ -29,6 +29,7 @@ func (d *Disburser) loadPayoutPrefs(ctx context.Context, tenantID uuid.UUID, sli
 	}
 	rows, err := d.orm.SalaryDetails.Query().
 		Where(salarydetails.TenantID(tenantID), salarydetails.EmployeeIDIn(ids...), salarydetails.IsActive(true)).
+		Order(ent.Asc(salarydetails.FieldCreatedAt)). // the newest active row wins, as in a run
 		All(ctx)
 	if err != nil {
 		return m

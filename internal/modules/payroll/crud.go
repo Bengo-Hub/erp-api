@@ -3,6 +3,7 @@ package payroll
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -95,7 +96,7 @@ type RecoverableInput struct {
 	Amount      decimal.Decimal
 	Description string
 	IssueDate   *time.Time
-	IsActive    bool
+	IsActive    *bool // nil: active on create, unchanged on update
 	// NoOfInstallments drives the RepayOption installment plan (installment_amount = amount/n).
 	// 0 or 1 means a single lump-sum recovery (no plan created).
 	NoOfInstallments int
@@ -165,7 +166,7 @@ func (s *Service) CreateAdvance(ctx context.Context, tenantID uuid.UUID, in Reco
 		SetTenantID(tenantID).
 		SetEmployeeID(in.EmployeeID).
 		SetAmountIssued(in.Amount).
-		SetIsActive(in.IsActive).
+		SetIsActive(in.IsActive == nil || *in.IsActive).
 		SetNillableRepayOptionID(repayID)
 	if in.IssueDate != nil {
 		b = b.SetIssueDate(*in.IssueDate)
@@ -189,7 +190,7 @@ func (s *Service) UpdateAdvance(ctx context.Context, tenantID, id uuid.UUID, in 
 	if err != nil {
 		return nil, err
 	}
-	u := existing.Update().SetIsActive(in.IsActive).SetNillableRepayOptionID(repayID)
+	u := existing.Update().SetNillableIsActive(in.IsActive).SetNillableRepayOptionID(repayID)
 	if !in.Amount.IsZero() {
 		u = u.SetAmountIssued(in.Amount)
 	}
@@ -280,7 +281,7 @@ func (s *Service) CreateLossDamage(ctx context.Context, tenantID uuid.UUID, in R
 		SetTenantID(tenantID).
 		SetEmployeeID(in.EmployeeID).
 		SetDamageAmount(in.Amount).
-		SetIsActive(in.IsActive).
+		SetIsActive(in.IsActive == nil || *in.IsActive).
 		SetNillableRepayOptionID(repayID)
 	if in.Description != "" {
 		b = b.SetDescription(in.Description)
@@ -304,7 +305,7 @@ func (s *Service) UpdateLossDamage(ctx context.Context, tenantID, id uuid.UUID, 
 	if err != nil {
 		return nil, err
 	}
-	u := existing.Update().SetIsActive(in.IsActive).SetNillableRepayOptionID(repayID)
+	u := existing.Update().SetNillableIsActive(in.IsActive).SetNillableRepayOptionID(repayID)
 	if !in.Amount.IsZero() {
 		u = u.SetDamageAmount(in.Amount)
 	}
@@ -355,6 +356,22 @@ type ClaimInput struct {
 	CostCenterID *uuid.UUID
 	ClaimType    string
 	Taxable      *bool
+	// Description is kept in the claim's metadata; nil keeps it, "" clears it.
+	Description *string
+}
+
+// claimMetadata returns existing metadata with the description applied.
+func (in ClaimInput) claimMetadata(existing map[string]any) map[string]any {
+	out := map[string]any{}
+	for k, v := range existing {
+		out[k] = v
+	}
+	if d := strings.TrimSpace(*in.Description); d == "" {
+		delete(out, "description")
+	} else {
+		out["description"] = d
+	}
+	return out
 }
 
 func (s *Service) ListClaims(ctx context.Context, tenantID uuid.UUID, employeeID *uuid.UUID, limit, offset int) ([]*ent.ExpenseClaim, int, error) {
@@ -404,6 +421,9 @@ func (s *Service) CreateClaim(ctx context.Context, tenantID uuid.UUID, in ClaimI
 	if in.ApplicationDate != nil {
 		b = b.SetApplicationDate(*in.ApplicationDate)
 	}
+	if in.Description != nil && strings.TrimSpace(*in.Description) != "" {
+		b = b.SetMetadata(in.claimMetadata(nil))
+	}
 	c, err := b.Save(ctx)
 	if err != nil {
 		return nil, err
@@ -438,6 +458,9 @@ func (s *Service) UpdateClaim(ctx context.Context, tenantID, id uuid.UUID, in Cl
 	}
 	if in.ApplicationDate != nil {
 		u = u.SetApplicationDate(*in.ApplicationDate)
+	}
+	if in.Description != nil {
+		u = u.SetMetadata(in.claimMetadata(existing.Metadata))
 	}
 	c, err := u.Save(ctx)
 	if err != nil {

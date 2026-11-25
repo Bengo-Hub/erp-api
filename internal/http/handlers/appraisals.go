@@ -41,6 +41,10 @@ func (h *AppraisalsHandler) RegisterRoutes(r chi.Router) {
 
 		ar.Get("/templates", h.ListTemplates)
 		ar.Post("/templates", h.CreateTemplate)
+		ar.Put("/templates/{id}", h.UpdateTemplate) // appraisals_templates.go
+		ar.Delete("/templates/{id}", h.DeleteTemplate)
+		ar.Put("/questions/{id}", h.UpdateQuestion)
+		ar.Delete("/questions/{id}", h.DeleteQuestion)
 		ar.Get("/templates/{id}/questions", h.ListQuestions)
 		ar.Get("/questions", h.ListAllQuestions)
 		ar.Post("/templates/{id}/questions", h.AddQuestion)
@@ -235,6 +239,7 @@ func (h *AppraisalsHandler) ListAllQuestions(w http.ResponseWriter, r *http.Requ
 type templateBody struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	IsActive    *bool  `json:"is_active"`
 }
 
 func (h *AppraisalsHandler) CreateTemplate(w http.ResponseWriter, r *http.Request) {
@@ -249,6 +254,9 @@ func (h *AppraisalsHandler) CreateTemplate(w http.ResponseWriter, r *http.Reques
 	}
 	uid := scope.UserID
 	row, err := h.svc.CreateTemplate(r.Context(), scope.TenantID, b.Name, b.Description, &uid)
+	if err == nil && b.IsActive != nil && !*b.IsActive {
+		row, err = h.svc.UpdateTemplate(r.Context(), scope.TenantID, row.ID, b.Name, b.Description, b.IsActive)
+	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
 		return
@@ -282,6 +290,7 @@ type questionBody struct {
 	Category     string   `json:"category"`
 	Weight       *float64 `json:"weight"`
 	MaxScore     *int     `json:"max_score"`
+	TemplateID   string   `json:"template_id"` // update only: moves the question
 }
 
 func (h *AppraisalsHandler) AddQuestion(w http.ResponseWriter, r *http.Request) {

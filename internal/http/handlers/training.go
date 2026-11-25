@@ -76,7 +76,7 @@ type courseBody struct {
 	Description string      `json:"description"`
 	StartDate   string      `json:"start_date"`
 	EndDate     string      `json:"end_date"`
-	Capacity    int         `json:"capacity"`
+	Capacity    *int        `json:"capacity"`
 	Provider    string      `json:"provider"`
 	Duration    json.Number `json:"duration"`
 	Cost        json.Number `json:"cost"`

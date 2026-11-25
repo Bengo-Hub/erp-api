@@ -43,7 +43,7 @@ type CourseInput struct {
 	Description string
 	StartDate   time.Time
 	EndDate     time.Time
-	Capacity    int
+	Capacity    *int // nil keeps the stored value on update
 	Provider    string
 	Duration    string
 	Cost        string
@@ -107,7 +107,7 @@ func (s *Service) CreateCourse(ctx context.Context, tenantID uuid.UUID, in Cours
 	}
 	row, err := s.orm.TrainingCourse.Create().
 		SetTenantID(tenantID).SetTitle(in.Title).SetDescription(in.Description).
-		SetStartDate(in.StartDate).SetEndDate(in.EndDate).SetCapacity(in.Capacity).
+		SetStartDate(in.StartDate).SetEndDate(in.EndDate).SetNillableCapacity(in.Capacity).
 		SetMetadata(in.metadata(nil)).Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("training: create course: %w", err)
@@ -129,7 +129,7 @@ func (s *Service) UpdateCourse(ctx context.Context, tenantID, id uuid.UUID, in C
 		return nil, err
 	}
 	row, err := c.Update().SetTitle(in.Title).SetDescription(in.Description).
-		SetStartDate(in.StartDate).SetEndDate(in.EndDate).SetCapacity(in.Capacity).
+		SetStartDate(in.StartDate).SetEndDate(in.EndDate).SetNillableCapacity(in.Capacity).
 		SetMetadata(in.metadata(c.Metadata)).Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("training: update course: %w", err)

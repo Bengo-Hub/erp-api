@@ -192,8 +192,44 @@ func (b employeeHRFields) hrInput() (employees.HRInput, error) {
 	return in, nil
 }
 
+// employeePayFields are the employee form's starting salary and job group, kept in
+// salary_details. A blank basic salary changes nothing; "" clears the job group.
+type employeePayFields struct {
+	MiddleName  *string `json:"middle_name"` // kept in the employee's metadata; "" clears it
+	BasicSalary *string `json:"basic_salary"`
+	JobGroup    *string `json:"job_group"`
+	JobGroupID  *string `json:"job_group_id"`
+}
+
+func (b employeePayFields) salaryInput() (employees.SalaryInput, error) {
+	var in employees.SalaryInput
+	if b.BasicSalary != nil && strings.TrimSpace(*b.BasicSalary) != "" {
+		d, err := decimal.NewFromString(strings.TrimSpace(*b.BasicSalary))
+		if err != nil {
+			return in, fmt.Errorf("basic_salary must be a number")
+		}
+		in.Monthly = &d
+	}
+	raw := b.JobGroup
+	if b.JobGroupID != nil {
+		raw = b.JobGroupID
+	}
+	if raw != nil {
+		id := uuid.Nil
+		if s := strings.TrimSpace(*raw); s != "" {
+			var err error
+			if id, err = uuid.Parse(s); err != nil {
+				return in, fmt.Errorf("job_group must be a UUID or empty")
+			}
+		}
+		in.JobGroupID = &id
+	}
+	return in, nil
+}
+
 type updateEmployeeBody struct {
 	employeeHRFields
+	employeePayFields
 	// KraPin is the employee form's name for pin_no.
 	KraPin *string `json:"kra_pin"`
 	// PhoneNumber is kept in contact_details; "" clears it.
@@ -210,9 +246,9 @@ type updateEmployeeBody struct {
 	// DateOfBirth is YYYY-MM-DD; "" clears it.
 	DateOfBirth    *string `json:"date_of_birth"`
 	EmployeeNumber *string `json:"employee_number"`
-	Terminated        *bool   `json:"terminated"`
-	IsDirector        *bool   `json:"is_director"`
-	IsShareholder     *bool   `json:"is_shareholder"`
+	Terminated     *bool   `json:"terminated"`
+	IsDirector     *bool   `json:"is_director"`
+	IsShareholder  *bool   `json:"is_shareholder"`
 	// WorkShiftID is the standard work shift (weekly working hours); "" clears it.
 	WorkShiftID *string `json:"work_shift_id"`
 }
@@ -249,6 +285,14 @@ func (h *EmployeesHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
+	pay, err := body.salaryInput()
+	if err == nil {
+		err = h.svc.CheckSalary(r.Context(), scope.TenantID, pay)
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
 	if body.PinNo == nil {
 		body.PinNo = body.KraPin
 	}
@@ -265,6 +309,7 @@ func (h *EmployeesHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	row, err := h.svc.Update(r.Context(), scope.TenantID, id, employees.UpdateInput{
 		DateOfBirth:       dob,
+		MiddleName:        body.MiddleName,
 		WorkShiftID:       workShiftID,
 		FirstName:         body.FirstName,
 		LastName:          body.LastName,
@@ -294,6 +339,12 @@ func (h *EmployeesHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if body.PhoneNumber != nil {
 		if err := h.svc.SetPhone(r.Context(), scope.TenantID, id, *body.PhoneNumber); err != nil {
+			writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+			return
+		}
+	}
+	if !pay.Empty() {
+		if _, err := h.svc.UpsertSalary(r.Context(), scope.TenantID, id, pay); err != nil {
 			writeError(w, http.StatusBadRequest, "update_failed", err.Error())
 			return
 		}
@@ -633,11 +684,18 @@ func (h *EmployeesHandler) Get(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, row)
 		return
 	}
+	if hasPermission(scope, permEmployeeManage) || hasPermission(scope, permPayrollView) {
+		if views[0].Salary, err = h.svc.Salary(r.Context(), scope.TenantID, id); err != nil {
+			writeError(w, http.StatusInternalServerError, "internal_error", "failed to load the salary")
+			return
+		}
+	}
 	writeJSON(w, http.StatusOK, views[0])
 }
 
 type createEmployeeBody struct {
 	employeeHRFields
+	employeePayFields
 	KraPin            string `json:"kra_pin"`
 	PhoneNumber       string `json:"phone_number"` // kept in contact_details
 	OutletID          string `json:"outlet_id"`
@@ -675,6 +733,17 @@ func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
+	pay, err := body.salaryInput()
+	if err == nil {
+		if pay.JobGroupID != nil && *pay.JobGroupID == uuid.Nil {
+			pay.JobGroupID = nil // nothing to clear on a new employee
+		}
+		err = h.svc.CheckSalary(r.Context(), scope.TenantID, pay)
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
 	if body.PinNo == "" {
 		body.PinNo = body.KraPin
 	}
@@ -691,6 +760,9 @@ func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ResidentialStatus: body.ResidentialStatus,
 		IsDirector:        body.IsDirector,
 		IsShareholder:     body.IsShareholder,
+	}
+	if body.MiddleName != nil {
+		in.MiddleName = *body.MiddleName
 	}
 	if raw := strings.TrimSpace(body.DateOfBirth); raw != "" {
 		d, err := parseDate(raw)
@@ -733,6 +805,12 @@ func (h *EmployeesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusCreated, map[string]any{"employee": row, "warning": err.Error()})
 		return
 	}
+	if !pay.Empty() {
+		if _, err := h.svc.UpsertSalary(r.Context(), scope.TenantID, row.ID, pay); err != nil {
+			writeJSON(w, http.StatusCreated, map[string]any{"employee": row, "warning": err.Error()})
+			return
+		}
+	}
 	writeJSON(w, http.StatusCreated, row)
 }
 
@@ -758,30 +836,51 @@ func (h *EmployeesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 type upsertSalaryBody struct {
 	MonthlySalary string `json:"monthly_salary"`
-	PayMode       string `json:"pay_mode"`
-	IncomeTax     string `json:"income_tax"`
-	Currency      string `json:"currency"`
-	// KRA relief inputs (optional; decimal strings, default 0). The engine applies the statutory caps.
-	InsurancePremium    string `json:"insurance_premium"`
-	PensionContribution string `json:"pension_contribution"`
-	MortgageInterest    string `json:"mortgage_interest"`
-	DisabilityExempt    bool   `json:"disability_exempt"`
-	// Preferred net-pay disbursement channel (optional; default bank_transfer).
-	PreferredPayoutMethod string `json:"preferred_payout_method"`
-	PayoutPhone           string `json:"payout_phone"`
+	// Every other field is optional: an omitted one keeps its stored value.
+	PayMode   *string `json:"pay_mode"` // pay frequency
+	IncomeTax *string `json:"income_tax"`
+	Currency  *string `json:"currency"`
+	// KRA relief amounts (decimal strings; "" is zero). The engine applies the statutory caps.
+	InsurancePremium    *string `json:"insurance_premium"`
+	PensionContribution *string `json:"pension_contribution"`
+	MortgageInterest    *string `json:"mortgage_interest"`
+	DisabilityExempt    *bool   `json:"disability_exempt"`
+	// Preferred net-pay disbursement channel.
+	PreferredPayoutMethod *string `json:"preferred_payout_method"`
+	PayoutPhone           *string `json:"payout_phone"`
 }
 
-// decimalOrZero parses a decimal string, returning zero for blank/invalid input (used for
-// optional numeric form fields that default to 0).
-func decimalOrZero(s string) decimal.Decimal {
-	if s == "" {
-		return decimal.Zero
+func (b upsertSalaryBody) toInput() (employees.SalaryInput, error) {
+	in := employees.SalaryInput{
+		PayMode: b.PayMode, IncomeTax: b.IncomeTax, Currency: b.Currency, DisabilityExempt: b.DisabilityExempt,
+		PreferredPayoutMethod: b.PreferredPayoutMethod, PayoutPhone: b.PayoutPhone,
 	}
-	d, err := decimal.NewFromString(s)
+	monthly, err := decimal.NewFromString(b.MonthlySalary)
 	if err != nil {
-		return decimal.Zero
+		return in, fmt.Errorf("invalid monthly_salary (must be a decimal string)")
 	}
-	return d
+	in.Monthly = &monthly
+	for _, f := range []struct {
+		raw  *string
+		dst  **decimal.Decimal
+		name string
+	}{
+		{b.InsurancePremium, &in.InsurancePremium, "insurance_premium"},
+		{b.PensionContribution, &in.PensionContribution, "pension_contribution"},
+		{b.MortgageInterest, &in.MortgageInterest, "mortgage_interest"},
+	} {
+		if f.raw == nil {
+			continue
+		}
+		v := decimal.Zero
+		if s := strings.TrimSpace(*f.raw); s != "" {
+			if v, err = decimal.NewFromString(s); err != nil {
+				return in, fmt.Errorf("%s must be a number", f.name)
+			}
+		}
+		*f.dst = &v
+	}
+	return in, nil
 }
 
 func (h *EmployeesHandler) UpsertSalary(w http.ResponseWriter, r *http.Request) {
@@ -802,21 +901,12 @@ func (h *EmployeesHandler) UpsertSalary(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	monthly, err := decimal.NewFromString(body.MonthlySalary)
+	in, err := body.toInput()
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid monthly_salary (must be a decimal string)")
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	// Optional relief amounts default to 0 when blank/unparseable.
-	reliefs := employees.SalaryReliefInput{
-		InsurancePremium:      decimalOrZero(body.InsurancePremium),
-		PensionContribution:   decimalOrZero(body.PensionContribution),
-		MortgageInterest:      decimalOrZero(body.MortgageInterest),
-		DisabilityExempt:      body.DisabilityExempt,
-		PreferredPayoutMethod: body.PreferredPayoutMethod,
-		PayoutPhone:           body.PayoutPhone,
-	}
-	row, err := h.svc.UpsertSalary(r.Context(), scope.TenantID, id, monthly, body.PayMode, body.IncomeTax, body.Currency, reliefs)
+	row, err := h.svc.UpsertSalary(r.Context(), scope.TenantID, id, in)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "salary_failed", err.Error())
 		return

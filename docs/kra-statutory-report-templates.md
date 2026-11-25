@@ -41,6 +41,15 @@ payslip (insurance_relief / pension_deduction / mortgage_deduction / disability_
 the P9A grid too: E1 = 30% × gross, E2 = actual scheme contribution (salary_details join), E3 =
 30,000 cap, and the deductible = min(E1,E2,E3). P9A fidelity is complete.
 
+**Taxable gross (2026-11-25):** the gross on P9, P9A, P10 (summary, B1, B2) and P10A leaves out
+non-taxable earnings (per diem and other items on KRA's "employment income not chargeable to PAYE"
+list), read from the stored payslip lines (`taxable_gross.go`), so gross less the allowable
+deductions gives the chargeable pay. The payslip, net pay and stored payslips are unchanged. The
+NSSF, SHIF, NITA and Housing Levy schedules and P10 Sheet M still print the payslip gross: the levy
+bases are defined by regular pay rather than by taxability and need a decision first. Source: KRA
+PAYE brochure 2026/27 (https://www.kra.go.ke/images/publications/PAYE-Brochure-2026.pdf), P9A template
+(https://www.kra.go.ke/images/publications/P9-FORM-Template-2025.pdf).
+
 ---
 
 ## 2. P10 / P10A — Employer Annual PAYE Return

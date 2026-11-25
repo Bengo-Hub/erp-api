@@ -16,7 +16,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/customuser"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeebankaccount"
-	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/userroleassignment"
 )
 
@@ -132,6 +131,7 @@ type CreateInput struct {
 	IsDirector        bool
 	IsShareholder     bool
 	DateOfBirth       *time.Time
+	MiddleName        string // kept in the employee's metadata
 }
 
 // ErrNameRequired is returned by Create when first_name or last_name is blank. The HTTP
@@ -170,6 +170,9 @@ func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, in CreateInput
 	}
 	if in.ShifOrNhifNumber != "" {
 		b = b.SetShifOrNhifNumber(in.ShifOrNhifNumber)
+	}
+	if strings.TrimSpace(in.MiddleName) != "" {
+		b = b.SetMetadata(withMiddleName(nil, in.MiddleName))
 	}
 	row, err := b.Save(ctx)
 	if err != nil {
@@ -428,80 +431,6 @@ func (s *Service) SoftDelete(ctx context.Context, tenantID, id uuid.UUID) error 
 		return fmt.Errorf("employees: not found")
 	}
 	return nil
-}
-
-// UpsertSalary sets/updates an employee's salary details and recomputes hourly/daily
-// rates from monthly_salary (never trusting client-supplied derived values, §4).
-// SalaryReliefInput carries the per-employee salary extras captured on the salary form: the KRA
-// relief amounts plus the preferred net-pay disbursement channel. Zero-value = no relief and
-// default (bank_transfer) payout — backward-compatible with callers that don't set them.
-type SalaryReliefInput struct {
-	InsurancePremium    decimal.Decimal
-	PensionContribution decimal.Decimal
-	MortgageInterest    decimal.Decimal
-	DisabilityExempt    bool
-	// PreferredPayoutMethod: bank_transfer | mpesa_b2c | airtel | paystack_mobile | cash.
-	PreferredPayoutMethod string
-	PayoutPhone           string // MSISDN for mobile-money channels
-}
-
-func (s *Service) UpsertSalary(ctx context.Context, tenantID, employeeID uuid.UUID, monthly decimal.Decimal, payMode, incomeTax, currency string, reliefs SalaryReliefInput) (*ent.SalaryDetails, error) {
-	if _, err := s.Get(ctx, tenantID, employeeID); err != nil {
-		return nil, fmt.Errorf("employees: salary owner: %w", err)
-	}
-	hourly := decimal.Zero
-	daily := decimal.Zero
-	if monthly.GreaterThan(decimal.Zero) {
-		hourly = monthly.DivRound(hoursPerMonth, 4)
-		daily = monthly.DivRound(daysPerMonth, 4)
-	}
-	if incomeTax == "" {
-		incomeTax = "primary"
-	}
-	if currency == "" {
-		currency = "KES"
-	}
-	payoutMethod := reliefs.PreferredPayoutMethod
-	if payoutMethod == "" {
-		payoutMethod = "bank_transfer"
-	}
-
-	existing, err := s.orm.SalaryDetails.Query().
-		Where(salarydetails.TenantID(tenantID), salarydetails.EmployeeID(employeeID)).
-		First(ctx)
-	if ent.IsNotFound(err) {
-		return s.orm.SalaryDetails.Create().
-			SetTenantID(tenantID).
-			SetEmployeeID(employeeID).
-			SetMonthlySalary(monthly).
-			SetHourlyRate(hourly).
-			SetDailyRate(daily).
-			SetPayMode(payMode).
-			SetIncomeTax(incomeTax).
-			SetCurrency(currency).
-			SetInsurancePremium(reliefs.InsurancePremium).
-			SetPensionContribution(reliefs.PensionContribution).
-			SetMortgageInterest(reliefs.MortgageInterest).
-			SetDisabilityExempt(reliefs.DisabilityExempt).
-			SetPreferredPayoutMethod(payoutMethod).
-			SetPayoutPhone(reliefs.PayoutPhone).
-			Save(ctx)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("employees: salary lookup: %w", err)
-	}
-	return existing.Update().
-		SetMonthlySalary(monthly).
-		SetHourlyRate(hourly).
-		SetDailyRate(daily).
-		SetPayMode(payMode).
-		SetIncomeTax(incomeTax).
-		SetCurrency(currency).
-		SetInsurancePremium(reliefs.InsurancePremium).
-		SetPensionContribution(reliefs.PensionContribution).
-		SetMortgageInterest(reliefs.MortgageInterest).
-		SetDisabilityExempt(reliefs.DisabilityExempt).
-		Save(ctx)
 }
 
 // SetPrimaryBankAccount enforces "single primary per employee" atomically (port of

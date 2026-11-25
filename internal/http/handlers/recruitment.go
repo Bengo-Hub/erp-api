@@ -38,6 +38,7 @@ func (h *RecruitmentHandler) RegisterRoutes(r chi.Router) {
 		rr.Get("/postings", h.ListPostings)
 		rr.Post("/postings", h.CreatePosting)
 		rr.Put("/postings/{id}", h.UpdatePosting)
+		rr.Delete("/postings/{id}", h.DeletePosting)
 		rr.Put("/postings/{id}/status", h.SetPostingStatus)
 
 		rr.Get("/candidates", h.ListCandidates)
@@ -101,7 +102,7 @@ func (b postingBody) toInput() recruitment.PostingInput {
 		EmploymentType: b.EmploymentType, NumPositions: b.NumPositions,
 	}
 	if b.ApplicationDeadline != "" {
-		if t, err := time.Parse("2006-01-02", b.ApplicationDeadline); err == nil {
+		if t, err := parseDate(b.ApplicationDeadline); err == nil {
 			in.ApplicationDeadline = &t
 		}
 	}
@@ -148,6 +149,29 @@ func (h *RecruitmentHandler) UpdatePosting(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	writeJSON(w, http.StatusOK, row)
+}
+
+// DeletePosting removes a posting without applications.
+func (h *RecruitmentHandler) DeletePosting(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permRecruitmentManage) {
+		return
+	}
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	err := h.svc.DeletePosting(r.Context(), scope.TenantID, id)
+	switch {
+	case ent.IsNotFound(err):
+		writeError(w, http.StatusNotFound, "not_found", "posting not found")
+	case errors.Is(err, recruitment.ErrPostingInUse):
+		writeError(w, http.StatusConflict, "in_use", err.Error())
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to delete posting")
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
 
 type statusBody struct {

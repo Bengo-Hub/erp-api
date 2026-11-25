@@ -3,6 +3,7 @@ package employees
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,12 +32,31 @@ type UpdateInput struct {
 	// DateOfBirth sets the date of birth; a pointer to the zero time clears it.
 	DateOfBirth    *time.Time
 	EmployeeNumber *string
-	Terminated        *bool
-	IsDirector        *bool
-	IsShareholder     *bool
+	Terminated     *bool
+	IsDirector     *bool
+	IsShareholder  *bool
 	// WorkShiftID sets the standard work shift (the person's weekly working hours); a pointer to
 	// uuid.Nil clears it. It must be one of the tenant's shifts.
 	WorkShiftID *uuid.UUID
+	// MiddleName is kept in the employee's metadata; "" clears it.
+	MiddleName *string
+}
+
+// metaMiddleName is the employee metadata key of the middle name.
+const metaMiddleName = "middle_name"
+
+// withMiddleName returns metadata with the middle name set, or removed when blank.
+func withMiddleName(meta map[string]any, name string) map[string]any {
+	out := map[string]any{}
+	for k, v := range meta {
+		out[k] = v
+	}
+	if name = strings.TrimSpace(name); name == "" {
+		delete(out, metaMiddleName)
+	} else {
+		out[metaMiddleName] = name
+	}
+	return out
 }
 
 // Update edits a tenant-scoped employee. Only non-nil fields are applied.
@@ -92,6 +112,9 @@ func (s *Service) Update(ctx context.Context, tenantID, id uuid.UUID, in UpdateI
 		case !*in.Terminated && current.Terminated:
 			u = u.ClearTerminatedAt()
 		}
+	}
+	if in.MiddleName != nil {
+		u = u.SetMetadata(withMiddleName(current.Metadata, *in.MiddleName))
 	}
 	if in.IsDirector != nil {
 		u = u.SetIsDirector(*in.IsDirector)

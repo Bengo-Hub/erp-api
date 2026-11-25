@@ -159,6 +159,12 @@ func (s *Service) UpdatePosting(ctx context.Context, tenantID, id uuid.UUID, in 
 	if in.ApplicationDeadline != nil {
 		u = u.SetApplicationDeadline(*in.ApplicationDeadline)
 	}
+	if in.Status != "" && in.Status != string(p.Status) {
+		u = u.SetStatus(jobposting.Status(in.Status))
+		if in.Status == "closed" {
+			u = u.SetClosedAt(time.Now().UTC())
+		}
+	}
 	u = applyPostingOptional(u, in)
 	if in.Title != p.Title {
 		slug, err := s.uniquePostingSlug(ctx, tenantID, in.Title, id)
@@ -168,6 +174,26 @@ func (s *Service) UpdatePosting(ctx context.Context, tenantID, id uuid.UUID, in 
 		u = u.SetSlug(slug)
 	}
 	return u.Save(ctx)
+}
+
+// ErrPostingInUse is returned when a posting with applications is deleted.
+var ErrPostingInUse = errors.New("this posting has applications; close it instead")
+
+// DeletePosting removes a posting nobody has applied to (ErrPostingInUse otherwise).
+func (s *Service) DeletePosting(ctx context.Context, tenantID, id uuid.UUID) error {
+	p, err := s.orm.JobPosting.Query().Where(jobposting.TenantID(tenantID), jobposting.ID(id)).Only(ctx)
+	if err != nil {
+		return err
+	}
+	used, err := s.orm.Application.Query().
+		Where(application.TenantID(tenantID), application.JobID(p.ID)).Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("recruitment: check applications: %w", err)
+	}
+	if used {
+		return ErrPostingInUse
+	}
+	return s.orm.JobPosting.DeleteOne(p).Exec(ctx)
 }
 
 // SetPostingStatus updates a posting's status, stamping closed_at when moving to closed.

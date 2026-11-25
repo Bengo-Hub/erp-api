@@ -41,6 +41,11 @@ type EmployeeView struct {
 	BasicSalary *string `json:"basic_salary,omitempty"`
 	// JobGroup is the salary_details job group as {id, name} (the UI's relation shape).
 	JobGroup *NamedRef `json:"job_group,omitempty"`
+	// MiddleName is kept in the employee's metadata (the table has first and last name only).
+	MiddleName string `json:"middle_name,omitempty"`
+	// Salary is the stored salary form. Set on a single employee read only, for callers who may
+	// manage employees or see payroll.
+	Salary *SalaryView `json:"salary,omitempty"`
 }
 
 // NamedRef is an id with its display name.
@@ -55,6 +60,7 @@ func (s *Service) Enrich(ctx context.Context, tenantID uuid.UUID, emps []*ent.Em
 	out := make([]EmployeeView, len(emps))
 	for i, e := range emps {
 		out[i] = EmployeeView{Employee: e}
+		out[i].MiddleName, _ = e.Metadata[metaMiddleName].(string)
 	}
 	if len(emps) == 0 {
 		return out, nil
@@ -81,16 +87,18 @@ func (s *Service) Enrich(ctx context.Context, tenantID uuid.UUID, emps []*ent.Em
 		out[idx[c.EmployeeID]].PhoneNumber = *c.Phone
 	}
 	salaries, err := s.orm.SalaryDetails.Query().
-		Where(salarydetails.TenantID(tenantID), salarydetails.EmployeeIDIn(ids...), salarydetails.IsActive(true)).
-		Order(ent.Asc(salarydetails.FieldUpdatedAt)).All(ctx)
+		Where(salarydetails.TenantID(tenantID), salarydetails.EmployeeIDIn(ids...)).
+		Order(ent.Asc(salarydetails.FieldIsActive), ent.Asc(salarydetails.FieldCreatedAt)).All(ctx)
 	if err != nil {
 		return nil, err
 	}
 	groupIDs := map[uuid.UUID]bool{}
-	for _, sd := range salaries { // ascending, so the latest active row wins
+	for _, sd := range salaries { // inactive first, so the newest active row (payroll's row) wins
 		i := idx[sd.EmployeeID]
-		amount := sd.MonthlySalary.StringFixed(2)
-		out[i].BasicSalary = &amount
+		if sd.IsActive {
+			amount := sd.MonthlySalary.StringFixed(2)
+			out[i].BasicSalary = &amount
+		}
 		out[i].JobGroup = nil
 		if sd.JobGroupID != nil {
 			out[i].JobGroup = &NamedRef{ID: *sd.JobGroupID}

@@ -345,7 +345,7 @@ func (s *Service) perDiemRate(ctx context.Context, tenantID, employeeID uuid.UUI
 	if len(p.JobGroupRates) > 0 {
 		sd, err := s.orm.SalaryDetails.Query().
 			Where(salarydetails.TenantID(tenantID), salarydetails.EmployeeID(employeeID)).
-			First(ctx)
+			Order(ent.Desc(salarydetails.FieldIsActive), ent.Desc(salarydetails.FieldCreatedAt)).First(ctx)
 		if err == nil && sd.JobGroupID != nil {
 			if r, ok := p.JobGroupRates[sd.JobGroupID.String()]; ok && r.IsPositive() {
 				return r
