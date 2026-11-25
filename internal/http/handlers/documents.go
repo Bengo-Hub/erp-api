@@ -201,12 +201,12 @@ func (h *DocumentsHandler) payslipInput(ctx context.Context, tenantID uuid.UUID,
 	if hr, err := h.orm.HRDetails.Query().
 		Where(hrdetails.TenantID(tenantID), hrdetails.EmployeeID(ps.EmployeeID)).First(ctx); err == nil && hr != nil {
 		if hr.DepartmentID != nil {
-			if dep, derr := h.orm.Department.Query().Where(department.ID(*hr.DepartmentID)).First(ctx); derr == nil && dep != nil {
+			if dep, derr := h.orm.Department.Query().Where(department.ID(*hr.DepartmentID), department.TenantID(tenantID)).First(ctx); derr == nil && dep != nil {
 				in.Department = dep.Title
 			}
 		}
 		if hr.RegionID != nil {
-			if reg, rerr := h.orm.Region.Query().Where(region.ID(*hr.RegionID)).First(ctx); rerr == nil && reg != nil {
+			if reg, rerr := h.orm.Region.Query().Where(region.ID(*hr.RegionID), region.Or(region.TenantID(tenantID), region.TenantIDIsNil())).First(ctx); rerr == nil && reg != nil {
 				in.Region = reg.Name
 			}
 		}

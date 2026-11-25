@@ -49,6 +49,59 @@ func isPlatformOwner(scope RequestScope) bool {
 	return scope.Claims != nil && scope.Claims.IsPlatformOwner
 }
 
+// actor is the caller of a role change, with what it may hand out.
+func (h *RBACHandler) actor(r *http.Request, scope RequestScope) (rbac.Actor, error) {
+	a := rbac.Actor{UserID: scope.UserID, PlatformOwner: isPlatformOwner(scope), Holds: func(code string) bool { return hasPermission(scope, code) }}
+	if scope.Claims != nil {
+		a.Subject = scope.Claims.Subject
+		a.Admin = scope.Claims.IsSuperuser()
+	}
+	if !a.Admin && scope.UserID != uuid.Nil {
+		admin, err := h.svc.HasAdminRole(r.Context(), scope.TenantID, scope.UserID)
+		if err != nil {
+			return a, err
+		}
+		a.Admin = admin
+	}
+	// The permission lookup queries the user's roles; keep the answers for the codes of one call.
+	seen := map[string]bool{}
+	holds := a.Holds
+	a.Holds = func(code string) bool {
+		v, ok := seen[code]
+		if !ok {
+			v = holds(code)
+			seen[code] = v
+		}
+		return v
+	}
+	return a, nil
+}
+
+// writeRoleError answers a refused role change with a readable reason.
+func writeRoleError(w http.ResponseWriter, code string, err error) {
+	var beyond *rbac.BeyondGrantError
+	switch {
+	case errors.Is(err, rbac.ErrSystemRole):
+		writeError(w, http.StatusForbidden, "system_role", err.Error())
+	case errors.Is(err, rbac.ErrWildcardRole):
+		writeError(w, http.StatusForbidden, "wildcard_role", err.Error())
+	case errors.Is(err, rbac.ErrOwnRoles):
+		writeError(w, http.StatusForbidden, "own_roles", err.Error())
+	case errors.Is(err, rbac.ErrAdminOnlyRole), errors.As(err, &beyond):
+		writeError(w, http.StatusForbidden, "beyond_own_permissions", err.Error())
+	case errors.Is(err, rbac.ErrLastAdmin):
+		writeError(w, http.StatusConflict, "last_admin", err.Error())
+	case errors.Is(err, rbac.ErrBuiltInCode):
+		writeError(w, http.StatusBadRequest, "built_in_code", err.Error())
+	case errors.Is(err, rbac.ErrUserNotFound):
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+	case ent.IsNotFound(err):
+		writeError(w, http.StatusNotFound, "not_found", "role not found")
+	default:
+		writeError(w, http.StatusBadRequest, code, err.Error())
+	}
+}
+
 func roleView(r *ent.Role, permCount, memberCount int) map[string]any {
 	var tenantID any
 	if r.TenantID != nil {
@@ -138,7 +191,7 @@ func (h *RBACHandler) CreateRole(w http.ResponseWriter, r *http.Request) {
 	}
 	role, err := h.svc.CreateRole(r.Context(), scope.TenantID, b.RoleCode, b.Name, b.Description)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
+		writeRoleError(w, "create_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, roleView(role, 0, 0))
@@ -160,16 +213,8 @@ func (h *RBACHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	role, err := h.svc.UpdateRole(r.Context(), scope.TenantID, id, b.Name, b.Description, isPlatformOwner(scope))
-	if errors.Is(err, rbac.ErrSystemRole) {
-		writeError(w, http.StatusForbidden, "system_role", err.Error())
-		return
-	}
-	if ent.IsNotFound(err) {
-		writeError(w, http.StatusNotFound, "not_found", "role not found")
-		return
-	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		writeRoleError(w, "update_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, roleView(role, 0, 0))
@@ -185,17 +230,12 @@ func (h *RBACHandler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	err = h.svc.DeleteRole(r.Context(), scope.TenantID, id)
-	if errors.Is(err, rbac.ErrSystemRole) {
-		writeError(w, http.StatusForbidden, "system_role", err.Error())
-		return
-	}
-	if ent.IsNotFound(err) {
-		writeError(w, http.StatusNotFound, "not_found", "role not found")
-		return
+	a, err := h.actor(r, scope)
+	if err == nil {
+		err = h.svc.DeleteRole(r.Context(), a, scope.TenantID, id)
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "delete_failed", err.Error())
+		writeRoleError(w, "delete_failed", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -220,21 +260,12 @@ func (h *RBACHandler) SetRolePermissions(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	err = h.svc.SetRolePermissions(r.Context(), scope.TenantID, id, b.PermissionCodes, isPlatformOwner(scope))
-	if errors.Is(err, rbac.ErrSystemRole) {
-		writeError(w, http.StatusForbidden, "system_role", err.Error())
-		return
-	}
-	if errors.Is(err, rbac.ErrWildcardRole) {
-		writeError(w, http.StatusForbidden, "wildcard_role", err.Error())
-		return
-	}
-	if ent.IsNotFound(err) {
-		writeError(w, http.StatusNotFound, "not_found", "role not found")
-		return
+	a, err := h.actor(r, scope)
+	if err == nil {
+		err = h.svc.SetRolePermissions(r.Context(), a, scope.TenantID, id, b.PermissionCodes)
 	}
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		writeRoleError(w, "update_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"role_id": id, "permission_codes": b.PermissionCodes})
@@ -264,16 +295,12 @@ func (h *RBACHandler) AssignUserRole(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid role id")
 		return
 	}
-	if err := h.svc.AssignUserRole(r.Context(), scope.TenantID, userID, roleID); err != nil {
-		if errors.Is(err, rbac.ErrUserNotFound) {
-			writeError(w, http.StatusNotFound, "not_found", err.Error())
-			return
-		}
-		if ent.IsNotFound(err) {
-			writeError(w, http.StatusNotFound, "not_found", "role not found")
-			return
-		}
-		writeError(w, http.StatusBadRequest, "assign_failed", err.Error())
+	a, err := h.actor(r, scope)
+	if err == nil {
+		err = h.svc.AssignUserRole(r.Context(), a, scope.TenantID, userID, roleID)
+	}
+	if err != nil {
+		writeRoleError(w, "assign_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"user_id": userID, "role_id": roleID})
@@ -294,8 +321,12 @@ func (h *RBACHandler) RemoveUserRole(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid role id")
 		return
 	}
-	if err := h.svc.RemoveUserRole(r.Context(), scope.TenantID, userID, roleID); err != nil {
-		writeError(w, http.StatusBadRequest, "remove_failed", err.Error())
+	a, err := h.actor(r, scope)
+	if err == nil {
+		err = h.svc.RemoveUserRole(r.Context(), a, scope.TenantID, userID, roleID)
+	}
+	if err != nil {
+		writeRoleError(w, "remove_failed", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

@@ -407,11 +407,20 @@ func (b ruleBody) input() attendance.RuleInput {
 
 // writeUpdateError answers 404 for a missing (or other-tenant) row and 400 otherwise.
 func writeUpdateError(w http.ResponseWriter, err error) {
-	if errors.Is(err, attendance.ErrNotFound) {
+	writeAttendanceError(w, "update_failed", err)
+}
+
+// writeAttendanceError answers 404 for a row or employee the tenant does not have, else 400 with
+// the given code.
+func writeAttendanceError(w http.ResponseWriter, code string, err error) {
+	switch {
+	case errors.Is(err, attendance.ErrEmployeeNotFound):
+		writeError(w, http.StatusNotFound, "not_found", "employee not found")
+	case errors.Is(err, attendance.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", err.Error())
-		return
+	default:
+		writeError(w, http.StatusBadRequest, code, clientMessage(err))
 	}
-	writeError(w, http.StatusBadRequest, "update_failed", clientMessage(err))
 }
 
 func (h *AttendanceHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
@@ -588,7 +597,7 @@ func (h *AttendanceHandler) CreateOffDay(w http.ResponseWriter, r *http.Request)
 	}
 	row, err := h.svc.CreateOffDay(r.Context(), scope.TenantID, empID, date, b.Reason)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
+		writeAttendanceError(w, "create_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)

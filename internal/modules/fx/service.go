@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 
@@ -30,9 +31,11 @@ func NewService(orm *ent.Client, log *zap.Logger) *Service {
 	return &Service{orm: orm, http: &http.Client{Timeout: 12 * time.Second}, log: log.Named("fx")}
 }
 
-// ListRates returns stored rates for a base currency (most recent first).
-func (s *Service) ListRates(ctx context.Context, base string) ([]*ent.ExchangeRate, error) {
-	q := s.orm.ExchangeRate.Query()
+// ListRates returns the platform's and the tenant's own stored rates for a base currency (most
+// recent first).
+func (s *Service) ListRates(ctx context.Context, tenantID uuid.UUID, base string) ([]*ent.ExchangeRate, error) {
+	q := s.orm.ExchangeRate.Query().
+		Where(exchangerate.Or(exchangerate.TenantIDIsNil(), exchangerate.TenantID(tenantID)))
 	if base != "" {
 		q = q.Where(exchangerate.BaseCurrency(base))
 	}
@@ -111,9 +114,11 @@ func (s *Service) fetchForSettings(ctx context.Context, st *ent.ExchangeRateAPIS
 	return n, nil
 }
 
-// upsertRate inserts or updates the unique (base, quote, date) rate row.
+// upsertRate inserts or updates the platform's (base, quote, date) rate row. A tenant's own rate
+// for the same pair and day is left alone.
 func (s *Service) upsertRate(ctx context.Context, base, quote string, rate decimal.Decimal, date time.Time, source string) error {
 	existing, err := s.orm.ExchangeRate.Query().Where(
+		exchangerate.TenantIDIsNil(),
 		exchangerate.BaseCurrency(base),
 		exchangerate.QuoteCurrency(quote),
 		exchangerate.RateDate(date),

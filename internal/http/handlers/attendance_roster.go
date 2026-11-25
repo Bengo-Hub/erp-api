@@ -102,7 +102,7 @@ func (h *AttendanceHandler) UpsertPlannerCell(w http.ResponseWriter, r *http.Req
 	in.CreatedBy = &uid
 	row, err := h.svc.UpsertPlannerCell(r.Context(), scope.TenantID, in)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "upsert_failed", err.Error())
+		writeAttendanceError(w, "upsert_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, row)
@@ -242,7 +242,7 @@ func (h *AttendanceHandler) UpsertSlot(w http.ResponseWriter, r *http.Request) {
 		StartTime: b.StartTime, EndTime: b.EndTime, IsOffDay: b.IsOffDay,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "upsert_failed", err.Error())
+		writeAttendanceError(w, "upsert_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, row)
@@ -302,7 +302,7 @@ func (h *AttendanceHandler) AssignRoster(w http.ResponseWriter, r *http.Request)
 	}
 	row, err := h.svc.AssignRoster(r.Context(), scope.TenantID, empID, rosterID, start, end)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "assign_failed", err.Error())
+		writeAttendanceError(w, "assign_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)
@@ -389,7 +389,7 @@ func (h *AttendanceHandler) CreateOverride(w http.ResponseWriter, r *http.Reques
 	in.CreatedBy = &uid
 	row, err := h.svc.CreateOverride(r.Context(), scope.TenantID, in)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
+		writeAttendanceError(w, "create_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, row)

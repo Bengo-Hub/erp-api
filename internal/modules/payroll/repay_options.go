@@ -51,11 +51,6 @@ func (s *Service) ensureRepayOption(ctx context.Context, tenantID uuid.UUID, opt
 	return &id, nil
 }
 
-// GetRepayOption returns a tenant-scoped repay option (for the schedule preview / view).
-func (s *Service) GetRepayOption(ctx context.Context, id uuid.UUID) (*ent.RepayOption, error) {
-	return s.orm.RepayOption.Get(ctx, id)
-}
-
 // RepayPlans loads the tenant's repay options with the given ids in one query, keyed by id
 // (the advances and losses lists show each record's installment plan).
 func (s *Service) RepayPlans(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]*ent.RepayOption, error) {

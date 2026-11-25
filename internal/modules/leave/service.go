@@ -14,6 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavecategory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaveentitlement"
@@ -170,6 +171,17 @@ func (s *Service) ListEntitlements(ctx context.Context, tenantID uuid.UUID, empl
 // UpsertEntitlement sets an employee's entitled days for a category/year and keeps the
 // matching LeaveBalance in sync (entitled changes propagate to remaining).
 func (s *Service) UpsertEntitlement(ctx context.Context, tenantID, employeeID, categoryID uuid.UUID, year int, days decimal.Decimal) (*ent.LeaveEntitlement, error) {
+	if ok, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.ID(employeeID)).Exist(ctx); err != nil {
+		return nil, fmt.Errorf("leave: load employee: %w", err)
+	} else if !ok {
+		return nil, ErrEmployeeNotFound
+	}
+	if ok, err := s.orm.LeaveCategory.Query().Where(leavecategory.ID(categoryID),
+		leavecategory.TenantIDIn(tenantID, s.systemTenant)).Exist(ctx); err != nil {
+		return nil, fmt.Errorf("leave: load leave type: %w", err)
+	} else if !ok {
+		return nil, ErrUnknownCategory
+	}
 	tx, err := s.orm.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("leave: begin tx: %w", err)

@@ -37,7 +37,7 @@ func (s *Service) lookupNames(ctx context.Context, tenantID uuid.UUID, empIDs, c
 		}
 	}
 	if len(catIDs) > 0 {
-		cats, err := s.orm.LeaveCategory.Query().Where(leavecategory.IDIn(catIDs...)).
+		cats, err := s.orm.LeaveCategory.Query().Where(leavecategory.IDIn(catIDs...), leavecategory.TenantIDIn(tenantID, s.systemTenant)).
 			Select(leavecategory.FieldID, leavecategory.FieldName).All(ctx)
 		if err != nil {
 			return n, fmt.Errorf("leave: load categories: %w", err)

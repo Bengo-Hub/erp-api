@@ -37,7 +37,7 @@ func (h *FXHandler) ListRates(w http.ResponseWriter, r *http.Request) {
 	if !ok || !requirePermission(w, scope, permFxView) {
 		return
 	}
-	rows, err := h.svc.ListRates(r.Context(), r.URL.Query().Get("base"))
+	rows, err := h.svc.ListRates(r.Context(), scope.TenantID, r.URL.Query().Get("base"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list rates")
 		return

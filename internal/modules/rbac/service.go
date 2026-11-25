@@ -3,6 +3,7 @@ package rbac
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -139,20 +140,23 @@ func (s *Service) reconcileRoles(ctx context.Context, tenantID, userID uuid.UUID
 	return nil
 }
 
-// resolveRole finds a role by code, preferring a tenant-specific role then falling
-// back to a global (tenant_id IS NULL) system role.
+// resolveRole finds the role an SSO role code stands for. A built-in code is always the shared
+// role, so a tenant's own role can never stand in for it; any other code prefers the tenant's.
 func (s *Service) resolveRole(ctx context.Context, tenantID uuid.UUID, code string) (*ent.Role, error) {
+	if !IsBuiltInRoleCode(code) {
+		r, err := s.orm.Role.Query().
+			Where(role.TenantID(tenantID), role.RoleCode(code)).
+			Only(ctx)
+		if err == nil {
+			return r, nil
+		}
+		if !ent.IsNotFound(err) {
+			return nil, err
+		}
+	}
 	r, err := s.orm.Role.Query().
-		Where(role.TenantID(tenantID), role.RoleCode(code)).
-		Only(ctx)
-	if err == nil {
-		return r, nil
-	}
-	if !ent.IsNotFound(err) {
-		return nil, err
-	}
-	r, err = s.orm.Role.Query().
 		Where(role.TenantIDIsNil(), role.RoleCode(code)).
+		Order(ent.Asc(role.FieldCreatedAt), ent.Asc(role.FieldID)).
 		First(ctx)
 	if ent.IsNotFound(err) {
 		return nil, nil
@@ -264,6 +268,9 @@ func (s *Service) CreateRole(ctx context.Context, tenantID uuid.UUID, code, name
 	if code == "" || name == "" {
 		return nil, fmt.Errorf("role_code and name are required")
 	}
+	if err := s.refuseBuiltInCode(ctx, code, name); err != nil {
+		return nil, err
+	}
 	return s.orm.Role.Create().
 		SetTenantID(tenantID).
 		SetRoleCode(code).
@@ -300,6 +307,11 @@ func (s *Service) UpdateRole(ctx context.Context, tenantID, roleID uuid.UUID, na
 	if err != nil {
 		return nil, err
 	}
+	if r.TenantID != nil {
+		if err := s.refuseBuiltInCode(ctx, name); err != nil {
+			return nil, err
+		}
+	}
 	upd := r.Update()
 	if strings.TrimSpace(name) != "" {
 		upd = upd.SetName(strings.TrimSpace(name))
@@ -309,11 +321,21 @@ func (s *Service) UpdateRole(ctx context.Context, tenantID, roleID uuid.UUID, na
 }
 
 // DeleteRole removes one of the tenant's own roles and its permission + user assignments. Global
-// and system roles are never deleted here, whoever asks.
-func (s *Service) DeleteRole(ctx context.Context, tenantID, roleID uuid.UUID) error {
+// and system roles are never deleted here, whoever asks. Deleting a role one holds would change
+// one's own roles, so it is refused.
+func (s *Service) DeleteRole(ctx context.Context, a Actor, tenantID, roleID uuid.UUID) error {
 	r, err := s.editableRole(ctx, tenantID, roleID, false)
 	if err != nil {
 		return err
+	}
+	holders, err := s.orm.UserRoleAssignment.Query().Where(userroleassignment.RoleID(roleID)).All(ctx)
+	if err != nil {
+		return fmt.Errorf("load assignments: %w", err)
+	}
+	for _, as := range holders {
+		if err := s.refuseOwn(ctx, a, as.UserID); err != nil {
+			return err
+		}
 	}
 	if _, err := s.orm.UserRoleAssignment.Delete().Where(userroleassignment.RoleID(roleID)).Exec(ctx); err != nil {
 		return fmt.Errorf("clear assignments: %w", err)
@@ -326,14 +348,28 @@ func (s *Service) DeleteRole(ctx context.Context, tenantID, roleID uuid.UUID) er
 }
 
 // SetRolePermissions reconciles a role's permissions to exactly the given codes (see
-// editableRole). The all-access role (erp_admin) is protected. Unknown codes are skipped.
-func (s *Service) SetRolePermissions(ctx context.Context, tenantID, roleID uuid.UUID, codes []string, platformOwner bool) error {
-	r, err := s.editableRole(ctx, tenantID, roleID, platformOwner)
+// editableRole). The all-access role (erp_admin) is protected. Unknown codes are skipped. Codes
+// the caller does not hold cannot be added; those the role already has may stay.
+func (s *Service) SetRolePermissions(ctx context.Context, a Actor, tenantID, roleID uuid.UUID, codes []string) error {
+	r, err := s.editableRole(ctx, tenantID, roleID, a.PlatformOwner)
 	if err != nil {
 		return err
 	}
 	if r.RoleCode == wildcardRoleCode {
 		return ErrWildcardRole
+	}
+	have, err := roleCodes(ctx, r)
+	if err != nil {
+		return fmt.Errorf("load role permissions: %w", err)
+	}
+	var added []string
+	for _, c := range codes {
+		if !slices.Contains(have, c) && !slices.Contains(added, c) {
+			added = append(added, c)
+		}
+	}
+	if err := a.checkGrant(added); err != nil {
+		return err
 	}
 	perms, err := s.orm.Permission.Query().Where(permission.PermissionCodeIn(codes...)).All(ctx)
 	if err != nil {
@@ -364,9 +400,18 @@ func (s *Service) userInTenant(ctx context.Context, tenantID, userID uuid.UUID) 
 		Where(userroleassignment.TenantID(tenantID), userroleassignment.UserID(userID)).Exist(ctx)
 }
 
-// AssignUserRole idempotently grants a role the tenant can see to one of its users.
-func (s *Service) AssignUserRole(ctx context.Context, tenantID, userID, roleID uuid.UUID) error {
-	if _, err := s.visibleRole(ctx, tenantID, roleID); err != nil {
+// AssignUserRole idempotently grants a role the tenant can see to one of its users: never to the
+// caller, and never more than the caller holds (see Actor). Role sync from SSO tokens does not
+// come through here (reconcileRoles); it only follows the roles auth-api issued.
+func (s *Service) AssignUserRole(ctx context.Context, a Actor, tenantID, userID, roleID uuid.UUID) error {
+	if err := s.refuseOwn(ctx, a, userID); err != nil {
+		return err
+	}
+	r, err := s.visibleRole(ctx, tenantID, roleID)
+	if err != nil {
+		return err
+	}
+	if err := s.checkAssign(ctx, a, r); err != nil {
 		return err
 	}
 	if ok, err := s.userInTenant(ctx, tenantID, userID); err != nil {
@@ -385,13 +430,5 @@ func (s *Service) AssignUserRole(ctx context.Context, tenantID, userID, roleID u
 	}
 	_, err = s.orm.UserRoleAssignment.Create().
 		SetTenantID(tenantID).SetUserID(userID).SetRoleID(roleID).Save(ctx)
-	return err
-}
-
-// RemoveUserRole revokes a service role from a user within a tenant.
-func (s *Service) RemoveUserRole(ctx context.Context, tenantID, userID, roleID uuid.UUID) error {
-	_, err := s.orm.UserRoleAssignment.Delete().
-		Where(userroleassignment.TenantID(tenantID), userroleassignment.UserID(userID), userroleassignment.RoleID(roleID)).
-		Exec(ctx)
 	return err
 }

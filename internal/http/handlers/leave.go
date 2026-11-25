@@ -256,7 +256,7 @@ func (h *LeaveHandler) UpsertEntitlement(w http.ResponseWriter, r *http.Request)
 	}
 	row, err := h.svc.UpsertEntitlement(r.Context(), scope.TenantID, empID, catID, body.Year, days)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "upsert_failed", err.Error())
+		leaveRequestError(w, "upsert_failed", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, row)

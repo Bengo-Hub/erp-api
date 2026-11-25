@@ -14,7 +14,22 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/role"
+	"github.com/Bengo-Hub/erp-api/internal/modules/rbac"
 )
+
+// TestBuiltInCodesMatchSeed: the codes a custom role may not take are exactly the seeded roles.
+func TestBuiltInCodesMatchSeed(t *testing.T) {
+	var seeded []string
+	for code := range roleGrants {
+		seeded = append(seeded, code)
+	}
+	known := rbac.BuiltInRoleCodes()
+	slices.Sort(seeded)
+	slices.Sort(known)
+	if !slices.Equal(seeded, known) {
+		t.Fatalf("seeded roles %v, built-in codes %v", seeded, known)
+	}
+}
 
 func seedTestClient(t *testing.T) *ent.Client {
 	t.Helper()

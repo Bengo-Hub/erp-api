@@ -64,8 +64,41 @@ type SlotInput struct {
 	IsOffDay   bool
 }
 
+// requireRoster refuses a roster that is not the tenant's.
+func (s *Service) requireRoster(ctx context.Context, tenantID, id uuid.UUID) error {
+	ok, err := s.orm.ShiftRoster.Query().Where(shiftroster.TenantID(tenantID), shiftroster.ID(id)).Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("attendance: load roster: %w", err)
+	}
+	if !ok {
+		return fmt.Errorf("roster %w", ErrNotFound)
+	}
+	return nil
+}
+
+// requireShift refuses a work shift that is not the tenant's; nil is no shift.
+func (s *Service) requireShift(ctx context.Context, tenantID uuid.UUID, id *uuid.UUID) error {
+	if id == nil {
+		return nil
+	}
+	ok, err := s.orm.WorkShift.Query().Where(workshift.TenantID(tenantID), workshift.ID(*id)).Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("attendance: load work shift: %w", err)
+	}
+	if !ok {
+		return fmt.Errorf("work shift %w", ErrNotFound)
+	}
+	return nil
+}
+
 // UpsertSlot creates/updates a roster slot (unique per roster/employee/cycle_day).
 func (s *Service) UpsertSlot(ctx context.Context, tenantID uuid.UUID, in SlotInput) (*ent.ShiftRosterSlot, error) {
+	if err := s.requireRoster(ctx, tenantID, in.RosterID); err != nil {
+		return nil, err
+	}
+	if _, err := s.loadEmployee(ctx, tenantID, in.EmployeeID); err != nil {
+		return nil, err
+	}
 	existing, err := s.orm.ShiftRosterSlot.Query().Where(
 		shiftrosterslot.TenantID(tenantID),
 		shiftrosterslot.RosterID(in.RosterID),
@@ -116,6 +149,12 @@ func (s *Service) ListSlots(ctx context.Context, tenantID, rosterID uuid.UUID) (
 
 // AssignRoster assigns an employee to a roster for a date window (the missing planner link).
 func (s *Service) AssignRoster(ctx context.Context, tenantID, employeeID, rosterID uuid.UUID, start time.Time, end *time.Time) (*ent.ShiftAssignment, error) {
+	if err := s.requireRoster(ctx, tenantID, rosterID); err != nil {
+		return nil, err
+	}
+	if _, err := s.loadEmployee(ctx, tenantID, employeeID); err != nil {
+		return nil, err
+	}
 	b := s.orm.ShiftAssignment.Create().
 		SetTenantID(tenantID).SetEmployeeID(employeeID).SetRosterID(rosterID).
 		SetStartDate(start).SetIsActive(true)
@@ -199,6 +238,12 @@ func (s *Service) CreateOverride(ctx context.Context, tenantID uuid.UUID, in Ove
 	if err := validateOverride(&in); err != nil {
 		return nil, err
 	}
+	if _, err := s.loadEmployee(ctx, tenantID, in.EmployeeID); err != nil {
+		return nil, err
+	}
+	if err := s.requireShift(ctx, tenantID, in.WorkShiftID); err != nil {
+		return nil, err
+	}
 	status := in.Status
 	if status == "" {
 		status = "approved"
@@ -268,6 +313,12 @@ func (s *Service) UpsertPlannerCell(ctx context.Context, tenantID uuid.UUID, in 
 	overrideType := "manual_shift"
 	if in.WorkShiftID == nil {
 		overrideType = "off_duty"
+	}
+	if _, err := s.loadEmployee(ctx, tenantID, in.EmployeeID); err != nil {
+		return nil, err
+	}
+	if err := s.requireShift(ctx, tenantID, in.WorkShiftID); err != nil {
+		return nil, err
 	}
 	existing, err := s.orm.StaffShiftOverride.Query().Where(
 		staffshiftoverride.TenantID(tenantID),
@@ -416,6 +467,9 @@ func (s *Service) UpdateOverride(ctx context.Context, tenantID, id uuid.UUID, in
 		in.WorkShiftID = existing.WorkShiftID
 	}
 	if err := validateOverride(&in); err != nil {
+		return nil, err
+	}
+	if _, err := s.loadEmployee(ctx, tenantID, in.EmployeeID); err != nil {
 		return nil, err
 	}
 	u := existing.Update().

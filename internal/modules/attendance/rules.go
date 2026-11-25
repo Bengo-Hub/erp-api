@@ -321,6 +321,9 @@ func (s *Service) ListOffDays(ctx context.Context, tenantID uuid.UUID, employeeI
 
 // CreateOffDay inserts a tenant-scoped off-day for an employee.
 func (s *Service) CreateOffDay(ctx context.Context, tenantID, employeeID uuid.UUID, date time.Time, reason string) (*ent.OffDay, error) {
+	if _, err := s.loadEmployee(ctx, tenantID, employeeID); err != nil {
+		return nil, err
+	}
 	b := s.orm.OffDay.Create().SetTenantID(tenantID).SetEmployeeID(employeeID).SetDate(date)
 	if reason != "" {
 		b = b.SetReason(reason)
@@ -340,6 +343,9 @@ func (s *Service) UpdateOffDay(ctx context.Context, tenantID, id, employeeID uui
 	}
 	if err != nil {
 		return nil, fmt.Errorf("attendance: load off-day: %w", err)
+	}
+	if _, err := s.loadEmployee(ctx, tenantID, employeeID); err != nil {
+		return nil, err
 	}
 	u := existing.Update().SetEmployeeID(employeeID).SetDate(date)
 	if reason != "" {

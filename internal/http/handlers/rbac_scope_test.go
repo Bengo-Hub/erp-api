@@ -35,7 +35,7 @@ func TestRBACRoutesAreTenantScoped(t *testing.T) {
 			return selfCall(r, method, path, body, uuid.Nil)
 		}
 	}
-	tenantA := as(&authclient.Claims{TenantID: a.String(), Permissions: []string{"rbac.view", "rbac.manage"}})
+	tenantA := as(&authclient.Claims{TenantID: a.String(), Permissions: []string{"rbac.view", "rbac.manage", "hrm.leave.view", "hrm.leave.manage"}})
 	owner := as(&authclient.Claims{TenantID: a.String(), IsPlatformOwner: true})
 
 	var codes []*ent.Permission
