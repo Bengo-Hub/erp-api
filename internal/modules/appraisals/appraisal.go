@@ -19,6 +19,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // ListAppraisals returns appraisals filtered by tenant (+ optional cycle/employee). A search
@@ -190,6 +191,22 @@ type AppraisalInput struct {
 
 // CreateAppraisal opens a draft appraisal for an employee within a cycle.
 func (s *Service) CreateAppraisal(ctx context.Context, tenantID uuid.UUID, in AppraisalInput) (*ent.Appraisal, error) {
+	if err := tenantref.Require(ctx, "appraisal cycle", s.orm.AppraisalCycle.Query().
+		Where(appraisalcycle.TenantID(tenantID), appraisalcycle.ID(in.CycleID))); err != nil {
+		return nil, err
+	}
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "employee", &in.EmployeeID); err != nil {
+		return nil, err
+	}
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "evaluator", in.EvaluatorID); err != nil {
+		return nil, err
+	}
+	if in.TemplateID != nil { // the tenant's own or the shared standard template
+		if err := tenantref.Require(ctx, "appraisal template", s.orm.AppraisalTemplate.Query().
+			Where(appraisaltemplate.TenantIDIn(s.tenantScope(tenantID)...), appraisaltemplate.ID(*in.TemplateID))); err != nil {
+			return nil, err
+		}
+	}
 	b := s.orm.Appraisal.Create().
 		SetTenantID(tenantID).SetCycleID(in.CycleID).SetEmployeeID(in.EmployeeID).
 		SetStatus(appraisal.StatusDraft)

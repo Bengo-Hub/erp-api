@@ -12,9 +12,11 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/companysettings"
+	"github.com/Bengo-Hub/erp-api/internal/ent/department"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/pieceoutput"
 	"github.com/Bengo-Hub/erp-api/internal/ent/piecerate"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // Piece work: rates per unit of an operation or item, output recorded per employee and day,
@@ -57,6 +59,15 @@ func (s *Service) tenantCurrency(ctx context.Context, tenantID uuid.UUID) string
 	return "KES"
 }
 
+// checkDepartment requires the tenant's own or a shared platform department.
+func (s *Service) checkDepartment(ctx context.Context, tenantID uuid.UUID, id *uuid.UUID) error {
+	if id == nil {
+		return nil
+	}
+	return tenantref.Require(ctx, "department", s.orm.Department.Query().
+		Where(department.ID(*id), department.Or(department.TenantID(tenantID), department.TenantIDIsNil())))
+}
+
 // CreatePieceRate adds a piece rate.
 func (s *Service) CreatePieceRate(ctx context.Context, tenantID uuid.UUID, in PieceRateInput) (*ent.PieceRate, error) {
 	if in.Code == nil || in.Name == nil || in.Unit == nil || in.Rate == nil || in.EffectiveFrom == nil ||
@@ -68,6 +79,9 @@ func (s *Service) CreatePieceRate(ctx context.Context, tenantID uuid.UUID, in Pi
 	}
 	if in.EffectiveTo != nil && in.EffectiveTo.Before(*in.EffectiveFrom) {
 		return nil, errors.New("effective_to must not be before effective_from")
+	}
+	if err := s.checkDepartment(ctx, tenantID, in.DepartmentID); err != nil {
+		return nil, err
 	}
 	currency := s.tenantCurrency(ctx, tenantID)
 	if in.Currency != nil && strings.TrimSpace(*in.Currency) != "" {
@@ -114,6 +128,9 @@ func (s *Service) UpdatePieceRate(ctx context.Context, tenantID, id uuid.UUID, i
 		u = u.SetCurrency(strings.ToUpper(strings.TrimSpace(*in.Currency)))
 	}
 	if in.DepartmentID != nil {
+		if err := s.checkDepartment(ctx, tenantID, in.DepartmentID); err != nil {
+			return nil, err
+		}
 		u = u.SetDepartmentID(*in.DepartmentID)
 	}
 	if in.EffectiveFrom != nil {

@@ -18,6 +18,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/trainingcourse"
 	"github.com/Bengo-Hub/erp-api/internal/ent/trainingenrollment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/trainingevaluation"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // Service holds training CRUD + capacity-checked enrollment. Tenant-scoped.
@@ -279,6 +280,9 @@ func (s *Service) ListEnrollments(ctx context.Context, tenantID uuid.UUID, cours
 // Enroll enrolls an employee in a course, enforcing capacity (count active enrolled <
 // course.capacity; 0 = unlimited) and the unique (tenant, course, employee) constraint.
 func (s *Service) Enroll(ctx context.Context, tenantID, courseID, employeeID uuid.UUID) (*ent.TrainingEnrollment, error) {
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "employee", &employeeID); err != nil {
+		return nil, err
+	}
 	tx, err := s.orm.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("training: begin tx: %w", err)

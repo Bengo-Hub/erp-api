@@ -141,7 +141,7 @@ func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []
 
 	// Installment per repay option: amount / number of installments (zero when unset).
 	for _, chunk := range chunkIDs(repayIDs) {
-		opts, err := s.orm.RepayOption.Query().Where(repayoption.IDIn(chunk...)).All(ctx)
+		opts, err := s.orm.RepayOption.Query().Where(repayoption.TenantID(tenantID), repayoption.IDIn(chunk...)).All(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("repay options: %w", err)
 		}

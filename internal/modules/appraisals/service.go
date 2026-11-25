@@ -18,6 +18,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalquestion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // moduleAppraisal is the approvals-engine module key for appraisal reviews.
@@ -306,6 +307,10 @@ type QuestionInput struct {
 
 // AddQuestion appends a question to a template.
 func (s *Service) AddQuestion(ctx context.Context, tenantID uuid.UUID, in QuestionInput) (*ent.AppraisalQuestion, error) {
+	if err := tenantref.Require(ctx, "appraisal template", s.orm.AppraisalTemplate.Query().
+		Where(appraisaltemplate.TenantIDIn(s.tenantScope(tenantID)...), appraisaltemplate.ID(in.TemplateID))); err != nil {
+		return nil, err
+	}
 	if in.QuestionType == "" {
 		in.QuestionType = string(appraisalquestion.QuestionTypeRating) // most questions are rated
 	}

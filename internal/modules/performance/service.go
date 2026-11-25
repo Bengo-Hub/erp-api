@@ -15,6 +15,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metriccategory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // Service holds performance CRUD + the review FSM. Tenant-scoped.
@@ -73,6 +74,10 @@ type MetricInput struct {
 
 // CreateMetric inserts a tenant-scoped performance metric.
 func (s *Service) CreateMetric(ctx context.Context, tenantID uuid.UUID, in MetricInput) (*ent.PerformanceMetric, error) {
+	if err := tenantref.Require(ctx, "metric category", s.orm.MetricCategory.Query().
+		Where(metriccategory.TenantID(tenantID), metriccategory.ID(in.CategoryID))); err != nil {
+		return nil, err
+	}
 	b := s.orm.PerformanceMetric.Create().
 		SetTenantID(tenantID).SetCategoryID(in.CategoryID).SetName(in.Name).
 		SetDescription(in.Description).
@@ -126,6 +131,9 @@ type RecordMetricInput struct {
 // RecordEmployeeMetric upserts an employee's metric value for a date and projects a numeric
 // value for numeric/percentage/rating metric types (port of EmployeeMetric.save).
 func (s *Service) RecordEmployeeMetric(ctx context.Context, tenantID uuid.UUID, in RecordMetricInput) (*ent.EmployeeMetric, error) {
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "employee", &in.EmployeeID); err != nil {
+		return nil, err
+	}
 	metric, err := s.orm.PerformanceMetric.Query().
 		Where(performancemetric.TenantID(tenantID), performancemetric.ID(in.MetricID)).Only(ctx)
 	if err != nil {

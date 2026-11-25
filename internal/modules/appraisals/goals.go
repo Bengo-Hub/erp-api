@@ -13,6 +13,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/goal"
 	"github.com/Bengo-Hub/erp-api/internal/ent/goalprogress"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // GoalFilter narrows ListGoals. Nil fields do not filter.
@@ -180,6 +181,9 @@ func (s *Service) DeleteGoal(ctx context.Context, tenantID, id uuid.UUID) error 
 func (s *Service) CreateGoal(ctx context.Context, tenantID uuid.UUID, in GoalInput) (*ent.Goal, error) {
 	md, err := in.metadata(nil)
 	if err != nil {
+		return nil, err
+	}
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "employee", in.EmployeeID); err != nil {
 		return nil, err
 	}
 	b := s.orm.Goal.Create().

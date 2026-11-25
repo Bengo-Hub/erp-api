@@ -18,6 +18,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobposting"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // Service holds recruitment CRUD + the application FSM + onboarding seeding. Tenant-scoped.
@@ -430,6 +431,14 @@ func (s *Service) DescribeApplications(ctx context.Context, tenantID uuid.UUID, 
 
 // CreateApplication files a candidate's application (starts at applied).
 func (s *Service) CreateApplication(ctx context.Context, tenantID, jobID, candidateID uuid.UUID, notes string) (*ent.Application, error) {
+	if err := tenantref.Require(ctx, "job posting", s.orm.JobPosting.Query().
+		Where(jobposting.TenantID(tenantID), jobposting.ID(jobID))); err != nil {
+		return nil, err
+	}
+	if err := tenantref.Require(ctx, "candidate", s.orm.Candidate.Query().
+		Where(candidate.TenantID(tenantID), candidate.ID(candidateID))); err != nil {
+		return nil, err
+	}
 	b := s.orm.Application.Create().
 		SetTenantID(tenantID).SetJobID(jobID).SetCandidateID(candidateID).
 		SetStatus(application.StatusApplied)

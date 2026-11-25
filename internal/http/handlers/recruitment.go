@@ -13,6 +13,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/recruitment"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 	"github.com/Bengo-Hub/erp-api/internal/platform/media"
 )
 
@@ -423,6 +424,10 @@ func (h *RecruitmentHandler) CreateApplication(w http.ResponseWriter, r *http.Re
 		return
 	}
 	row, err := h.svc.CreateApplication(r.Context(), scope.TenantID, jobID, candID, b.Notes)
+	if errors.Is(err, tenantref.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
 		return

@@ -9,6 +9,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeprojectallocation"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // AllocationInput is the create/update payload for an employee↔project allocation.
@@ -37,6 +38,9 @@ func (s *Service) ListAllocations(ctx context.Context, tenantID uuid.UUID, emplo
 func (s *Service) CreateAllocation(ctx context.Context, tenantID uuid.UUID, in AllocationInput) (*ent.EmployeeProjectAllocation, error) {
 	if in.EmployeeID == uuid.Nil || in.ProjectID == uuid.Nil {
 		return nil, fmt.Errorf("employee_id and project_id are required")
+	}
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "employee", &in.EmployeeID); err != nil {
+		return nil, err
 	}
 	c := s.orm.EmployeeProjectAllocation.Create().
 		SetTenantID(tenantID).

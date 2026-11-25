@@ -15,6 +15,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/task"
 	"github.com/Bengo-Hub/erp-api/internal/ent/taskcomment"
 	"github.com/Bengo-Hub/erp-api/internal/ent/tasklog"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // Service holds task CRUD + status/comment/log logic. Every query is tenant-scoped.
@@ -67,6 +68,9 @@ type CreateInput struct {
 func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, in CreateInput) (*ent.Task, error) {
 	if in.Title == "" {
 		return nil, fmt.Errorf("tasks: title required")
+	}
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "assignee", in.AssigneeID); err != nil {
+		return nil, err
 	}
 	b := s.orm.Task.Create().SetTenantID(tenantID).SetTitle(in.Title).SetDescription(in.Description)
 	if in.Status != "" {
@@ -129,6 +133,9 @@ func (s *Service) Update(ctx context.Context, tenantID, id uuid.UUID, in UpdateI
 		u = u.SetDueDate(*in.DueDate)
 	}
 	if in.AssigneeID != nil {
+		if err := tenantref.Employee(ctx, s.orm, tenantID, "assignee", in.AssigneeID); err != nil {
+			return nil, err
+		}
 		u = u.SetAssigneeEmployeeID(*in.AssigneeID)
 		s.log(ctx, tenantID, id, "assigned", "task reassigned", in.ActingUser)
 	}

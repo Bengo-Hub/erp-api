@@ -10,6 +10,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/application"
+	"github.com/Bengo-Hub/erp-api/internal/ent/candidate"
 )
 
 // allowedTransitions defines the hiring-pipeline FSM. rejected is reachable from any
@@ -110,7 +111,7 @@ func (s *Service) Transition(ctx context.Context, tenantID, id uuid.UUID, to str
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	cand, err := tx.Candidate.Get(ctx, app.CandidateID)
+	cand, err := tx.Candidate.Query().Where(candidate.TenantID(tenantID), candidate.ID(app.CandidateID)).Only(ctx)
 	if err != nil {
 		return res, fmt.Errorf("recruitment: load candidate: %w", err)
 	}
@@ -147,7 +148,7 @@ func (s *Service) notifyStatus(ctx context.Context, tenantID, candidateID uuid.U
 	if s.notify == nil {
 		return
 	}
-	cand, err := s.orm.Candidate.Get(ctx, candidateID)
+	cand, err := s.orm.Candidate.Query().Where(candidate.TenantID(tenantID), candidate.ID(candidateID)).Only(ctx)
 	if err != nil {
 		return
 	}

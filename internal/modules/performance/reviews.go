@@ -12,8 +12,10 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/metrictarget"
+	"github.com/Bengo-Hub/erp-api/internal/ent/performancemetric"
 	"github.com/Bengo-Hub/erp-api/internal/ent/performancereview"
 	"github.com/Bengo-Hub/erp-api/internal/ent/reviewmetric"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // ---- Targets ----
@@ -29,6 +31,12 @@ func (s *Service) ListTargets(ctx context.Context, tenantID uuid.UUID, employeeI
 
 // SetTarget upserts a per-period target for an employee/metric.
 func (s *Service) SetTarget(ctx context.Context, tenantID, employeeID, metricID uuid.UUID, target decimal.Decimal, start, end time.Time, createdBy *uuid.UUID) (*ent.MetricTarget, error) {
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "employee", &employeeID); err != nil {
+		return nil, err
+	}
+	if err := s.ownMetric(ctx, tenantID, metricID); err != nil {
+		return nil, err
+	}
 	existing, err := s.orm.MetricTarget.Query().Where(
 		metrictarget.TenantID(tenantID),
 		metrictarget.EmployeeID(employeeID),
@@ -134,6 +142,12 @@ type ReviewInput struct {
 
 // CreateReview opens a draft performance review.
 func (s *Service) CreateReview(ctx context.Context, tenantID uuid.UUID, in ReviewInput) (*ent.PerformanceReview, error) {
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "employee", &in.EmployeeID); err != nil {
+		return nil, err
+	}
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "reviewer", in.ReviewerID); err != nil {
+		return nil, err
+	}
 	b := s.orm.PerformanceReview.Create().
 		SetTenantID(tenantID).SetEmployeeID(in.EmployeeID).SetTitle(in.Title).
 		SetDescription(in.Description).SetReviewDate(in.ReviewDate).
@@ -215,8 +229,21 @@ type ReviewMetricInput struct {
 	Comments string
 }
 
+// ownMetric requires a metric of the tenant.
+func (s *Service) ownMetric(ctx context.Context, tenantID, metricID uuid.UUID) error {
+	return tenantref.Require(ctx, "metric", s.orm.PerformanceMetric.Query().
+		Where(performancemetric.TenantID(tenantID), performancemetric.ID(metricID)))
+}
+
 // UpsertReviewMetric records/updates a metric score within a review (unique per review/metric).
 func (s *Service) UpsertReviewMetric(ctx context.Context, tenantID uuid.UUID, in ReviewMetricInput) (*ent.ReviewMetric, error) {
+	if err := tenantref.Require(ctx, "review", s.orm.PerformanceReview.Query().
+		Where(performancereview.TenantID(tenantID), performancereview.ID(in.ReviewID))); err != nil {
+		return nil, err
+	}
+	if err := s.ownMetric(ctx, tenantID, in.MetricID); err != nil {
+		return nil, err
+	}
 	var rating *decimal.Decimal
 	if in.Rating != "" {
 		d, derr := decimal.NewFromString(in.Rating)

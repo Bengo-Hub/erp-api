@@ -123,7 +123,7 @@ func (s *Service) Enrich(ctx context.Context, tenantID uuid.UUID, emps []*ent.Em
 			outletIDs[*e.OutletID] = true
 		}
 	}
-	outletName := s.outletNamesByID(ctx, keys(outletIDs))
+	outletName := s.outletNamesByID(ctx, tenantID, keys(outletIDs))
 	for i, e := range emps {
 		if e.OutletID != nil {
 			out[i].Outlet = outletName[*e.OutletID]
@@ -152,8 +152,8 @@ func (s *Service) Enrich(ctx context.Context, tenantID uuid.UUID, emps []*ent.Em
 		}
 	}
 
-	deptName := s.namesByID(ctx, "department", keys(deptIDs))
-	titleName := s.namesByID(ctx, "jobtitle", keys(titleIDs))
+	deptName := s.namesByID(ctx, tenantID, "department", keys(deptIDs))
+	titleName := s.namesByID(ctx, tenantID, "jobtitle", keys(titleIDs))
 	mgrName := s.employeeNames(ctx, tenantID, keys(mgrIDs))
 	for i := range out {
 		if out[i].DepartmentID != nil {
@@ -178,19 +178,20 @@ func keys(m map[uuid.UUID]bool) []uuid.UUID {
 }
 
 // namesByID loads title labels for departments or job titles.
-func (s *Service) namesByID(ctx context.Context, kind string, ids []uuid.UUID) map[uuid.UUID]string {
+func (s *Service) namesByID(ctx context.Context, tenantID uuid.UUID, kind string, ids []uuid.UUID) map[uuid.UUID]string {
 	out := map[uuid.UUID]string{}
 	if len(ids) == 0 {
 		return out
 	}
 	switch kind {
 	case "department":
-		rows, _ := s.orm.Department.Query().Where(department.IDIn(ids...)).All(ctx)
+		rows, _ := s.orm.Department.Query().Where(department.IDIn(ids...),
+			department.Or(department.TenantID(tenantID), department.TenantIDIsNil())).All(ctx)
 		for _, d := range rows {
 			out[d.ID] = d.Title
 		}
 	case "jobtitle":
-		rows, _ := s.orm.JobTitle.Query().Where(jobtitle.IDIn(ids...)).All(ctx)
+		rows, _ := s.orm.JobTitle.Query().Where(jobtitle.IDIn(ids...), jobtitle.TenantID(tenantID)).All(ctx)
 		for _, t := range rows {
 			out[t.ID] = t.Title
 		}
@@ -200,12 +201,12 @@ func (s *Service) namesByID(ctx context.Context, kind string, ids []uuid.UUID) m
 
 // outletNamesByID resolves branch/outlet NAMEs from the local AuthOutlet shadow, so callers
 // never have to fall back to rendering the raw outlet_id uuid.
-func (s *Service) outletNamesByID(ctx context.Context, ids []uuid.UUID) map[uuid.UUID]string {
+func (s *Service) outletNamesByID(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) map[uuid.UUID]string {
 	out := map[uuid.UUID]string{}
 	if len(ids) == 0 {
 		return out
 	}
-	rows, _ := s.orm.AuthOutlet.Query().Where(authoutlet.IDIn(ids...)).All(ctx)
+	rows, _ := s.orm.AuthOutlet.Query().Where(authoutlet.IDIn(ids...), authoutlet.TenantID(tenantID)).All(ctx)
 	for _, o := range rows {
 		out[o.ID] = o.Name
 	}

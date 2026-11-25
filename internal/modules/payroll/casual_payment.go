@@ -9,7 +9,9 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/advance"
 	"github.com/Bengo-Hub/erp-api/internal/ent/casualpayment"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // CasualPaymentInput is the unified create/update payload for a casual payment (both a direct
@@ -100,6 +102,22 @@ func (s *Service) GetCasualPayment(ctx context.Context, tenantID, id uuid.UUID) 
 		Where(casualpayment.ID(id), casualpayment.TenantID(tenantID), casualpayment.DeleteStatus(false)).Only(ctx)
 }
 
+// checkCasualRefs requires the worker, the engaging employee and the imprest advance to be the
+// tenant's own. Projects and cost centres belong to other services and are references only.
+func (s *Service) checkCasualRefs(ctx context.Context, tenantID uuid.UUID, in CasualPaymentInput) error {
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "employee", in.EmployeeID); err != nil {
+		return err
+	}
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "engaging employee", in.EngagedByEmployeeID); err != nil {
+		return err
+	}
+	if in.ImprestAdvanceID == nil {
+		return nil
+	}
+	return tenantref.Require(ctx, "imprest advance", s.orm.Advance.Query().
+		Where(advance.TenantID(tenantID), advance.ID(*in.ImprestAdvanceID)))
+}
+
 // CreateCasualPayment creates a casual payment (status=pending), computing amount = quantity × rate.
 func (s *Service) CreateCasualPayment(ctx context.Context, tenantID uuid.UUID, in CasualPaymentInput) (*ent.CasualPayment, error) {
 	mode := in.SettlementMode
@@ -115,6 +133,9 @@ func (s *Service) CreateCasualPayment(ctx context.Context, tenantID uuid.UUID, i
 	amount := in.amount()
 	if amount.IsZero() {
 		return nil, fmt.Errorf("quantity × rate must be greater than zero")
+	}
+	if err := s.checkCasualRefs(ctx, tenantID, in); err != nil {
+		return nil, err
 	}
 	c := s.orm.CasualPayment.Create().
 		SetTenantID(tenantID).
@@ -155,6 +176,9 @@ func (s *Service) CreateCasualPayment(ctx context.Context, tenantID uuid.UUID, i
 func (s *Service) UpdateCasualPayment(ctx context.Context, tenantID, id uuid.UUID, in CasualPaymentInput) (*ent.CasualPayment, error) {
 	existing, err := s.GetCasualPayment(ctx, tenantID, id)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.checkCasualRefs(ctx, tenantID, in); err != nil {
 		return nil, err
 	}
 	u := existing.Update().

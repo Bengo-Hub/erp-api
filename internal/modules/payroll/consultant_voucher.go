@@ -12,6 +12,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appsetting"
 	"github.com/Bengo-Hub/erp-api/internal/ent/consultantvoucher"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // WHTRatesKey is the app setting that holds the tenant's withholding tax rates on consultancy
@@ -110,6 +111,9 @@ func (s *Service) resolveWHTRate(ctx context.Context, tenantID uuid.UUID, reside
 func (s *Service) CreateConsultantVoucher(ctx context.Context, tenantID uuid.UUID, in ConsultantVoucherInput) (*ent.ConsultantVoucher, error) {
 	if in.EmployeeID == uuid.Nil {
 		return nil, fmt.Errorf("a consultant is required")
+	}
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "consultant", &in.EmployeeID); err != nil {
+		return nil, err
 	}
 	if in.GrossAmount.LessThanOrEqual(decimal.Zero) {
 		return nil, fmt.Errorf("gross amount must be greater than zero")

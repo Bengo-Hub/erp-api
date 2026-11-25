@@ -10,6 +10,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employeeonboarding"
 	"github.com/Bengo-Hub/erp-api/internal/ent/onboardingtask"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // defaultOnboardingTasks is the checklist seeded when onboarding starts (port of
@@ -41,6 +42,9 @@ func (s *Service) ListOnboardings(ctx context.Context, tenantID uuid.UUID, emplo
 
 // StartOnboarding creates an onboarding for an employee and seeds the default checklist.
 func (s *Service) StartOnboarding(ctx context.Context, tenantID, employeeID uuid.UUID) (*ent.EmployeeOnboarding, error) {
+	if err := tenantref.Employee(ctx, s.orm, tenantID, "employee", &employeeID); err != nil {
+		return nil, err
+	}
 	tx, err := s.orm.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("recruitment: begin tx: %w", err)
@@ -123,6 +127,9 @@ func (s *Service) UpdateTask(ctx context.Context, tenantID, taskID uuid.UUID, in
 	}
 	u := task.Update()
 	if in.AssignedTo != nil {
+		if err := tenantref.Employee(ctx, s.orm, tenantID, "assignee", in.AssignedTo); err != nil {
+			return nil, err
+		}
 		u = u.SetAssignedTo(*in.AssignedTo)
 	}
 	if in.ClearDue {
@@ -137,6 +144,10 @@ func (s *Service) UpdateTask(ctx context.Context, tenantID, taskID uuid.UUID, in
 func (s *Service) AddTask(ctx context.Context, tenantID, onboardingID uuid.UUID, category, title string) (*ent.OnboardingTask, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title is required")
+	}
+	if err := tenantref.Require(ctx, "onboarding", s.orm.EmployeeOnboarding.Query().
+		Where(employeeonboarding.TenantID(tenantID), employeeonboarding.ID(onboardingID))); err != nil {
+		return nil, err
 	}
 	if category == "" {
 		category = "Other"
