@@ -86,8 +86,14 @@ func TestIntegration_BodyIDsMustBelongToTenant(t *testing.T) {
 			_, err := perf.CreateMetric(ctx, a, performance.MetricInput{CategoryID: theirCat.ID, Name: "m", MetricType: "numeric"})
 			return err
 		},
-		"target employee": func() error { _, err := perf.SetTarget(ctx, a, theirEmp.ID, ownMetric.ID, one, day, day, nil); return err },
-		"target metric":   func() error { _, err := perf.SetTarget(ctx, a, ownEmp.ID, theirMetric.ID, one, day, day, nil); return err },
+		"target employee": func() error {
+			_, err := perf.SetTarget(ctx, a, theirEmp.ID, ownMetric.ID, one, day, day, nil)
+			return err
+		},
+		"target metric": func() error {
+			_, err := perf.SetTarget(ctx, a, ownEmp.ID, theirMetric.ID, one, day, day, nil)
+			return err
+		},
 		"recorded value employee": func() error {
 			_, err := perf.RecordEmployeeMetric(ctx, a, performance.RecordMetricInput{EmployeeID: theirEmp.ID, MetricID: ownMetric.ID, Value: "1", DateRecorded: day})
 			return err

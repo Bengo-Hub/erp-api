@@ -13,8 +13,8 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/recruitment"
-	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 	"github.com/Bengo-Hub/erp-api/internal/platform/media"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // Recruitment RBAC permission codes.
