@@ -11,6 +11,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalstepaction"
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflow"
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalworkflowstep"
+	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
 // ---- Workflows ----
@@ -49,6 +50,11 @@ type WorkflowInput struct {
 func (s *Service) CreateWorkflow(ctx context.Context, tenantID uuid.UUID, in WorkflowInput) (*ent.ApprovalWorkflow, error) {
 	if len(in.Steps) == 0 {
 		return nil, fmt.Errorf("approvals: workflow needs at least one step")
+	}
+	for _, st := range in.Steps {
+		if err := tenantref.Employee(ctx, s.orm, tenantID, "approver", st.ApproverEmployeeID); err != nil {
+			return nil, err
+		}
 	}
 	tx, err := s.orm.Tx(ctx)
 	if err != nil {

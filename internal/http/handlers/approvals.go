@@ -109,10 +109,13 @@ func (h *ApprovalsHandler) CreateWorkflow(w http.ResponseWriter, r *http.Request
 			Sequence: st.Sequence, Name: st.Name, ApproverType: st.ApproverType,
 			ApproverRole: st.ApproverRole, IsOptional: st.IsOptional,
 		}
-		if st.ApproverEmployeeID != nil {
-			if id, err := uuid.Parse(*st.ApproverEmployeeID); err == nil {
-				s.ApproverEmployeeID = &id
+		if st.ApproverEmployeeID != nil && *st.ApproverEmployeeID != "" {
+			id, err := uuid.Parse(*st.ApproverEmployeeID)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "bad_request", "invalid approver_employee_id")
+				return
 			}
+			s.ApproverEmployeeID = &id
 		}
 		in.Steps = append(in.Steps, s)
 	}

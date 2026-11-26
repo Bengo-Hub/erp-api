@@ -11,6 +11,7 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/appraisals"
+	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll"
 	"github.com/Bengo-Hub/erp-api/internal/modules/performance"
@@ -132,6 +133,13 @@ func TestIntegration_BodyIDsMustBelongToTenant(t *testing.T) {
 		},
 		"allocation employee": func() error {
 			_, err := emps.CreateAllocation(ctx, a, employees.AllocationInput{EmployeeID: theirEmp.ID, ProjectID: uuid.New(), AllocationPercent: one})
+			return err
+		},
+		"approval step approver": func() error {
+			_, err := approvals.NewService(client, nil).CreateWorkflow(ctx, a, approvals.WorkflowInput{
+				Module: "payroll", Name: "w", IsActive: true,
+				Steps: []approvals.StepInput{{Sequence: 1, Name: "s", ApproverType: "user",ApproverEmployeeID: &theirEmp.ID}},
+			})
 			return err
 		},
 		"task assignee": func() error {
