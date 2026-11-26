@@ -8,6 +8,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/expenseclaim"
@@ -63,8 +64,11 @@ func (s *Service) loadPayrollClaims(ctx context.Context, tenantID uuid.UUID, per
 }
 
 // applyClaims adds an employee's taxable claims to taxable gross and their non-taxable claims to
-// net pay, and lists each on the payslip.
-func applyClaims(claims []*ent.ExpenseClaim, in *payrollengine.EmployeeInput, items *EmployeeItemized) {
+// net pay, and lists each on the payslip. A per diem claim is non-taxable only up to the daily
+// tax-free limit times its days (Income Tax Act s.5(2)(a)(iii)): the rest is taxed. The claim is
+// still paid in full as a reimbursement (treasury booked all of it to reimbursements payable), so
+// the excess is added to taxable pay only.
+func applyClaims(claims []*ent.ExpenseClaim, dailyExempt decimal.Decimal, in *payrollengine.EmployeeInput, items *EmployeeItemized) {
 	for _, c := range claims {
 		if !c.Amount.IsPositive() {
 			continue
@@ -79,9 +83,32 @@ func applyClaims(claims []*ent.ExpenseClaim, in *payrollengine.EmployeeInput, it
 		} else {
 			in.Reimbursements = in.Reimbursements.Add(c.Amount)
 			items.Reimbursements = append(items.Reimbursements, LabeledAmount{Label: label, Amount: c.Amount})
+			if excess := perDiemTaxable(c, dailyExempt); excess.IsPositive() {
+				in.TaxableOnly = in.TaxableOnly.Add(excess)
+				items.PerDiemTaxable = append(items.PerDiemTaxable, LabeledAmount{Label: "Per diem above the tax-free limit", Amount: excess})
+			}
 		}
 		items.ClaimIDs = append(items.ClaimIDs, c.ID)
 	}
+}
+
+// perDiemTaxable is the part of a per diem claim above the tax-free limit for its days. A claim
+// without a day count, or no limit configured, has no taxable part.
+func perDiemTaxable(c *ent.ExpenseClaim, dailyExempt decimal.Decimal) decimal.Decimal {
+	if c.ClaimType != "per_diem" || !dailyExempt.IsPositive() {
+		return decimal.Zero
+	}
+	var days decimal.Decimal
+	switch v := c.Metadata["days"].(type) {
+	case float64:
+		days = decimal.NewFromFloat(v)
+	case string:
+		days, _ = decimal.NewFromString(v)
+	}
+	if !days.IsPositive() {
+		return decimal.Zero
+	}
+	return decimal.Max(decimal.Zero, c.Amount.Sub(dailyExempt.Mul(days))).Round(2)
 }
 
 // linkClaimsToPayslip records which payslip carries each claim.

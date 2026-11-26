@@ -22,6 +22,12 @@ const (
 	reliefDisability = "disability exemption"
 	reliefPension    = "pension relief"
 	reliefMortgage   = "mortgage interest relief"
+	// reliefPostRetirement caps the deductible post-retirement medical fund contribution.
+	reliefPostRetirement = "post-retirement medical fund relief"
+	// reliefNonCash is the monthly non-cash benefit threshold; while active, benefits are taxed.
+	reliefNonCash = "non-cash benefit threshold"
+	// reliefMeals is the monthly employer meals exemption.
+	reliefMeals = "employer meals exemption"
 )
 
 // statutoryReliefs are on for every tenant by default and flagged statutory in the UI.
@@ -39,6 +45,11 @@ var reliefAliases = map[string]string{
 	"pension":          reliefPension,
 	"mortgage":         reliefMortgage,
 	"mortgage relief":  reliefMortgage,
+	"post retirement medical": reliefPostRetirement,
+	"post-retirement medical": reliefPostRetirement,
+	"non-cash":                reliefNonCash,
+	"non cash":                reliefNonCash,
+	"meals":                   reliefMeals,
 }
 
 // ReliefKey normalises a relief title or UI code (personal_relief, "Personal Relief") to its key.

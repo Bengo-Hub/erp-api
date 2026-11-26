@@ -114,6 +114,20 @@ func (s *Service) BuildEngineConfig(ctx context.Context, tenantID uuid.UUID, per
 		return cfg, fmt.Errorf("health (SHIF/NHIF): %w", payrollengine.ErrFormulaNotConfigured)
 	}
 
+	// Per diem tax-free limit and fringe benefit tax: dated platform rules a tenant may override.
+	// Missing rules leave per diem wholly non-taxable and charge no FBT.
+	// Only a version actually in force for the month counts: a rule that starts later never
+	// reaches back to an earlier month.
+	if f := set.inForce(FormulaTypeReliefAllowance, FormulaCategoryPerDiem, period); f != nil {
+		cfg.PerDiemDailyExempt = metaDecimal(f.Metadata[MetaDailyExempt])
+	}
+	if f := set.inForce(FormulaTypeFBT, FormulaCategoryFBT, period); f != nil {
+		cfg.FBT = &payrollengine.FBTRates{
+			TaxRate:    metaDecimal(f.Metadata[MetaFBTTaxRate]),
+			MarketRate: metaDecimal(f.Metadata[MetaMarketInterestRate]),
+		}
+	}
+
 	// Resolve the deduction ordering from the income formula if present.
 	if f := set.effective("income", "primary", period); f != nil && len(f.DeductionOrder) > 0 {
 		for _, p := range f.DeductionOrder {
@@ -156,6 +170,15 @@ func applyReliefs(reliefs []ResolvedRelief, cfg *payrollengine.Config) {
 			cfg.MortgageReliefCap = r.FixedLimit
 		case reliefDisability:
 			cfg.DisabilityExemptAmount = r.FixedLimit
+		case reliefPostRetirement:
+			cfg.PostRetirementMedicalCap = r.FixedLimit
+		case reliefNonCash:
+			// The statutory treatment: benefits are pay in kind (never taken off cash pay) and
+			// taxed once they reach the threshold.
+			cfg.NonCashAsTaxable = true
+			cfg.NonCashTaxThreshold = r.FixedLimit
+		case reliefMeals:
+			cfg.MealsMonthlyExemption = r.FixedLimit
 		}
 	}
 }

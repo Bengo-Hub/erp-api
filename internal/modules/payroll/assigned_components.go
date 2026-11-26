@@ -91,6 +91,20 @@ func (in *runInputs) applyAssignedComponents(p RunParams, empID uuid.UUID, basic
 			amounts[i] = e.terms.For(basic, gross)
 		}
 	}
+	// Gratuity rules need this period's pay without the gratuity, and whether the employee pays
+	// into a registered pension scheme.
+	gratuityPaid := decimal.Zero
+	for i, e := range earnings {
+		if isGratuityStatus(e.rc.TaxableStatus) {
+			gratuityPaid = gratuityPaid.Add(amounts[i])
+		}
+	}
+	pensionMember := ei.PensionContribution.IsPositive()
+	for _, d := range deductions {
+		if d.rc.Code == "pension" || d.rc.Code == "provident_fund" {
+			pensionMember = true
+		}
+	}
 	for i, e := range earnings {
 		amt := amounts[i]
 		if !amt.IsPositive() {
@@ -98,7 +112,17 @@ func (in *runInputs) applyAssignedComponents(p RunParams, empID uuid.UUID, basic
 		}
 		cid := e.rc.Component.ID
 		line := LabeledAmount{ComponentID: &cid, Label: e.rc.Title, Amount: amt}
-		if e.rc.Component.TaxableStatus == "nontaxable" {
+		status := e.rc.TaxableStatus
+		if isGratuityStatus(status) {
+			facts := in.gratuity[empID].facts(p.Period, gross.Sub(gratuityPaid), pensionMember)
+			excluded := gratuityExcluded(status, amt, p.Period, facts)
+			ei.NonTaxableEarnings = ei.NonTaxableEarnings.Add(excluded)
+			ei.TaxableAllowances = ei.TaxableAllowances.Add(amt.Sub(excluded))
+			line.Taxable = amt.Sub(excluded)
+			items.Allowances = append(items.Allowances, line)
+			continue
+		}
+		if status == "nontaxable" {
 			ei.NonTaxableEarnings = ei.NonTaxableEarnings.Add(amt)
 		} else {
 			ei.TaxableAllowances = ei.TaxableAllowances.Add(amt)
@@ -122,6 +146,8 @@ func (in *runInputs) applyAssignedComponents(p RunParams, empID uuid.UUID, basic
 			pension = pension.Add(amt)
 		case "insurance_premium":
 			premium = premium.Add(amt)
+		case "post_retirement_medical":
+			ei.PostRetirementMedical = ei.PostRetirementMedical.Add(amt)
 		}
 		items.OtherDeductions = append(items.OtherDeductions, DeductionLine{
 			ComponentID: d.rc.Component.ID, Code: d.rc.Code, Label: d.rc.Title, Phase: phase,

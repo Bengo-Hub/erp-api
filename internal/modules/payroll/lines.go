@@ -53,6 +53,8 @@ type EmployeeItemized struct {
 	PieceOutputIDs []uuid.UUID
 	// Reimbursements are the non-taxable expense claims added to net pay (never to gross).
 	Reimbursements []LabeledAmount
+	// PerDiemTaxable is the per diem above the daily tax-free limit: taxed, never paid twice.
+	PerDiemTaxable []LabeledAmount
 	// ClaimIDs are the expense claims, taxable or not, paid through this payslip (claims_payroll.go).
 	ClaimIDs []uuid.UUID
 	// Allowances are the opt-in earnings assigned to the employee (Taxable zero when the component
@@ -174,6 +176,10 @@ func composeLines(basic decimal.Decimal, res payrollengine.PayslipResult, items 
 	for _, r := range items.Reimbursements {
 		add(secReimbursement, claimEarningCode, r.Label, r.Amount, decimal.Zero, decimal.Zero, false, false, "", nil)
 	}
+	// Per diem above the tax-free limit: taxable value only, the cash is in the claim above.
+	for _, r := range items.PerDiemTaxable {
+		add(secReimbursement, "per_diem_taxable", r.Label, decimal.Zero, r.Amount, decimal.Zero, false, true, "", nil)
+	}
 
 	// Statutory (before-tax) — NSSF split into tiers + employer, SHIF, housing levy.
 	if res.NSSFEmployeeTier1.IsPositive() {
@@ -235,8 +241,14 @@ func composeLines(basic decimal.Decimal, res payrollengine.PayslipResult, items 
 	if res.NSSFEmployer.IsPositive() {
 		add(secEmployer, "nssf_employer", "N.S.S.F. Employer", decimal.Zero, decimal.Zero, res.NSSFEmployer, false, false, "", nil)
 	}
+	if res.HousingLevyEmployer.IsPositive() {
+		add(secEmployer, "housing_levy_employer", "Housing Levy Employer", decimal.Zero, decimal.Zero, res.HousingLevyEmployer, false, false, "", nil)
+	}
 	if res.NITAEmployer.IsPositive() {
 		add(secEmployer, "nita", "NITA Levy", decimal.Zero, decimal.Zero, res.NITAEmployer, false, false, "", nil)
+	}
+	if res.FBTEmployer.IsPositive() {
+		add(secEmployer, "fbt", "Fringe Benefit Tax", decimal.Zero, decimal.Zero, res.FBTEmployer, false, false, "", nil)
 	}
 
 	return lines

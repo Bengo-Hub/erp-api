@@ -39,11 +39,19 @@ type defaultRelief struct {
 var defaultReliefs = []defaultRelief{
 	{"Personal", "Personal Relief", false, "2400", "0", "", true},
 	{"Deductible", "Insurance Relief", true, "5000", "15", "Actual", true},
-	{"Deductible", "Affordable Housing Relief", true, "9000", "15", "Actual", true},
+	// Repealed by the Tax Laws (Amendment) Act 2024 (s.30A, from 27 Dec 2024): the levy is now
+	// deducted before tax instead. Kept inactive for history.
+	{"Deductible", "Affordable Housing Relief", true, "9000", "15", "Actual", false},
 	{"Deductible", "Disability Exemption", false, "150000", "0", "", true},
 	{"Deductible", "Pension Relief", true, "30000", "100", "Actual", true},
 	// Owner-occupier mortgage interest: deductible up to KES 30,000/month (KES 360,000/year).
 	{"Deductible", "Mortgage Interest Relief", true, "30000", "100", "Actual", true},
+	// Income Tax Act s.15(2)(ad): post-retirement medical fund contributions up to KES 15,000 a month.
+	{"Deductible", "Post-Retirement Medical Fund Relief", true, "15000", "100", "Actual", true},
+	// s.5(2)(b): non-cash benefits are taxable once they reach KES 60,000 a year (5,000 a month).
+	{"Deductible", "Non-Cash Benefit Threshold", false, "5000", "0", "", true},
+	// s.5(4)(f): the first KES 60,000 a year (5,000 a month) of employer meals is excluded.
+	{"Deductible", "Employer Meals Exemption", false, "5000", "0", "", true},
 }
 
 // EnsureReliefs idempotently seeds the default KRA reliefs for a tenant (the system tenant in

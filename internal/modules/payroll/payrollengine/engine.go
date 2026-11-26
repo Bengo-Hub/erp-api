@@ -24,6 +24,8 @@ type PayslipResult struct {
 	InsuranceRelief     decimal.Decimal
 	PensionDeduction    decimal.Decimal
 	MortgageDeduction   decimal.Decimal
+	// PostRetirementMedicalDeduction is the applied pre-tax post-retirement medical deduction.
+	PostRetirementMedicalDeduction decimal.Decimal
 	DisabilityExemption decimal.Decimal
 	GrossPayAfterTax    decimal.Decimal
 	SHIFOrNHIF          decimal.Decimal
@@ -35,6 +37,8 @@ type PayslipResult struct {
 	// NITAEmployer is the employer-only industrial training levy (flat per employee/month).
 	// It never enters deductions or net pay.
 	NITAEmployer decimal.Decimal
+	// FBTEmployer is the employer's fringe benefit tax on the employee's low-interest staff loans.
+	FBTEmployer decimal.Decimal
 	// Reimbursements is the non-taxable expense claim repayment added to net pay (never to gross).
 	Reimbursements decimal.Decimal
 	// NonTaxableEarnings is the non-taxable component pay included in GrossPay.
@@ -178,6 +182,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 		}
 		res.NITAEmployer = nita
 	}
+	res.FBTEmployer = fringeBenefitTax(cfg.FBT, in.StaffLoans)
 
 	_ = nssf
 	// Non-taxable component earnings are pay, so they are part of gross and net pay, but they were
@@ -259,17 +264,38 @@ func applyOtherDeductions(res *PayslipResult, order []Phase, gross decimal.Decim
 	}
 }
 
-// taxableNonCash returns the taxable portion of non-cash benefits for the period: the excess over
-// the monthly de-minimis exemption, only when NonCashAsTaxable is enabled. Otherwise zero.
+// fringeBenefitTax is the employer's monthly fringe benefit tax (s.12B): the rate times, for each
+// loan, the month's interest gap between the market rate and the loan's rate (never below zero).
+func fringeBenefitTax(r *FBTRates, loans []LoanBenefit) decimal.Decimal {
+	if r == nil || !r.TaxRate.IsPositive() {
+		return decimal.Zero
+	}
+	value := decimal.Zero
+	perMonth := decimal.NewFromInt(1200) // percent per year to a fraction per month
+	for _, l := range loans {
+		gap := r.MarketRate.Sub(l.AnnualRate)
+		if !gap.IsPositive() || !l.Outstanding.IsPositive() {
+			continue
+		}
+		value = value.Add(l.Outstanding.Mul(gap).Div(perMonth))
+	}
+	return round2(value.Mul(r.TaxRate))
+}
+
+// taxableNonCash returns the taxable value of non-cash benefits for the period, only when
+// NonCashAsTaxable is enabled. Employer meals are reduced by their monthly exemption first; the
+// aggregate is then taxed in full when it reaches NonCashTaxThreshold and not at all below it.
 func taxableNonCash(cfg Config, in EmployeeInput) decimal.Decimal {
 	if !cfg.NonCashAsTaxable {
 		return decimal.Zero
 	}
-	excess := in.NonCashBenefits.Sub(cfg.NonCashMonthlyExemption)
-	if excess.LessThan(decimal.Zero) {
+	meals := decimal.Min(in.MealBenefits, in.NonCashBenefits)
+	taxableMeals := decimal.Max(decimal.Zero, meals.Sub(cfg.MealsMonthlyExemption))
+	aggregate := in.NonCashBenefits.Sub(meals).Add(taxableMeals)
+	if !aggregate.IsPositive() || aggregate.LessThan(cfg.NonCashTaxThreshold) {
 		return decimal.Zero
 	}
-	return excess
+	return aggregate
 }
 
 // applyPAYE computes taxable pay (gross - before-tax deductions), progressive PAYE, then
@@ -278,7 +304,7 @@ func taxableNonCash(cfg Config, in EmployeeInput) decimal.Decimal {
 func applyPAYE(res *PayslipResult, cfg Config, in EmployeeInput) error {
 	// res.GrossPay already includes taxable allowances. Taxable pay = gross − before-tax deductions
 	// + the taxable excess of non-cash benefits (when NonCashAsTaxable is enabled).
-	taxable := res.GrossPay.Sub(res.DeductionsBeforeTax).Add(taxableNonCash(cfg, in))
+	taxable := res.GrossPay.Sub(res.DeductionsBeforeTax).Add(taxableNonCash(cfg, in)).Add(in.TaxableOnly)
 	if taxable.LessThan(decimal.Zero) {
 		taxable = decimal.Zero
 	}
@@ -299,6 +325,12 @@ func applyPAYE(res *PayslipResult, cfg Config, in EmployeeInput) error {
 		mortgage := minDec(in.MortgageInterest, cfg.MortgageReliefCap)
 		res.MortgageDeduction = round2(mortgage)
 		taxable = taxable.Sub(mortgage)
+	}
+	// Post-retirement medical fund contribution: min(actual, statutory monthly cap).
+	if in.PostRetirementMedical.IsPositive() && cfg.PostRetirementMedicalCap.IsPositive() {
+		prmf := minDec(in.PostRetirementMedical, cfg.PostRetirementMedicalCap)
+		res.PostRetirementMedicalDeduction = round2(prmf)
+		taxable = taxable.Sub(prmf)
 	}
 	// PWD exemption certificate: the first DisabilityExemptAmount of chargeable pay is exempt.
 	if in.DisabilityExempt && cfg.DisabilityExemptAmount.IsPositive() {

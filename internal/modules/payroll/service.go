@@ -127,7 +127,7 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 			items.AttendanceIDs = append(items.AttendanceIDs, d.ID)
 		}
 		earnings.apply(emp.ID, &in, &items)
-		applyClaims(claims[emp.ID], &in, &items)
+		applyClaims(claims[emp.ID], cfg.PerDiemDailyExempt, &in, &items)
 		res, cerr := payrollengine.Compute(cfg, in)
 		if cerr != nil {
 			return nil, fmt.Errorf("payroll: employee %s: %w", emp.ID, cerr)

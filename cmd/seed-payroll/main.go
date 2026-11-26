@@ -138,6 +138,14 @@ func seed(ctx context.Context, client *ent.Client, tenantID uuid.UUID) error {
 		log.Printf("  set the SHIF minimum contribution on %d platform formula version(s)", n)
 	}
 
+	// Dated rules: per diem tax-free limit, quarterly fringe benefit tax, and the inactive 2026
+	// bill PAYE bands. Only missing rows are added.
+	if n, err := payrollsettings.EnsureDatedRules(ctx, client, tenantID); err != nil {
+		return err
+	} else if n > 0 {
+		log.Printf("  added %d dated payroll rule(s)", n)
+	}
+
 	// Seed the default KRA reliefs (personal, insurance, AHL, disability, pension) under the
 	// system tenant. Idempotent (skips by title). Per-tenant reuse via defaults.EnsureReliefs.
 	if err := defaults.EnsureReliefsWithClient(ctx, client, tenantID); err != nil {

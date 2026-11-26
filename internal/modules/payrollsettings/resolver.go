@@ -207,6 +207,16 @@ func (s *Service) loadFormulaSet(ctx context.Context, tenantID uuid.UUID, where 
 	return set, nil
 }
 
+// inForce is the tenant's, else the platform's, version of one key in force for the period, with
+// no fallback to a version that starts later (for optional rules that must not reach back).
+func (fs *formulaSet) inForce(ftype, category string, period time.Time) *ent.PayrollFormula {
+	k := formulaKey{ftype, category}
+	if f := pickCovering(fs.tenant[k], period); f != nil {
+		return f
+	}
+	return pickCovering(fs.platform[k], period)
+}
+
 // effective resolves one key from the preloaded set. An empty category matches any category of
 // the type (legacy callers).
 func (fs *formulaSet) effective(ftype, category string, period time.Time) *ent.PayrollFormula {

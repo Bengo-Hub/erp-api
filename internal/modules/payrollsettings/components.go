@@ -29,11 +29,14 @@ type ComponentChoice struct {
 	Percentage         *decimal.Decimal `json:"percentage,omitempty"`
 	EmployerAmount     *decimal.Decimal `json:"employer_amount,omitempty"`
 	EmployerPercentage *decimal.Decimal `json:"employer_percentage,omitempty"`
+	// TaxableStatus picks the tenant's tax treatment, e.g. a gratuity paid into a registered
+	// pension scheme (gratuity_pension) over the platform's contract gratuity rule.
+	TaxableStatus string `json:"taxable_status,omitempty"`
 }
 
 // customised reports whether the choice changes any value (beyond on or off).
 func (c ComponentChoice) customised() bool {
-	return c.Title != "" || c.Amount != nil || c.Percentage != nil || c.EmployerAmount != nil || c.EmployerPercentage != nil
+	return c.Title != "" || c.Amount != nil || c.Percentage != nil || c.EmployerAmount != nil || c.EmployerPercentage != nil || c.TaxableStatus != ""
 }
 
 // ResolvedComponent is one payroll component as a tenant sees it, with the values that apply.
@@ -56,6 +59,9 @@ type ResolvedComponent struct {
 	Percentage         decimal.Decimal
 	EmployerAmount     decimal.Decimal
 	EmployerPercentage decimal.Decimal
+	// TaxableStatus is the tax treatment that applies: taxable, nontaxable, gratuity or
+	// gratuity_pension (the tenant's choice over the platform row).
+	TaxableStatus string
 }
 
 // choiceKey is the key a platform component's choice is stored under: its code, else its id.
@@ -71,6 +77,7 @@ func resolveComponent(c *ent.PayrollComponent, tenantID, systemTenant uuid.UUID,
 	r := ResolvedComponent{
 		Component: c, Title: c.Title, Statutory: c.Statutory,
 		Amount: c.Amount, Percentage: c.Percentage, EmployerAmount: c.EmployerAmount, EmployerPercentage: c.EmployerPercentage,
+		TaxableStatus: c.TaxableStatus,
 	}
 	if c.WbCode != nil {
 		r.Code = *c.WbCode
@@ -124,6 +131,9 @@ func resolveComponent(c *ent.PayrollComponent, tenantID, systemTenant uuid.UUID,
 		}
 		if ch.EmployerPercentage != nil {
 			r.EmployerPercentage = *ch.EmployerPercentage
+		}
+		if ch.TaxableStatus != "" {
+			r.TaxableStatus = ch.TaxableStatus
 		}
 	}
 	return r
@@ -346,6 +356,12 @@ func (s *Service) CustomiseComponent(ctx context.Context, tenantID, id uuid.UUID
 	}
 	if ch.Title == cur.Component.Title {
 		ch.Title = ""
+	}
+	if ch.TaxableStatus == "" {
+		ch.TaxableStatus = prev.TaxableStatus
+	}
+	if ch.TaxableStatus == cur.Component.TaxableStatus {
+		ch.TaxableStatus = ""
 	}
 	if !ch.customised() && (ch.Active == nil || *ch.Active == cur.DefaultActive) {
 		delete(choices, k)

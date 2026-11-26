@@ -49,6 +49,21 @@ type Deduction struct {
 	Amount   decimal.Decimal
 }
 
+// LoanBenefit is one staff loan for fringe benefit tax: the balance and its annual interest rate
+// in percent (3 == 3%).
+type LoanBenefit struct {
+	Outstanding decimal.Decimal
+	AnnualRate  decimal.Decimal
+}
+
+// FBTRates is the fringe benefit tax rule for a period (Income Tax Act s.12B): TaxRate is the
+// rate charged on the taxable value (a fraction, the resident corporate rate) and MarketRate the
+// KRA market interest rate for the quarter in percent.
+type FBTRates struct {
+	TaxRate    decimal.Decimal
+	MarketRate decimal.Decimal
+}
+
 // EmployeeInput is the per-employee data the engine needs for one period. All amounts
 // are decimal. Recoverables are passed in already filtered/effective-dated by the caller.
 type EmployeeInput struct {
@@ -93,6 +108,17 @@ type EmployeeInput struct {
 	// MortgageInterest is monthly owner-occupier mortgage interest — an allowable PRE-TAX
 	// deduction up to the statutory monthly cap.
 	MortgageInterest decimal.Decimal
+	// PostRetirementMedical is the monthly contribution to a post-retirement medical fund, an
+	// allowable PRE-TAX deduction up to the statutory monthly cap (Income Tax Act s.15(2)(ad)).
+	PostRetirementMedical decimal.Decimal
+	// MealBenefits is the part of NonCashBenefits that is employer-provided meals; the first
+	// MealsMonthlyExemption of it is excluded before the non-cash threshold test (s.5(4)(f)).
+	MealBenefits decimal.Decimal
+	// TaxableOnly is income that is taxed but is neither cash pay nor a statutory base: the per
+	// diem above the daily tax-free limit on a claim already paid in full as a reimbursement.
+	TaxableOnly decimal.Decimal
+	// StaffLoans are the employee's outstanding staff loans, for fringe benefit tax.
+	StaffLoans []LoanBenefit
 	// DisabilityExempt marks an employee holding a PWD tax-exemption certificate: the first
 	// DisabilityExemptAmount of chargeable pay is exempt from PAYE.
 	DisabilityExempt bool
@@ -123,6 +149,11 @@ type Config struct {
 	// KES 50). Optional: nil when the tenant has no NITA formula configured. Never affects
 	// employee deductions or net pay; surfaces as an employer contribution only.
 	NITA *FormulaRates
+	// FBT is the fringe benefit tax rule for the period; nil charges none.
+	FBT *FBTRates
+	// PerDiemDailyExempt is the tax-free per diem per day away on duty (s.5(2)(a)(iii): 10,000).
+	// Zero means no rule: per diem claims stay wholly non-taxable.
+	PerDiemDailyExempt decimal.Decimal
 	// Disabled marks components (Comp* codes) a tenant has DELIBERATELY switched off via
 	// statutory settings — the engine skips them silently. This is distinct from a missing
 	// formula on an ENABLED component, which still fails loud (ErrFormulaNotConfigured,
@@ -138,10 +169,16 @@ type Config struct {
 	// false preserves the legacy behaviour (non-cash deducted from net, untaxed) until a tenant
 	// opts in, so existing payslips are unchanged.
 	NonCashAsTaxable bool
-	// NonCashMonthlyExemption is the de-minimis monthly non-cash benefit exemption (KRA: aggregate
-	// non-cash benefits up to KES 36,000/yr ≈ KES 3,000/month are not taxable). Only the excess is
-	// taxed. Applied only when NonCashAsTaxable is true.
-	NonCashMonthlyExemption decimal.Decimal
+	// NonCashTaxThreshold is the monthly aggregate value from which non-cash benefits are taxable
+	// (Income Tax Act s.5(2)(b): KES 60,000 a year, 5,000 a month). Below it nothing is taxed; at
+	// or above it the whole aggregate is. Applied only when NonCashAsTaxable is true.
+	NonCashTaxThreshold decimal.Decimal
+	// MealsMonthlyExemption is the monthly value of employer meals excluded from gains
+	// (s.5(4)(f): the first KES 60,000 a year, 5,000 a month).
+	MealsMonthlyExemption decimal.Decimal
+	// PostRetirementMedicalCap is the monthly ceiling on the deductible post-retirement medical
+	// fund contribution (15,000). Zero means the relief is not configured.
+	PostRetirementMedicalCap decimal.Decimal
 
 	// --- KRA relief caps (resolved from the tenant's active PayrollRelief rows). A zero cap means
 	// the relief is NOT configured and is skipped entirely, so a zero-value Config is unchanged. ---

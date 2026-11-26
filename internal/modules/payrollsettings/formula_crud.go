@@ -53,6 +53,23 @@ type FormulaInput struct {
 // metaMinimumContribution is the formula metadata key of the minimum monthly contribution.
 const metaMinimumContribution = "minimum_contribution"
 
+// Dated rules kept as formula rows (versioned by effective dates, overridable per tenant) whose
+// values live in the metadata.
+const (
+	FormulaTypeReliefAllowance = "relief_allowance"
+	FormulaCategoryPerDiem     = "per_diem"
+	// MetaDailyExempt is the tax-free per diem per day (Income Tax Act s.5(2)(a)(iii)).
+	MetaDailyExempt = "daily_exempt"
+
+	FormulaTypeFBT     = "fbt"
+	FormulaCategoryFBT = "fbt"
+	// MetaFBTTaxRate is the fringe benefit tax rate as a fraction (s.12B: the resident corporate
+	// rate, Third Schedule para 15).
+	MetaFBTTaxRate = "tax_rate"
+	// MetaMarketInterestRate is KRA's market interest rate for the quarter, in percent.
+	MetaMarketInterestRate = "market_interest_rate"
+)
+
 // FormulaMinimumContribution reads a formula's minimum monthly contribution from its metadata
 // (zero when unset or unreadable).
 func FormulaMinimumContribution(f *ent.PayrollFormula) decimal.Decimal {

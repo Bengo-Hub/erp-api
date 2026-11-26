@@ -446,14 +446,14 @@ func TestNSSFYear4_Limits(t *testing.T) {
 	}
 }
 
-// TestNonCashAsTaxable verifies the corrected non-cash treatment: excess over the monthly
-// exemption is taxed (added to taxable pay) and NOT deducted from net pay; the legacy default
-// keeps deducting it from net, untaxed.
+// TestNonCashAsTaxable verifies the corrected non-cash treatment: benefits that reach the monthly
+// threshold are taxed (added to taxable pay) and NOT deducted from net pay; the legacy default
+// keeps deducting them from net, untaxed.
 func TestNonCashAsTaxable(t *testing.T) {
 	legacy := kra2025Config()
 	corrected := kra2025Config()
 	corrected.NonCashAsTaxable = true
-	corrected.NonCashMonthlyExemption = d("3000")
+	corrected.NonCashTaxThreshold = d("3000")
 
 	in := EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary", NonCashBenefits: d("10000")}
 
@@ -465,7 +465,7 @@ func TestNonCashAsTaxable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("corrected: %v", err)
 	}
-	// Corrected mode: taxable pay includes the 7000 excess (10000-3000) -> higher PAYE.
+	// Corrected mode: 10000 reaches the 3000 threshold, so all of it is taxable -> higher PAYE.
 	if !corRes.PAYE.GreaterThan(legRes.PAYE) {
 		t.Fatalf("corrected PAYE should exceed legacy: %s vs %s", corRes.PAYE, legRes.PAYE)
 	}
@@ -476,5 +476,95 @@ func TestNonCashAsTaxable(t *testing.T) {
 	}
 	if !corRes.DeductionsFinal.Equal(d("0")) {
 		t.Fatalf("corrected final deductions should be 0 (in-kind), got %s", corRes.DeductionsFinal)
+	}
+}
+
+// The four worked examples from the levy research (Year 4 NSSF, SHIF, AHL, Finance Act 2023
+// bands), computed by hand. The 2026 relief defaults (post-retirement medical cap, non-cash and
+// meals limits) must not change them for an employee who has none of those items.
+func TestWorkedExamples_UnchangedByReliefDefaults(t *testing.T) {
+	cfg := KRADefaults()
+	cfg.NSSF = NSSFYear4()
+	withDefaults := cfg
+	withDefaults.PostRetirementMedicalCap = d("15000")
+	withDefaults.NonCashAsTaxable = true
+	withDefaults.NonCashTaxThreshold = d("5000")
+	withDefaults.MealsMonthlyExemption = d("5000")
+	cases := []struct {
+		gross, nssf, shif, ahl, taxable, paye, net string
+	}{
+		{"50000", "3000", "1375", "750", "44875", "5845.85", "39029.15"},
+		{"60000", "3600", "1650", "900", "53850", "8538.35", "45311.65"},
+		{"150000", "6480", "4125", "2250", "137145", "33526.85", "103618.15"},
+		{"180000", "6480", "4950", "2700", "165870", "42144.35", "123725.65"},
+	}
+	for _, c := range cases {
+		for name, conf := range map[string]Config{"current": cfg, "defaults": withDefaults} {
+			res, err := Compute(conf, EmployeeInput{GrossPay: d(c.gross), TaxCategory: "primary"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := []decimal.Decimal{res.NSSFEmployeeTier1.Add(res.NSSFEmployeeTier2), res.SHIFOrNHIF, res.HousingLevy, res.TaxablePay, res.PAYE, res.NetPay}
+			want := []string{c.nssf, c.shif, c.ahl, c.taxable, c.paye, c.net}
+			for i := range got {
+				if !got[i].Equal(d(want[i])) {
+					t.Errorf("%s gross %s field %d: got %s want %s", name, c.gross, i, got[i], want[i])
+				}
+			}
+		}
+	}
+}
+
+// Income Tax Act s.15(2)(ad): post-retirement medical fund contributions are deductible up to
+// KES 15,000 a month.
+func TestPostRetirementMedicalDeductible(t *testing.T) {
+	cfg := KRADefaults()
+	cfg.NSSF = NSSFYear4()
+	cfg.PostRetirementMedicalCap = d("15000")
+	base, _ := Compute(cfg, EmployeeInput{GrossPay: d("50000"), TaxCategory: "primary"})
+	res, err := Compute(cfg, EmployeeInput{GrossPay: d("50000"), TaxCategory: "primary", PostRetirementMedical: d("2000")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.PostRetirementMedicalDeduction.Equal(d("2000")) || !base.PAYE.Sub(res.PAYE).Equal(d("600")) {
+		t.Errorf("deduction %s, PAYE drop %s; want 2000 and 600", res.PostRetirementMedicalDeduction, base.PAYE.Sub(res.PAYE))
+	}
+	capped, _ := Compute(cfg, EmployeeInput{GrossPay: d("200000"), TaxCategory: "primary", PostRetirementMedical: d("20000")})
+	if !capped.PostRetirementMedicalDeduction.Equal(d("15000")) {
+		t.Errorf("capped deduction %s, want 15000", capped.PostRetirementMedicalDeduction)
+	}
+	off := cfg
+	off.PostRetirementMedicalCap = decimal.Zero
+	none, _ := Compute(off, EmployeeInput{GrossPay: d("50000"), TaxCategory: "primary", PostRetirementMedical: d("2000")})
+	if !none.PAYE.Equal(base.PAYE) {
+		t.Errorf("relief switched off still changed PAYE: %s vs %s", none.PAYE, base.PAYE)
+	}
+}
+
+// Income Tax Act s.5(2)(b): benefits are taxable only when their aggregate value reaches the
+// threshold (KES 60,000 a year, 5,000 a month), and then in full. s.5(4)(f): the first KES
+// 60,000 a year (5,000 a month) of employer meals is excluded first.
+func TestNonCashThresholdAndMeals(t *testing.T) {
+	cfg := KRADefaults()
+	cfg.NonCashAsTaxable = true
+	cfg.NonCashTaxThreshold = d("5000")
+	cfg.MealsMonthlyExemption = d("5000")
+	taxable := func(nonCash, meals string) decimal.Decimal {
+		t.Helper()
+		res, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary", NonCashBenefits: d(nonCash), MealBenefits: d(meals)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res.TaxablePay.Sub(d("91430")) // taxable pay on 100,000 with no benefits
+	}
+	for _, c := range []struct{ nonCash, meals, want string }{
+		{"4000", "0", "0"},          // under the threshold: not taxed
+		{"8000", "0", "8000"},       // reaches it: taxed in full, not just the excess
+		{"6000", "6000", "0"},       // meals over the exemption by 1,000: under the threshold
+		{"10500", "6000", "5500"},   // 4,500 other + 1,000 taxable meals reaches the threshold
+	} {
+		if got := taxable(c.nonCash, c.meals); !got.Equal(d(c.want)) {
+			t.Errorf("non-cash %s (meals %s): taxable added %s, want %s", c.nonCash, c.meals, got, c.want)
+		}
 	}
 }

@@ -296,7 +296,7 @@ func TestIntegration_ClaimsPaidThroughPayroll(t *testing.T) {
 	}
 	var in payrollengine.EmployeeInput
 	var items EmployeeItemized
-	applyClaims(got[emp], &in, &items)
+	applyClaims(got[emp], decimal.Zero, &in, &items)
 	if !in.TaxableAllowances.Equal(decimal.NewFromInt(3000)) || !in.Reimbursements.Equal(decimal.NewFromInt(900)) {
 		t.Fatalf("taxable %s / reimbursements %s, want 3000 / 900", in.TaxableAllowances, in.Reimbursements)
 	}

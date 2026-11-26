@@ -145,8 +145,9 @@ func componentView(rc payrollsettings.ResolvedComponent) map[string]any {
 	if c.EffectiveTo != nil {
 		v["effective_to"] = c.EffectiveTo.Format("2006-01-02")
 	}
-	if c.TaxableStatus != "" {
-		v["is_taxable"] = c.TaxableStatus == "taxable"
+	if rc.TaxableStatus != "" {
+		v["is_taxable"] = rc.TaxableStatus == "taxable"
+		v["taxable_status"] = rc.TaxableStatus
 	}
 	return v
 }
@@ -280,6 +281,9 @@ func (h *PayrollSettingsHandler) customiseComponent(w http.ResponseWriter, r *ht
 	var ch payrollsettings.ComponentChoice
 	ch.Active = b.IsActive
 	ch.Title = b.title()
+	// Only an explicit taxable_status is a choice: the form's plain taxable switch on a platform
+	// row is not stored.
+	ch.TaxableStatus = b.TaxableStatus
 	var err error
 	for _, f := range []struct {
 		s   string
@@ -308,7 +312,11 @@ type componentBody struct {
 	Mode               string `json:"mode"`
 	IsActive           *bool  `json:"is_active"`
 	IsTaxable          *bool  `json:"is_taxable"`
-	NonCash            *bool  `json:"non_cash"`
+	// TaxableStatus sets the tax treatment directly and wins over is_taxable: taxable, nontaxable,
+	// gratuity (contract gratuity rule) or gratuity_pension (gratuity paid into a registered
+	// pension scheme).
+	TaxableStatus string `json:"taxable_status"`
+	NonCash       *bool  `json:"non_cash"`
 	Checkoff           *bool  `json:"checkoff"`
 	Amount             string `json:"amount"`
 	Percentage         string `json:"percentage"`
@@ -374,6 +382,28 @@ func (b componentBody) title() string {
 	return b.Title
 }
 
+// validTaxableStatuses are the tax treatments a component can carry.
+var validTaxableStatuses = map[string]bool{"taxable": true, "nontaxable": true, "gratuity": true, "gratuity_pension": true}
+
+// taxableStatus is the treatment the body asks for: taxable_status when sent, else is_taxable. A
+// plain "taxable" from is_taxable keeps a gratuity rule already on the component, so a form that
+// only knows taxable or not never drops it. ok is false when the body asks for no change.
+func (b componentBody) taxableStatus(current string) (string, bool) {
+	if b.TaxableStatus != "" {
+		return b.TaxableStatus, true
+	}
+	if b.IsTaxable == nil {
+		return "", false
+	}
+	if !*b.IsTaxable {
+		return "nontaxable", true
+	}
+	if current == "gratuity" || current == "gratuity_pension" {
+		return current, true
+	}
+	return "taxable", true
+}
+
 func (h *PayrollSettingsHandler) CreateComponent(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permPayrollManage) {
@@ -382,6 +412,10 @@ func (h *PayrollSettingsHandler) CreateComponent(w http.ResponseWriter, r *http.
 	var b componentBody
 	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	if b.TaxableStatus != "" && !validTaxableStatuses[b.TaxableStatus] {
+		writeError(w, http.StatusBadRequest, "bad_request", "taxable_status must be taxable, nontaxable, gratuity or gratuity_pension")
 		return
 	}
 	if b.title() == "" {
@@ -408,12 +442,8 @@ func (h *PayrollSettingsHandler) CreateComponent(w http.ResponseWriter, r *http.
 	if b.Checkoff != nil {
 		c = c.SetCheckoff(*b.Checkoff)
 	}
-	if b.IsTaxable != nil {
-		if *b.IsTaxable {
-			c = c.SetTaxableStatus("taxable")
-		} else {
-			c = c.SetTaxableStatus("nontaxable")
-		}
+	if st, ok := b.taxableStatus(""); ok {
+		c = c.SetTaxableStatus(st)
 	}
 	c = applyComponentMoney(c, b)
 	if d, e := parseDate(b.EffectiveFrom); e == nil {
@@ -461,6 +491,10 @@ func (h *PayrollSettingsHandler) UpdateComponent(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
+	if b.TaxableStatus != "" && !validTaxableStatuses[b.TaxableStatus] {
+		writeError(w, http.StatusBadRequest, "bad_request", "taxable_status must be taxable, nontaxable, gratuity or gratuity_pension")
+		return
+	}
 	existing := resolved.Component
 	if existing.TenantID != tenant && scope.Claims != nil && scope.Claims.IsPlatformOwner && h.svc.IsPlatformTenant(existing.TenantID) {
 		// The platform owner edits the platform component itself: the change reaches every
@@ -494,12 +528,8 @@ func (h *PayrollSettingsHandler) UpdateComponent(w http.ResponseWriter, r *http.
 	if b.Checkoff != nil {
 		u = u.SetCheckoff(*b.Checkoff)
 	}
-	if b.IsTaxable != nil {
-		if *b.IsTaxable {
-			u = u.SetTaxableStatus("taxable")
-		} else {
-			u = u.SetTaxableStatus("nontaxable")
-		}
+	if st, ok := b.taxableStatus(existing.TaxableStatus); ok {
+		u = u.SetTaxableStatus(st)
 	}
 	u = applyComponentMoney(u, b)
 	if d, e := parseDate(b.EffectiveFrom); e == nil {

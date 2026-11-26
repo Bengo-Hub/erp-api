@@ -40,6 +40,8 @@ type runInputs struct {
 	// components is every assigned component as the tenant sees it (category, taxability, phase,
 	// default amount or rate).
 	components map[uuid.UUID]payrollsettings.ResolvedComponent
+	// gratuity holds contract and pay history for employees with a gratuity earning (nil when none).
+	gratuity map[uuid.UUID]*gratuityHistory
 }
 
 // loadRunInputs reads salaries, active recoverables, non-cash benefits, their repay options and
@@ -170,6 +172,9 @@ func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []
 			}
 		}
 	}
+	if err := s.loadGratuityHistory(ctx, tenantID, in); err != nil {
+		return nil, err
+	}
 	return in, nil
 }
 
@@ -221,6 +226,8 @@ func (s *Service) buildEmployeeInput(p RunParams, emp *ent.Employee, pre *runInp
 		}
 		outstanding := l.PrincipalAmount.Sub(l.AmountRepaid)
 		in.Loans = append(in.Loans, payrollengine.Recoverable{Installment: l.MonthlyInstallment, Outstanding: outstanding})
+		// Fringe benefit tax looks at every outstanding staff loan and its interest rate.
+		in.StaffLoans = append(in.StaffLoans, payrollengine.LoanBenefit{Outstanding: outstanding, AnnualRate: l.InterestRate})
 		if rec := recovered(l.MonthlyInstallment, outstanding); rec.IsPositive() {
 			items.Loans = append(items.Loans, LabeledAmount{Label: "Loan", Amount: rec})
 			items.Recoveries = append(items.Recoveries, RecoveryAlloc{Type: "loan", ID: l.ID, Amount: rec})
@@ -283,6 +290,11 @@ func (s *Service) buildEmployeeInput(p RunParams, emp *ent.Employee, pre *runInp
 			continue // the tenant has this component switched off
 		}
 		total = total.Add(b.Amount)
+		if b.ComponentID != nil {
+			if c, ok := pre.components[*b.ComponentID]; ok && c.Code == "meals_benefit" {
+				in.MealBenefits = in.MealBenefits.Add(b.Amount)
+			}
+		}
 		label := "Benefit"
 		if b.ComponentID != nil {
 			if t, ok := pre.titles[*b.ComponentID]; ok {
