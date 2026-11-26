@@ -114,7 +114,7 @@ func PlatformCatalogue() []CatalogueItem {
 		d("pension", "Pension Contribution", "", payrollengine.PhaseBeforeTax, 4, false, "Registered pension scheme contribution, deductible up to the pension relief cap."),
 		d("provident_fund", "Provident Fund", "", payrollengine.PhaseBeforeTax, 5, false, "Registered provident fund contribution."),
 		d("post_retirement_medical", "Post-Retirement Medical Fund", "", payrollengine.PhaseAfterPAYE, 11, false, "Contribution to a registered post-retirement medical fund; deductible before tax up to the relief cap."),
-		d("insurance_premium","Insurance Premium", "", payrollengine.PhaseAfterPAYE, 8, false, "Life, health or education policy premium; qualifies for insurance relief."),
+		d("insurance_premium", "Insurance Premium", "", payrollengine.PhaseAfterPAYE, 8, false, "Life, health or education policy premium; qualifies for insurance relief."),
 		d("welfare", "Staff Welfare", "", payrollengine.PhaseAfterPAYE, 9, false, "Staff welfare contribution."),
 		d("court_order", "Court Order or Garnishee", "", payrollengine.PhaseFinal, 1, false, "Deduction ordered by a court."),
 		d("salary_overpayment", "Salary Overpayment Recovery", "", payrollengine.PhaseAfterPAYE, 10, false, "Recovery of pay made in error."),

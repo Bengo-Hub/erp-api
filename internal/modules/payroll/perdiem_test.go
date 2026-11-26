@@ -13,9 +13,9 @@ import (
 func TestPerDiemAboveTheLimit(t *testing.T) {
 	dec := decimal.RequireFromString
 	claims := []*ent.ExpenseClaim{
-		{ClaimType: "per_diem", Amount: dec("36000"), Metadata: map[string]any{"days": float64(3)}},  // 6,000 over
-		{ClaimType: "per_diem", Amount: dec("18000"), Metadata: map[string]any{"days": float64(2)}},  // within
-		{ClaimType: "per_diem", Amount: dec("15000")},                                                // no day count
+		{ClaimType: "per_diem", Amount: dec("36000"), Metadata: map[string]any{"days": float64(3)}},      // 6,000 over
+		{ClaimType: "per_diem", Amount: dec("18000"), Metadata: map[string]any{"days": float64(2)}},      // within
+		{ClaimType: "per_diem", Amount: dec("15000")},                                                    // no day count
 		{ClaimType: "reimbursement", Amount: dec("50000"), Metadata: map[string]any{"days": float64(1)}}, // not per diem
 	}
 	var in payrollengine.EmployeeInput

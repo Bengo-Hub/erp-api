@@ -21,19 +21,19 @@ type PayslipResult struct {
 	// PAYE alongside PersonalRelief. PensionDeduction/MortgageDeduction are the applied PRE-TAX
 	// allowable deductions, and DisabilityExemption the applied chargeable-pay exemption — all
 	// surfaced for the P9/P9A card. Zero unless the employee has the corresponding relief input.
-	InsuranceRelief     decimal.Decimal
-	PensionDeduction    decimal.Decimal
-	MortgageDeduction   decimal.Decimal
+	InsuranceRelief   decimal.Decimal
+	PensionDeduction  decimal.Decimal
+	MortgageDeduction decimal.Decimal
 	// PostRetirementMedicalDeduction is the applied pre-tax post-retirement medical deduction.
 	PostRetirementMedicalDeduction decimal.Decimal
-	DisabilityExemption decimal.Decimal
-	GrossPayAfterTax    decimal.Decimal
-	SHIFOrNHIF          decimal.Decimal
-	HousingLevy         decimal.Decimal
-	NSSFEmployeeTier1   decimal.Decimal
-	NSSFEmployeeTier2   decimal.Decimal
-	NSSFEmployer        decimal.Decimal
-	HousingLevyEmployer decimal.Decimal // employer match; never part of deductions or net pay
+	DisabilityExemption            decimal.Decimal
+	GrossPayAfterTax               decimal.Decimal
+	SHIFOrNHIF                     decimal.Decimal
+	HousingLevy                    decimal.Decimal
+	NSSFEmployeeTier1              decimal.Decimal
+	NSSFEmployeeTier2              decimal.Decimal
+	NSSFEmployer                   decimal.Decimal
+	HousingLevyEmployer            decimal.Decimal // employer match; never part of deductions or net pay
 	// NITAEmployer is the employer-only industrial training levy (flat per employee/month).
 	// It never enters deductions or net pay.
 	NITAEmployer decimal.Decimal

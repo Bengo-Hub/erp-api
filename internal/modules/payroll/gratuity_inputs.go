@@ -173,4 +173,6 @@ func (h *gratuityHistory) facts(period time.Time, emoluments decimal.Decimal, pe
 	return f
 }
 
-func monthStart(t time.Time) time.Time { return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC) }
+func monthStart(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+}

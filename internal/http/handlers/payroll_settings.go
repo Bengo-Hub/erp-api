@@ -306,19 +306,19 @@ func (h *PayrollSettingsHandler) customiseComponent(w http.ResponseWriter, r *ht
 
 type componentBody struct {
 	// Code is the stable catalogue code (platform components; optional for tenant ones).
-	Code               string `json:"code"`
-	Name               string `json:"name"`
-	Title              string `json:"title"`
-	Category           string `json:"category"`
-	Description        string `json:"description"`
-	Mode               string `json:"mode"`
-	IsActive           *bool  `json:"is_active"`
-	IsTaxable          *bool  `json:"is_taxable"`
+	Code        string `json:"code"`
+	Name        string `json:"name"`
+	Title       string `json:"title"`
+	Category    string `json:"category"`
+	Description string `json:"description"`
+	Mode        string `json:"mode"`
+	IsActive    *bool  `json:"is_active"`
+	IsTaxable   *bool  `json:"is_taxable"`
 	// TaxableStatus sets the tax treatment directly and wins over is_taxable: taxable, nontaxable,
 	// gratuity (contract gratuity rule) or gratuity_pension (gratuity paid into a registered
 	// pension scheme).
-	TaxableStatus string `json:"taxable_status"`
-	NonCash       *bool  `json:"non_cash"`
+	TaxableStatus      string `json:"taxable_status"`
+	NonCash            *bool  `json:"non_cash"`
 	Checkoff           *bool  `json:"checkoff"`
 	Amount             string `json:"amount"`
 	Percentage         string `json:"percentage"`

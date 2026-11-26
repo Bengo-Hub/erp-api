@@ -558,10 +558,10 @@ func TestNonCashThresholdAndMeals(t *testing.T) {
 		return res.TaxablePay.Sub(d("91430")) // taxable pay on 100,000 with no benefits
 	}
 	for _, c := range []struct{ nonCash, meals, want string }{
-		{"4000", "0", "0"},          // under the threshold: not taxed
-		{"8000", "0", "8000"},       // reaches it: taxed in full, not just the excess
-		{"6000", "6000", "0"},       // meals over the exemption by 1,000: under the threshold
-		{"10500", "6000", "5500"},   // 4,500 other + 1,000 taxable meals reaches the threshold
+		{"4000", "0", "0"},        // under the threshold: not taxed
+		{"8000", "0", "8000"},     // reaches it: taxed in full, not just the excess
+		{"6000", "6000", "0"},     // meals over the exemption by 1,000: under the threshold
+		{"10500", "6000", "5500"}, // 4,500 other + 1,000 taxable meals reaches the threshold
 	} {
 		if got := taxable(c.nonCash, c.meals); !got.Equal(d(c.want)) {
 			t.Errorf("non-cash %s (meals %s): taxable added %s, want %s", c.nonCash, c.meals, got, c.want)

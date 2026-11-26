@@ -63,7 +63,9 @@ type LoginDisabledEmployee struct {
 // loginDisabled lists the tenant's current employees flagged by an auth-api deactivation.
 func (s *Service) loginDisabled(ctx context.Context, tenantID uuid.UUID) ([]LoginDisabledEmployee, error) {
 	rows, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.Deleted(false), employee.Terminated(false),
-		func(sel *entsql.Selector) { sel.Where(sqljson.HasKey(employee.FieldMetadata, sqljson.Path("login_disabled_at"))) }).
+		func(sel *entsql.Selector) {
+			sel.Where(sqljson.HasKey(employee.FieldMetadata, sqljson.Path("login_disabled_at")))
+		}).
 		Order(employee.ByFirstName()).Limit(200).All(ctx)
 	if err != nil {
 		return nil, err
