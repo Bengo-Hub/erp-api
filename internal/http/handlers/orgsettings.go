@@ -33,6 +33,7 @@ func NewOrgSettingsHandler(log *zap.Logger, svc *orgsettings.Service) *OrgSettin
 func (h *OrgSettingsHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/hrm/departments", func(dr chi.Router) {
 		dr.Get("/", h.ListDepartments)
+		dr.Get("/cost-center-check", h.CostCenterCheck)
 		dr.Post("/", h.CreateDepartment)
 		dr.Get("/{id}", h.GetDepartment)
 		dr.Put("/{id}", h.UpdateDepartment)
@@ -145,6 +146,21 @@ func decodeNamed(w http.ResponseWriter, r *http.Request) (orgsettings.NamedInput
 }
 
 // ---- Departments ----
+
+// CostCenterCheck returns the last nightly comparison of the tenant's department and project
+// allocation cost centres with treasury: ids treasury no longer has, or has deactivated.
+func (h *OrgSettingsHandler) CostCenterCheck(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permEmployeeView) {
+		return
+	}
+	res, err := h.svc.LastCostCenterCheck(r.Context(), scope.TenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to read the cost centre check")
+		return
+	}
+	writeJSON(w, http.StatusOK, res)
+}
 
 func (h *OrgSettingsHandler) ListDepartments(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)

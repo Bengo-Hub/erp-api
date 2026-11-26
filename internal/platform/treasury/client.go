@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -154,22 +155,104 @@ func (c *Client) ResolveAccount(ctx context.Context, tenantID uuid.UUID, account
 		c.baseURL, tenantID.String(), url.QueryEscape(accountNumber), url.QueryEscape(bankCode)))
 }
 
+// getAttempts bounds the tries of one GET; getBackoff and getBackoffCap shape the wait between
+// them (exponential with jitter, capped).
+const (
+	getAttempts   = 3
+	getBackoff    = 500 * time.Millisecond
+	getBackoffCap = 5 * time.Second
+)
+
+// waitFor sleeps d or until ctx ends (replaced in tests).
+var waitFor = func(ctx context.Context, d time.Duration) error {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
+}
+
+// backoff is the wait before retry n (1-based).
+func backoff(n int) time.Duration {
+	d := getBackoff << (n - 1)
+	if d > getBackoffCap || d <= 0 {
+		d = getBackoffCap
+	}
+	d += time.Duration(rand.Int63n(int64(d)/2 + 1))
+	if d > getBackoffCap {
+		d = getBackoffCap
+	}
+	return d
+}
+
+// getRaw GETs a treasury S2S URL. A network error, 429 or 5xx is retried up to getAttempts times
+// with backoff; any other status fails at once.
 func (c *Client) getRaw(ctx context.Context, fullURL string) (json.RawMessage, error) {
+	var lastErr error
+	for attempt := 1; attempt <= getAttempts; attempt++ {
+		if attempt > 1 {
+			if err := waitFor(ctx, backoff(attempt-1)); err != nil {
+				return nil, err
+			}
+		}
+		body, status, err := c.getOnce(ctx, fullURL)
+		if err == nil && status == http.StatusOK {
+			return json.RawMessage(body), nil
+		}
+		if err != nil {
+			lastErr = err
+		} else {
+			lastErr = fmt.Errorf("treasury: %s status %d", fullURL, status)
+			if status != http.StatusTooManyRequests && status < 500 {
+				return nil, lastErr
+			}
+		}
+	}
+	return nil, fmt.Errorf("after %d attempts: %w", getAttempts, lastErr)
+}
+
+func (c *Client) getOnce(ctx context.Context, fullURL string) ([]byte, int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	req.Header.Set("X-API-Key", c.apiKey)
 	resp, err := c.httpc.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("treasury: %s status %d", fullURL, resp.StatusCode)
+	body, err := io.ReadAll(resp.Body)
+	return body, resp.StatusCode, err
+}
+
+// CostCenter is one of a tenant's treasury cost centres (GET /api/v1/s2s/{tenant}/cost-centers).
+type CostCenter struct {
+	ID       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	Code     string    `json:"code"`
+	IsActive bool      `json:"is_active"`
+}
+
+// ListCostCenters reads all of the tenant's cost centres, active or not.
+func (c *Client) ListCostCenters(ctx context.Context, tenantID uuid.UUID) ([]CostCenter, error) {
+	if !c.enabled {
+		return nil, fmt.Errorf("treasury client not configured")
 	}
-	return json.RawMessage(body), nil
+	raw, err := c.getRaw(ctx, fmt.Sprintf("%s/api/v1/s2s/%s/cost-centers", c.baseURL, tenantID.String()))
+	if err != nil {
+		return nil, err
+	}
+	var env struct {
+		CostCenters []CostCenter `json:"cost_centers"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return nil, fmt.Errorf("treasury: decode cost centres: %w", err)
+	}
+	return env.CostCenters, nil
 }
 
 // StatutoryRate is one row of treasury's platform-wide statutory rate reference

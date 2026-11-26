@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/department"
@@ -21,6 +22,8 @@ type Service struct {
 	orm *ent.Client
 	// systemTenant owns the platform's job groups every company inherits (jobgroups_inherit.go).
 	systemTenant uuid.UUID
+	costCenters  CostCenterSource // nil: cost centre ids are not checked
+	log          *zap.Logger
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
@@ -57,6 +60,11 @@ func (s *Service) CreateDepartment(ctx context.Context, tenantID uuid.UUID, in N
 	if in.Title == "" {
 		return nil, fmt.Errorf("orgsettings: department title is required")
 	}
+	if in.CostCenterSet {
+		if err := s.checkCostCenter(ctx, tenantID, in.CostCenterID); err != nil {
+			return nil, err
+		}
+	}
 	b := s.orm.Department.Create().SetTenantID(tenantID).SetTitle(in.Title)
 	if in.Code != "" {
 		b = b.SetCode(in.Code)
@@ -68,8 +76,16 @@ func (s *Service) CreateDepartment(ctx context.Context, tenantID uuid.UUID, in N
 }
 
 func (s *Service) UpdateDepartment(ctx context.Context, tenantID, id uuid.UUID, in NamedInput) (*ent.Department, error) {
-	if _, err := s.GetDepartment(ctx, tenantID, id); err != nil {
+	cur, err := s.GetDepartment(ctx, tenantID, id)
+	if err != nil {
 		return nil, err
+	}
+	// Only a changed cost centre is checked, so saving a department whose cost centre was later
+	// retired in treasury still works for its other fields.
+	if in.CostCenterSet && in.CostCenterID != nil && (cur.CostCenterID == nil || *cur.CostCenterID != *in.CostCenterID) {
+		if err := s.checkCostCenter(ctx, tenantID, in.CostCenterID); err != nil {
+			return nil, err
+		}
 	}
 	u := s.orm.Department.UpdateOneID(id)
 	if in.Title != "" {
