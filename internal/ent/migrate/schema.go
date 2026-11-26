@@ -3422,6 +3422,7 @@ var (
 		{Name: "job_group_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "workers_union_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "effective_from", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
@@ -3440,6 +3441,11 @@ var (
 				Name:    "salarydetails_employee_id",
 				Unique:  false,
 				Columns: []*schema.Column{SalaryDetailsColumns[2]},
+			},
+			{
+				Name:    "salarydetails_tenant_id_employee_id_effective_from",
+				Unique:  false,
+				Columns: []*schema.Column{SalaryDetailsColumns[1], SalaryDetailsColumns[2], SalaryDetailsColumns[19]},
 			},
 		},
 	}

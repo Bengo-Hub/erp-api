@@ -261,6 +261,20 @@ func (_c *SalaryDetailsCreate) SetNillableIsActive(v *bool) *SalaryDetailsCreate
 	return _c
 }
 
+// SetEffectiveFrom sets the "effective_from" field.
+func (_c *SalaryDetailsCreate) SetEffectiveFrom(v time.Time) *SalaryDetailsCreate {
+	_c.mutation.SetEffectiveFrom(v)
+	return _c
+}
+
+// SetNillableEffectiveFrom sets the "effective_from" field if the given value is not nil.
+func (_c *SalaryDetailsCreate) SetNillableEffectiveFrom(v *time.Time) *SalaryDetailsCreate {
+	if v != nil {
+		_c.SetEffectiveFrom(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *SalaryDetailsCreate) SetCreatedAt(v time.Time) *SalaryDetailsCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -550,6 +564,10 @@ func (_c *SalaryDetailsCreate) createSpec() (*SalaryDetails, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(salarydetails.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
+	}
+	if value, ok := _c.mutation.EffectiveFrom(); ok {
+		_spec.SetField(salarydetails.FieldEffectiveFrom, field.TypeTime, value)
+		_node.EffectiveFrom = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(salarydetails.FieldCreatedAt, field.TypeTime, value)
@@ -854,6 +872,24 @@ func (u *SalaryDetailsUpsert) SetIsActive(v bool) *SalaryDetailsUpsert {
 // UpdateIsActive sets the "is_active" field to the value that was provided on create.
 func (u *SalaryDetailsUpsert) UpdateIsActive() *SalaryDetailsUpsert {
 	u.SetExcluded(salarydetails.FieldIsActive)
+	return u
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (u *SalaryDetailsUpsert) SetEffectiveFrom(v time.Time) *SalaryDetailsUpsert {
+	u.Set(salarydetails.FieldEffectiveFrom, v)
+	return u
+}
+
+// UpdateEffectiveFrom sets the "effective_from" field to the value that was provided on create.
+func (u *SalaryDetailsUpsert) UpdateEffectiveFrom() *SalaryDetailsUpsert {
+	u.SetExcluded(salarydetails.FieldEffectiveFrom)
+	return u
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (u *SalaryDetailsUpsert) ClearEffectiveFrom() *SalaryDetailsUpsert {
+	u.SetNull(salarydetails.FieldEffectiveFrom)
 	return u
 }
 
@@ -1204,6 +1240,27 @@ func (u *SalaryDetailsUpsertOne) SetIsActive(v bool) *SalaryDetailsUpsertOne {
 func (u *SalaryDetailsUpsertOne) UpdateIsActive() *SalaryDetailsUpsertOne {
 	return u.Update(func(s *SalaryDetailsUpsert) {
 		s.UpdateIsActive()
+	})
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (u *SalaryDetailsUpsertOne) SetEffectiveFrom(v time.Time) *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetEffectiveFrom(v)
+	})
+}
+
+// UpdateEffectiveFrom sets the "effective_from" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertOne) UpdateEffectiveFrom() *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdateEffectiveFrom()
+	})
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (u *SalaryDetailsUpsertOne) ClearEffectiveFrom() *SalaryDetailsUpsertOne {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.ClearEffectiveFrom()
 	})
 }
 
@@ -1723,6 +1780,27 @@ func (u *SalaryDetailsUpsertBulk) SetIsActive(v bool) *SalaryDetailsUpsertBulk {
 func (u *SalaryDetailsUpsertBulk) UpdateIsActive() *SalaryDetailsUpsertBulk {
 	return u.Update(func(s *SalaryDetailsUpsert) {
 		s.UpdateIsActive()
+	})
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (u *SalaryDetailsUpsertBulk) SetEffectiveFrom(v time.Time) *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.SetEffectiveFrom(v)
+	})
+}
+
+// UpdateEffectiveFrom sets the "effective_from" field to the value that was provided on create.
+func (u *SalaryDetailsUpsertBulk) UpdateEffectiveFrom() *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.UpdateEffectiveFrom()
+	})
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (u *SalaryDetailsUpsertBulk) ClearEffectiveFrom() *SalaryDetailsUpsertBulk {
+	return u.Update(func(s *SalaryDetailsUpsert) {
+		s.ClearEffectiveFrom()
 	})
 }
 

@@ -312,6 +312,26 @@ func (_u *SalaryDetailsUpdate) SetNillableIsActive(v *bool) *SalaryDetailsUpdate
 	return _u
 }
 
+// SetEffectiveFrom sets the "effective_from" field.
+func (_u *SalaryDetailsUpdate) SetEffectiveFrom(v time.Time) *SalaryDetailsUpdate {
+	_u.mutation.SetEffectiveFrom(v)
+	return _u
+}
+
+// SetNillableEffectiveFrom sets the "effective_from" field if the given value is not nil.
+func (_u *SalaryDetailsUpdate) SetNillableEffectiveFrom(v *time.Time) *SalaryDetailsUpdate {
+	if v != nil {
+		_u.SetEffectiveFrom(*v)
+	}
+	return _u
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (_u *SalaryDetailsUpdate) ClearEffectiveFrom() *SalaryDetailsUpdate {
+	_u.mutation.ClearEffectiveFrom()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *SalaryDetailsUpdate) SetUpdatedAt(v time.Time) *SalaryDetailsUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -436,6 +456,12 @@ func (_u *SalaryDetailsUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(salarydetails.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.EffectiveFrom(); ok {
+		_spec.SetField(salarydetails.FieldEffectiveFrom, field.TypeTime, value)
+	}
+	if _u.mutation.EffectiveFromCleared() {
+		_spec.ClearField(salarydetails.FieldEffectiveFrom, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(salarydetails.FieldUpdatedAt, field.TypeTime, value)
@@ -742,6 +768,26 @@ func (_u *SalaryDetailsUpdateOne) SetNillableIsActive(v *bool) *SalaryDetailsUpd
 	return _u
 }
 
+// SetEffectiveFrom sets the "effective_from" field.
+func (_u *SalaryDetailsUpdateOne) SetEffectiveFrom(v time.Time) *SalaryDetailsUpdateOne {
+	_u.mutation.SetEffectiveFrom(v)
+	return _u
+}
+
+// SetNillableEffectiveFrom sets the "effective_from" field if the given value is not nil.
+func (_u *SalaryDetailsUpdateOne) SetNillableEffectiveFrom(v *time.Time) *SalaryDetailsUpdateOne {
+	if v != nil {
+		_u.SetEffectiveFrom(*v)
+	}
+	return _u
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (_u *SalaryDetailsUpdateOne) ClearEffectiveFrom() *SalaryDetailsUpdateOne {
+	_u.mutation.ClearEffectiveFrom()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *SalaryDetailsUpdateOne) SetUpdatedAt(v time.Time) *SalaryDetailsUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -896,6 +942,12 @@ func (_u *SalaryDetailsUpdateOne) sqlSave(ctx context.Context) (_node *SalaryDet
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(salarydetails.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.EffectiveFrom(); ok {
+		_spec.SetField(salarydetails.FieldEffectiveFrom, field.TypeTime, value)
+	}
+	if _u.mutation.EffectiveFromCleared() {
+		_spec.ClearField(salarydetails.FieldEffectiveFrom, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(salarydetails.FieldUpdatedAt, field.TypeTime, value)

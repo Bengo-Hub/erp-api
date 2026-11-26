@@ -55,6 +55,8 @@ type SalaryDetails struct {
 	WorkersUnionID *uuid.UUID `json:"workers_union_id,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
+	// EffectiveFrom holds the value of the "effective_from" field.
+	EffectiveFrom *time.Time `json:"effective_from,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -75,7 +77,7 @@ func (*SalaryDetails) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case salarydetails.FieldPayMode, salarydetails.FieldIncomeTax, salarydetails.FieldCurrency, salarydetails.FieldPreferredPayoutMethod, salarydetails.FieldPayoutPhone:
 			values[i] = new(sql.NullString)
-		case salarydetails.FieldCreatedAt, salarydetails.FieldUpdatedAt:
+		case salarydetails.FieldEffectiveFrom, salarydetails.FieldCreatedAt, salarydetails.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case salarydetails.FieldID, salarydetails.FieldTenantID, salarydetails.FieldEmployeeID:
 			values[i] = new(uuid.UUID)
@@ -211,6 +213,13 @@ func (_m *SalaryDetails) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.IsActive = value.Bool
 			}
+		case salarydetails.FieldEffectiveFrom:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field effective_from", values[i])
+			} else if value.Valid {
+				_m.EffectiveFrom = new(time.Time)
+				*_m.EffectiveFrom = value.Time
+			}
 		case salarydetails.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -318,6 +327,11 @@ func (_m *SalaryDetails) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))
+	builder.WriteString(", ")
+	if v := _m.EffectiveFrom; v != nil {
+		builder.WriteString("effective_from=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

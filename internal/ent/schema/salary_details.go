@@ -57,6 +57,10 @@ func (SalaryDetails) Fields() []ent.Field {
 		field.UUID("workers_union_id", uuid.UUID{}).Optional().Nillable(),
 
 		field.Bool("is_active").Default(true),
+		// effective_from is the first month this salary applies. Payroll pays each month from the
+		// row in force that month, so a raise can be scheduled ahead and history is kept. Empty
+		// means in force from the start (rows saved before effective dates existed).
+		field.Time("effective_from").Optional().Nillable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}
@@ -66,5 +70,6 @@ func (SalaryDetails) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("tenant_id"),
 		index.Fields("employee_id"),
+		index.Fields("tenant_id", "employee_id", "effective_from"),
 	}
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/repayoption"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/staffpurchasededuction"
+	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payroll/payrollengine"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
 )
@@ -25,7 +26,7 @@ const runChunk = 1000
 // runInputs is everything buildEmployeeInput reads, loaded once per run: a fixed handful of
 // grouped reads per 1000 employees instead of seven or more queries per employee.
 type runInputs struct {
-	salaries       map[uuid.UUID]*ent.SalaryDetails
+	salaries       map[uuid.UUID][]*ent.SalaryDetails
 	loans          map[uuid.UUID][]*ent.EmployeeLoan
 	advances       map[uuid.UUID][]*ent.Advance
 	lossDamages    map[uuid.UUID][]*ent.LossAndDamage
@@ -42,13 +43,15 @@ type runInputs struct {
 	components map[uuid.UUID]payrollsettings.ResolvedComponent
 	// gratuity holds contract and pay history for employees with a gratuity earning (nil when none).
 	gratuity map[uuid.UUID]*gratuityHistory
+	// levy answers which levies each earning counts for this run's month (nil: the defaults).
+	levy *payrollsettings.LevyResolver
 }
 
 // loadRunInputs reads salaries, active recoverables, non-cash benefits, their repay options and
 // component titles for the run's employees.
 func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []*ent.Employee) (*runInputs, error) {
 	in := &runInputs{
-		salaries:       map[uuid.UUID]*ent.SalaryDetails{},
+		salaries:       map[uuid.UUID][]*ent.SalaryDetails{},
 		loans:          map[uuid.UUID][]*ent.EmployeeLoan{},
 		advances:       map[uuid.UUID][]*ent.Advance{},
 		lossDamages:    map[uuid.UUID][]*ent.LossAndDamage{},
@@ -68,7 +71,8 @@ func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []
 			ids = append(ids, e.ID)
 		}
 
-		// Newest active salary row wins when an employee has more than one.
+		// Every active salary row: the run pays from the one in force for its month
+		// (employees.SalaryInForce), so a scheduled raise starts in its month.
 		sals, err := s.orm.SalaryDetails.Query().
 			Where(salarydetails.TenantID(tenantID), salarydetails.EmployeeIDIn(ids...), salarydetails.IsActive(true)).
 			Order(ent.Desc(salarydetails.FieldCreatedAt)).All(ctx)
@@ -76,9 +80,7 @@ func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []
 			return nil, fmt.Errorf("salaries: %w", err)
 		}
 		for _, sd := range sals {
-			if _, ok := in.salaries[sd.EmployeeID]; !ok {
-				in.salaries[sd.EmployeeID] = sd
-			}
+			in.salaries[sd.EmployeeID] = append(in.salaries[sd.EmployeeID], sd)
 		}
 
 		loans, err := s.orm.EmployeeLoan.Query().
@@ -207,11 +209,12 @@ func (s *Service) buildEmployeeInput(p RunParams, emp *ent.Employee, pre *runInp
 	var in payrollengine.EmployeeInput
 	var items EmployeeItemized
 
-	sal, ok := pre.salaries[emp.ID]
-	if !ok {
+	sal := employees.SalaryInForce(pre.salaries[emp.ID], employees.MonthEnd(p.Period))
+	if sal == nil {
 		return in, items, fmt.Errorf("no active salary details")
 	}
 	in.GrossPay = sal.MonthlySalary
+	countEarning(&in, pre.levy.Flags("basic", "taxable"), sal.MonthlySalary, true, true)
 	in.TaxCategory = sal.IncomeTax
 	// Per-employee KRA relief inputs (actual monthly amounts; the engine applies the statutory caps).
 	in.InsurancePremium = sal.InsurancePremium

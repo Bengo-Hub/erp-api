@@ -12,6 +12,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
+	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
 )
 
@@ -88,9 +89,14 @@ func (s *Service) EmployeePaySummary(ctx context.Context, tenantID, employeeID u
 	if err != nil {
 		return nil, err
 	}
-	sd, err := s.orm.SalaryDetails.Query().
+	// The salary in force for the month shown (a scheduled raise from its month on).
+	rows, err := s.orm.SalaryDetails.Query().
 		Where(salarydetails.TenantID(tenantID), salarydetails.EmployeeID(employeeID), salarydetails.IsActive(true)).
-		Order(ent.Desc(salarydetails.FieldCreatedAt)).First(ctx)
+		Order(ent.Desc(salarydetails.FieldCreatedAt)).All(ctx)
+	sd := employees.SalaryInForce(rows, employees.MonthEnd(period))
+	if err == nil && sd == nil {
+		err = &ent.NotFoundError{}
+	}
 	if ent.IsNotFound(err) || (err == nil && !sd.MonthlySalary.IsPositive()) {
 		out.State, out.Reason = PaySummaryNoSalary, "No salary is set for this employee, so nothing can be computed yet."
 		out.addStatutory(statutory, nil)

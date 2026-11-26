@@ -848,12 +848,33 @@ type upsertSalaryBody struct {
 	// Preferred net-pay disbursement channel.
 	PreferredPayoutMethod *string `json:"preferred_payout_method"`
 	PayoutPhone           *string `json:"payout_phone"`
+	// EffectiveFrom ("2026-12" or a date in that month) schedules the change from that month;
+	// omitted changes the salary in force now.
+	EffectiveFrom *string `json:"effective_from"`
+}
+
+// parseEffectiveMonth reads "2026-12" or "2026-12-15" as the first day of that month.
+func parseEffectiveMonth(s string) (time.Time, error) {
+	s = strings.TrimSpace(s)
+	for _, layout := range []string{"2006-01", "2006-01-02"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC), nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("effective_from must be a month like 2026-12")
 }
 
 func (b upsertSalaryBody) toInput() (employees.SalaryInput, error) {
 	in := employees.SalaryInput{
 		PayMode: b.PayMode, IncomeTax: b.IncomeTax, Currency: b.Currency, DisabilityExempt: b.DisabilityExempt,
 		PreferredPayoutMethod: b.PreferredPayoutMethod, PayoutPhone: b.PayoutPhone,
+	}
+	if b.EffectiveFrom != nil && strings.TrimSpace(*b.EffectiveFrom) != "" {
+		m, err := parseEffectiveMonth(*b.EffectiveFrom)
+		if err != nil {
+			return in, err
+		}
+		in.EffectiveFrom = &m
 	}
 	monthly, err := decimal.NewFromString(b.MonthlySalary)
 	if err != nil {

@@ -146,6 +146,11 @@ func IsActive(v bool) predicate.SalaryDetails {
 	return predicate.SalaryDetails(sql.FieldEQ(FieldIsActive, v))
 }
 
+// EffectiveFrom applies equality check predicate on the "effective_from" field. It's identical to EffectiveFromEQ.
+func EffectiveFrom(v time.Time) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldEffectiveFrom, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.SalaryDetails {
 	return predicate.SalaryDetails(sql.FieldEQ(FieldCreatedAt, v))
@@ -989,6 +994,56 @@ func IsActiveEQ(v bool) predicate.SalaryDetails {
 // IsActiveNEQ applies the NEQ predicate on the "is_active" field.
 func IsActiveNEQ(v bool) predicate.SalaryDetails {
 	return predicate.SalaryDetails(sql.FieldNEQ(FieldIsActive, v))
+}
+
+// EffectiveFromEQ applies the EQ predicate on the "effective_from" field.
+func EffectiveFromEQ(v time.Time) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldEQ(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromNEQ applies the NEQ predicate on the "effective_from" field.
+func EffectiveFromNEQ(v time.Time) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNEQ(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromIn applies the In predicate on the "effective_from" field.
+func EffectiveFromIn(vs ...time.Time) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldIn(FieldEffectiveFrom, vs...))
+}
+
+// EffectiveFromNotIn applies the NotIn predicate on the "effective_from" field.
+func EffectiveFromNotIn(vs ...time.Time) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNotIn(FieldEffectiveFrom, vs...))
+}
+
+// EffectiveFromGT applies the GT predicate on the "effective_from" field.
+func EffectiveFromGT(v time.Time) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGT(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromGTE applies the GTE predicate on the "effective_from" field.
+func EffectiveFromGTE(v time.Time) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldGTE(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromLT applies the LT predicate on the "effective_from" field.
+func EffectiveFromLT(v time.Time) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLT(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromLTE applies the LTE predicate on the "effective_from" field.
+func EffectiveFromLTE(v time.Time) predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldLTE(FieldEffectiveFrom, v))
+}
+
+// EffectiveFromIsNil applies the IsNil predicate on the "effective_from" field.
+func EffectiveFromIsNil() predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldIsNull(FieldEffectiveFrom))
+}
+
+// EffectiveFromNotNil applies the NotNil predicate on the "effective_from" field.
+func EffectiveFromNotNil() predicate.SalaryDetails {
+	return predicate.SalaryDetails(sql.FieldNotNull(FieldEffectiveFrom))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

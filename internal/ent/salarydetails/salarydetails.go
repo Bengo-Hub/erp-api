@@ -51,6 +51,8 @@ const (
 	FieldWorkersUnionID = "workers_union_id"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
+	// FieldEffectiveFrom holds the string denoting the effective_from field in the database.
+	FieldEffectiveFrom = "effective_from"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -80,6 +82,7 @@ var Columns = []string{
 	FieldJobGroupID,
 	FieldWorkersUnionID,
 	FieldIsActive,
+	FieldEffectiveFrom,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -223,6 +226,11 @@ func ByWorkersUnionID(opts ...sql.OrderTermOption) OrderOption {
 // ByIsActive orders the results by the is_active field.
 func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsActive, opts...).ToFunc()
+}
+
+// ByEffectiveFrom orders the results by the effective_from field.
+func ByEffectiveFrom(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEffectiveFrom, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

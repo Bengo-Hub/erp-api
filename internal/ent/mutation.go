@@ -94678,6 +94678,7 @@ type SalaryDetailsMutation struct {
 	job_group_id            *uuid.UUID
 	workers_union_id        *uuid.UUID
 	is_active               *bool
+	effective_from          *time.Time
 	created_at              *time.Time
 	updated_at              *time.Time
 	clearedFields           map[string]struct{}
@@ -95503,6 +95504,55 @@ func (m *SalaryDetailsMutation) ResetIsActive() {
 	m.is_active = nil
 }
 
+// SetEffectiveFrom sets the "effective_from" field.
+func (m *SalaryDetailsMutation) SetEffectiveFrom(t time.Time) {
+	m.effective_from = &t
+}
+
+// EffectiveFrom returns the value of the "effective_from" field in the mutation.
+func (m *SalaryDetailsMutation) EffectiveFrom() (r time.Time, exists bool) {
+	v := m.effective_from
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEffectiveFrom returns the old "effective_from" field's value of the SalaryDetails entity.
+// If the SalaryDetails object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SalaryDetailsMutation) OldEffectiveFrom(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEffectiveFrom is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEffectiveFrom requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEffectiveFrom: %w", err)
+	}
+	return oldValue.EffectiveFrom, nil
+}
+
+// ClearEffectiveFrom clears the value of the "effective_from" field.
+func (m *SalaryDetailsMutation) ClearEffectiveFrom() {
+	m.effective_from = nil
+	m.clearedFields[salarydetails.FieldEffectiveFrom] = struct{}{}
+}
+
+// EffectiveFromCleared returns if the "effective_from" field was cleared in this mutation.
+func (m *SalaryDetailsMutation) EffectiveFromCleared() bool {
+	_, ok := m.clearedFields[salarydetails.FieldEffectiveFrom]
+	return ok
+}
+
+// ResetEffectiveFrom resets all changes to the "effective_from" field.
+func (m *SalaryDetailsMutation) ResetEffectiveFrom() {
+	m.effective_from = nil
+	delete(m.clearedFields, salarydetails.FieldEffectiveFrom)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *SalaryDetailsMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -95609,7 +95659,7 @@ func (m *SalaryDetailsMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SalaryDetailsMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.tenant_id != nil {
 		fields = append(fields, salarydetails.FieldTenantID)
 	}
@@ -95664,6 +95714,9 @@ func (m *SalaryDetailsMutation) Fields() []string {
 	if m.is_active != nil {
 		fields = append(fields, salarydetails.FieldIsActive)
 	}
+	if m.effective_from != nil {
+		fields = append(fields, salarydetails.FieldEffectiveFrom)
+	}
 	if m.created_at != nil {
 		fields = append(fields, salarydetails.FieldCreatedAt)
 	}
@@ -95714,6 +95767,8 @@ func (m *SalaryDetailsMutation) Field(name string) (ent.Value, bool) {
 		return m.WorkersUnionID()
 	case salarydetails.FieldIsActive:
 		return m.IsActive()
+	case salarydetails.FieldEffectiveFrom:
+		return m.EffectiveFrom()
 	case salarydetails.FieldCreatedAt:
 		return m.CreatedAt()
 	case salarydetails.FieldUpdatedAt:
@@ -95763,6 +95818,8 @@ func (m *SalaryDetailsMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldWorkersUnionID(ctx)
 	case salarydetails.FieldIsActive:
 		return m.OldIsActive(ctx)
+	case salarydetails.FieldEffectiveFrom:
+		return m.OldEffectiveFrom(ctx)
 	case salarydetails.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case salarydetails.FieldUpdatedAt:
@@ -95902,6 +95959,13 @@ func (m *SalaryDetailsMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetIsActive(v)
 		return nil
+	case salarydetails.FieldEffectiveFrom:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEffectiveFrom(v)
+		return nil
 	case salarydetails.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -95961,6 +96025,9 @@ func (m *SalaryDetailsMutation) ClearedFields() []string {
 	if m.FieldCleared(salarydetails.FieldWorkersUnionID) {
 		fields = append(fields, salarydetails.FieldWorkersUnionID)
 	}
+	if m.FieldCleared(salarydetails.FieldEffectiveFrom) {
+		fields = append(fields, salarydetails.FieldEffectiveFrom)
+	}
 	return fields
 }
 
@@ -95989,6 +96056,9 @@ func (m *SalaryDetailsMutation) ClearField(name string) error {
 		return nil
 	case salarydetails.FieldWorkersUnionID:
 		m.ClearWorkersUnionID()
+		return nil
+	case salarydetails.FieldEffectiveFrom:
+		m.ClearEffectiveFrom()
 		return nil
 	}
 	return fmt.Errorf("unknown SalaryDetails nullable field %s", name)
@@ -96051,6 +96121,9 @@ func (m *SalaryDetailsMutation) ResetField(name string) error {
 		return nil
 	case salarydetails.FieldIsActive:
 		m.ResetIsActive()
+		return nil
+	case salarydetails.FieldEffectiveFrom:
+		m.ResetEffectiveFrom()
 		return nil
 	case salarydetails.FieldCreatedAt:
 		m.ResetCreatedAt()

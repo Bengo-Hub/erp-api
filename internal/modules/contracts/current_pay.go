@@ -9,14 +9,15 @@ import (
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
+	"github.com/Bengo-Hub/erp-api/internal/modules/employees"
 )
 
 // The contract's salary is the figure agreed on that document and is never rewritten. What the
 // person is paid is the active salary_details row (the one a payroll run reads); this file only
 // reads it, so a contract can say whether it still states the current pay.
 
-// CurrentSalaries returns each employee's current monthly salary (the newest active row). An
-// employee without one is absent.
+// CurrentSalaries returns each employee's monthly salary in force today (a scheduled raise counts
+// from its month). An employee without one is absent.
 func (s *Service) CurrentSalaries(ctx context.Context, tenantID uuid.UUID, employeeIDs []uuid.UUID) (map[uuid.UUID]decimal.Decimal, error) {
 	out := map[uuid.UUID]decimal.Decimal{}
 	if len(employeeIDs) == 0 {
@@ -28,8 +29,15 @@ func (s *Service) CurrentSalaries(ctx context.Context, tenantID uuid.UUID, emplo
 	if err != nil {
 		return nil, err
 	}
+	byEmp := map[uuid.UUID][]*ent.SalaryDetails{}
 	for _, r := range rows {
-		out[r.EmployeeID] = r.MonthlySalary
+		byEmp[r.EmployeeID] = append(byEmp[r.EmployeeID], r)
+	}
+	now := time.Now().UTC()
+	for id, rs := range byEmp {
+		if r := employees.SalaryInForce(rs, now); r != nil {
+			out[id] = r.MonthlySalary
+		}
 	}
 	return out, nil
 }
