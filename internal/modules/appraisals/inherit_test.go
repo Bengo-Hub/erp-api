@@ -45,6 +45,17 @@ func TestInheritedTemplatesOnPostgres(t *testing.T) {
 	if n := client.AppraisalTemplate.Query().CountX(ctx); n != 1 {
 		t.Fatalf("template copied: %d", n)
 	}
+	// The lists say what is inherited and what the company changed.
+	tv, err := svc.ListTemplateViews(ctx, tenant)
+	if err != nil || len(tv) != 1 || !tv[0].Inherited || !tv[0].Customised {
+		t.Fatalf("template views: %+v %v", tv, err)
+	}
+	if otv, _ := svc.ListTemplateViews(ctx, other); !otv[0].Inherited || otv[0].Customised {
+		t.Fatalf("other company's template view: %+v", otv)
+	}
+	if qv, err := svc.ListAllQuestions(ctx, tenant); err != nil || len(qv) != 1 || !qv[0].Inherited || !qv[0].Customised {
+		t.Fatalf("question views: %+v %v", qv, err)
+	}
 
 	// A question the company's staff answered is no longer changed.
 	emp := client.Employee.Create().SetTenantID(tenant).SetFirstName("Jane").SetLastName("W").SaveX(ctx)
@@ -109,6 +120,9 @@ func TestInheritedSampleGoalsOnPostgres(t *testing.T) {
 	}
 	if rows := library(tenant); rows[0].Description != "By 30%" {
 		t.Fatalf("company view: %v", rows[0])
+	}
+	if gv, err := svc.DescribeGoals(ctx, tenant, library(tenant)); err != nil || !gv[0].Inherited || !gv[0].Customised {
+		t.Fatalf("goal views: %+v %v", gv, err)
 	}
 	emp := uuid.New()
 	if _, err := svc.UpdateGoal(ctx, tenant, g.ID, GoalInput{Title: "Reduce customer complaints", EmployeeID: &emp}); !errors.Is(err, ErrInheritedGoal) {

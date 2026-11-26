@@ -11,8 +11,10 @@ import (
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalquestion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
 	"github.com/Bengo-Hub/erp-api/internal/ent/goal"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
@@ -85,6 +87,55 @@ func TestRemovedDefaultsStayRemoved(t *testing.T) {
 		if n != 0 {
 			t.Errorf("%s came back on the second run", what)
 		}
+	}
+}
+
+// TestPlatformRevisionFillsOldRows: rows the platform seeded before the defaults carried question
+// scoring and the unpaid flag are brought up to the defaults once; a later change by the platform
+// owner is kept.
+func TestPlatformRevisionFillsOldRows(t *testing.T) {
+	c := testClient(t)
+	ctx := context.Background()
+	s := NewService(c)
+	platform := uuid.New()
+	// The old seed: the template with questions without category, weight or max score, and the
+	// leave types without the paid flag.
+	tpl := c.AppraisalTemplate.Create().SetTenantID(platform).SetName(defaultTemplateName).SaveX(ctx)
+	for _, q := range defaultAppraisalQuestions {
+		c.AppraisalQuestion.Create().SetTenantID(platform).SetTemplateID(tpl.ID).SetQuestionText(q.text).
+			SetQuestionType(q.questionType).SetOrder(q.order).SaveX(ctx)
+	}
+	for _, lc := range defaultLeaveCategories {
+		c.LeaveCategory.Create().SetTenantID(platform).SetName(lc.name).SetDefaultAnnualDays(decimal.RequireFromString(lc.annualDays)).
+			SetMaxCarryoverDays(decimal.RequireFromString(lc.maxCarryover)).SaveX(ctx)
+	}
+	if err := s.EnsurePlatform(ctx, platform); err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range defaultAppraisalQuestions {
+		got := c.AppraisalQuestion.Query().Where(appraisalquestion.TemplateID(tpl.ID), appraisalquestion.QuestionText(q.text)).OnlyX(ctx)
+		if got.Category != q.category || got.Weight != q.weight || got.MaxScore != q.maxScore {
+			t.Errorf("%s: category %q weight %v max %d", q.text, got.Category, got.Weight, got.MaxScore)
+		}
+	}
+	unpaid := c.LeaveCategory.Query().Where(leavecategory.TenantID(platform), leavecategory.Name("Unpaid Leave")).OnlyX(ctx)
+	if unpaid.IsPaid {
+		t.Fatal("Unpaid Leave must be unpaid")
+	}
+	if n := c.AppraisalQuestion.Query().CountX(ctx); n != len(defaultAppraisalQuestions) {
+		t.Fatalf("questions added: %d", n)
+	}
+	// The platform owner changes a value afterwards; the next deploy keeps it.
+	c.LeaveCategory.UpdateOne(unpaid).SetIsPaid(true).ExecX(ctx)
+	c.AppraisalQuestion.Update().Where(appraisalquestion.QuestionText("Teamwork")).ClearWeight().ExecX(ctx)
+	if err := s.EnsurePlatform(ctx, platform); err != nil {
+		t.Fatal(err)
+	}
+	if !c.LeaveCategory.GetX(ctx, unpaid.ID).IsPaid {
+		t.Fatal("a later change by the platform owner was undone")
+	}
+	if w := c.AppraisalQuestion.Query().Where(appraisalquestion.QuestionText("Teamwork")).OnlyX(ctx).Weight; w != 0 {
+		t.Fatalf("a later change by the platform owner was undone: weight %v", w)
 	}
 }
 

@@ -58,5 +58,5 @@ func (s *Service) EnsurePlatform(ctx context.Context, tenantID uuid.UUID) error 
 	if err := s.EnsureGoalLibrary(ctx, tenantID); err != nil {
 		return fmt.Errorf("defaults: goal library: %w", err)
 	}
-	return nil
+	return s.revisePlatform(ctx, tenantID)
 }

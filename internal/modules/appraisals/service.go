@@ -18,6 +18,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisalquestion"
 	"github.com/Bengo-Hub/erp-api/internal/ent/appraisaltemplate"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
+	"github.com/Bengo-Hub/erp-api/internal/modules/inherited"
 	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
@@ -192,6 +193,9 @@ type TemplateView struct {
 	// active).
 	IsActive      bool `json:"is_active"`
 	QuestionCount int  `json:"question_count"`
+	// Inherited marks a platform template; Customised one the company changed.
+	Inherited  bool `json:"inherited"`
+	Customised bool `json:"customised"`
 }
 
 // ListTemplateViews returns ListTemplates with each template's question count (one
@@ -222,8 +226,15 @@ func (s *Service) ListTemplateViews(ctx context.Context, tenantID uuid.UUID) ([]
 	for _, c := range counts {
 		byTemplate[c.TemplateID] = c.Count
 	}
+	changes, err := inherited.Load[TemplateOverride](ctx, s.orm, tenantID, TemplateOverridesKey)
+	if err != nil {
+		return nil, fmt.Errorf("appraisals: %w", err)
+	}
 	for i, t := range tpls {
-		out[i] = TemplateView{AppraisalTemplate: t, IsActive: t.IsActive, QuestionCount: byTemplate[t.ID]}
+		_, changed := changes[t.ID.String()]
+		own := t.TenantID == tenantID
+		out[i] = TemplateView{AppraisalTemplate: t, IsActive: t.IsActive, QuestionCount: byTemplate[t.ID],
+			Inherited: !own, Customised: !own && changed}
 	}
 	return out, nil
 }
@@ -232,6 +243,9 @@ func (s *Service) ListTemplateViews(ctx context.Context, tenantID uuid.UUID) ([]
 type QuestionView struct {
 	*ent.AppraisalQuestion
 	TemplateName string `json:"template_name,omitempty"`
+	// Inherited marks a question of a platform template; Customised one the company changed.
+	Inherited  bool `json:"inherited"`
+	Customised bool `json:"customised"`
 }
 
 // ListAllQuestions returns the questions of every template the tenant can use, grouped by
@@ -260,8 +274,15 @@ func (s *Service) ListAllQuestions(ctx context.Context, tenantID uuid.UUID) ([]Q
 	if rows, err = s.withQuestionChanges(ctx, tenantID, rows); err != nil {
 		return nil, err
 	}
+	changes, err := inherited.Load[QuestionOverride](ctx, s.orm, tenantID, QuestionOverridesKey)
+	if err != nil {
+		return nil, fmt.Errorf("appraisals: %w", err)
+	}
 	for _, q := range rows {
-		out = append(out, QuestionView{AppraisalQuestion: q, TemplateName: names[q.TemplateID]})
+		_, changed := changes[q.ID.String()]
+		own := q.TenantID == tenantID
+		out = append(out, QuestionView{AppraisalQuestion: q, TemplateName: names[q.TemplateID],
+			Inherited: !own, Customised: !own && changed})
 	}
 	return out, nil
 }

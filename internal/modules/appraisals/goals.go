@@ -13,6 +13,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/goal"
 	"github.com/Bengo-Hub/erp-api/internal/ent/goalprogress"
+	"github.com/Bengo-Hub/erp-api/internal/modules/inherited"
 	"github.com/Bengo-Hub/erp-api/internal/platform/tenantref"
 )
 
@@ -51,6 +52,9 @@ type GoalView struct {
 	EmployeeName string `json:"employee_name,omitempty"`
 	Category     string `json:"category,omitempty"`
 	Weight       string `json:"weight,omitempty"`
+	// Inherited marks a platform sample goal; Customised one the company changed.
+	Inherited  bool `json:"inherited"`
+	Customised bool `json:"customised"`
 }
 
 // DescribeGoals adds employee names (one query) and flattens category and weight.
@@ -71,9 +75,15 @@ func (s *Service) DescribeGoals(ctx context.Context, tenantID uuid.UUID, rows []
 			names[e.ID] = fullName(e)
 		}
 	}
+	changes, err := inherited.Load[GoalOverride](ctx, s.orm, tenantID, GoalOverridesKey)
+	if err != nil {
+		return nil, fmt.Errorf("appraisals: %w", err)
+	}
 	out := make([]GoalView, len(rows))
 	for i, g := range rows {
-		v := GoalView{Goal: g}
+		_, changed := changes[g.ID.String()]
+		own := g.TenantID == tenantID
+		v := GoalView{Goal: g, Inherited: !own, Customised: !own && changed}
 		if g.EmployeeID != nil {
 			v.EmployeeName = names[*g.EmployeeID]
 		}
