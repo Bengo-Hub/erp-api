@@ -101,6 +101,18 @@ func (d *Disburser) buildEvent(ctx context.Context, p DisburseParams, slips []*e
 		return nil, decimal.Zero, err
 	}
 	payload, net := buildPayrollEvent(slips, empByID, d.loadPayoutPrefs(ctx, p.TenantID, slips), reimb, p, ref)
+	payload["currency"] = d.tenantCurrency(ctx, p.TenantID)
+	withheld := decimal.Zero
+	for _, s := range slips {
+		withheld = withheld.Add(s.GrossPay).Add(reimb[s.ID]).Sub(s.NetPay)
+	}
+	bd, err := d.buildBreakdown(ctx, p.TenantID, slips, withheld)
+	if err != nil {
+		return nil, decimal.Zero, err
+	}
+	if bd != nil {
+		payload["breakdown"] = bd
+	}
 	return payload, net, nil
 }
 
