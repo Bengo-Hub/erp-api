@@ -255,6 +255,42 @@ func (s *Service) UpsertFromAuthUser(ctx context.Context, tenantID, authUserID u
 	return upd.Save(ctx)
 }
 
+// Employee metadata keys set when the person's login is disabled in auth-api. HR sees them on the
+// dashboard ("login disabled, review exit") and decides whether to exit the person.
+const (
+	MetaLoginDisabledAt = "login_disabled_at"
+	MetaLoginStatus     = "login_status"
+)
+
+// DeactivateAuthUser reacts to auth-api disabling a user: the ERP login shadow is marked inactive
+// and every current employee record of the user is flagged for HR review. Employment, pay and
+// history stay as they are: exiting someone is HR's decision (Mark as exited, then final pay).
+// Returns how many employee records were flagged.
+func (s *Service) DeactivateAuthUser(ctx context.Context, authUserID uuid.UUID, status string, at time.Time) (int, error) {
+	if _, err := s.orm.CustomUser.Update().Where(customuser.ID(authUserID), customuser.IsActive(true)).
+		SetIsActive(false).Save(ctx); err != nil {
+		return 0, fmt.Errorf("employees: deactivate user: %w", err)
+	}
+	emps, err := s.orm.Employee.Query().Where(employee.UserID(authUserID), employee.Deleted(false), employee.Terminated(false)).All(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("employees: deactivate user: %w", err)
+	}
+	for _, e := range emps {
+		meta := map[string]any{}
+		for k, v := range e.Metadata {
+			meta[k] = v
+		}
+		if _, flagged := meta[MetaLoginDisabledAt]; !flagged {
+			meta[MetaLoginDisabledAt] = at.UTC().Format(time.RFC3339)
+		}
+		meta[MetaLoginStatus] = status
+		if err := e.Update().SetMetadata(meta).Exec(ctx); err != nil {
+			return 0, fmt.Errorf("employees: flag employee: %w", err)
+		}
+	}
+	return len(emps), nil
+}
+
 // HardDeleteAuthUser reacts to auth-api's real hard-delete (AdminPurgeUser, published as
 // auth.user.deleted) of a platform user. Two different things reference this user's id:
 //

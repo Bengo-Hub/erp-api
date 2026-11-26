@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	sharedevents "github.com/Bengo-Hub/shared-events"
 	"github.com/google/uuid"
@@ -140,6 +141,35 @@ func (c *AuthUserSyncConsumer) handleUserDeleted(ctx context.Context, evt *share
 		return err
 	}
 	c.log.Info("user hard-deleted from auth.user.deleted event", zap.String("auth_user_id", authUserID.String()))
+	return nil
+}
+
+// handleUserDeactivated reacts to auth-api deactivating, suspending or setting a user inactive:
+// the user's ERP login shadow is marked inactive and their employee records are flagged "login
+// disabled, review exit" on the HR dashboard. Employment is an HR decision, so the employee
+// record, its pay and its history are left as they are (HR exits a leaver with Mark as exited).
+func (c *AuthUserSyncConsumer) handleUserDeactivated(ctx context.Context, evt *sharedevents.Event) error {
+	authUserID := parseUUID(str(evt.Payload, "user_id"))
+	if authUserID == uuid.Nil {
+		authUserID = evt.AggregateID
+	}
+	if authUserID == uuid.Nil {
+		return fmt.Errorf("auth.user.deactivated event missing user id")
+	}
+	at := evt.Timestamp
+	if at.IsZero() {
+		at = time.Now()
+	}
+	status := str(evt.Payload, "status")
+	if status == "" {
+		status = "deactivated"
+	}
+	flagged, err := c.svc.DeactivateAuthUser(ctx, authUserID, status, at)
+	if err != nil {
+		return err
+	}
+	c.log.Info("auth user deactivated", zap.String("auth_user_id", authUserID.String()),
+		zap.String("status", status), zap.Int("employees_flagged", flagged))
 	return nil
 }
 

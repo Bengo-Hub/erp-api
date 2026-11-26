@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
@@ -44,6 +46,39 @@ type HRMAnalytics struct {
 	// LeaveLiability is this year's remaining leave days of active employees at their daily rate.
 	LeaveLiability     decimal.Decimal `json:"leave_liability"`
 	LeaveDaysRemaining decimal.Decimal `json:"leave_days_remaining"`
+	// LoginDisabled are current employees whose login was disabled in auth-api: HR reviews
+	// whether they have left (Mark as exited, final pay) or the login should be restored.
+	LoginDisabled []LoginDisabledEmployee `json:"login_disabled"`
+}
+
+// LoginDisabledEmployee is one employee flagged "login disabled, review exit".
+type LoginDisabledEmployee struct {
+	EmployeeID     uuid.UUID `json:"employee_id"`
+	Name           string    `json:"name"`
+	EmployeeNumber string    `json:"employee_number,omitempty"`
+	Status         string    `json:"status"`
+	Since          string    `json:"since"`
+}
+
+// loginDisabled lists the tenant's current employees flagged by an auth-api deactivation.
+func (s *Service) loginDisabled(ctx context.Context, tenantID uuid.UUID) ([]LoginDisabledEmployee, error) {
+	rows, err := s.orm.Employee.Query().Where(employee.TenantID(tenantID), employee.Deleted(false), employee.Terminated(false),
+		func(sel *entsql.Selector) { sel.Where(sqljson.HasKey(employee.FieldMetadata, sqljson.Path("login_disabled_at"))) }).
+		Order(employee.ByFirstName()).Limit(200).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]LoginDisabledEmployee, 0, len(rows))
+	for _, e := range rows {
+		v := LoginDisabledEmployee{EmployeeID: e.ID, Name: strings.TrimSpace(e.FirstName + " " + e.LastName)}
+		if e.EmployeeNumber != nil {
+			v.EmployeeNumber = *e.EmployeeNumber
+		}
+		v.Status, _ = e.Metadata["login_status"].(string)
+		v.Since, _ = e.Metadata["login_disabled_at"].(string)
+		out = append(out, v)
+	}
+	return out, nil
 }
 
 // NamedCount is one group of a headcount breakdown.
@@ -194,6 +229,9 @@ func (s *Service) HRMAnalytics(ctx context.Context, tenantID uuid.UUID, from, to
 		if out.PayrollByDept, err = s.payrollByDepartment(ctx, tenantID, out.PayrollTrend[len(out.PayrollTrend)-1].Month, names); err != nil {
 			return nil, err
 		}
+	}
+	if out.LoginDisabled, err = s.loginDisabled(ctx, tenantID); err != nil {
+		return nil, fmt.Errorf("login disabled: %w", err)
 	}
 	return out, nil
 }
