@@ -122,6 +122,9 @@ func run() error {
 
 	orm := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.Postgres, sqlDB)))
 	defer func() { _ = orm.Close() }()
+	// Every employee create or change to a field other services copy (name, staff number, login
+	// link, exit) writes erp.employee.upserted to the outbox in the same transaction.
+	orm.Employee.Use(employees.UpsertedEventHook(cfg.Events.SourceService))
 
 	// Schema changes only through cmd/migrate (direct connection, advisory lock). An unlocked
 	// in-process auto-migrate on every replica start was removed.
@@ -213,6 +216,13 @@ func run() error {
 		if err := claimConsumer.Start(ctx, natsConn); err != nil {
 			log.Warn("treasury claim consumer start failed", zap.Error(err))
 		}
+		// projects-api project lifecycle: refresh copied project names, end allocations of a
+		// closed or deleted project.
+		projectConsumer := consumers.NewProjectSyncConsumer(log, authUserEmployeesSvc, idem)
+		projectConsumer.Entitled = erpEntitled
+		if err := projectConsumer.Start(ctx, natsConn); err != nil {
+			log.Warn("project-sync consumer start failed", zap.Error(err))
+		}
 		// tenant.purge (dormancy, a deleted tenant, a declined registration): delete every row
 		// erp holds for the tenant (auth_tenants included), by the shared schema-driven purger.
 		if js, err := natsConn.JetStream(); err == nil {
@@ -248,7 +258,8 @@ func run() error {
 	employeesSvc := employees.NewService(orm).WithSystemTenant(platformTenant)
 	handlers.SetEmployeeResolver(employeesSvc.EmployeeIDForExternalUser) // ESS self-scoping (?mine=true)
 	employeesHandler := handlers.NewEmployeesHandler(log, employeesSvc)
-	orgSettingsHandler := handlers.NewOrgSettingsHandler(log, orgsettings.NewService(orm).WithSystemTenant(platformTenant))
+	orgSettingsSvc := orgsettings.NewService(orm).WithSystemTenant(platformTenant)
+	orgSettingsHandler := handlers.NewOrgSettingsHandler(log, orgSettingsSvc)
 	contractsHandler := handlers.NewContractsHandler(log, contracts.NewService(orm))
 
 	// Payroll: engine service (reuses payroll-settings for rate resolution) + disburser
@@ -261,6 +272,11 @@ func run() error {
 	// Claim approval checks treasury budgets first (fails open when treasury is unreachable).
 	payrollSvc := payroll.NewService(orm, payrollSettingsSvc).WithPublisher(notifyPublisher).WithLogger(log.Named("payroll")).WithBudgetChecker(treasuryClient)
 	employeesHandler.WithTreasury(treasuryClient) // enables /hrm/banks/* verify proxy
+	if treasuryClient.Enabled() {
+		// Department cost centres are checked against treasury on save and every day after.
+		orgSettingsSvc.WithCostCenters(treasuryClient, log.Named("orgsettings"))
+		orgsettings.NewCostCenterCron(orgSettingsSvc, log, 24*time.Hour).Start(ctx)
+	}
 	payrollDisburser := payroll.NewDisburser(orm, notifyPublisher, treasuryClient, log)
 	// POS↔ERP staff-credit: premium-gated recoverable created S2S by pos-api (staff_fund_from_salary).
 	subsGate := subs.NewClient(cfg.Services.SubscriptionsURL, cfg.Auth.APIKey, log)
@@ -289,9 +305,12 @@ func run() error {
 		WithMedia(mediaStore).WithLookups(lookupsClient).WithJobs(payrollJobs)
 	payrollSettingsHandler := handlers.NewPayrollSettingsHandler(log, payrollSettingsSvc, orm)
 	if treasuryClient.Enabled() {
-		payrollSettingsHandler.WithTreasuryRates(func(ctx context.Context) ([]treasury.StatutoryRate, error) {
+		listRates := func(ctx context.Context) ([]treasury.StatutoryRate, error) {
 			return treasuryClient.ListStatutoryRates(ctx, systemTenant)
-		})
+		}
+		payrollSettingsHandler.WithTreasuryRates(listRates)
+		// Daily pull of treasury's approved statutory rates (also run on every deploy).
+		payrollsettings.NewTreasuryRatesCron(payrollSettingsSvc, listRates, log, 24*time.Hour).Start(ctx)
 	}
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher)).WithSystemTenant(systemTenant)
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
