@@ -29,28 +29,30 @@ type TenantInput struct {
 	ID         uuid.UUID
 	Slug       string
 	Name       string
-	Status     string
-	IsPlatform bool
+	Status     string // "" keeps the stored status (active for a new row)
+	IsPlatform *bool  // nil keeps the stored flag (false for a new row)
 }
 
-// UpsertTenant creates or updates the local AuthTenant shadow keyed on the auth-api UUID.
+// UpsertTenant creates or updates the local AuthTenant shadow keyed on the auth-api UUID. Only
+// the fields the event carries are written, so a partial event never resets the others.
 func (s *TenantSyncer) UpsertTenant(ctx context.Context, in TenantInput) (*ent.AuthTenant, error) {
 	if in.ID == uuid.Nil {
 		return nil, fmt.Errorf("usersync: empty tenant id")
-	}
-	if in.Status == "" {
-		in.Status = "active"
 	}
 	now := time.Now().UTC()
 
 	existing, err := s.orm.AuthTenant.Get(ctx, in.ID)
 	if ent.IsNotFound(err) {
+		status := in.Status
+		if status == "" {
+			status = "active"
+		}
 		return s.orm.AuthTenant.Create().
 			SetID(in.ID).
 			SetSlug(in.Slug).
 			SetName(in.Name).
-			SetStatus(in.Status).
-			SetIsPlatform(in.IsPlatform).
+			SetStatus(status).
+			SetIsPlatform(in.IsPlatform != nil && *in.IsPlatform).
 			SetSyncedAt(now).
 			Save(ctx)
 	}
@@ -65,7 +67,12 @@ func (s *TenantSyncer) UpsertTenant(ctx context.Context, in TenantInput) (*ent.A
 	if in.Name != "" {
 		upd = upd.SetName(in.Name)
 	}
-	upd = upd.SetStatus(in.Status).SetIsPlatform(in.IsPlatform)
+	if in.Status != "" {
+		upd = upd.SetStatus(in.Status)
+	}
+	if in.IsPlatform != nil {
+		upd = upd.SetIsPlatform(*in.IsPlatform)
+	}
 	return upd.Save(ctx)
 }
 
@@ -101,31 +108,38 @@ type OutletInput struct {
 	Code     string
 	Name     string
 	UseCase  string
-	IsHQ     bool
-	Status   string
+	IsHQ     *bool  // nil keeps the stored flag (false for a new row)
+	Status   string // "" keeps the stored status (active for a new row)
 	Timezone string
 }
 
-// UpsertOutlet creates or updates the local AuthOutlet shadow.
+// UpsertOutlet creates or updates the local AuthOutlet shadow. Only the fields the event carries
+// are written. An event for an outlet erp has never seen that carries neither name nor code (a
+// metadata-only republish) creates nothing and returns nil: the full created event or the
+// republish endpoint brings that outlet in.
 func (s *TenantSyncer) UpsertOutlet(ctx context.Context, in OutletInput) (*ent.AuthOutlet, error) {
 	if in.ID == uuid.Nil || in.TenantID == uuid.Nil {
 		return nil, fmt.Errorf("usersync: outlet requires id and tenant_id")
-	}
-	if in.Status == "" {
-		in.Status = "active"
 	}
 	now := time.Now().UTC()
 
 	existing, err := s.orm.AuthOutlet.Get(ctx, in.ID)
 	if ent.IsNotFound(err) {
+		if in.Name == "" && in.Code == "" {
+			return nil, nil
+		}
+		status := in.Status
+		if status == "" {
+			status = "active"
+		}
 		return s.orm.AuthOutlet.Create().
 			SetID(in.ID).
 			SetTenantID(in.TenantID).
 			SetCode(in.Code).
 			SetName(in.Name).
 			SetUseCase(in.UseCase).
-			SetIsHq(in.IsHQ).
-			SetStatus(in.Status).
+			SetIsHq(in.IsHQ != nil && *in.IsHQ).
+			SetStatus(status).
 			SetTimezone(in.Timezone).
 			SetSyncedAt(now).
 			Save(ctx)
@@ -136,9 +150,13 @@ func (s *TenantSyncer) UpsertOutlet(ctx context.Context, in OutletInput) (*ent.A
 
 	upd := existing.Update().
 		SetTenantID(in.TenantID).
-		SetStatus(in.Status).
-		SetIsHq(in.IsHQ).
 		SetSyncedAt(now)
+	if in.Status != "" {
+		upd = upd.SetStatus(in.Status)
+	}
+	if in.IsHQ != nil {
+		upd = upd.SetIsHq(*in.IsHQ)
+	}
 	if in.Name != "" {
 		upd = upd.SetName(in.Name)
 	}

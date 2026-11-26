@@ -62,6 +62,10 @@ func (c *TenantSyncConsumer) Start(ctx context.Context, nc *nats.Conn) error {
 }
 
 func (c *TenantSyncConsumer) handleTenantEvent(ctx context.Context, evt *sharedevents.Event) error {
+	// auth.tenant.<type>.notify are founder emails (name is the founder's, not the company's).
+	if evt.EventType == "notify" || strings.HasSuffix(evt.EventType, ".notify") {
+		return nil
+	}
 	id := tenantIDFromEvent(evt)
 	if id == uuid.Nil {
 		return fmt.Errorf("auth.tenant event missing tenant id")
@@ -74,7 +78,7 @@ func (c *TenantSyncConsumer) handleTenantEvent(ctx context.Context, evt *sharede
 		Slug:       str(evt.Payload, "slug"),
 		Name:       str(evt.Payload, "name"),
 		Status:     str(evt.Payload, "status"),
-		IsPlatform: boolean(evt.Payload, "is_platform"),
+		IsPlatform: optBool(evt.Payload, "is_platform"),
 	}
 	if _, err := c.syncer.UpsertTenant(ctx, in); err != nil {
 		return err
@@ -87,6 +91,11 @@ func (c *TenantSyncConsumer) handleOutletEvent(ctx context.Context, evt *sharede
 	outletID := parseUUID(str(evt.Payload, "id"))
 	if outletID == uuid.Nil {
 		outletID = parseUUID(str(evt.Payload, "outlet_id"))
+	}
+	if outletID == uuid.Nil {
+		// auth-api's outbox sets the aggregate id to the outlet (the eTIMS branch republish
+		// carries it nowhere else).
+		outletID = evt.AggregateID
 	}
 	if outletID == uuid.Nil {
 		return fmt.Errorf("auth.outlet event missing outlet id")
@@ -109,12 +118,17 @@ func (c *TenantSyncConsumer) handleOutletEvent(ctx context.Context, evt *sharede
 		Code:     str(evt.Payload, "code"),
 		Name:     str(evt.Payload, "name"),
 		UseCase:  str(evt.Payload, "use_case"),
-		IsHQ:     boolean(evt.Payload, "is_hq"),
+		IsHQ:     optBool(evt.Payload, "is_hq"),
 		Status:   str(evt.Payload, "status"),
 		Timezone: str(evt.Payload, "timezone"),
 	}
-	if _, err := c.syncer.UpsertOutlet(ctx, in); err != nil {
+	row, err := c.syncer.UpsertOutlet(ctx, in)
+	if err != nil {
 		return err
+	}
+	if row == nil {
+		c.log.Info("outlet event for an unknown outlet without a name skipped", zap.String("outlet_id", outletID.String()))
+		return nil
 	}
 	c.log.Info("outlet shadow upserted", zap.String("outlet_id", outletID.String()), zap.String("event", evt.EventType))
 	return nil
@@ -145,14 +159,12 @@ func str(m map[string]any, k string) string {
 	return ""
 }
 
-func boolean(m map[string]any, k string) bool {
-	if m == nil {
-		return false
-	}
+// optBool returns the payload boolean, or nil when the event does not carry it.
+func optBool(m map[string]any, k string) *bool {
 	if v, ok := m[k].(bool); ok {
-		return v
+		return &v
 	}
-	return false
+	return nil
 }
 
 func parseUUID(s string) uuid.UUID {
