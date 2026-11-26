@@ -59,22 +59,11 @@ func (s *Service) WithSystemTenant(id uuid.UUID) *Service { s.systemTenant = id;
 
 // ---- Categories ----
 
-// ListCategories returns the tenant's leave categories, or the GLOBAL shared set (system tenant)
-// when the tenant has defined none of its own — so every tenant gets sensible leave types out of
-// the box while remaining free to override with their own.
+// ListCategories returns the leave types a company uses, by name: its own, and the platform's
+// (with the company's changes) that no own type of the same name replaces (inherit.go).
 func (s *Service) ListCategories(ctx context.Context, tenantID uuid.UUID) ([]*ent.LeaveCategory, error) {
-	own, err := s.orm.LeaveCategory.Query().
-		Where(leavecategory.TenantID(tenantID)).
-		Order(ent.Asc(leavecategory.FieldName)).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if len(own) > 0 || s.systemTenant == uuid.Nil || s.systemTenant == tenantID {
-		return own, nil
-	}
-	return s.orm.LeaveCategory.Query().
-		Where(leavecategory.TenantID(s.systemTenant)).
-		Order(ent.Asc(leavecategory.FieldName)).All(ctx)
+	rows, _, err := s.resolvedCategories(ctx, tenantID)
+	return rows, err
 }
 
 // CategoryInput is the create/update payload for a leave category.

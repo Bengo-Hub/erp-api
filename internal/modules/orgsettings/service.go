@@ -19,6 +19,8 @@ import (
 // Service holds reference-data CRUD. Every query is tenant-filtered.
 type Service struct {
 	orm *ent.Client
+	// systemTenant owns the platform's job groups every company inherits (jobgroups_inherit.go).
+	systemTenant uuid.UUID
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
@@ -205,13 +207,7 @@ func (s *Service) DeleteJobTitle(ctx context.Context, tenantID, id uuid.UUID) er
 
 // ---- Job groups ----
 
-func (s *Service) ListJobGroups(ctx context.Context, tenantID uuid.UUID) ([]*ent.JobGroup, error) {
-	return s.orm.JobGroup.Query().
-		Where(jobgroup.TenantID(tenantID)).
-		Order(ent.Asc(jobgroup.FieldTitle)).
-		All(ctx)
-}
-
+// GetJobGroup loads one of the company's own job groups.
 func (s *Service) GetJobGroup(ctx context.Context, tenantID, id uuid.UUID) (*ent.JobGroup, error) {
 	return s.orm.JobGroup.Query().
 		Where(jobgroup.ID(id), jobgroup.TenantID(tenantID)).
@@ -229,10 +225,23 @@ func (s *Service) CreateJobGroup(ctx context.Context, tenantID uuid.UUID, in Nam
 	return b.Save(ctx)
 }
 
-func (s *Service) UpdateJobGroup(ctx context.Context, tenantID, id uuid.UUID, in NamedInput) (*ent.JobGroup, error) {
-	if _, err := s.GetJobGroup(ctx, tenantID, id); err != nil {
+// UpdateJobGroup edits an own job group, or keeps the company's description for an inherited one.
+func (s *Service) UpdateJobGroup(ctx context.Context, tenantID, id uuid.UUID, in NamedInput) (*JobGroupRow, error) {
+	row, err := s.JobGroupRowByID(ctx, tenantID, id)
+	if err != nil {
 		return nil, err
 	}
+	if row.Inherited {
+		return s.customiseJobGroup(ctx, tenantID, row, in)
+	}
+	g, err := s.updateOwnJobGroup(id, in).Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &JobGroupRow{JobGroup: g}, nil
+}
+
+func (s *Service) updateOwnJobGroup(id uuid.UUID, in NamedInput) *ent.JobGroupUpdateOne {
 	u := s.orm.JobGroup.UpdateOneID(id)
 	if in.Title != "" {
 		u = u.SetTitle(in.Title)
@@ -240,10 +249,14 @@ func (s *Service) UpdateJobGroup(ctx context.Context, tenantID, id uuid.UUID, in
 	if in.Description != "" {
 		u = u.SetDescription(in.Description)
 	}
-	return u.Save(ctx)
+	return u
 }
 
+// DeleteJobGroup deletes an own job group; a platform one is refused.
 func (s *Service) DeleteJobGroup(ctx context.Context, tenantID, id uuid.UUID) error {
+	if row, err := s.JobGroupRowByID(ctx, tenantID, id); err == nil && row.Inherited {
+		return ErrInheritedJobGroup
+	}
 	n, err := s.orm.JobGroup.Delete().
 		Where(jobgroup.ID(id), jobgroup.TenantID(tenantID)).
 		Exec(ctx)

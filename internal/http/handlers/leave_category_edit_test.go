@@ -14,14 +14,14 @@ func TestLeaveTypeEditKeepsUnsentFields(t *testing.T) {
 	e := newLeaveEnv(t)
 	ctx := context.Background()
 	hr := e.hr(e.tenant)
-	cat := e.c.LeaveCategory.Create().SetTenantID(e.tenant).SetName("Annual").SetIsActive(false).
+	cat := e.c.LeaveCategory.Create().SetTenantID(e.tenant).SetName("Annual").SetIsActive(false).SetDescription("Yearly").
 		SetAllowCarryover(true).SetMaxCarryoverDays(decimal.NewFromInt(5)).SetDefaultAnnualDays(decimal.NewFromInt(21)).SaveX(ctx)
 	code, b := hr(http.MethodPut, "/hrm/leave/categories/"+cat.ID.String(), `{"name":"Annual Leave","max_days":"24","is_paid":true,"carry_forward":true}`)
 	if code != http.StatusOK {
 		t.Fatalf("edit: %d %v", code, b)
 	}
 	got := e.c.LeaveCategory.GetX(ctx, cat.ID)
-	if got.Name != "Annual Leave" || !got.DefaultAnnualDays.Equal(decimal.NewFromInt(24)) || got.IsActive ||
+	if got.Name != "Annual Leave" || !got.DefaultAnnualDays.Equal(decimal.NewFromInt(24)) || got.IsActive || got.Description != "Yearly" ||
 		!got.MaxCarryoverDays.Equal(decimal.NewFromInt(5)) || !got.AllowCarryover {
 		t.Fatalf("after edit: %+v", got)
 	}

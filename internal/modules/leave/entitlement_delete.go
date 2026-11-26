@@ -45,6 +45,9 @@ func (s *Service) DeleteEntitlement(ctx context.Context, tenantID, id uuid.UUID)
 	if err != nil {
 		return fmt.Errorf("leave: load leave type: %w", err)
 	}
+	if cat, err = s.withChanges(ctx, s.orm, tenantID, cat); err != nil {
+		return err
+	}
 	entitled, err := s.computeEntitled(ctx, tenantID, row.EmployeeID, cat, row.Year, row.Year-1)
 	if err != nil {
 		return err

@@ -14,6 +14,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobtitle"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
+	"github.com/Bengo-Hub/erp-api/internal/modules/inherited"
 )
 
 // EmployeeView is an employee enriched with the hr_details-derived fields the UI lists/charts need
@@ -106,7 +107,7 @@ func (s *Service) Enrich(ctx context.Context, tenantID uuid.UUID, emps []*ent.Em
 		}
 	}
 	if len(groupIDs) > 0 {
-		groups, _ := s.orm.JobGroup.Query().Where(jobgroup.TenantID(tenantID), jobgroup.IDIn(keys(groupIDs)...)).All(ctx)
+		groups, _ := s.orm.JobGroup.Query().Where(jobgroup.TenantIDIn(inherited.Tenants(s.systemTenant, tenantID)...), jobgroup.IDIn(keys(groupIDs)...)).All(ctx)
 		groupName := make(map[uuid.UUID]string, len(groups))
 		for _, g := range groups {
 			groupName[g.ID] = g.Title

@@ -87,3 +87,32 @@ func TestRemovedDefaultsStayRemoved(t *testing.T) {
 		}
 	}
 }
+
+// TestCompaniesGetNoCopies: a company's defaults are its document sequences only; the shared
+// settings are seeded once on the platform tenant, and a second run adds nothing.
+func TestCompaniesGetNoCopies(t *testing.T) {
+	c := testClient(t)
+	ctx := context.Background()
+	s := NewService(c)
+	company, platform := uuid.New(), uuid.New()
+	if err := s.EnsureAll(ctx, company); err != nil {
+		t.Fatal(err)
+	}
+	if n := c.LeaveCategory.Query().CountX(ctx) + c.JobGroup.Query().CountX(ctx) + c.Goal.Query().CountX(ctx) + c.AppraisalTemplate.Query().CountX(ctx); n != 0 {
+		t.Fatalf("a company got %d copied settings", n)
+	}
+	for i := 0; i < 2; i++ {
+		if err := s.EnsurePlatform(ctx, platform); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := c.LeaveCategory.Query().Where(leavecategory.TenantID(platform)).CountX(ctx); n != len(defaultLeaveCategories) {
+		t.Fatalf("platform leave types: %d", n)
+	}
+	if n := c.AppraisalTemplate.Query().Where(appraisaltemplate.TenantID(platform)).CountX(ctx); n != 1 {
+		t.Fatalf("platform templates: %d", n)
+	}
+	if c.JobGroup.Query().Where(jobgroup.TenantID(platform)).CountX(ctx) == 0 || c.Goal.Query().Where(goal.TenantID(platform)).CountX(ctx) == 0 {
+		t.Fatal("platform job groups or goals missing")
+	}
+}

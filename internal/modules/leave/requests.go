@@ -144,6 +144,10 @@ func (s *Service) CreateRequest(ctx context.Context, tenantID uuid.UUID, in Crea
 	if !count.Days.IsPositive() {
 		return nil, ErrNoDays
 	}
+	// A switched-off type takes no new requests; requests already filed on it are kept.
+	if count.category != nil && !count.category.IsActive {
+		return nil, ErrInactiveCategory
+	}
 	tx, err := s.orm.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("leave: begin tx: %w", err)

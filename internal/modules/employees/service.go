@@ -38,6 +38,8 @@ type StaffNumberer interface {
 type Service struct {
 	orm *ent.Client
 	seq StaffNumberer // optional; when set, blank staff numbers are auto-issued as SLUG/YYYY/###
+	// systemTenant owns the platform job groups every company inherits.
+	systemTenant uuid.UUID
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
@@ -45,6 +47,12 @@ func NewService(orm *ent.Client) *Service { return &Service{orm: orm} }
 // WithSequence wires the staff-number generator so new employees get a meaningful number.
 func (s *Service) WithSequence(seq StaffNumberer) *Service {
 	s.seq = seq
+	return s
+}
+
+// WithSystemTenant sets the tenant whose job groups every company inherits.
+func (s *Service) WithSystemTenant(id uuid.UUID) *Service {
+	s.systemTenant = id
 	return s
 }
 

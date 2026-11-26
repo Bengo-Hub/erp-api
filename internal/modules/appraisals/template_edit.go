@@ -30,6 +30,14 @@ func (s *Service) UpdateTemplate(ctx context.Context, tenantID, id uuid.UUID, na
 	}
 	t, err := s.orm.AppraisalTemplate.Query().
 		Where(appraisaltemplate.TenantID(tenantID), appraisaltemplate.ID(id)).Only(ctx)
+	if ent.IsNotFound(err) {
+		// An inherited template is customised for this company only.
+		current, ierr := s.inheritedTemplate(ctx, tenantID, id)
+		if ierr != nil {
+			return nil, err
+		}
+		return s.customiseTemplate(ctx, tenantID, current, name, description, isActive)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +104,14 @@ func (s *Service) UpdateQuestion(ctx context.Context, tenantID, id uuid.UUID, in
 		return nil, fmt.Errorf("appraisals: question_text is required")
 	}
 	q, err := s.editableQuestion(ctx, tenantID, id)
+	if ent.IsNotFound(err) {
+		// A question of an inherited template is customised for this company only.
+		platform, ierr := s.inheritedQuestion(ctx, tenantID, id)
+		if ierr != nil {
+			return nil, err
+		}
+		return s.customiseQuestion(ctx, tenantID, platform, in)
+	}
 	if err != nil {
 		return nil, err
 	}

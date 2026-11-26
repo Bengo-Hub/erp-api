@@ -11,6 +11,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/jobgroup"
 	"github.com/Bengo-Hub/erp-api/internal/ent/salarydetails"
+	"github.com/Bengo-Hub/erp-api/internal/modules/inherited"
 )
 
 // SalaryInput is the salary form. Nil leaves a stored value unchanged, so saving one field never
@@ -95,7 +96,7 @@ func (s *Service) CheckSalary(ctx context.Context, tenantID uuid.UUID, in Salary
 		}
 	}
 	if in.JobGroupID != nil && *in.JobGroupID != uuid.Nil {
-		ok, err := s.orm.JobGroup.Query().Where(jobgroup.ID(*in.JobGroupID), jobgroup.TenantID(tenantID)).Exist(ctx)
+		ok, err := s.orm.JobGroup.Query().Where(jobgroup.ID(*in.JobGroupID), jobgroup.TenantIDIn(inherited.Tenants(s.systemTenant, tenantID)...)).Exist(ctx)
 		if err != nil {
 			return err
 		}

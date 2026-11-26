@@ -41,6 +41,7 @@ func (h *LeaveHandler) RegisterRoutes(r chi.Router) {
 		lr.Post("/categories", h.CreateCategory)
 		lr.Put("/categories/{id}", h.UpdateCategory)
 		lr.Delete("/categories/{id}", h.DeleteCategory)
+		lr.Delete("/categories/{id}/customisation", h.RevertCategory)
 		lr.Put("/categories/{id}/count-mode", h.SetCountMode)
 		lr.Put("/categories/{id}/balance-rule", h.SetBalanceRule)
 
@@ -99,11 +100,11 @@ func (h *LeaveHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
 }
 
 type categoryBody struct {
-	Name              string `json:"name"`
-	Description       string `json:"description"`
-	IsActive          *bool  `json:"is_active"`
-	IsPaid            *bool  `json:"is_paid"`
-	DefaultAnnualDays string `json:"default_annual_days"`
+	Name              string  `json:"name"`
+	Description       *string `json:"description"`
+	IsActive          *bool   `json:"is_active"`
+	IsPaid            *bool   `json:"is_paid"`
+	DefaultAnnualDays string  `json:"default_annual_days"`
 	// max_days is the UI's name for the default yearly entitlement; accept either.
 	MaxDays          string  `json:"max_days"`
 	AllowCarryover   *bool   `json:"allow_carryover"`
@@ -115,7 +116,7 @@ type categoryBody struct {
 // body leaves out keeps its value (the edit form does not send them all); a new type starts
 // active and paid, without carryover.
 func (b categoryBody) toInput(current *ent.LeaveCategory) (leave.CategoryInput, error) {
-	in := leave.CategoryInput{Name: b.Name, Description: b.Description, IsActive: true, IsPaid: true}
+	in := leave.CategoryInput{Name: b.Name, IsActive: true, IsPaid: true}
 	if current != nil {
 		in = leave.CategoryInput{Name: current.Name, Description: current.Description, IsActive: current.IsActive,
 			IsPaid: current.IsPaid, DefaultAnnualDays: current.DefaultAnnualDays,
@@ -123,7 +124,9 @@ func (b categoryBody) toInput(current *ent.LeaveCategory) (leave.CategoryInput, 
 		if strings.TrimSpace(b.Name) != "" {
 			in.Name = b.Name
 		}
-		in.Description = b.Description
+	}
+	if b.Description != nil {
+		in.Description = *b.Description
 	}
 	if b.IsActive != nil {
 		in.IsActive = *b.IsActive
@@ -199,6 +202,11 @@ func (h *LeaveHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	current, err := h.svc.OwnCategory(r.Context(), scope.TenantID, id)
+	inherited := errors.Is(err, leave.ErrInheritedCategory)
+	if inherited {
+		// An inherited type is customised: the changes are kept for this company only.
+		current, err = h.svc.UsableCategory(r.Context(), scope.TenantID, id)
+	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
 		return
@@ -208,12 +216,45 @@ func (h *LeaveHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	row, err := h.svc.UpdateCategory(r.Context(), scope.TenantID, id, in)
+	var row *ent.LeaveCategory
+	if inherited {
+		if leave.NameKey(in.Name) != leave.NameKey(current.Name) {
+			writeError(w, http.StatusBadRequest, "update_failed", leave.ErrInheritedName.Error())
+			return
+		}
+		row, err = h.svc.CustomiseCategory(r.Context(), scope.TenantID, id, in)
+	} else {
+		row, err = h.svc.UpdateCategory(r.Context(), scope.TenantID, id, in)
+	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, row)
+}
+
+// RevertCategory drops the company's changes to an inherited leave type.
+func (h *LeaveHandler) RevertCategory(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	row, err := h.svc.RevertCategory(r.Context(), scope.TenantID, id)
+	switch {
+	case errors.Is(err, leave.ErrUnknownCategory):
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+	case errors.Is(err, leave.ErrNotCustomised):
+		writeError(w, http.StatusConflict, "not_customised", err.Error())
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to revert the leave type")
+	default:
+		writeJSON(w, http.StatusOK, row)
+	}
 }
 
 func (h *LeaveHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {

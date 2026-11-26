@@ -189,6 +189,9 @@ func (s *Service) refuseOverBalance(ctx context.Context, c *ent.Client, tenantID
 	if err != nil {
 		return fmt.Errorf("leave: load leave type: %w", err)
 	}
+	if cat, err = s.withChanges(ctx, c, tenantID, cat); err != nil {
+		return err
+	}
 	chk, err := s.checkBalance(ctx, c, tenantID, req.EmployeeID, cat, req.StartDate.Year(), req.DaysRequested, false)
 	if err != nil {
 		return err

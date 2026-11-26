@@ -30,6 +30,7 @@ const CountModesKey = "leave.count_modes"
 var (
 	ErrEmployeeNotFound = errors.New("employee not found")
 	ErrUnknownCategory  = errors.New("unknown leave type")
+	ErrInactiveCategory = errors.New("this leave type is switched off and takes no new requests")
 	// ErrInheritedCategory refuses an edit or delete of a platform leave type.
 	ErrInheritedCategory = errors.New("this is a platform leave type and cannot be edited or deleted; you can change how its days are counted and its balance rule")
 	ErrRequestNotFound   = errors.New("leave request not found")
@@ -52,9 +53,13 @@ func (s *Service) SetCalendar(c WorkCalendar) { s.calendar = c }
 // which the tenant cannot edit beyond those settings.
 type CategoryView struct {
 	*ent.LeaveCategory
+	// IsActive is always sent (ent leaves a false one out of the JSON).
+	IsActive    bool   `json:"is_active"`
 	CountMode   string `json:"count_mode"`
 	BalanceRule string `json:"balance_rule"`
 	Inherited   bool   `json:"inherited"`
+	// Customised marks an inherited type the company changed; revert drops the changes.
+	Customised bool `json:"customised"`
 }
 
 // SkippedDay is a date that does not count as a full day, with the reason.
@@ -116,9 +121,16 @@ func (s *Service) CategoryViews(ctx context.Context, tenantID uuid.UUID, rows []
 	if err != nil {
 		return nil, err
 	}
+	changes, err := typeOverrides(ctx, s.orm, tenantID)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]CategoryView, len(rows))
 	for i, c := range rows {
-		out[i] = CategoryView{LeaveCategory: c, CountMode: modeOf(modes, c), BalanceRule: ruleOf(rules, c), Inherited: c.TenantID != tenantID}
+		inherited := c.TenantID != tenantID
+		_, changed := changes[c.ID.String()]
+		out[i] = CategoryView{LeaveCategory: c, IsActive: c.IsActive, CountMode: modeOf(modes, c), BalanceRule: ruleOf(rules, c),
+			Inherited: inherited, Customised: inherited && changed}
 	}
 	return out, nil
 }

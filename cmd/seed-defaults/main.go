@@ -1,12 +1,9 @@
-// Command seed-defaults seeds per-tenant HR/Ops reference data defaults — job groups (salary
-// grades A–G), leave categories, a default appraisal template + questions, default document
-// sequences, and the KRA reliefs — for every known tenant shadow (auth_tenants). These are
-// tenant-scoped business config (NOT shared global reference data, per
-// feedback_shared_core_reference_data), so they are seeded once per tenant.
+// Command seed-defaults seeds the shared settings once on the platform tenant (national holidays,
+// leave types, job groups A to G, the default appraisal template with its questions, and sample
+// goals), which every company inherits without a copy, and each company's own document sequences
+// for every known tenant shadow (auth_tenants).
 //
-// Idempotent: every Ensure* skips rows that already exist. Safe to run on every deploy. New
-// tenants also get the document sequences + (the rest are also lazily bootstrapped) the first
-// time they save company settings (business.UpsertSettings).
+// Idempotent: every Ensure* skips a kind that already has rows. Safe to run on every deploy.
 //
 // Usage:
 //
@@ -61,12 +58,17 @@ func main() {
 	} else {
 		hctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		n, err := holidays.EnsurePlatform(hctx, client, system)
-		cancel()
 		if err != nil {
 			log.Printf("seed-defaults: national holidays: %v (added %d)", err, n)
 		} else {
 			log.Printf("seed-defaults: national holidays: added %d", n)
 		}
+		// Leave types, job groups, the appraisal template and sample goals: seeded once on the
+		// platform tenant, inherited by every company, never copied into one.
+		if err := svc.EnsurePlatform(hctx, system); err != nil {
+			log.Printf("seed-defaults: platform settings: %v", err)
+		}
+		cancel()
 	}
 
 	tenants, err := client.AuthTenant.Query().All(ctx)

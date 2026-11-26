@@ -32,7 +32,16 @@ func (s *Service) ListGoals(ctx context.Context, tenantID uuid.UUID, f GoalFilte
 	if f.IsTemplate != nil {
 		q = q.Where(goal.IsTemplate(*f.IsTemplate))
 	}
-	return q.Order(ent.Desc(goal.FieldCreatedAt)).All(ctx)
+	rows, err := q.Order(ent.Desc(goal.FieldCreatedAt)).All(ctx)
+	if err != nil || f.EmployeeID != nil || (f.IsTemplate != nil && !*f.IsTemplate) {
+		return rows, err
+	}
+	// The library also holds the platform's sample goals the company inherits (goals_inherit.go).
+	platform, err := s.inheritedGoals(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	return append(rows, platform...), nil
 }
 
 // GoalView is a goal with its employee's name and its metadata fields (category, weight)
@@ -122,6 +131,14 @@ func (s *Service) UpdateGoal(ctx context.Context, tenantID, id uuid.UUID, in Goa
 		return nil, fmt.Errorf("appraisals: title is required")
 	}
 	g, err := s.orm.Goal.Query().Where(goal.TenantID(tenantID), goal.ID(id)).Only(ctx)
+	if ent.IsNotFound(err) {
+		// An inherited sample goal is customised for this company only.
+		current, ierr := s.inheritedGoal(ctx, tenantID, id)
+		if ierr != nil {
+			return nil, err
+		}
+		return s.customiseGoal(ctx, tenantID, current, in)
+	}
 	if err != nil {
 		return nil, err
 	}

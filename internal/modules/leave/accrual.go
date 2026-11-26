@@ -2,6 +2,7 @@ package leave
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -10,7 +11,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavebalance"
-	"github.com/Bengo-Hub/erp-api/internal/ent/leavecategory"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaveentitlement"
 )
 
@@ -36,10 +36,16 @@ func (s *Service) AccrueYear(ctx context.Context, tenantID uuid.UUID, year int) 
 	if err != nil {
 		return res, fmt.Errorf("leave: accrual employees: %w", err)
 	}
-	cats, err := s.orm.LeaveCategory.Query().
-		Where(leavecategory.TenantID(tenantID), leavecategory.IsActive(true)).All(ctx)
+	// Every active type the company uses: its own and the inherited ones, with its changes.
+	all, err := s.ListCategories(ctx, tenantID)
 	if err != nil {
 		return res, fmt.Errorf("leave: accrual categories: %w", err)
+	}
+	cats := make([]*ent.LeaveCategory, 0, len(all))
+	for _, c := range all {
+		if c.IsActive {
+			cats = append(cats, c)
+		}
 	}
 
 	for _, emp := range emps {
@@ -128,23 +134,30 @@ func (s *Service) refreshBalance(ctx context.Context, tenantID, employeeID, cate
 // AccrueAllTenants runs accrual for every tenant that has at least one active leave category.
 // Used by the scheduled accrual cron goroutine.
 func (s *Service) AccrueAllTenants(ctx context.Context, year int) (int, error) {
-	tenantIDs, err := s.orm.LeaveCategory.Query().
-		Where(leavecategory.IsActive(true)).
-		GroupBy(leavecategory.FieldTenantID).Strings(ctx)
+	// Every company with employees: inherited types need no own row to accrue.
+	tenantIDs, err := s.orm.Employee.Query().
+		Where(employee.Deleted(false), employee.Terminated(false)).
+		GroupBy(employee.FieldTenantID).Strings(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("leave: accrual tenants: %w", err)
 	}
+	// One company's failure does not stop the others; the run reports all of them.
 	total := 0
+	var failed []error
 	for _, t := range tenantIDs {
+		if err := ctx.Err(); err != nil {
+			return total, err
+		}
 		tid, perr := uuid.Parse(t)
-		if perr != nil {
+		if perr != nil || tid == s.systemTenant {
 			continue
 		}
 		res, rerr := s.AccrueYear(ctx, tid, year)
 		if rerr != nil {
-			return total, rerr
+			failed = append(failed, fmt.Errorf("tenant %s: %w", tid, rerr))
+			continue
 		}
 		total += res.Processed
 	}
-	return total, nil
+	return total, errors.Join(failed...)
 }

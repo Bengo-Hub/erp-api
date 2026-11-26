@@ -27,11 +27,24 @@ func NewService(orm *ent.Client) *Service {
 	return &Service{orm: orm, seq: business.NewSequenceService(orm)}
 }
 
-// EnsureAll seeds every default reference set for a tenant. Idempotent + best-effort ordered:
-// each Ensure* is independent, so a failure in one is returned but does not corrupt the others.
+// EnsureAll seeds what a company needs of its own: the document sequences. Leave types, job
+// groups, the appraisal template and sample goals are platform rows every company inherits
+// (EnsurePlatform), so nothing of them is copied into a company.
 func (s *Service) EnsureAll(ctx context.Context, tenantID uuid.UUID) error {
 	if tenantID == uuid.Nil {
 		return fmt.Errorf("defaults: empty tenant id")
+	}
+	if err := s.seq.EnsureDefaults(ctx, tenantID); err != nil {
+		return fmt.Errorf("defaults: document sequences: %w", err)
+	}
+	return nil
+}
+
+// EnsurePlatform seeds the shared settings on the platform tenant, once each: a kind the
+// platform already holds rows of is left as it is.
+func (s *Service) EnsurePlatform(ctx context.Context, tenantID uuid.UUID) error {
+	if tenantID == uuid.Nil {
+		return fmt.Errorf("defaults: empty platform tenant id")
 	}
 	if err := s.EnsureJobGroups(ctx, tenantID); err != nil {
 		return fmt.Errorf("defaults: job groups: %w", err)
@@ -44,9 +57,6 @@ func (s *Service) EnsureAll(ctx context.Context, tenantID uuid.UUID) error {
 	}
 	if err := s.EnsureGoalLibrary(ctx, tenantID); err != nil {
 		return fmt.Errorf("defaults: goal library: %w", err)
-	}
-	if err := s.seq.EnsureDefaults(ctx, tenantID); err != nil {
-		return fmt.Errorf("defaults: document sequences: %w", err)
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -53,6 +54,7 @@ func (h *OrgSettingsHandler) RegisterRoutes(r chi.Router) {
 		jr.Put("/{id}", h.UpdateJobGroup)
 		jr.Patch("/{id}", h.UpdateJobGroup)
 		jr.Delete("/{id}", h.DeleteJobGroup)
+		jr.Delete("/{id}/customisation", h.RevertJobGroup)
 	})
 }
 
@@ -68,6 +70,10 @@ type namedView struct {
 	CreatedAt   string    `json:"created_at,omitempty"`
 	// CostCenterID (departments only) is the treasury cost center for unallocated payroll cost.
 	CostCenterID *string `json:"cost_center_id,omitempty"`
+	// Inherited and Customised (job groups only): a platform job group, and whether the company
+	// changed it.
+	Inherited  bool `json:"inherited"`
+	Customised bool `json:"customised"`
 }
 
 func deptView(d *ent.Department) namedView {
@@ -352,14 +358,14 @@ func (h *OrgSettingsHandler) ListJobGroups(w http.ResponseWriter, r *http.Reques
 	if !ok || !requirePermission(w, scope, permEmployeeView) {
 		return
 	}
-	rows, err := h.svc.ListJobGroups(r.Context(), scope.TenantID)
+	rows, err := h.svc.JobGroupRows(r.Context(), scope.TenantID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list job groups")
 		return
 	}
 	out := make([]namedView, 0, len(rows))
 	for _, g := range rows {
-		out = append(out, groupView(g))
+		out = append(out, groupRowView(g))
 	}
 	writePagedSlice(w, out, pagination.Parse(r))
 }
@@ -374,8 +380,8 @@ func (h *OrgSettingsHandler) GetJobGroup(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	g, err := h.svc.GetJobGroup(r.Context(), scope.TenantID, id)
-	if ent.IsNotFound(err) {
+	g, err := h.svc.JobGroupRowByID(r.Context(), scope.TenantID, id)
+	if errors.Is(err, orgsettings.ErrJobGroupNotFound) {
 		writeError(w, http.StatusNotFound, "not_found", "job group not found")
 		return
 	}
@@ -383,7 +389,7 @@ func (h *OrgSettingsHandler) GetJobGroup(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to fetch job group")
 		return
 	}
-	writeJSON(w, http.StatusOK, groupView(g))
+	writeJSON(w, http.StatusOK, groupRowView(*g))
 }
 
 func (h *OrgSettingsHandler) CreateJobGroup(w http.ResponseWriter, r *http.Request) {
@@ -418,7 +424,7 @@ func (h *OrgSettingsHandler) UpdateJobGroup(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	g, err := h.svc.UpdateJobGroup(r.Context(), scope.TenantID, id, in)
-	if ent.IsNotFound(err) {
+	if errors.Is(err, orgsettings.ErrJobGroupNotFound) || ent.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "not_found", "job group not found")
 		return
 	}
@@ -426,7 +432,7 @@ func (h *OrgSettingsHandler) UpdateJobGroup(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, groupView(g))
+	writeJSON(w, http.StatusOK, groupRowView(*g))
 }
 
 func (h *OrgSettingsHandler) DeleteJobGroup(w http.ResponseWriter, r *http.Request) {
@@ -440,8 +446,43 @@ func (h *OrgSettingsHandler) DeleteJobGroup(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if err := h.svc.DeleteJobGroup(r.Context(), scope.TenantID, id); err != nil {
+		if errors.Is(err, orgsettings.ErrInheritedJobGroup) {
+			writeError(w, http.StatusBadRequest, "delete_failed", err.Error())
+			return
+		}
 		writeError(w, http.StatusNotFound, "not_found", err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// RevertJobGroup drops the company's changes to an inherited job group.
+func (h *OrgSettingsHandler) RevertJobGroup(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permEmployeeManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	row, err := h.svc.RevertJobGroup(r.Context(), scope.TenantID, id)
+	switch {
+	case errors.Is(err, orgsettings.ErrJobGroupNotFound):
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+	case errors.Is(err, orgsettings.ErrJobGroupNotCustomised):
+		writeError(w, http.StatusConflict, "not_customised", err.Error())
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to revert the job group")
+	default:
+		writeJSON(w, http.StatusOK, groupRowView(*row))
+	}
+}
+
+// groupRowView is a job group with whether the company inherits or changed it.
+func groupRowView(row orgsettings.JobGroupRow) namedView {
+	v := groupView(row.JobGroup)
+	v.Inherited, v.Customised = row.Inherited, row.Customised
+	return v
 }

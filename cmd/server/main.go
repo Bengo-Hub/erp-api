@@ -243,10 +243,12 @@ func run() error {
 
 	// HRM modules (Sprint 2 employees + Sprint 3 leave/attendance/recruitment/training/appraisals).
 	notifyPublisher := events.NewPublisher(orm, cfg.Events.SourceService)
-	employeesSvc := employees.NewService(orm)
+	// The platform tenant owns the shared settings every company inherits (job groups here).
+	platformTenant, _ := uuid.Parse(cfg.Payroll.SystemTenantID)
+	employeesSvc := employees.NewService(orm).WithSystemTenant(platformTenant)
 	handlers.SetEmployeeResolver(employeesSvc.EmployeeIDForExternalUser) // ESS self-scoping (?mine=true)
 	employeesHandler := handlers.NewEmployeesHandler(log, employeesSvc)
-	orgSettingsHandler := handlers.NewOrgSettingsHandler(log, orgsettings.NewService(orm))
+	orgSettingsHandler := handlers.NewOrgSettingsHandler(log, orgsettings.NewService(orm).WithSystemTenant(platformTenant))
 	contractsHandler := handlers.NewContractsHandler(log, contracts.NewService(orm))
 
 	// Payroll: engine service (reuses payroll-settings for rate resolution) + disburser

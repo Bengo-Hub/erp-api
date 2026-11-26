@@ -18,9 +18,67 @@ func writeTemplateError(w http.ResponseWriter, err error, what string) {
 		writeError(w, http.StatusNotFound, "not_found", what+" not found")
 	case errors.Is(err, appraisals.ErrTemplateInUse), errors.Is(err, appraisals.ErrQuestionAnswered):
 		writeError(w, http.StatusConflict, "in_use", err.Error())
+	case errors.Is(err, appraisals.ErrInheritedTemplate):
+		writeError(w, http.StatusBadRequest, "save_failed", err.Error())
+	case errors.Is(err, appraisals.ErrNothingToRevert):
+		writeError(w, http.StatusConflict, "not_customised", err.Error())
 	default:
 		writeError(w, http.StatusBadRequest, "save_failed", clientMessage(err))
 	}
+}
+
+// RevertTemplate drops the company's changes to an inherited template.
+func (h *AppraisalsHandler) RevertTemplate(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAppraisalManage) {
+		return
+	}
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	row, err := h.svc.RevertTemplate(r.Context(), scope.TenantID, id)
+	if err != nil {
+		writeTemplateError(w, err, "template")
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+// RevertGoal drops the company's changes to an inherited sample goal.
+func (h *AppraisalsHandler) RevertGoal(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAppraisalManage) {
+		return
+	}
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	row, err := h.svc.RevertGoal(r.Context(), scope.TenantID, id)
+	if err != nil {
+		writeTemplateError(w, err, "goal")
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
+}
+
+// RevertQuestion drops the company's changes to a question of an inherited template.
+func (h *AppraisalsHandler) RevertQuestion(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permAppraisalManage) {
+		return
+	}
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	row, err := h.svc.RevertQuestion(r.Context(), scope.TenantID, id)
+	if err != nil {
+		writeTemplateError(w, err, "question")
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
 }
 
 // UpdateTemplate edits one of the tenant's own templates.

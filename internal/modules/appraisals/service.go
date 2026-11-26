@@ -179,27 +179,19 @@ func (s *Service) DeleteCycle(ctx context.Context, tenantID, id uuid.UUID) error
 
 // ---- Templates + questions ----
 
-// ListTemplates returns tenant-scoped appraisal templates.
+// ListTemplates returns the templates a company uses: its own and the inherited platform ones
+// with its changes (inherit.go).
 func (s *Service) ListTemplates(ctx context.Context, tenantID uuid.UUID) ([]*ent.AppraisalTemplate, error) {
-	own, err := s.orm.AppraisalTemplate.Query().
-		Where(appraisaltemplate.TenantID(tenantID)).
-		Order(ent.Desc(appraisaltemplate.FieldCreatedAt)).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if len(own) > 0 || s.systemTenant == uuid.Nil || s.systemTenant == tenantID {
-		return own, nil
-	}
-	// Inherit the global standard appraisal template when the tenant has none of its own.
-	return s.orm.AppraisalTemplate.Query().
-		Where(appraisaltemplate.TenantID(s.systemTenant)).
-		Order(ent.Desc(appraisaltemplate.FieldCreatedAt)).All(ctx)
+	return s.resolvedTemplates(ctx, tenantID)
 }
 
 // TemplateView is a template with how many questions it holds.
 type TemplateView struct {
 	*ent.AppraisalTemplate
-	QuestionCount int `json:"question_count"`
+	// IsActive is always sent (ent leaves a false one out of the JSON, which the page read as
+	// active).
+	IsActive      bool `json:"is_active"`
+	QuestionCount int  `json:"question_count"`
 }
 
 // ListTemplateViews returns ListTemplates with each template's question count (one
@@ -231,7 +223,7 @@ func (s *Service) ListTemplateViews(ctx context.Context, tenantID uuid.UUID) ([]
 		byTemplate[c.TemplateID] = c.Count
 	}
 	for i, t := range tpls {
-		out[i] = TemplateView{AppraisalTemplate: t, QuestionCount: byTemplate[t.ID]}
+		out[i] = TemplateView{AppraisalTemplate: t, IsActive: t.IsActive, QuestionCount: byTemplate[t.ID]}
 	}
 	return out, nil
 }
@@ -265,6 +257,9 @@ func (s *Service) ListAllQuestions(ctx context.Context, tenantID uuid.UUID) ([]Q
 	if err != nil {
 		return nil, err
 	}
+	if rows, err = s.withQuestionChanges(ctx, tenantID, rows); err != nil {
+		return nil, err
+	}
 	for _, q := range rows {
 		out = append(out, QuestionView{AppraisalQuestion: q, TemplateName: names[q.TemplateID]})
 	}
@@ -288,9 +283,13 @@ func (s *Service) CreateTemplate(ctx context.Context, tenantID uuid.UUID, name, 
 // ListQuestions returns the questions for a template the tenant can use: its own, or the
 // inherited standard template of the system tenant.
 func (s *Service) ListQuestions(ctx context.Context, tenantID, templateID uuid.UUID) ([]*ent.AppraisalQuestion, error) {
-	return s.orm.AppraisalQuestion.Query().
+	rows, err := s.orm.AppraisalQuestion.Query().
 		Where(appraisalquestion.TenantIDIn(s.tenantScope(tenantID)...), appraisalquestion.TemplateID(templateID)).
 		Order(ent.Asc(appraisalquestion.FieldOrder)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.withQuestionChanges(ctx, tenantID, rows)
 }
 
 // QuestionInput is the create payload for a template question.

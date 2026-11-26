@@ -302,10 +302,11 @@ func TestLeaveSearchInheritedAndEntitlements(t *testing.T) {
 		t.Fatalf("inherited list: %d %v", code, list)
 	}
 	path := "/hrm/leave/categories/" + plat.String()
-	for _, m := range []string{http.MethodPut, http.MethodDelete} {
-		if code, b := hr(m, path, `{"name":"Mine"}`); code == http.StatusOK || b["error"] != leave.ErrInheritedCategory.Error() {
-			t.Fatalf("%s on a platform type: %d %v", m, code, b)
-		}
+	if code, b := hr(http.MethodPut, path, `{"name":"Mine"}`); code == http.StatusOK || b["error"] != leave.ErrInheritedName.Error() {
+		t.Fatalf("rename of a platform type: %d %v", code, b)
+	}
+	if code, b := hr(http.MethodDelete, path, ""); code == http.StatusOK || b["error"] != leave.ErrInheritedCategory.Error() {
+		t.Fatalf("delete of a platform type: %d %v", code, b)
 	}
 	if code, b := hr(http.MethodPut, path+"/balance-rule", `{"balance_rule":"allow"}`); code != http.StatusOK || b["inherited"] != true {
 		t.Fatalf("settings on a platform type: %d %v", code, b)
