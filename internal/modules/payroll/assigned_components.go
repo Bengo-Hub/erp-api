@@ -113,6 +113,7 @@ func (in *runInputs) applyAssignedComponents(p RunParams, empID uuid.UUID, basic
 		cid := e.rc.Component.ID
 		line := LabeledAmount{ComponentID: &cid, Label: e.rc.Title, Amount: amt}
 		status := e.rc.TaxableStatus
+		flags := in.levy.Flags(e.rc.Code, status)
 		if isGratuityStatus(status) {
 			facts := in.gratuity[empID].facts(p.Period, gross.Sub(gratuityPaid), pensionMember)
 			excluded := gratuityExcluded(status, amt, p.Period, facts)
@@ -120,13 +121,18 @@ func (in *runInputs) applyAssignedComponents(p RunParams, empID uuid.UUID, basic
 			ei.TaxableAllowances = ei.TaxableAllowances.Add(amt.Sub(excluded))
 			line.Taxable = amt.Sub(excluded)
 			items.Allowances = append(items.Allowances, line)
+			// The taxed part is in gross and follows the flags; the excluded part stays out of
+			// every base, as before the flags existed.
+			countEarning(ei, flags, amt.Sub(excluded), true, true)
 			continue
 		}
 		if status == "nontaxable" {
 			ei.NonTaxableEarnings = ei.NonTaxableEarnings.Add(amt)
+			countEarning(ei, flags, amt, false, true)
 		} else {
 			ei.TaxableAllowances = ei.TaxableAllowances.Add(amt)
 			line.Taxable = amt
+			countEarning(ei, flags, amt, true, true)
 		}
 		items.Allowances = append(items.Allowances, line)
 	}

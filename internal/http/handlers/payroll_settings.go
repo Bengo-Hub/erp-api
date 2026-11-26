@@ -78,6 +78,8 @@ func (h *PayrollSettingsHandler) RegisterRoutes(r chi.Router) {
 		pr.Get("/formulas", h.ListFormulas)
 		pr.Get("/formulas/relief-status", h.ReliefStatus)
 		pr.Get("/formulas/reliefs", h.ListReliefs)
+		pr.Get("/levy-bases", h.ListLevyBases)
+		pr.Put("/levy-bases/{code}", h.SetLevyRule)
 		pr.Post("/formula-management", h.FormulaManagement)
 		pr.Post("/formulas", h.CreateFormula)
 		pr.Get("/formulas/{id}", h.GetFormula)
@@ -964,6 +966,51 @@ func reliefView(rr payrollsettings.ResolvedRelief) map[string]any {
 }
 
 // ListReliefs lists the tenant's resolved KRA reliefs (platform reliefs with its choices applied).
+// ListLevyBases returns, per earning, which levies it counts for: the tenant's own dated rules
+// and the platform's (?scope=platform for the platform owner editing the platform rules). An
+// earning without a rule follows its tax treatment (taxable: every levy; basic: pensionable).
+func (h *PayrollSettingsHandler) ListLevyBases(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollView) {
+		return
+	}
+	tenant := h.settingsTenant(r, scope)
+	own, err := h.svc.LevyBases(r.Context(), tenant)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to read levy bases")
+		return
+	}
+	platform := payrollsettings.LevyBases{}
+	if tenant != h.svc.SystemTenant() {
+		if platform, err = h.svc.LevyBases(r.Context(), h.svc.SystemTenant()); err != nil {
+			writeError(w, http.StatusInternalServerError, "internal_error", "failed to read levy bases")
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"own": own, "platform": platform})
+}
+
+// SetLevyRule sets an earning's levies from a month: {"from": "2026-12", "flags": {"paye": true,
+// "nssf": false, "shif": true, "housing_levy": true, "pensionable": false}}. Earlier months keep
+// their rules, so payroll already run is unchanged.
+func (h *PayrollSettingsHandler) SetLevyRule(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	var rule payrollsettings.LevyRule
+	if err := json.NewDecoder(r.Body).Decode(&rule); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	bases, err := h.svc.SetLevyRule(r.Context(), h.settingsTenant(r, scope), chi.URLParam(r, "code"), rule)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"own": bases})
+}
+
 func (h *PayrollSettingsHandler) ListReliefs(w http.ResponseWriter, r *http.Request) {
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permPayrollView) {

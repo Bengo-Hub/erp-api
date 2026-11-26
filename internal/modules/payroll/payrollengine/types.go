@@ -49,6 +49,13 @@ type Deduction struct {
 	Amount   decimal.Decimal
 }
 
+// LevyAdjust moves each levy's base away from gross for the earnings that count differently:
+// negative for an earning in gross that the levy leaves out, positive for an earning outside
+// gross (non-taxable) that the levy counts. Zero values keep every base at gross.
+type LevyAdjust struct {
+	PAYE, NSSF, SHIF, HousingLevy decimal.Decimal
+}
+
 // LoanBenefit is one staff loan for fringe benefit tax: the balance and its annual interest rate
 // in percent (3 == 3%).
 type LoanBenefit struct {
@@ -119,6 +126,11 @@ type EmployeeInput struct {
 	TaxableOnly decimal.Decimal
 	// StaffLoans are the employee's outstanding staff loans, for fringe benefit tax.
 	StaffLoans []LoanBenefit
+	// LevyAdjust sets each levy's base from the earnings' levy flags (payrollsettings levy bases).
+	LevyAdjust LevyAdjust
+	// PensionablePay is the pay the 30% pension deduction limit applies to (basic plus the
+	// pensionable earnings). Zero falls back to gross.
+	PensionablePay decimal.Decimal
 	// DisabilityExempt marks an employee holding a PWD tax-exemption certificate: the first
 	// DisabilityExemptAmount of chargeable pay is exempt from PAYE.
 	DisabilityExempt bool

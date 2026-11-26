@@ -100,7 +100,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 			}
 			switch comp {
 			case CompNSSF:
-				n, err := CalculateNSSF(cfg.NSSF, gross)
+				n, err := CalculateNSSF(cfg.NSSF, levyBase(gross, in.LevyAdjust.NSSF))
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -115,7 +115,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 					// SHIF not effective this period; skip (NHIF handles health then).
 					continue
 				}
-				c, err := CalculateSHIF(cfg.SHIF, gross)
+				c, err := CalculateSHIF(cfg.SHIF, levyBase(gross, in.LevyAdjust.SHIF))
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -126,7 +126,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 				if cfg.NHIF == nil {
 					continue
 				}
-				c, err := CalculateNHIF(cfg.NHIF, gross)
+				c, err := CalculateNHIF(cfg.NHIF, levyBase(gross, in.LevyAdjust.SHIF))
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -134,7 +134,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 				addPhase(&res, phase.Name, c.Employee)
 
 			case CompHousingLevy:
-				c, err := CalculateHousingLevy(cfg.HousingLevy, gross)
+				c, err := CalculateHousingLevy(cfg.HousingLevy, levyBase(gross, in.LevyAdjust.HousingLevy))
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -264,6 +264,11 @@ func applyOtherDeductions(res *PayslipResult, order []Phase, gross decimal.Decim
 	}
 }
 
+// levyBase is gross moved by a levy's adjustment, never below zero.
+func levyBase(gross, adjust decimal.Decimal) decimal.Decimal {
+	return decimal.Max(decimal.Zero, gross.Add(adjust))
+}
+
 // fringeBenefitTax is the employer's monthly fringe benefit tax (s.12B): the rate times, for each
 // loan, the month's interest gap between the market rate and the loan's rate (never below zero).
 func fringeBenefitTax(r *FBTRates, loans []LoanBenefit) decimal.Decimal {
@@ -304,7 +309,7 @@ func taxableNonCash(cfg Config, in EmployeeInput) decimal.Decimal {
 func applyPAYE(res *PayslipResult, cfg Config, in EmployeeInput) error {
 	// res.GrossPay already includes taxable allowances. Taxable pay = gross − before-tax deductions
 	// + the taxable excess of non-cash benefits (when NonCashAsTaxable is enabled).
-	taxable := res.GrossPay.Sub(res.DeductionsBeforeTax).Add(taxableNonCash(cfg, in)).Add(in.TaxableOnly)
+	taxable := res.GrossPay.Sub(res.DeductionsBeforeTax).Add(taxableNonCash(cfg, in)).Add(in.TaxableOnly).Add(in.LevyAdjust.PAYE)
 	if taxable.LessThan(decimal.Zero) {
 		taxable = decimal.Zero
 	}
@@ -314,9 +319,13 @@ func applyPAYE(res *PayslipResult, cfg Config, in EmployeeInput) error {
 	// so they do NOT alter net pay here. Each is gated on its cap being configured, so a zero-value
 	// Config (no reliefs resolved) leaves taxable pay exactly as before.
 	//
-	// Deductible pension: min(actual, statutory monthly cap, 30% of gross).
+	// Deductible pension (s.22A): min(actual, statutory monthly cap, 30% of pensionable pay).
 	if in.PensionContribution.IsPositive() && cfg.PensionReliefCap.IsPositive() {
-		pension := minDec(in.PensionContribution, cfg.PensionReliefCap, res.GrossPay.Mul(pct30))
+		pensionable := in.PensionablePay
+		if !pensionable.IsPositive() {
+			pensionable = res.GrossPay
+		}
+		pension := minDec(in.PensionContribution, cfg.PensionReliefCap, pensionable.Mul(pct30))
 		res.PensionDeduction = round2(pension)
 		taxable = taxable.Sub(pension)
 	}

@@ -94,6 +94,12 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("payroll: load inputs: %w", err)
 	}
+	// Which levies each earning counts for this month (no rules: the old single gross base).
+	if s.settings != nil {
+		if pre.levy, err = s.settings.LevyResolver(ctx, p.TenantID, p.Period); err != nil {
+			return nil, fmt.Errorf("payroll: levy bases: %w", err)
+		}
+	}
 	attendance, err := s.approvedAttendanceDeductions(ctx, p.TenantID, p.Period)
 	if err != nil {
 		return nil, fmt.Errorf("payroll: attendance deductions: %w", err)
@@ -128,6 +134,11 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 		}
 		earnings.apply(emp.ID, &in, &items)
 		applyClaims(claims[emp.ID], cfg.PerDiemDailyExempt, &in, &items)
+		// Overtime, holiday work, piece pay and taxable claims are taxable cash earnings.
+		for _, e := range items.Earnings {
+			countEarning(&in, pre.levy.Flags(e.Code, "taxable"), e.Amount, true, true)
+		}
+		in.PensionablePay = pensionableFor(p.Period, in.PensionablePay)
 		res, cerr := payrollengine.Compute(cfg, in)
 		if cerr != nil {
 			return nil, fmt.Errorf("payroll: employee %s: %w", emp.ID, cerr)
