@@ -108,4 +108,18 @@ func TestSeedTakesLeaveManageFromStaff(t *testing.T) {
 	if !slices.Contains(codes(hr), "hrm.leave.manage") {
 		t.Fatal("HR roles keep hrm.leave.manage")
 	}
+
+	// A second global staff row does not stop the seed; both are reset and neither is deleted.
+	twin := c.Role.Create().SetRoleCode("staff").SetName("Staff twin").SetIsSystemRole(true).AddPermissions(manage).SaveX(ctx)
+	if err := seed(ctx, c); err != nil {
+		t.Fatalf("seed with two global staff rows: %v", err)
+	}
+	for _, r := range []*ent.Role{global, twin} {
+		if got := codes(r); !slices.Equal(got, want) {
+			t.Fatalf("staff row %s: %v", r.Name, got)
+		}
+	}
+	if n := c.Role.Query().Where(role.RoleCode("staff"), role.TenantIDIsNil()).CountX(ctx); n != 2 {
+		t.Fatalf("global staff rows: %d", n)
+	}
 }

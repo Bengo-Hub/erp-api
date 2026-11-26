@@ -108,6 +108,16 @@ func (s *Service) CreateCategory(ctx context.Context, tenantID uuid.UUID, in Cat
 	return row, nil
 }
 
+// OwnCategory loads one of the tenant's own leave types for an edit; a platform type answers
+// ErrInheritedCategory.
+func (s *Service) OwnCategory(ctx context.Context, tenantID, id uuid.UUID) (*ent.LeaveCategory, error) {
+	row, err := s.orm.LeaveCategory.Query().Where(leavecategory.TenantID(tenantID), leavecategory.ID(id)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return nil, s.missingCategory(ctx, tenantID, id)
+	}
+	return row, err
+}
+
 // UpdateCategory updates a tenant-scoped leave category.
 func (s *Service) UpdateCategory(ctx context.Context, tenantID, id uuid.UUID, in CategoryInput) (*ent.LeaveCategory, error) {
 	if err := s.ensureUniqueCategoryName(ctx, tenantID, in.Name, &id); err != nil {

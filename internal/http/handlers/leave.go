@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Bengo-Hub/pagination"
@@ -103,34 +104,58 @@ type categoryBody struct {
 	IsPaid            *bool  `json:"is_paid"`
 	DefaultAnnualDays string `json:"default_annual_days"`
 	// max_days is the UI's name for the default yearly entitlement; accept either.
-	MaxDays          string `json:"max_days"`
-	AllowCarryover   bool   `json:"allow_carryover"`
-	CarryForward     *bool  `json:"carry_forward"`
-	MaxCarryoverDays string `json:"max_carryover_days"`
+	MaxDays          string  `json:"max_days"`
+	AllowCarryover   *bool   `json:"allow_carryover"`
+	CarryForward     *bool   `json:"carry_forward"`
+	MaxCarryoverDays *string `json:"max_carryover_days"`
 }
 
-func (b categoryBody) toInput() (leave.CategoryInput, error) {
-	in := leave.CategoryInput{
-		Name:           b.Name,
-		Description:    b.Description,
-		IsActive:       b.IsActive == nil || *b.IsActive,
-		IsPaid:         b.IsPaid == nil || *b.IsPaid,
-		AllowCarryover: b.AllowCarryover || (b.CarryForward != nil && *b.CarryForward),
+// toInput builds the saved values. On an edit, current is the row being edited and a field the
+// body leaves out keeps its value (the edit form does not send them all); a new type starts
+// active and paid, without carryover.
+func (b categoryBody) toInput(current *ent.LeaveCategory) (leave.CategoryInput, error) {
+	in := leave.CategoryInput{Name: b.Name, Description: b.Description, IsActive: true, IsPaid: true}
+	if current != nil {
+		in = leave.CategoryInput{Name: current.Name, Description: current.Description, IsActive: current.IsActive,
+			IsPaid: current.IsPaid, DefaultAnnualDays: current.DefaultAnnualDays,
+			AllowCarryover: current.AllowCarryover, MaxCarryoverDays: current.MaxCarryoverDays}
+		if strings.TrimSpace(b.Name) != "" {
+			in.Name = b.Name
+		}
+		in.Description = b.Description
 	}
-	// Accept the UI alias `max_days` when `default_annual_days` is not supplied.
-	if b.DefaultAnnualDays == "" && b.MaxDays != "" {
-		b.DefaultAnnualDays = b.MaxDays
+	if b.IsActive != nil {
+		in.IsActive = *b.IsActive
 	}
-	d, err := parseDecimalDefault(b.DefaultAnnualDays)
-	if err != nil {
-		return in, err
+	if b.IsPaid != nil {
+		in.IsPaid = *b.IsPaid
 	}
-	in.DefaultAnnualDays = d
-	m, err := parseDecimalDefault(b.MaxCarryoverDays)
-	if err != nil {
-		return in, err
+	// carry_forward is the UI's name for allow_carryover.
+	if b.CarryForward != nil {
+		in.AllowCarryover = *b.CarryForward
 	}
-	in.MaxCarryoverDays = m
+	if b.AllowCarryover != nil {
+		in.AllowCarryover = *b.AllowCarryover
+	}
+	// max_days is the UI's name for the default yearly entitlement; accept either.
+	days := b.DefaultAnnualDays
+	if days == "" {
+		days = b.MaxDays
+	}
+	if days != "" || current == nil {
+		d, err := parseDecimalDefault(days)
+		if err != nil {
+			return in, err
+		}
+		in.DefaultAnnualDays = d
+	}
+	if b.MaxCarryoverDays != nil {
+		m, err := parseDecimalDefault(*b.MaxCarryoverDays)
+		if err != nil {
+			return in, err
+		}
+		in.MaxCarryoverDays = m
+	}
 	return in, nil
 }
 
@@ -144,7 +169,7 @@ func (h *LeaveHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	in, err := body.toInput()
+	in, err := body.toInput(nil)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
@@ -172,7 +197,12 @@ func (h *LeaveHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
 		return
 	}
-	in, err := body.toInput()
+	current, err := h.svc.OwnCategory(r.Context(), scope.TenantID, id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	in, err := body.toInput(current)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return

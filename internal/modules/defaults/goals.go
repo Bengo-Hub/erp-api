@@ -26,6 +26,10 @@ var defaultGoalLibrary = []struct{ title, description string }{
 // EnsureGoalLibrary idempotently seeds the common goal-template library for a tenant. Skips any
 // template whose title already exists (the library tab in the UI reads is_template=true goals).
 func (s *Service) EnsureGoalLibrary(ctx context.Context, tenantID uuid.UUID) error {
+	// Seeded once: a tenant with any library goal keeps what it has (a removed one stays removed).
+	if any, err := s.orm.Goal.Query().Where(goal.TenantID(tenantID), goal.IsTemplate(true)).Exist(ctx); err != nil || any {
+		return err
+	}
 	for _, g := range defaultGoalLibrary {
 		exists, err := s.orm.Goal.Query().
 			Where(goal.TenantID(tenantID), goal.IsTemplate(true), goal.Title(g.title)).Exist(ctx)

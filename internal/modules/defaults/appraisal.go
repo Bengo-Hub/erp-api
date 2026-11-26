@@ -40,8 +40,10 @@ var defaultAppraisalQuestions = []defaultAppraisalQuestion{
 // questions for a tenant. If the template already exists (by name), it is left untouched and
 // the questions are not re-created.
 func (s *Service) EnsureAppraisalTemplate(ctx context.Context, tenantID uuid.UUID) error {
+	// Any template at all means the tenant was set up: a default it renamed or deleted is not
+	// brought back.
 	exists, err := s.orm.AppraisalTemplate.Query().
-		Where(appraisaltemplate.TenantID(tenantID), appraisaltemplate.Name(defaultTemplateName)).Exist(ctx)
+		Where(appraisaltemplate.TenantID(tenantID)).Exist(ctx)
 	if err != nil {
 		return err
 	}

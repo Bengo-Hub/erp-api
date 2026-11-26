@@ -250,21 +250,27 @@ func upsertPermission(ctx context.Context, client *ent.Client, code string) (*en
 		Save(ctx)
 }
 
+// upsertRoleWithPermissions makes every global row of the code carry exactly codes. The unique
+// index does not stop two global rows (a NULL tenant never clashes), so a second row is reset
+// too rather than aborting the seed; nothing is deleted, since users may point at either row.
 func upsertRoleWithPermissions(ctx context.Context, client *ent.Client, roleCode string, codes []string, perms map[string]*ent.Permission) error {
-	r, err := client.Role.Query().Where(role.RoleCodeEQ(roleCode), role.TenantIDIsNil()).Only(ctx)
-	if ent.IsNotFound(err) {
-		r, err = client.Role.Create().
+	rows, err := client.Role.Query().Where(role.RoleCodeEQ(roleCode), role.TenantIDIsNil()).All(ctx)
+	if err != nil {
+		return err
+	}
+	if len(rows) == 0 {
+		r, err := client.Role.Create().
 			SetRoleCode(roleCode).
 			SetName(humanize(roleCode)).
 			SetIsSystemRole(true).
 			Save(ctx)
+		if err != nil {
+			return err
+		}
+		rows = append(rows, r)
 	}
-	if err != nil {
-		return err
-	}
-	// Reconcile permissions: clear then re-add (idempotent).
-	if _, err := r.Update().ClearPermissions().Save(ctx); err != nil {
-		return err
+	if len(rows) > 1 {
+		log.Printf("warn: %d global %q roles; each is reset to the seeded permissions", len(rows), roleCode)
 	}
 	add := make([]*ent.Permission, 0, len(codes))
 	for _, c := range codes {
@@ -272,8 +278,13 @@ func upsertRoleWithPermissions(ctx context.Context, client *ent.Client, roleCode
 			add = append(add, p)
 		}
 	}
-	_, err = r.Update().AddPermissions(add...).Save(ctx)
-	return err
+	for _, r := range rows {
+		// Reconcile permissions: clear then re-add (idempotent).
+		if err := r.Update().ClearPermissions().AddPermissions(add...).Exec(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // splitCode derives (module, action) from a dotted code, e.g. "hrm.leave.approve" ->

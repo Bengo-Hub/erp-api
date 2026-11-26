@@ -36,6 +36,11 @@ var defaultLeaveCategories = []defaultLeaveCategory{
 // Skips any category whose name already exists (the (tenant_id, name) unique index makes the
 // name the natural key).
 func (s *Service) EnsureLeaveCategories(ctx context.Context, tenantID uuid.UUID) error {
+	// Seeded once: a tenant that has any leave type keeps what it has, so a default it renamed or
+	// deleted does not come back on the next deploy.
+	if any, err := s.orm.LeaveCategory.Query().Where(leavecategory.TenantID(tenantID)).Exist(ctx); err != nil || any {
+		return err
+	}
 	for _, c := range defaultLeaveCategories {
 		exists, err := s.orm.LeaveCategory.Query().
 			Where(leavecategory.TenantID(tenantID), leavecategory.Name(c.name)).Exist(ctx)

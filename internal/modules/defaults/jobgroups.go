@@ -28,6 +28,10 @@ var defaultJobGroups = []defaultJobGroup{
 // EnsureJobGroups idempotently creates the default salary-grade job groups for a tenant.
 // Skips any grade whose title already exists for the tenant (case-sensitive title match).
 func (s *Service) EnsureJobGroups(ctx context.Context, tenantID uuid.UUID) error {
+	// Seeded once: a tenant with any job group keeps what it has (a removed default stays removed).
+	if any, err := s.orm.JobGroup.Query().Where(jobgroup.TenantID(tenantID)).Exist(ctx); err != nil || any {
+		return err
+	}
 	for _, g := range defaultJobGroups {
 		exists, err := s.orm.JobGroup.Query().
 			Where(jobgroup.TenantID(tenantID), jobgroup.Title(g.title)).Exist(ctx)
