@@ -3,6 +3,7 @@ package attendance
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -12,6 +13,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/esssettings"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshiftschedule"
+	"github.com/Bengo-Hub/erp-api/internal/modules/holidays"
 	"github.com/Bengo-Hub/erp-api/internal/platform/events"
 )
 
@@ -22,9 +24,20 @@ type Service struct {
 	log *zap.Logger
 	// approvals routes regularisations and overtime requests (corrections.go); nil until wired.
 	approvals ApprovalEngine
+	// systemTenant owns the platform's national holidays every tenant inherits (uuid.Nil: none).
+	systemTenant uuid.UUID
 }
 
 func NewService(orm *ent.Client) *Service { return &Service{orm: orm, log: zap.NewNop()} }
+
+// WithSystemTenant sets the tenant whose national holidays every tenant inherits.
+func (s *Service) WithSystemTenant(id uuid.UUID) *Service { s.systemTenant = id; return s }
+
+// publicHolidays returns the holidays that apply to a tenant in [from, to): its own and the
+// platform's national ones it has not switched off.
+func (s *Service) publicHolidays(ctx context.Context, tenantID uuid.UUID, from, to time.Time) ([]*ent.PublicHoliday, error) {
+	return holidays.Active(ctx, s.orm, s.systemTenant, tenantID, from, to)
+}
 
 // WithPublisher enables attendance events (punch received, record updated) via the outbox.
 func (s *Service) WithPublisher(p *events.Publisher) *Service { s.pub = p; return s }

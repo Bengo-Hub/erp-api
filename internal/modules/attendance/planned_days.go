@@ -10,7 +10,6 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
-	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 )
 
 // Reasons a planned day is not a full working day.
@@ -71,8 +70,7 @@ func (s *Service) PlannedDays(ctx context.Context, tenantID, employeeID uuid.UUI
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.orm.PublicHoliday.Query().Where(publicholiday.TenantID(tenantID),
-		publicholiday.DateGTE(from), publicholiday.DateLT(to.AddDate(0, 0, 1))).All(ctx)
+	rows, err := s.publicHolidays(ctx, tenantID, from, to.AddDate(0, 0, 1))
 	if err != nil {
 		return nil, fmt.Errorf("attendance: planned holidays: %w", err)
 	}

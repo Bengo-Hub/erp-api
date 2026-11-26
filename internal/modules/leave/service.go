@@ -21,6 +21,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/leavelog"
 	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
+	"github.com/Bengo-Hub/erp-api/internal/modules/holidays"
 )
 
 // Service holds leave CRUD + balance/accrual logic. Every query is tenant-scoped.
@@ -313,16 +314,28 @@ func upsertBalanceTx(ctx context.Context, tx *ent.Tx, tenantID, employeeID, cate
 
 // ---- Public holidays ----
 
-// ListHolidays returns tenant-scoped public holidays (optionally for a year).
-func (s *Service) ListHolidays(ctx context.Context, tenantID uuid.UUID, year int) ([]*ent.PublicHoliday, error) {
-	q := s.orm.PublicHoliday.Query().Where(publicholiday.TenantID(tenantID))
+// ListHolidays returns the tenant's own public holidays and the platform's national ones it
+// inherits, each marked inherited and active (optionally for a year).
+func (s *Service) ListHolidays(ctx context.Context, tenantID uuid.UUID, year int) ([]holidays.Holiday, error) {
+	var from, to time.Time
 	if year > 0 {
-		start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
-		end := time.Date(year+1, 1, 1, 0, 0, 0, 0, time.UTC)
-		q = q.Where(publicholiday.DateGTE(start), publicholiday.DateLT(end))
+		from = time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+		to = time.Date(year+1, 1, 1, 0, 0, 0, 0, time.UTC)
 	}
-	return q.Order(ent.Desc(publicholiday.FieldDate)).All(ctx)
+	return holidays.List(ctx, s.orm, s.systemTenant, tenantID, from, to)
 }
+
+// SetHolidayActive switches one of the platform's holidays off or back on for the tenant.
+func (s *Service) SetHolidayActive(ctx context.Context, tenantID, id uuid.UUID, active bool) (*holidays.Holiday, error) {
+	h, err := holidays.SetActive(ctx, s.orm, s.systemTenant, tenantID, id, active)
+	if errors.Is(err, holidays.ErrNotInherited) {
+		return nil, ErrHolidayNotFound
+	}
+	return h, err
+}
+
+// SystemTenant is the tenant whose rows every tenant inherits (uuid.Nil when unset).
+func (s *Service) SystemTenant() uuid.UUID { return s.systemTenant }
 
 // ErrHolidayNotFound is returned when a holiday id does not exist for the tenant (another
 // tenant's row included), so handlers can answer 404.

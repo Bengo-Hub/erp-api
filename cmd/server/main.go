@@ -293,7 +293,7 @@ func run() error {
 	}
 	leaveSvc := leave.NewService(orm, leave.NewOutboxNotifier(notifyPublisher)).WithSystemTenant(systemTenant)
 	leaveHandler := handlers.NewLeaveHandler(log, leaveSvc)
-	attendanceSvc := attendance.NewService(orm).WithPublisher(notifyPublisher).WithLogger(log.Named("attendance"))
+	attendanceSvc := attendance.NewService(orm).WithPublisher(notifyPublisher).WithLogger(log.Named("attendance")).WithSystemTenant(systemTenant)
 	leaveSvc.SetCalendar(attendanceSvc) // counts the working days of leave requests
 	attendanceHandler := handlers.NewAttendanceHandler(log, attendanceSvc).WithMedia(mediaStore)
 	// Rotation advance, auto-absent per tenant and day, and the punch processor sweep.

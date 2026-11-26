@@ -85,7 +85,7 @@ func toFloat(v any) float64 {
 // AttendanceAnalytics answers the dashboard for one day (default today in the company zone),
 // optionally for one outlet or department. Every figure is one grouped query.
 func (s *Service) AttendanceAnalytics(ctx context.Context, tenantID uuid.UUID, day time.Time, outlet, dept *uuid.UUID) (*AttendanceAnalytics, error) {
-	att := attendance.NewService(s.orm)
+	att := attendance.NewService(s.orm).WithSystemTenant(s.systemTenant)
 	loc := att.TenantZone(ctx, tenantID)
 	if day.IsZero() {
 		y, m, d := time.Now().In(loc).Date()

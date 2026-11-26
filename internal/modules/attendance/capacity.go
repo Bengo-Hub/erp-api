@@ -16,7 +16,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
 	"github.com/Bengo-Hub/erp-api/internal/ent/hrdetails"
 	"github.com/Bengo-Hub/erp-api/internal/ent/leaverequest"
-	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/region"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshiftschedule"
@@ -314,10 +313,7 @@ func (s *Service) Capacity(ctx context.Context, tenantID uuid.UUID, authUserIDs 
 	national := map[time.Time]bool{}
 	byCounty := map[string][]time.Time{}
 	if len(empIDs) > 0 {
-		rows, err := s.orm.PublicHoliday.Query().
-			Where(publicholiday.TenantID(tenantID),
-				publicholiday.Or(publicholiday.IsNational(true), publicholiday.CountyNotNil()),
-				publicholiday.DateGTE(lo), publicholiday.DateLT(hi.AddDate(0, 0, 1))).All(ctx)
+		rows, err := s.publicHolidays(ctx, tenantID, lo, hi.AddDate(0, 0, 1))
 		if err != nil {
 			return nil, fmt.Errorf("attendance: capacity holidays: %w", err)
 		}

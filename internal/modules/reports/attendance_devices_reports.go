@@ -31,7 +31,7 @@ func afterHours(local time.Time, start, end string) bool {
 // AccessLog lists door events with names, after-hours flag and a reason. After hours means
 // outside the tenant default shift's start and end in the company zone.
 func (s *Service) AccessLog(ctx context.Context, tenantID uuid.UUID, f AttendanceFilter) (*Report, error) {
-	att := attendance.NewService(s.orm)
+	att := attendance.NewService(s.orm).WithSystemTenant(s.systemTenant)
 	loc := att.TenantZone(ctx, tenantID)
 	from := time.Date(f.From.Year(), f.From.Month(), f.From.Day(), 0, 0, 0, 0, loc)
 	to := time.Date(f.To.Year(), f.To.Month(), f.To.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 1)
@@ -130,7 +130,7 @@ func (s *Service) employeeNames(ctx context.Context, tenantID uuid.UUID, ids []u
 // DeviceHealth lists each device with its status and the range's punches, unmatched punches
 // and failed commands. Department and employee filters do not apply to devices.
 func (s *Service) DeviceHealth(ctx context.Context, tenantID uuid.UUID, f AttendanceFilter) (*Report, error) {
-	att := attendance.NewService(s.orm)
+	att := attendance.NewService(s.orm).WithSystemTenant(s.systemTenant)
 	st, err := att.GetSettings(ctx, tenantID)
 	if err != nil {
 		return nil, err

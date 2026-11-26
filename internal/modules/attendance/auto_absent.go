@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
-	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 )
 
 // autoAbsentChunk bounds the employee ids sent in one statement.
@@ -86,8 +85,7 @@ func (s *Service) expectedToWork(ctx context.Context, tenantID uuid.UUID, emps [
 	if err != nil {
 		return nil, nil, err
 	}
-	hols, err := s.orm.PublicHoliday.Query().Where(publicholiday.TenantID(tenantID),
-		publicholiday.DateGTE(day), publicholiday.DateLT(day.AddDate(0, 0, 1))).All(ctx)
+	hols, err := s.publicHolidays(ctx, tenantID, day, day.AddDate(0, 0, 1))
 	if err != nil {
 		return nil, nil, fmt.Errorf("attendance: auto-absent holidays: %w", err)
 	}

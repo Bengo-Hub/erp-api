@@ -17,6 +17,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"time"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -27,6 +28,7 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/config"
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/modules/defaults"
+	"github.com/Bengo-Hub/erp-api/internal/modules/holidays"
 	"github.com/Bengo-Hub/erp-api/internal/modules/payrollsettings"
 )
 
@@ -51,6 +53,21 @@ func main() {
 
 	ctx := context.Background()
 	svc := defaults.NewService(client)
+
+	// Kenya's national holidays belong to the platform tenant; every company inherits them. Each
+	// date is added once ever, so one the platform owner removed does not come back.
+	if system, err := uuid.Parse(cfg.Payroll.SystemTenantID); err != nil {
+		log.Printf("seed-defaults: national holidays skipped: invalid system tenant: %v", err)
+	} else {
+		hctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		n, err := holidays.EnsurePlatform(hctx, client, system)
+		cancel()
+		if err != nil {
+			log.Printf("seed-defaults: national holidays: %v (added %d)", err, n)
+		} else {
+			log.Printf("seed-defaults: national holidays: added %d", n)
+		}
+	}
 
 	tenants, err := client.AuthTenant.Query().All(ctx)
 	if err != nil {

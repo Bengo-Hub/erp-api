@@ -11,7 +11,6 @@ import (
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/attendancerecord"
 	"github.com/Bengo-Hub/erp-api/internal/ent/employee"
-	"github.com/Bengo-Hub/erp-api/internal/ent/publicholiday"
 	"github.com/Bengo-Hub/erp-api/internal/ent/workshift"
 )
 
@@ -123,8 +122,7 @@ func PayableTimeForPeriod(ctx context.Context, orm *ent.Client, tenantID uuid.UU
 // holidayDays answers whether a day is a public holiday for an employee: national ones for
 // everyone, county ones by the employee's county.
 func (s *Service) holidayDays(ctx context.Context, tenantID uuid.UUID, from, to time.Time, empIDs []uuid.UUID) (func(uuid.UUID, time.Time) bool, error) {
-	rows, err := s.orm.PublicHoliday.Query().Where(publicholiday.TenantID(tenantID),
-		publicholiday.DateGTE(from), publicholiday.DateLT(to)).All(ctx)
+	rows, err := s.publicHolidays(ctx, tenantID, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("attendance: holidays: %w", err)
 	}

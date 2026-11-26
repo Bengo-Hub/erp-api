@@ -56,6 +56,7 @@ func (h *LeaveHandler) RegisterRoutes(r chi.Router) {
 		lr.Put("/holidays/{id}", h.UpdateHoliday)
 		lr.Patch("/holidays/{id}", h.UpdateHoliday)
 		lr.Delete("/holidays/{id}", h.DeleteHoliday)
+		lr.Put("/holidays/{id}/active", h.SetHolidayActive)
 
 		lr.Get("/logs", h.ListLogs)
 
@@ -338,12 +339,52 @@ func (h *LeaveHandler) ListHolidays(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	year, _ := strconv.Atoi(r.URL.Query().Get("year"))
-	rows, err := h.svc.ListHolidays(r.Context(), scope.TenantID, year)
+	rows, err := h.svc.ListHolidays(r.Context(), h.holidayTenant(r, scope), year)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to list holidays")
 		return
 	}
 	writePagedSlice(w, rows, pagination.Parse(r))
+}
+
+// holidayTenant is the tenant whose holidays a request reads or writes: the platform's national
+// list when the platform owner asks for scope=platform, else the caller's own.
+func (h *LeaveHandler) holidayTenant(r *http.Request, scope RequestScope) uuid.UUID {
+	if r.URL.Query().Get("scope") == "platform" && isPlatformOwner(scope) && h.svc.SystemTenant() != uuid.Nil {
+		return h.svc.SystemTenant()
+	}
+	return scope.TenantID
+}
+
+// SetHolidayActive switches one of the platform's national holidays off for the caller's company,
+// or back on (the revert). The company's own holidays are edited or deleted instead.
+func (h *LeaveHandler) SetHolidayActive(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permLeaveManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var body struct {
+		Active *bool `json:"active"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Active == nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "active (true or false) is required")
+		return
+	}
+	row, err := h.svc.SetHolidayActive(r.Context(), scope.TenantID, id, *body.Active)
+	if errors.Is(err, leave.ErrHolidayNotFound) {
+		writeError(w, http.StatusNotFound, "not_found", "platform holiday not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to switch the holiday")
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
 }
 
 type holidayBody struct {
@@ -381,7 +422,7 @@ func (h *LeaveHandler) CreateHoliday(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	row, err := h.svc.CreateHoliday(r.Context(), scope.TenantID, in)
+	row, err := h.svc.CreateHoliday(r.Context(), h.holidayTenant(r, scope), in)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "create_failed", clientMessage(err))
 		return
@@ -404,7 +445,7 @@ func (h *LeaveHandler) UpdateHoliday(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	row, err := h.svc.UpdateHoliday(r.Context(), scope.TenantID, id, in)
+	row, err := h.svc.UpdateHoliday(r.Context(), h.holidayTenant(r, scope), id, in)
 	if errors.Is(err, leave.ErrHolidayNotFound) {
 		writeError(w, http.StatusNotFound, "not_found", err.Error())
 		return
@@ -426,7 +467,7 @@ func (h *LeaveHandler) DeleteHoliday(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
 		return
 	}
-	if err := h.svc.DeleteHoliday(r.Context(), scope.TenantID, id); err != nil {
+	if err := h.svc.DeleteHoliday(r.Context(), h.holidayTenant(r, scope), id); err != nil {
 		writeError(w, http.StatusNotFound, "not_found", err.Error())
 		return
 	}
