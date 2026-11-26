@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -90,8 +91,8 @@ func TestIntegration_SalaryAndEmployeeForm(t *testing.T) {
 	got, _ := svc.Salary(ctx, tenant, twin.ID)
 	want := employees.SalaryView{BasicSalary: "80000.50", PayFrequency: "daily", IncomeTax: "secondary", Currency: "USD",
 		InsurancePremium: "1.10", PensionContribution: "2.20", MortgageInterest: "3.30", DisabilityExempt: true,
-		PreferredPayoutMethod: "airtel", PayoutPhone: "+254711111111"}
-	if got == nil || *got != want {
+		PreferredPayoutMethod: "airtel", PayoutPhone: "+254711111111", Scheduled: []employees.ScheduledSalary{}}
+	if got == nil || !reflect.DeepEqual(*got, want) {
 		t.Errorf("reload = %+v, want %+v", got, want)
 	}
 

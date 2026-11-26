@@ -61,7 +61,8 @@ func gratuityExcluded(status string, amount decimal.Decimal, period time.Time, f
 		if f.ContractEnd != nil {
 			end = *f.ContractEnd
 		}
-		if f.ContractStart.AddDate(3, 0, 0).After(end) {
+		// Three continuous years: a contract from 1 August 2023 to 31 July 2026 qualifies.
+		if f.ContractStart.AddDate(3, 0, 0).After(end.AddDate(0, 0, 1)) {
 			return decimal.Zero // shorter than three continuous years
 		}
 		limit = f.Emoluments.Mul(gratuityContractShare)

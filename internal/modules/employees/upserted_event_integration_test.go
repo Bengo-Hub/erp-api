@@ -3,6 +3,7 @@ package employees
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -65,7 +66,11 @@ func TestIntegration_EmployeeUpsertedEvent(t *testing.T) {
 	}
 	row := client.OutboxEvent.Query().Where(outboxevent.EventType(EventEmployeeUpserted)).
 		Order(ent.Desc(outboxevent.FieldCreatedAt)).FirstX(ctx)
-	if !strings.Contains(string(row.Payload), `"employee_number":"A/2"`) || row.AggregateType != "erp" {
+	var env struct {
+		Payload map[string]any `json:"payload"`
+	}
+	_ = json.Unmarshal(row.Payload, &env)
+	if env.Payload["employee_number"] != "A/2" || row.AggregateType != "erp" {
 		t.Errorf("payload %s aggregate %s", row.Payload, row.AggregateType)
 	}
 

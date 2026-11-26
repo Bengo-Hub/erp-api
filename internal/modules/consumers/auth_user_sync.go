@@ -35,21 +35,6 @@ type AuthUserSyncConsumer struct {
 	Deactivated func(ctx context.Context, authUserID string) error
 }
 
-// handleUserDeactivated takes away what ERP gave a person whose account was deactivated.
-func (c *AuthUserSyncConsumer) handleUserDeactivated(ctx context.Context, evt *sharedevents.Event) error {
-	authUserID := parseUUID(str(evt.Payload, "user_id"))
-	if authUserID == uuid.Nil {
-		authUserID = evt.AggregateID
-	}
-	if authUserID == uuid.Nil {
-		return fmt.Errorf("auth.user.deactivated event missing user id")
-	}
-	if c.Deactivated == nil {
-		return nil
-	}
-	return c.Deactivated(ctx, authUserID.String())
-}
-
 func NewAuthUserSyncConsumer(log *zap.Logger, svc *employees.Service, idem *sharedevents.IdempotencyStore) *AuthUserSyncConsumer {
 	return &AuthUserSyncConsumer{
 		log:  log.Named("consumers.auth_user_sync"),
@@ -145,9 +130,10 @@ func (c *AuthUserSyncConsumer) handleUserDeleted(ctx context.Context, evt *share
 }
 
 // handleUserDeactivated reacts to auth-api deactivating, suspending or setting a user inactive:
-// the user's ERP login shadow is marked inactive and their employee records are flagged "login
-// disabled, review exit" on the HR dashboard. Employment is an HR decision, so the employee
-// record, its pay and its history are left as they are (HR exits a leaver with Mark as exited).
+// what ERP gave the person is taken away (Deactivated, e.g. ERP-given roles), the user's ERP
+// login shadow is marked inactive and their employee records are flagged "login disabled, review
+// exit" on the HR dashboard. Employment is an HR decision, so the employee record, its pay and
+// its history are left as they are (HR exits a leaver with Mark as exited).
 func (c *AuthUserSyncConsumer) handleUserDeactivated(ctx context.Context, evt *sharedevents.Event) error {
 	authUserID := parseUUID(str(evt.Payload, "user_id"))
 	if authUserID == uuid.Nil {
@@ -155,6 +141,11 @@ func (c *AuthUserSyncConsumer) handleUserDeactivated(ctx context.Context, evt *s
 	}
 	if authUserID == uuid.Nil {
 		return fmt.Errorf("auth.user.deactivated event missing user id")
+	}
+	if c.Deactivated != nil {
+		if err := c.Deactivated(ctx, authUserID.String()); err != nil {
+			return err
+		}
 	}
 	at := evt.Timestamp
 	if at.IsZero() {
