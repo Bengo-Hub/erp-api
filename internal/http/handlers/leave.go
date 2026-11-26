@@ -183,7 +183,19 @@ func (h *LeaveHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "create_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, row)
+	h.writeCategory(w, r, http.StatusCreated, scope.TenantID, row)
+}
+
+// writeCategory sends a saved leave type as the list shows it: is_active always present (ent
+// leaves a false one out) and the inherited and customised marks.
+func (h *LeaveHandler) writeCategory(w http.ResponseWriter, r *http.Request, status int, tenantID uuid.UUID, row *ent.LeaveCategory) {
+	views, err := h.svc.CategoryViews(r.Context(), tenantID, []*ent.LeaveCategory{row})
+	if err != nil {
+		h.log.Error("leave type view", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "saved, but failed to load the leave type")
+		return
+	}
+	writeJSON(w, status, views[0])
 }
 
 func (h *LeaveHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
@@ -230,7 +242,7 @@ func (h *LeaveHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, row)
+	h.writeCategory(w, r, http.StatusOK, scope.TenantID, row)
 }
 
 // RevertCategory drops the company's changes to an inherited leave type.
@@ -253,7 +265,7 @@ func (h *LeaveHandler) RevertCategory(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to revert the leave type")
 	default:
-		writeJSON(w, http.StatusOK, row)
+		h.writeCategory(w, r, http.StatusOK, scope.TenantID, row)
 	}
 }
 

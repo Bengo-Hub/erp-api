@@ -43,6 +43,9 @@ var permissionCodes = []string{
 	"hrm.appraisal.view", "hrm.appraisal.manage",
 	"hrm.performance.view", "hrm.performance.manage",
 	"hrm.payroll.view", "hrm.payroll.manage", "hrm.payroll.process", "hrm.payroll.disburse",
+	// See and filter every outlet when the token pins the member to one (erp_admin holds it
+	// through "*"; a tenant grants it to any other role in the role matrix).
+	"hrm.outlets.view_all",
 	// Cross-cutting
 	"approvals.view", "approvals.manage", "approvals.decide",
 	"tasks.view", "tasks.manage",

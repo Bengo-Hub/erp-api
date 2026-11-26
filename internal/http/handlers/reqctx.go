@@ -94,8 +94,21 @@ func scopeFromRequest(w http.ResponseWriter, r *http.Request) (RequestScope, boo
 			scope.OutletID = parsed
 		}
 	}
+	// A member pinned to an outlet by their token whose role grants hrm.outlets.view_all works
+	// like HQ: the outlet filter is honoured and no filter means every outlet. erp-ui shows the
+	// filter by the same permission. A member limited to a list of outlets stays limited. Only
+	// pinned members pay the permission lookup.
+	if scope.OutletID != uuid.Nil && mw.IsRestrictedUser(r.Context()) && !claims.OutletRestricted() && hasPermission(scope, permOutletsViewAll) {
+		scope.OutletID = uuid.Nil
+		if parsed, perr := uuid.Parse(r.Header.Get("X-Outlet-ID")); perr == nil {
+			scope.OutletID = parsed
+		}
+	}
 	return scope, true
 }
+
+// permOutletsViewAll lets a member pinned to one outlet see and filter every outlet.
+const permOutletsViewAll = "hrm.outlets.view_all"
 
 // platformTenantOverride reads a platform owner's drilled-into tenant from the
 // ?tenantId=/?tenant_id= query param or the X-Tenant-ID header. Returns uuid.Nil if

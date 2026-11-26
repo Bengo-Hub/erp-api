@@ -89,7 +89,7 @@ func TestInheritedLeaveTypes(t *testing.T) {
 	}
 
 	// Revert: back to the platform values; a second revert has nothing to drop.
-	if code, b := hr(http.MethodDelete, path+"/customisation", ""); code != http.StatusOK || b["default_annual_days"] != "21" {
+	if code, b := hr(http.MethodDelete, path+"/customisation", ""); code != http.StatusOK || b["default_annual_days"] != "21" || b["customised"] != false || b["is_active"] != true {
 		t.Fatalf("revert: %d %v", code, b)
 	}
 	if code, _ := hr(http.MethodDelete, path+"/customisation", ""); code != http.StatusConflict {
@@ -99,8 +99,9 @@ func TestInheritedLeaveTypes(t *testing.T) {
 		t.Fatalf("revert of a replaced platform type: %d", code)
 	}
 	// Switching an inherited type off is a customisation too.
-	// (ent leaves is_active out of the JSON when it is false.)
-	if code, b := hr(http.MethodPut, "/hrm/leave/categories/"+sick.ID.String(), `{"is_active":false}`); code != http.StatusOK || b["is_active"] == true || b["name"] != "Sick Leave" {
+	// The saved type comes back as the list shows it: is_active sent even when false, and marked
+	// customised.
+	if code, b := hr(http.MethodPut, "/hrm/leave/categories/"+sick.ID.String(), `{"is_active":false}`); code != http.StatusOK || b["is_active"] != false || b["customised"] != true || b["inherited"] != true || b["name"] != "Sick Leave" {
 		t.Fatalf("switch off: %d %v", code, b)
 	}
 	// The list always sends is_active, false included.
