@@ -93,6 +93,20 @@ func (_u *UserRoleAssignmentUpdate) ClearExpiresAt() *UserRoleAssignmentUpdate {
 	return _u
 }
 
+// SetSource sets the "source" field.
+func (_u *UserRoleAssignmentUpdate) SetSource(v string) *UserRoleAssignmentUpdate {
+	_u.mutation.SetSource(v)
+	return _u
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_u *UserRoleAssignmentUpdate) SetNillableSource(v *string) *UserRoleAssignmentUpdate {
+	if v != nil {
+		_u.SetSource(*v)
+	}
+	return _u
+}
+
 // SetUser sets the "user" edge to the CustomUser entity.
 func (_u *UserRoleAssignmentUpdate) SetUser(v *CustomUser) *UserRoleAssignmentUpdate {
 	return _u.SetUserID(v.ID)
@@ -178,6 +192,9 @@ func (_u *UserRoleAssignmentUpdate) sqlSave(ctx context.Context) (_node int, err
 	}
 	if _u.mutation.ExpiresAtCleared() {
 		_spec.ClearField(userroleassignment.FieldExpiresAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.Source(); ok {
+		_spec.SetField(userroleassignment.FieldSource, field.TypeString, value)
 	}
 	if _u.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -319,6 +336,20 @@ func (_u *UserRoleAssignmentUpdateOne) ClearExpiresAt() *UserRoleAssignmentUpdat
 	return _u
 }
 
+// SetSource sets the "source" field.
+func (_u *UserRoleAssignmentUpdateOne) SetSource(v string) *UserRoleAssignmentUpdateOne {
+	_u.mutation.SetSource(v)
+	return _u
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_u *UserRoleAssignmentUpdateOne) SetNillableSource(v *string) *UserRoleAssignmentUpdateOne {
+	if v != nil {
+		_u.SetSource(*v)
+	}
+	return _u
+}
+
 // SetUser sets the "user" edge to the CustomUser entity.
 func (_u *UserRoleAssignmentUpdateOne) SetUser(v *CustomUser) *UserRoleAssignmentUpdateOne {
 	return _u.SetUserID(v.ID)
@@ -434,6 +465,9 @@ func (_u *UserRoleAssignmentUpdateOne) sqlSave(ctx context.Context) (_node *User
 	}
 	if _u.mutation.ExpiresAtCleared() {
 		_spec.ClearField(userroleassignment.FieldExpiresAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.Source(); ok {
+		_spec.SetField(userroleassignment.FieldSource, field.TypeString, value)
 	}
 	if _u.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{

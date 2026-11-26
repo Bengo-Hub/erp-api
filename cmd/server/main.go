@@ -194,6 +194,15 @@ func run() error {
 		// tenant's employee roster is populated from SSO instead of empty placeholders.
 		authUserConsumer := consumers.NewAuthUserSyncConsumer(log, authUserEmployeesSvc, idem)
 		authUserConsumer.Entitled = erpEntitled
+		// A deactivated or suspended account loses the roles given to it in ERP, in every company.
+		revoker := rbac.NewService(orm, log)
+		authUserConsumer.Deactivated = func(ctx context.Context, authUserID string) error {
+			n, err := revoker.RevokeGiven(ctx, authUserID)
+			if n > 0 {
+				log.Info("roles given in ERP removed from a deactivated account", zap.String("user", authUserID), zap.Int("roles", n))
+			}
+			return err
+		}
 		if err := authUserConsumer.Start(ctx, natsConn); err != nil {
 			log.Warn("auth-user-sync consumer start failed", zap.Error(err))
 		}
@@ -216,6 +225,12 @@ func run() error {
 
 	// --- RBAC + handlers ---
 	rbacService := rbac.NewService(orm, log)
+	// A role given in ERP counts only while auth-api lists the person as an active member.
+	if members := platformauth.NewMemberDirectory(cfg.Auth.ServiceURL, cfg.Auth.APIKey); members != nil {
+		rbacService.WithMembers(members)
+	} else {
+		log.Warn("no INTERNAL_SERVICE_KEY: roles given in ERP are not checked against company membership")
+	}
 	handlers.SetRBACService(rbacService) // enable local erp-permission enforcement in requirePermission
 	authHandler := handlers.NewAuthHandler(log, rbacService)
 	rbacHandler := handlers.NewRBACHandler(log, rbacService)

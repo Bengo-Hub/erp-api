@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -107,14 +108,6 @@ func (a Actor) checkGrant(codes []string) error {
 	return nil
 }
 
-// HasAdminRole reports whether the user holds the shared erp_admin role in the tenant.
-func (s *Service) HasAdminRole(ctx context.Context, tenantID, userID uuid.UUID) (bool, error) {
-	return s.orm.UserRoleAssignment.Query().Where(
-		userroleassignment.TenantID(tenantID), userroleassignment.UserID(userID),
-		userroleassignment.HasRoleWith(role.TenantIDIsNil(), role.RoleCode(wildcardRoleCode)),
-	).Exist(ctx)
-}
-
 // refuseOwn refuses a change of the caller's own assignments.
 func (s *Service) refuseOwn(ctx context.Context, a Actor, userID uuid.UUID) error {
 	if a.UserID != uuid.Nil && a.UserID == userID {
@@ -177,11 +170,17 @@ func (s *Service) RemoveUserRole(ctx context.Context, a Actor, tenantID, userID,
 	if err != nil {
 		return fmt.Errorf("rbac: lock administrators: %w", err)
 	}
+	// Another administrator counts only while the assignment has not expired and, for one given in
+	// ERP, the person is still an active member.
 	others, target := 0, false
+	now := time.Now()
 	for _, as := range admins {
-		if as.UserID == userID && as.RoleID == roleID {
-			target = true
-		} else if as.UserID != userID {
+		switch {
+		case as.UserID == userID && as.RoleID == roleID:
+			target = as.ExpiresAt == nil || as.ExpiresAt.After(now)
+		case as.UserID == userID || (as.ExpiresAt != nil && !as.ExpiresAt.After(now)):
+		case as.Source == SourceERP && s.members != nil && !s.activeMember(ctx, tenantID, as.UserID):
+		default:
 			others++
 		}
 	}

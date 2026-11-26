@@ -30,6 +30,9 @@ func (UserRoleAssignment) Fields() []ent.Field {
 		field.Time("expires_at").
 			Optional().
 			Nillable(),
+		field.String("source").
+			Default("sync").
+			Comment("sync: from the SSO token, which adds and removes it; erp: given in ERP, sync leaves it"),
 	}
 }
 

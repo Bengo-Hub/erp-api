@@ -25,6 +25,8 @@ const (
 	FieldAssignedAt = "assigned_at"
 	// FieldExpiresAt holds the string denoting the expires_at field in the database.
 	FieldExpiresAt = "expires_at"
+	// FieldSource holds the string denoting the source field in the database.
+	FieldSource = "source"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// EdgeRole holds the string denoting the role edge name in mutations.
@@ -55,6 +57,7 @@ var Columns = []string{
 	FieldRoleID,
 	FieldAssignedAt,
 	FieldExpiresAt,
+	FieldSource,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -70,6 +73,8 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultAssignedAt holds the default value on creation for the "assigned_at" field.
 	DefaultAssignedAt func() time.Time
+	// DefaultSource holds the default value on creation for the "source" field.
+	DefaultSource string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -105,6 +110,11 @@ func ByAssignedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByExpiresAt orders the results by the expires_at field.
 func ByExpiresAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldExpiresAt, opts...).ToFunc()
+}
+
+// BySource orders the results by the source field.
+func BySource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSource, opts...).ToFunc()
 }
 
 // ByUserField orders the results by user field.

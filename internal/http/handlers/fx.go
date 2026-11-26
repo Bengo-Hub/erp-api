@@ -51,7 +51,15 @@ func (h *FXHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	if !ok || !requirePermission(w, scope, permFxManage) {
 		return
 	}
-	n, err := h.svc.FetchAllActive(r.Context())
+	// A company refreshes with its own settings; every company's only for the platform owner (the
+	// scheduled job runs them all).
+	var n int
+	var err error
+	if r.URL.Query().Get("scope") == "all" && isPlatformOwner(scope) {
+		n, err = h.svc.FetchAllActive(r.Context())
+	} else {
+		n, err = h.svc.FetchForTenant(r.Context(), scope.TenantID)
+	}
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "fetch_failed", err.Error())
 		return

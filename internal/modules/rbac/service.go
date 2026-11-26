@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -21,8 +22,9 @@ import (
 // reconciliation on every login (add + remove), and resolution
 // of roles/permissions for GET /auth/me.
 type Service struct {
-	orm *ent.Client
-	log *zap.Logger
+	orm     *ent.Client
+	log     *zap.Logger
+	members Members // who is an active member (assignments.go); nil trusts every member
 }
 
 func NewService(orm *ent.Client, log *zap.Logger) *Service {
@@ -89,9 +91,9 @@ func (s *Service) EnsureUserFromToken(ctx context.Context, tenantID uuid.UUID, e
 	return u, nil
 }
 
-// reconcileRoles makes the user's assignments exactly match claimRoles for this tenant:
-// it adds assignments for newly-granted roles and removes assignments no longer present
-// in the token. Roles absent from the local Role table are skipped (not auto-created).
+// reconcileRoles makes the user's sync-given assignments match claimRoles for this tenant: it adds
+// newly-granted roles and removes sync-given ones no longer in the token. Roles given in ERP stay.
+// Roles absent from the local Role table are skipped (not auto-created).
 func (s *Service) reconcileRoles(ctx context.Context, tenantID, userID uuid.UUID, claimRoles []string) error {
 	desired := map[uuid.UUID]bool{}
 	for _, code := range claimRoles {
@@ -118,9 +120,15 @@ func (s *Service) reconcileRoles(ctx context.Context, tenantID, userID uuid.UUID
 	have := map[uuid.UUID]bool{}
 	for _, a := range existing {
 		have[a.RoleID] = true
-		if !desired[a.RoleID] {
+		switch {
+		case !desired[a.RoleID] && a.Source == SourceSync:
 			if err := s.orm.UserRoleAssignment.DeleteOne(a).Exec(ctx); err != nil {
 				return fmt.Errorf("remove stale assignment: %w", err)
+			}
+		case desired[a.RoleID] && a.ExpiresAt != nil && !a.ExpiresAt.After(time.Now()):
+			// The role given in ERP ran out, but the token carries it.
+			if err := a.Update().ClearExpiresAt().SetSource(SourceSync).Exec(ctx); err != nil {
+				return fmt.Errorf("renew assignment: %w", err)
 			}
 		}
 	}
@@ -164,11 +172,10 @@ func (s *Service) resolveRole(ctx context.Context, tenantID uuid.UUID, code stri
 	return r, err
 }
 
-// GetUserRoles returns the locally-assigned roles for a user within a tenant.
+// GetUserRoles returns the roles that apply to a user within a tenant: not expired, and for a role
+// given in ERP only while the person is an active member of the tenant.
 func (s *Service) GetUserRoles(ctx context.Context, tenantID, userID uuid.UUID) ([]*ent.Role, error) {
-	assignments, err := s.orm.UserRoleAssignment.Query().
-		Where(userroleassignment.TenantID(tenantID), userroleassignment.UserID(userID)).
-		All(ctx)
+	assignments, err := s.liveAssignments(ctx, tenantID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -419,16 +426,14 @@ func (s *Service) AssignUserRole(ctx context.Context, a Actor, tenantID, userID,
 	} else if !ok {
 		return ErrUserNotFound
 	}
-	exists, err := s.orm.UserRoleAssignment.Query().
+	// A role the person already has from sign-in becomes one given in ERP, so it stays when the
+	// token loses it. An expired one starts again.
+	n, err := s.orm.UserRoleAssignment.Update().
 		Where(userroleassignment.TenantID(tenantID), userroleassignment.UserID(userID), userroleassignment.RoleID(roleID)).
-		Exist(ctx)
-	if err != nil {
+		SetSource(SourceERP).ClearExpiresAt().Save(ctx)
+	if err != nil || n > 0 {
 		return err
 	}
-	if exists {
-		return nil
-	}
-	_, err = s.orm.UserRoleAssignment.Create().
-		SetTenantID(tenantID).SetUserID(userID).SetRoleID(roleID).Save(ctx)
-	return err
+	return s.orm.UserRoleAssignment.Create().
+		SetTenantID(tenantID).SetUserID(userID).SetRoleID(roleID).SetSource(SourceERP).Exec(ctx)
 }

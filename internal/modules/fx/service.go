@@ -25,10 +25,20 @@ type Service struct {
 	orm  *ent.Client
 	http *http.Client
 	log  *zap.Logger
+	// fetchOne fetches and stores the rates for one company's settings.
+	fetchOne func(context.Context, *ent.ExchangeRateAPISettings) (int, error)
 }
 
 func NewService(orm *ent.Client, log *zap.Logger) *Service {
-	return &Service{orm: orm, http: &http.Client{Timeout: 12 * time.Second}, log: log.Named("fx")}
+	s := &Service{orm: orm, http: &http.Client{Timeout: 12 * time.Second}, log: log.Named("fx")}
+	s.fetchOne = s.fetchForSettings
+	return s
+}
+
+// WithFetcher replaces the provider call, so tests can see which companies a refresh covers.
+func (s *Service) WithFetcher(f func(context.Context, *ent.ExchangeRateAPISettings) (int, error)) *Service {
+	s.fetchOne = f
+	return s
 }
 
 // ListRates returns the platform's and the tenant's own stored rates for a base currency (most
@@ -45,14 +55,26 @@ func (s *Service) ListRates(ctx context.Context, tenantID uuid.UUID, base string
 // FetchAllActive fetches rates for every tenant with active FX settings. Returns the number
 // of rate rows upserted. Best-effort per tenant (one failure doesn't abort the rest).
 func (s *Service) FetchAllActive(ctx context.Context) (int, error) {
-	settings, err := s.orm.ExchangeRateAPISettings.Query().
-		Where(exchangerateapisettings.IsActive(true)).All(ctx)
+	return s.fetch(ctx, nil)
+}
+
+// FetchForTenant fetches rates with one tenant's FX settings only.
+func (s *Service) FetchForTenant(ctx context.Context, tenantID uuid.UUID) (int, error) {
+	return s.fetch(ctx, &tenantID)
+}
+
+func (s *Service) fetch(ctx context.Context, tenantID *uuid.UUID) (int, error) {
+	q := s.orm.ExchangeRateAPISettings.Query().Where(exchangerateapisettings.IsActive(true))
+	if tenantID != nil {
+		q = q.Where(exchangerateapisettings.TenantID(*tenantID))
+	}
+	settings, err := q.All(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("fx: load settings: %w", err)
 	}
 	total := 0
 	for _, st := range settings {
-		n, ferr := s.fetchForSettings(ctx, st)
+		n, ferr := s.fetchOne(ctx, st)
 		if ferr != nil {
 			s.log.Warn("fx fetch failed for tenant", zap.String("tenant", st.TenantID.String()), zap.Error(ferr))
 			continue

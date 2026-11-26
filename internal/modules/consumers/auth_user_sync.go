@@ -30,6 +30,23 @@ type AuthUserSyncConsumer struct {
 	// Entitled reports whether the tenant's plan includes the erp service. Tenants outside it get
 	// no employee projection. Nil lets every tenant through (local development).
 	Entitled func(ctx context.Context, tenantID uuid.UUID) bool
+	// Deactivated is called with the auth user id of a deactivated or suspended account.
+	Deactivated func(ctx context.Context, authUserID string) error
+}
+
+// handleUserDeactivated takes away what ERP gave a person whose account was deactivated.
+func (c *AuthUserSyncConsumer) handleUserDeactivated(ctx context.Context, evt *sharedevents.Event) error {
+	authUserID := parseUUID(str(evt.Payload, "user_id"))
+	if authUserID == uuid.Nil {
+		authUserID = evt.AggregateID
+	}
+	if authUserID == uuid.Nil {
+		return fmt.Errorf("auth.user.deactivated event missing user id")
+	}
+	if c.Deactivated == nil {
+		return nil
+	}
+	return c.Deactivated(ctx, authUserID.String())
 }
 
 func NewAuthUserSyncConsumer(log *zap.Logger, svc *employees.Service, idem *sharedevents.IdempotencyStore) *AuthUserSyncConsumer {
@@ -57,6 +74,7 @@ func (c *AuthUserSyncConsumer) Start(ctx context.Context, nc *nats.Conn) error {
 		{"auth.user.created", "erp-auth-user-created", c.handleUserEvent},
 		{"auth.user.updated", "erp-auth-user-updated", c.handleUserEvent},
 		{"auth.user.deleted", "erp-auth-user-deleted", c.handleUserDeleted},
+		{"auth.user.deactivated", "erp-auth-user-deactivated", c.handleUserDeactivated},
 	})
 	return nil
 }

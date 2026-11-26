@@ -3031,6 +3031,10 @@ func init() {
 	userroleassignmentDescAssignedAt := userroleassignmentFields[4].Descriptor()
 	// userroleassignment.DefaultAssignedAt holds the default value on creation for the assigned_at field.
 	userroleassignment.DefaultAssignedAt = userroleassignmentDescAssignedAt.Default.(func() time.Time)
+	// userroleassignmentDescSource is the schema descriptor for source field.
+	userroleassignmentDescSource := userroleassignmentFields[6].Descriptor()
+	// userroleassignment.DefaultSource holds the default value on creation for the source field.
+	userroleassignment.DefaultSource = userroleassignmentDescSource.Default.(string)
 	// userroleassignmentDescID is the schema descriptor for id field.
 	userroleassignmentDescID := userroleassignmentFields[0].Descriptor()
 	// userroleassignment.DefaultID holds the default value on creation for the id field.

@@ -52,14 +52,14 @@ func EnsureServiceUser(svc *rbac.Service, syncer *usersync.TenantSyncer, log *za
 	}
 }
 
-// erpKnownRoles are the SSO global role names that map 1:1 onto an erp system role
-// (mirrors the roleGrants keys in cmd/seed/main.go, minus erp_admin which is already
-// matched by the "admin" substring case below — kept as a literal set here since cmd/seed
-// is package main and can't be imported). Anything NOT in this set (and not admin-tier) is
-// a role from another domain entirely (POS/logistics/hospitality/etc. — cashier, rider,
-// driver, waiter, stylist, technician, generic "manager", ...) with no HRM relevance, so it
-// falls back to "staff": every tenant employee, regardless of their business-specific role
-// in other services, still gets basic ESS access in ERP (own payslips, leave, attendance).
+// adminRoleNames are the only SSO role names that make an ERP administrator. erp-ui's
+// use-app-permissions.ts keeps the same list.
+var adminRoleNames = map[string]bool{"admin": true, "superuser": true, "superusers": true, "erp_admin": true}
+
+// erpKnownRoles are the SSO global role names that map 1:1 onto an erp system role (the built-in
+// codes minus erp_admin). Anything in neither set is a role from another domain (POS, logistics,
+// hospitality: cashier, rider, waiter, a generic "manager", ...) with no HRM relevance, so it falls
+// back to "staff": every tenant employee still gets basic ESS access in ERP.
 var erpKnownRoles = map[string]bool{
 	"ceo":                 true,
 	"cto":                 true,
@@ -79,15 +79,11 @@ var erpKnownRoles = map[string]bool{
 
 // MapGlobalRolesToERP maps SSO global role names to erp service-role codes.
 //
-//   - "superuser"/"superusers" (legacy group name), or ANY role name containing "admin"
-//     as a substring — "admin", "erp_admin", "isp_admin", "library_admin", a future
-//     "inventory_admin", etc. — map to erp_admin. Any tenant member holding an admin-tier
-//     role in ANY service should get full erp administrative access, not be silently
-//     demoted to bare ESS just because their literal role string isn't exactly "admin".
+//   - exactly "admin", "superuser", "superusers" and "erp_admin" map to erp_admin. An admin of
+//     another service (isp_admin, library_admin, hadia_admin, ...) is not an ERP administrator.
 //   - names that match a known erp role (erpKnownRoles) pass through unchanged.
-//   - every other name (a role scoped to a different service — POS, logistics, hospitality,
-//     etc. — with no HRM/admin relevance) defaults to "staff" so that user still gets ESS
-//     access (own payslips/leave/attendance) instead of zero erp permissions.
+//   - every other name (a role scoped to a different service: POS, logistics, hospitality, ...)
+//     defaults to "staff" so that user still gets ESS access (own payslips/leave/attendance).
 func MapGlobalRolesToERP(globalRoles []string) []string {
 	out := make([]string, 0, len(globalRoles)+1)
 	addedAdmin := false
@@ -99,7 +95,7 @@ func MapGlobalRolesToERP(globalRoles []string) []string {
 		}
 		lower := strings.ToLower(code)
 		switch {
-		case lower == "superuser" || lower == "superusers" || strings.Contains(lower, "admin"):
+		case adminRoleNames[lower]:
 			if !addedAdmin {
 				out = append(out, "erp_admin")
 				addedAdmin = true

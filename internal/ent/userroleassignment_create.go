@@ -72,6 +72,20 @@ func (_c *UserRoleAssignmentCreate) SetNillableExpiresAt(v *time.Time) *UserRole
 	return _c
 }
 
+// SetSource sets the "source" field.
+func (_c *UserRoleAssignmentCreate) SetSource(v string) *UserRoleAssignmentCreate {
+	_c.mutation.SetSource(v)
+	return _c
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_c *UserRoleAssignmentCreate) SetNillableSource(v *string) *UserRoleAssignmentCreate {
+	if v != nil {
+		_c.SetSource(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *UserRoleAssignmentCreate) SetID(v uuid.UUID) *UserRoleAssignmentCreate {
 	_c.mutation.SetID(v)
@@ -135,6 +149,10 @@ func (_c *UserRoleAssignmentCreate) defaults() {
 		v := userroleassignment.DefaultAssignedAt()
 		_c.mutation.SetAssignedAt(v)
 	}
+	if _, ok := _c.mutation.Source(); !ok {
+		v := userroleassignment.DefaultSource
+		_c.mutation.SetSource(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := userroleassignment.DefaultID()
 		_c.mutation.SetID(v)
@@ -154,6 +172,9 @@ func (_c *UserRoleAssignmentCreate) check() error {
 	}
 	if _, ok := _c.mutation.AssignedAt(); !ok {
 		return &ValidationError{Name: "assigned_at", err: errors.New(`ent: missing required field "UserRoleAssignment.assigned_at"`)}
+	}
+	if _, ok := _c.mutation.Source(); !ok {
+		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "UserRoleAssignment.source"`)}
 	}
 	if len(_c.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "UserRoleAssignment.user"`)}
@@ -208,6 +229,10 @@ func (_c *UserRoleAssignmentCreate) createSpec() (*UserRoleAssignment, *sqlgraph
 	if value, ok := _c.mutation.ExpiresAt(); ok {
 		_spec.SetField(userroleassignment.FieldExpiresAt, field.TypeTime, value)
 		_node.ExpiresAt = &value
+	}
+	if value, ok := _c.mutation.Source(); ok {
+		_spec.SetField(userroleassignment.FieldSource, field.TypeString, value)
+		_node.Source = value
 	}
 	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -349,6 +374,18 @@ func (u *UserRoleAssignmentUpsert) ClearExpiresAt() *UserRoleAssignmentUpsert {
 	return u
 }
 
+// SetSource sets the "source" field.
+func (u *UserRoleAssignmentUpsert) SetSource(v string) *UserRoleAssignmentUpsert {
+	u.Set(userroleassignment.FieldSource, v)
+	return u
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *UserRoleAssignmentUpsert) UpdateSource() *UserRoleAssignmentUpsert {
+	u.SetExcluded(userroleassignment.FieldSource)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -460,6 +497,20 @@ func (u *UserRoleAssignmentUpsertOne) UpdateExpiresAt() *UserRoleAssignmentUpser
 func (u *UserRoleAssignmentUpsertOne) ClearExpiresAt() *UserRoleAssignmentUpsertOne {
 	return u.Update(func(s *UserRoleAssignmentUpsert) {
 		s.ClearExpiresAt()
+	})
+}
+
+// SetSource sets the "source" field.
+func (u *UserRoleAssignmentUpsertOne) SetSource(v string) *UserRoleAssignmentUpsertOne {
+	return u.Update(func(s *UserRoleAssignmentUpsert) {
+		s.SetSource(v)
+	})
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *UserRoleAssignmentUpsertOne) UpdateSource() *UserRoleAssignmentUpsertOne {
+	return u.Update(func(s *UserRoleAssignmentUpsert) {
+		s.UpdateSource()
 	})
 }
 
@@ -741,6 +792,20 @@ func (u *UserRoleAssignmentUpsertBulk) UpdateExpiresAt() *UserRoleAssignmentUpse
 func (u *UserRoleAssignmentUpsertBulk) ClearExpiresAt() *UserRoleAssignmentUpsertBulk {
 	return u.Update(func(s *UserRoleAssignmentUpsert) {
 		s.ClearExpiresAt()
+	})
+}
+
+// SetSource sets the "source" field.
+func (u *UserRoleAssignmentUpsertBulk) SetSource(v string) *UserRoleAssignmentUpsertBulk {
+	return u.Update(func(s *UserRoleAssignmentUpsert) {
+		s.SetSource(v)
+	})
+}
+
+// UpdateSource sets the "source" field to the value that was provided on create.
+func (u *UserRoleAssignmentUpsertBulk) UpdateSource() *UserRoleAssignmentUpsertBulk {
+	return u.Update(func(s *UserRoleAssignmentUpsert) {
+		s.UpdateSource()
 	})
 }
 

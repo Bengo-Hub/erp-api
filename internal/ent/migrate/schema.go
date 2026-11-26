@@ -3188,6 +3188,14 @@ var (
 				Unique:  true,
 				Columns: []*schema.Column{PublicHolidaysColumns[1], PublicHolidaysColumns[3], PublicHolidaysColumns[5]},
 			},
+			{
+				Name:    "publicholiday_tenant_national_date",
+				Unique:  true,
+				Columns: []*schema.Column{PublicHolidaysColumns[1], PublicHolidaysColumns[3]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "is_national = true",
+				},
+			},
 		},
 	}
 	// RecoveryLinesColumns holds the columns for the "recovery_lines" table.
@@ -3937,6 +3945,7 @@ var (
 		{Name: "tenant_id", Type: field.TypeUUID},
 		{Name: "assigned_at", Type: field.TypeTime},
 		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "source", Type: field.TypeString, Default: "sync"},
 		{Name: "user_id", Type: field.TypeUUID},
 		{Name: "role_id", Type: field.TypeUUID},
 	}
@@ -3948,13 +3957,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "user_role_assignments_custom_users_role_assignments",
-				Columns:    []*schema.Column{UserRoleAssignmentsColumns[4]},
+				Columns:    []*schema.Column{UserRoleAssignmentsColumns[5]},
 				RefColumns: []*schema.Column{CustomUsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "user_role_assignments_roles_user_assignments",
-				Columns:    []*schema.Column{UserRoleAssignmentsColumns[5]},
+				Columns:    []*schema.Column{UserRoleAssignmentsColumns[6]},
 				RefColumns: []*schema.Column{RolesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -3963,7 +3972,7 @@ var (
 			{
 				Name:    "userroleassignment_tenant_id_user_id_role_id",
 				Unique:  true,
-				Columns: []*schema.Column{UserRoleAssignmentsColumns[1], UserRoleAssignmentsColumns[4], UserRoleAssignmentsColumns[5]},
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[1], UserRoleAssignmentsColumns[5], UserRoleAssignmentsColumns[6]},
 			},
 			{
 				Name:    "userroleassignment_tenant_id",
@@ -3973,12 +3982,12 @@ var (
 			{
 				Name:    "userroleassignment_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserRoleAssignmentsColumns[4]},
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[5]},
 			},
 			{
 				Name:    "userroleassignment_role_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserRoleAssignmentsColumns[5]},
+				Columns: []*schema.Column{UserRoleAssignmentsColumns[6]},
 			},
 		},
 	}

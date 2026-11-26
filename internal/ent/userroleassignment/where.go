@@ -81,6 +81,11 @@ func ExpiresAt(v time.Time) predicate.UserRoleAssignment {
 	return predicate.UserRoleAssignment(sql.FieldEQ(FieldExpiresAt, v))
 }
 
+// Source applies equality check predicate on the "source" field. It's identical to SourceEQ.
+func Source(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldEQ(FieldSource, v))
+}
+
 // TenantIDEQ applies the EQ predicate on the "tenant_id" field.
 func TenantIDEQ(v uuid.UUID) predicate.UserRoleAssignment {
 	return predicate.UserRoleAssignment(sql.FieldEQ(FieldTenantID, v))
@@ -249,6 +254,71 @@ func ExpiresAtIsNil() predicate.UserRoleAssignment {
 // ExpiresAtNotNil applies the NotNil predicate on the "expires_at" field.
 func ExpiresAtNotNil() predicate.UserRoleAssignment {
 	return predicate.UserRoleAssignment(sql.FieldNotNull(FieldExpiresAt))
+}
+
+// SourceEQ applies the EQ predicate on the "source" field.
+func SourceEQ(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldEQ(FieldSource, v))
+}
+
+// SourceNEQ applies the NEQ predicate on the "source" field.
+func SourceNEQ(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldNEQ(FieldSource, v))
+}
+
+// SourceIn applies the In predicate on the "source" field.
+func SourceIn(vs ...string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldIn(FieldSource, vs...))
+}
+
+// SourceNotIn applies the NotIn predicate on the "source" field.
+func SourceNotIn(vs ...string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldNotIn(FieldSource, vs...))
+}
+
+// SourceGT applies the GT predicate on the "source" field.
+func SourceGT(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldGT(FieldSource, v))
+}
+
+// SourceGTE applies the GTE predicate on the "source" field.
+func SourceGTE(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldGTE(FieldSource, v))
+}
+
+// SourceLT applies the LT predicate on the "source" field.
+func SourceLT(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldLT(FieldSource, v))
+}
+
+// SourceLTE applies the LTE predicate on the "source" field.
+func SourceLTE(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldLTE(FieldSource, v))
+}
+
+// SourceContains applies the Contains predicate on the "source" field.
+func SourceContains(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldContains(FieldSource, v))
+}
+
+// SourceHasPrefix applies the HasPrefix predicate on the "source" field.
+func SourceHasPrefix(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldHasPrefix(FieldSource, v))
+}
+
+// SourceHasSuffix applies the HasSuffix predicate on the "source" field.
+func SourceHasSuffix(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldHasSuffix(FieldSource, v))
+}
+
+// SourceEqualFold applies the EqualFold predicate on the "source" field.
+func SourceEqualFold(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldEqualFold(FieldSource, v))
+}
+
+// SourceContainsFold applies the ContainsFold predicate on the "source" field.
+func SourceContainsFold(v string) predicate.UserRoleAssignment {
+	return predicate.UserRoleAssignment(sql.FieldContainsFold(FieldSource, v))
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.

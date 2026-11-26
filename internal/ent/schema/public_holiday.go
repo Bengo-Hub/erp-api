@@ -4,14 +4,14 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
-// PublicHoliday is a Kenyan public holiday (national or county-specific). Made
-// tenant-scoped per the sprint spec: legacy uniq(date,county) -> uniq(tenant,date,county)
-// so each tenant maintains its own holiday calendar (fixes the global-table isolation gap).
+// PublicHoliday is a Kenyan public holiday (national or county-specific). Rows of the system tenant
+// are the national calendar every tenant inherits (modules/holidays); a tenant's rows are its own.
 type PublicHoliday struct {
 	ent.Schema
 }
@@ -34,5 +34,8 @@ func (PublicHoliday) Indexes() []ent.Index {
 		index.Fields("tenant_id"),
 		index.Fields("tenant_id", "date"),
 		index.Fields("tenant_id", "date", "county").Unique(),
+		// A national row has no county, and NULLs never clash in the index above.
+		index.Fields("tenant_id", "date").Unique().StorageKey("publicholiday_tenant_national_date").
+			Annotations(entsql.IndexWhere("is_national = true")),
 	}
 }

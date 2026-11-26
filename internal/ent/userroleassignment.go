@@ -30,6 +30,8 @@ type UserRoleAssignment struct {
 	AssignedAt time.Time `json:"assigned_at,omitempty"`
 	// ExpiresAt holds the value of the "expires_at" field.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	// sync: from the SSO token, which adds and removes it; erp: given in ERP, sync leaves it
+	Source string `json:"source,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserRoleAssignmentQuery when eager-loading is set.
 	Edges        UserRoleAssignmentEdges `json:"edges"`
@@ -74,6 +76,8 @@ func (*UserRoleAssignment) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case userroleassignment.FieldSource:
+			values[i] = new(sql.NullString)
 		case userroleassignment.FieldAssignedAt, userroleassignment.FieldExpiresAt:
 			values[i] = new(sql.NullTime)
 		case userroleassignment.FieldID, userroleassignment.FieldTenantID, userroleassignment.FieldUserID, userroleassignment.FieldRoleID:
@@ -129,6 +133,12 @@ func (_m *UserRoleAssignment) assignValues(columns []string, values []any) error
 			} else if value.Valid {
 				_m.ExpiresAt = new(time.Time)
 				*_m.ExpiresAt = value.Time
+			}
+		case userroleassignment.FieldSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field source", values[i])
+			} else if value.Valid {
+				_m.Source = value.String
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -192,6 +202,9 @@ func (_m *UserRoleAssignment) String() string {
 		builder.WriteString("expires_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("source=")
+	builder.WriteString(_m.Source)
 	builder.WriteByte(')')
 	return builder.String()
 }
