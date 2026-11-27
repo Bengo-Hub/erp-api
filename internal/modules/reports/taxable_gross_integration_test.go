@@ -65,8 +65,8 @@ func TestIntegration_TaxableGrossOnPAYEReturns(t *testing.T) {
 	if r := rowOf(p10.Rows); r["gross_pay"] != "45000.00" {
 		t.Errorf("P10 gross = %v, want 45000", r["gross_pay"])
 	}
-	if r := rowOf(p10.Sheets[2].Rows); r["gross_pay"] != "50000.00" {
-		t.Errorf("P10 sheet M gross = %v, want the payslip gross 50000", r["gross_pay"])
+	if r := rowOf(p10.Sheets[2].Rows); r["gross_salary"] != "50000.00" {
+		t.Errorf("P10 sheet M gross salary = %v, want the payslip gross 50000 (no stored levy base)", r["gross_salary"])
 	}
 	nssf, err := svc.NSSF(ctx, fx.tenant, fx.octF)
 	if err != nil {

@@ -181,18 +181,20 @@ func composeLines(basic decimal.Decimal, res payrollengine.PayslipResult, items 
 		add(secReimbursement, "per_diem_taxable", r.Label, decimal.Zero, r.Amount, decimal.Zero, false, true, "", nil)
 	}
 
-	// Statutory (before-tax) — NSSF split into tiers + employer, SHIF, housing levy.
+	// Statutory (before-tax) — NSSF split into tiers + employer, SHIF, housing levy. Each levy line
+	// keeps, in its taxable amount, the pay the levy was charged on (NSSF pensionable earnings,
+	// SHIF and Housing Levy gross salary), which the statutory returns show.
 	if res.NSSFEmployeeTier1.IsPositive() {
-		add(secBeforeTax, "nssf_t1", "N.S.S.F. Tier I", res.NSSFEmployeeTier1, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseBeforeTax, nil)
+		add(secBeforeTax, "nssf_t1", "N.S.S.F. Tier I", res.NSSFEmployeeTier1, res.NSSFBase, decimal.Zero, false, false, payrollengine.PhaseBeforeTax, nil)
 	}
 	if res.NSSFEmployeeTier2.IsPositive() {
 		add(secBeforeTax, "nssf_t2", "N.S.S.F. Tier II", res.NSSFEmployeeTier2, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseBeforeTax, nil)
 	}
 	if res.SHIFOrNHIF.IsPositive() {
-		add(secBeforeTax, "shif", "S.H.I.F.", res.SHIFOrNHIF, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseBeforeTax, nil)
+		add(secBeforeTax, "shif", "S.H.I.F.", res.SHIFOrNHIF, res.SHIFBase, decimal.Zero, false, false, payrollengine.PhaseBeforeTax, nil)
 	}
 	if res.HousingLevy.IsPositive() {
-		add(secBeforeTax, "housing_levy", "Housing Levy", res.HousingLevy, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseBeforeTax, nil)
+		add(secBeforeTax, "housing_levy", "Housing Levy", res.HousingLevy, res.HousingLevyBase, decimal.Zero, false, false, payrollengine.PhaseBeforeTax, nil)
 	}
 
 	// Tax + relief.
@@ -203,7 +205,7 @@ func composeLines(basic decimal.Decimal, res payrollengine.PayslipResult, items 
 		add(secRelief, "insurance_relief", "Insurance Relief", res.InsuranceRelief, decimal.Zero, decimal.Zero, false, false, "", nil)
 	}
 	if res.PAYE.IsPositive() {
-		add(secTax, "paye", "P.A.Y.E.", res.PAYE, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseAfterTax, nil)
+		add(secTax, "paye", "P.A.Y.E.", res.PAYE, res.TaxablePay, decimal.Zero, false, false, payrollengine.PhaseAfterTax, nil)
 	}
 
 	// After-PAYE recoverables (labelled).

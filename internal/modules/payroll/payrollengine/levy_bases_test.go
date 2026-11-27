@@ -13,6 +13,10 @@ func TestLevyBases(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The run records the base each levy was charged on, for the returns.
+	if !res.NSSFBase.Equal(d("50000")) || !res.SHIFBase.Equal(d("50000")) || !res.HousingLevyBase.Equal(d("50000")) {
+		t.Errorf("bases nssf %s shif %s ahl %s, want 50000 each", res.NSSFBase, res.SHIFBase, res.HousingLevyBase)
+	}
 	nssf := res.NSSFEmployeeTier1.Add(res.NSSFEmployeeTier2)
 	if !nssf.Equal(d("3000")) || !res.SHIFOrNHIF.Equal(d("1375")) || !res.HousingLevy.Equal(d("750")) {
 		t.Errorf("levies on 50,000: nssf %s shif %s ahl %s", nssf, res.SHIFOrNHIF, res.HousingLevy)

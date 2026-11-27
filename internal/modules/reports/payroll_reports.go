@@ -355,10 +355,15 @@ func (s *Service) P10(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 		return nil, err
 	}
 	type acc struct {
-		e                                     *ent.Employee
+		e                                           *ent.Employee
 		gross, full, taxable, nssf, shif, ahl, paye decimal.Decimal // gross is the taxable gross
+		ahlBase, ahlEmployer                        decimal.Decimal
 	}
 	taxGross, err := s.taxableGross(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
+	}
+	levies, err := s.levyLines(ctx, tenantID, slips)
 	if err != nil {
 		return nil, err
 	}
@@ -377,18 +382,20 @@ func (s *Service) P10(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 		a.nssf = a.nssf.Add(p.NssfEmployeeTier1).Add(p.NssfEmployeeTier2)
 		a.shif = a.shif.Add(p.ShifOrNhifContribution)
 		a.ahl = a.ahl.Add(p.HousingLevy)
+		a.ahlBase = a.ahlBase.Add(base(levies[p.ID].ahlBase, p.GrossPay))
+		a.ahlEmployer = a.ahlEmployer.Add(levies[p.ID].ahlEmployerOf(p))
 		a.paye = a.paye.Add(p.Paye)
 	}
 	b1 := ReportSheet{Name: "B1 - PAYE", Columns: []string{"employee_name", "employee_pin", "gross_pay", "nssf", "shif", "chargeable_pay", "paye"}, Rows: []map[string]any{}}
 	b2 := ReportSheet{Name: "B2 - Below Threshold", Columns: []string{"employee_name", "employee_pin", "gross_pay", "reason"}, Rows: []map[string]any{}}
-	m := ReportSheet{Name: "Sheet M - AHL", Columns: []string{"employee_name", "employee_pin", "gross_pay", "employee_ahl", "employer_ahl", "total_ahl"}, Rows: []map[string]any{}}
+	m := ReportSheet{Name: "Sheet M - AHL", Columns: []string{"employee_name", "employee_pin", "national_id", "gross_salary", "employee_ahl", "employer_ahl", "total_ahl"}, Rows: []map[string]any{}}
 	rep := &Report{
 		Report:  "P10",
 		Period:  periodMeta(f),
 		Columns: []string{"employee_name", "employee_pin", "gross_pay", "chargeable_pay", "paye", "paye_liable"},
 		Rows:    []map[string]any{},
 	}
-	totGross, totPaye, totAHL := d(), d(), d()
+	totGross, totPaye, totAHL, totAHLR := d(), d(), d(), d()
 	for _, id := range order {
 		a := byEmp[id]
 		if a.paye.IsPositive() {
@@ -402,9 +409,10 @@ func (s *Service) P10(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 			})
 		}
 		m.Rows = append(m.Rows, map[string]any{
-			"employee_name": empName(a.e), "employee_pin": pin(a.e), "gross_pay": money(a.full),
-			"employee_ahl": money(a.ahl), "employer_ahl": money(a.ahl), "total_ahl": money(a.ahl.Add(a.ahl)),
+			"employee_name": empName(a.e), "employee_pin": pin(a.e), "national_id": natID(a.e), "gross_salary": money(a.ahlBase),
+			"employee_ahl": money(a.ahl), "employer_ahl": money(a.ahlEmployer), "total_ahl": money(a.ahl.Add(a.ahlEmployer)),
 		})
+		totAHLR = totAHLR.Add(a.ahlEmployer)
 		rep.Rows = append(rep.Rows, map[string]any{
 			"employee_name": empName(a.e), "employee_pin": pin(a.e), "gross_pay": money(a.gross),
 			"chargeable_pay": money(a.taxable), "paye": money(a.paye), "paye_liable": a.paye.IsPositive(),
@@ -412,7 +420,7 @@ func (s *Service) P10(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repor
 		totGross, totPaye, totAHL = totGross.Add(a.gross), totPaye.Add(a.paye), totAHL.Add(a.ahl)
 	}
 	b1.Totals = map[string]any{"employee_name": "TOTAL", "gross_pay": money(totGross), "paye": money(totPaye)}
-	m.Totals = map[string]any{"employee_name": "TOTAL", "employee_ahl": money(totAHL), "employer_ahl": money(totAHL), "total_ahl": money(totAHL.Add(totAHL))}
+	m.Totals = map[string]any{"employee_name": "TOTAL", "employee_ahl": money(totAHL), "employer_ahl": money(totAHLR), "total_ahl": money(totAHL.Add(totAHLR))}
 	rep.Sheets = []ReportSheet{b1, b2, m}
 	rep.Totals = map[string]any{"count": len(order), "gross_pay": money(totGross), "paye": money(totPaye)}
 	return rep, nil

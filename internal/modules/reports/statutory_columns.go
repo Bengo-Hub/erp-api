@@ -10,7 +10,7 @@ import (
 // (src/lib/reports-config.ts), and the same keys drive the PDF/Excel/CSV export columns.
 var (
 	nssfColumns = []string{
-		"employee_name", "employee_pin", "nssf_number", "gross_pay",
+		"employee_name", "employee_pin", "nssf_number", "gross_pay", "pensionable_earnings",
 		"tier_1", "tier_2", "employee_total", "employer", "nssf_contribution",
 	}
 	nitaColumns = []string{"employee_name", "employee_pin", "gross_pay", "nita_levy"}
@@ -19,7 +19,7 @@ var (
 // healthColumns is the SHIF/NHIF member schedule: who, their scheme number, gross and the
 // contribution deducted.
 func healthColumns(numberKey, amountKey string) []string {
-	return []string{"employee_name", "employee_pin", "national_id", numberKey, "gross_pay", amountKey, "coverage_type"}
+	return []string{"employee_name", "employee_pin", "national_id", numberKey, "gross_pay", "gross_salary", amountKey, "coverage_type"}
 }
 
 func healthNumber(e *ent.Employee) string {

@@ -39,6 +39,9 @@ type PayslipResult struct {
 	NITAEmployer decimal.Decimal
 	// FBTEmployer is the employer's fringe benefit tax on the employee's low-interest staff loans.
 	FBTEmployer decimal.Decimal
+	// The pay each levy was charged on (gross adjusted by the earnings' levy flags), for the
+	// statutory returns: NSSF pensionable earnings, SHIF and Housing Levy gross salary.
+	NSSFBase, SHIFBase, HousingLevyBase decimal.Decimal
 	// Reimbursements is the non-taxable expense claim repayment added to net pay (never to gross).
 	Reimbursements decimal.Decimal
 	// NonTaxableEarnings is the non-taxable component pay included in GrossPay.
@@ -100,7 +103,9 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 			}
 			switch comp {
 			case CompNSSF:
-				n, err := CalculateNSSF(cfg.NSSF, levyBase(gross, in.LevyAdjust.NSSF))
+				b := levyBase(gross, in.LevyAdjust.NSSF)
+				res.NSSFBase = round2(b)
+				n, err := CalculateNSSF(cfg.NSSF, b)
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -115,7 +120,9 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 					// SHIF not effective this period; skip (NHIF handles health then).
 					continue
 				}
-				c, err := CalculateSHIF(cfg.SHIF, levyBase(gross, in.LevyAdjust.SHIF))
+				b := levyBase(gross, in.LevyAdjust.SHIF)
+				res.SHIFBase = round2(b)
+				c, err := CalculateSHIF(cfg.SHIF, b)
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -126,7 +133,9 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 				if cfg.NHIF == nil {
 					continue
 				}
-				c, err := CalculateNHIF(cfg.NHIF, levyBase(gross, in.LevyAdjust.SHIF))
+				b := levyBase(gross, in.LevyAdjust.SHIF)
+				res.SHIFBase = round2(b)
+				c, err := CalculateNHIF(cfg.NHIF, b)
 				if err != nil {
 					return PayslipResult{}, err
 				}
@@ -134,7 +143,9 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 				addPhase(&res, phase.Name, c.Employee)
 
 			case CompHousingLevy:
-				c, err := CalculateHousingLevy(cfg.HousingLevy, levyBase(gross, in.LevyAdjust.HousingLevy))
+				b := levyBase(gross, in.LevyAdjust.HousingLevy)
+				res.HousingLevyBase = round2(b)
+				c, err := CalculateHousingLevy(cfg.HousingLevy, b)
 				if err != nil {
 					return PayslipResult{}, err
 				}

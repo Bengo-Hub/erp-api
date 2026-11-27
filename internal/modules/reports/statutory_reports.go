@@ -40,30 +40,37 @@ func (s *Service) NSSF(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	if err != nil {
 		return nil, err
 	}
+	levies, err := s.levyLines(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
+	}
 	rep := &Report{
 		Report:  "nssf",
 		Period:  periodMeta(f),
 		Columns: nssfColumns,
 		Rows:    []map[string]any{},
 	}
-	totGross, totT1, totT2, totE, totR := d(), d(), d(), d(), d()
+	totGross, totBase, totT1, totT2, totE, totR := d(), d(), d(), d(), d(), d()
 	for _, p := range slips {
 		e := emps[p.EmployeeID]
+		pensionable := base(levies[p.ID].nssfBase, p.GrossPay)
+		totBase = totBase.Add(pensionable)
 		empTotal := p.NssfEmployeeTier1.Add(p.NssfEmployeeTier2)
 		nssfNo := ""
 		if e != nil {
 			nssfNo = e.NssfNo
 		}
 		rep.Rows = append(rep.Rows, map[string]any{
-			"employee_name":     empName(e),
-			"employee_pin":      pin(e),
-			"nssf_number":       nssfNo,
-			"gross_pay":         money(p.GrossPay),
-			"tier_1":            money(p.NssfEmployeeTier1),
-			"tier_2":            money(p.NssfEmployeeTier2),
-			"employee_total":    money(empTotal),
-			"employer":          money(p.NssfEmployerContribution),
-			"nssf_contribution": money(empTotal.Add(p.NssfEmployerContribution)),
+			"employee_name":        empName(e),
+			"employee_pin":         pin(e),
+			"nssf_number":          nssfNo,
+			"gross_pay":            money(p.GrossPay),
+			"pensionable_earnings": money(pensionable),
+			"tier_1":               money(p.NssfEmployeeTier1),
+			"tier_2":               money(p.NssfEmployeeTier2),
+			"employee_total":       money(empTotal),
+			"employer":             money(p.NssfEmployerContribution),
+			"nssf_contribution":    money(empTotal.Add(p.NssfEmployerContribution)),
 		})
 		totGross = totGross.Add(p.GrossPay)
 		totT1 = totT1.Add(p.NssfEmployeeTier1)
@@ -72,14 +79,15 @@ func (s *Service) NSSF(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 		totR = totR.Add(p.NssfEmployerContribution)
 	}
 	rep.Totals = map[string]any{
-		"count": len(slips), "gross_pay": money(totGross), "tier_1": money(totT1), "tier_2": money(totT2),
+		"count": len(slips), "gross_pay": money(totGross), "pensionable_earnings": money(totBase), "tier_1": money(totT1), "tier_2": money(totT2),
 		"employee_total": money(totE), "employer": money(totR), "nssf_contribution": money(totE.Add(totR)),
 	}
 	return rep, nil
 }
 
-// HousingLevy is the Affordable Housing Levy return: 1.5% employee matched by 1.5% employer.
-// The payslip stores the employee side; the employer match equals it (matched contribution).
+// HousingLevy is the Affordable Housing Levy return: 1.5% of the employee's gross salary, matched
+// by the employer. gross_salary is the base the levy was charged on; the employer share is the
+// run's employer line (the employee share for payslips run before that line existed).
 func (s *Service) HousingLevy(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
 	slips, err := s.fetchPayslips(ctx, tenantID, f)
 	if err != nil {
@@ -89,20 +97,29 @@ func (s *Service) HousingLevy(ctx context.Context, tenantID uuid.UUID, f Filter)
 	if err != nil {
 		return nil, err
 	}
+	levies, err := s.levyLines(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
+	}
 	rep := &Report{
 		Report:  "housing-levy",
 		Period:  periodMeta(f),
-		Columns: []string{"employee_name", "employee_pin", "gross_pay", "employee_levy", "employer_levy", "total_levy"},
+		Columns: []string{"employee_name", "employee_pin", "national_id", "gross_pay", "gross_salary", "employee_levy", "employer_levy", "total_levy"},
 		Rows:    []map[string]any{},
 	}
-	totEmp, totEmpr := d(), d()
+	totEmp, totEmpr, totBase := d(), d(), d()
 	for _, p := range slips {
 		e := emps[p.EmployeeID]
+		lv := levies[p.ID]
 		emp := p.HousingLevy
-		empr := p.HousingLevy // matched 1.5%
+		empr := lv.ahlEmployerOf(p)
+		salary := base(lv.ahlBase, p.GrossPay)
+		totBase = totBase.Add(salary)
 		rep.Rows = append(rep.Rows, map[string]any{
 			"employee_name": empName(e),
 			"employee_pin":  pin(e),
+			"national_id":   natID(e),
+			"gross_salary":  money(salary),
 			"gross_pay":     money(p.GrossPay),
 			"employee_levy": money(emp),
 			"employer_levy": money(empr),
@@ -112,7 +129,7 @@ func (s *Service) HousingLevy(ctx context.Context, tenantID uuid.UUID, f Filter)
 		totEmpr = totEmpr.Add(empr)
 	}
 	rep.Totals = map[string]any{
-		"count": len(slips), "employee_levy": money(totEmp),
+		"count": len(slips), "gross_salary": money(totBase), "employee_levy": money(totEmp),
 		"employer_levy": money(totEmpr), "total_levy": money(totEmp.Add(totEmpr)),
 	}
 	return rep, nil
@@ -228,29 +245,36 @@ func (s *Service) singleStatutory(ctx context.Context, tenantID uuid.UUID, f Fil
 	if err != nil {
 		return nil, err
 	}
+	levies, err := s.levyLines(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
+	}
 	rep := &Report{
 		Report:  name,
 		Period:  periodMeta(f),
 		Columns: healthColumns(numberKey, amountKey),
 		Rows:    []map[string]any{},
 	}
-	totGross, total := d(), d()
+	totGross, totBase, total := d(), d(), d()
 	for _, p := range slips {
 		e := emps[p.EmployeeID]
 		amt := amount(p)
+		salary := base(levies[p.ID].shifBase, p.GrossPay)
 		rep.Rows = append(rep.Rows, map[string]any{
 			"employee_name": empName(e),
 			"employee_pin":  pin(e),
 			"national_id":   natID(e),
 			numberKey:       healthNumber(e),
 			"gross_pay":     money(p.GrossPay),
+			"gross_salary":  money(salary),
 			amountKey:       money(amt),
 			"coverage_type": coverageType(p),
 		})
 		totGross = totGross.Add(p.GrossPay)
+		totBase = totBase.Add(salary)
 		total = total.Add(amt)
 	}
-	rep.Totals = map[string]any{"count": len(slips), "gross_pay": money(totGross), amountKey: money(total)}
+	rep.Totals = map[string]any{"count": len(slips), "gross_pay": money(totGross), "gross_salary": money(totBase), amountKey: money(total)}
 	return rep, nil
 }
 
