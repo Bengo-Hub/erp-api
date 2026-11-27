@@ -45,4 +45,23 @@ func TestIntegration_LevyBases(t *testing.T) {
 	if f := now.Flags("basic", "taxable"); !f.Pensionable {
 		t.Error("basic pay is pensionable by default")
 	}
+
+	// A future rule can be cancelled; a rule already in force cannot.
+	cur := time.Now().UTC().Format("2006-01")
+	if _, err := svc.SetLevyRule(ctx, tenant, "house_allowance", LevyRule{From: cur, Flags: LevyFlags{PAYE: true}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.CancelLevyRule(ctx, tenant, "house_allowance", cur); err == nil {
+		t.Error("a rule in force this month must not be cancellable")
+	}
+	bases, err := svc.CancelLevyRule(ctx, tenant, "bonus", from)
+	if err != nil {
+		t.Fatalf("cancel future rule: %v", err)
+	}
+	if len(bases["bonus"]) != 0 {
+		t.Errorf("bonus rules after cancel = %v", bases["bonus"])
+	}
+	if _, err := svc.CancelLevyRule(ctx, tenant, "bonus", from); err == nil {
+		t.Error("cancelling a rule that is not there must say so")
+	}
 }

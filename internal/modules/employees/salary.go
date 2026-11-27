@@ -92,6 +92,24 @@ func (s *Service) salaryRows(ctx context.Context, tenantID, employeeID uuid.UUID
 		Order(ent.Desc(salarydetails.FieldCreatedAt)).All(ctx)
 }
 
+// CancelScheduledSalary removes a salary change set to start in a later month (scheduled by
+// mistake). The salary in force and earlier ones are history and stay.
+func (s *Service) CancelScheduledSalary(ctx context.Context, tenantID, employeeID uuid.UUID, month time.Time) error {
+	month = time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, time.UTC)
+	if !month.After(time.Now().UTC()) {
+		return fmt.Errorf("only a salary starting in a later month can be cancelled")
+	}
+	n, err := s.orm.SalaryDetails.Delete().Where(salarydetails.TenantID(tenantID), salarydetails.EmployeeID(employeeID),
+		salarydetails.EffectiveFromEQ(month)).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("employees: cancel salary: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("no salary change is scheduled for %s", month.Format("2006-01"))
+	}
+	return nil
+}
+
 // scheduledSalaryRow returns the row a salary change from month applies to: the row already
 // starting that month, else a new row starting then, copied from the salary in force that month,
 // so earlier months keep what they paid. A month before the current one is refused.

@@ -125,6 +125,43 @@ func (s *Service) LevyBases(ctx context.Context, tenantID uuid.UUID) (LevyBases,
 	return s.readLevyBases(ctx, tenantID)
 }
 
+// CancelLevyRule removes the tenant's rule for an earning that starts in a later month (set by
+// mistake). A rule already in force is history and stays.
+func (s *Service) CancelLevyRule(ctx context.Context, tenantID uuid.UUID, code, from string) (LevyBases, error) {
+	if from <= time.Now().UTC().Format("2006-01") {
+		return nil, fmt.Errorf("only a rule starting in a later month can be cancelled")
+	}
+	bases, err := s.readLevyBases(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	rules := bases[code]
+	kept := rules[:0:0]
+	for _, r := range rules {
+		if r.From != from {
+			kept = append(kept, r)
+		}
+	}
+	if len(kept) == len(rules) {
+		return nil, fmt.Errorf("no %s rule starts in %s", code, from)
+	}
+	if len(kept) == 0 {
+		delete(bases, code)
+	} else {
+		bases[code] = kept
+	}
+	return bases, s.writeLevyBases(ctx, tenantID, bases)
+}
+
+func (s *Service) writeLevyBases(ctx context.Context, tenantID uuid.UUID, bases LevyBases) error {
+	raw, err := json.Marshal(bases)
+	if err != nil {
+		return err
+	}
+	return s.orm.AppSetting.Create().SetTenantID(tenantID).SetAppKey(LevyBasesKey).SetValue(string(raw)).
+		OnConflictColumns(appsetting.FieldTenantID, appsetting.FieldAppKey).UpdateNewValues().Exec(ctx)
+}
+
 // SetLevyRule adds or replaces the rule for an earning code from a month. Earlier months keep
 // their rules, so past payroll is unchanged.
 func (s *Service) SetLevyRule(ctx context.Context, tenantID uuid.UUID, code string, rule LevyRule) (LevyBases, error) {

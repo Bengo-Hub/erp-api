@@ -75,6 +75,7 @@ func (h *EmployeesHandler) RegisterRoutes(r chi.Router) {
 		er.Patch("/{id}", h.Update)
 		er.Delete("/{id}", h.Delete)
 		er.Put("/{id}/salary", h.UpsertSalary)
+		er.Delete("/{id}/salary/scheduled/{month}", h.CancelScheduledSalary)
 		er.Put("/{id}/device-pin", h.SetDevicePIN) // biometric user PIN (employees_device_pin.go)
 		er.Put("/{id}/bank-accounts/{accountID}/primary", h.SetPrimaryBank)
 		// HR documents (upload / list / stream).
@@ -933,6 +934,32 @@ func (h *EmployeesHandler) UpsertSalary(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, row)
+}
+
+// CancelScheduledSalary removes a salary change set for a later month ({month} like 2027-01). The
+// salary in force and earlier ones are history and cannot be removed.
+func (h *EmployeesHandler) CancelScheduledSalary(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	month, err := parseEffectiveMonth(chi.URLParam(r, "month"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	if err := h.svc.CancelScheduledSalary(r.Context(), scope.TenantID, id, month); err != nil {
+		writeError(w, http.StatusBadRequest, "cancel_failed", err.Error())
+		return
+	}
+	h.log.Info("audit: scheduled salary cancelled", zap.String("tenant_id", scope.TenantID.String()),
+		zap.String("employee_id", id.String()), zap.String("month", month.Format("2006-01")), zap.String("by", scope.UserID.String()))
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *EmployeesHandler) SetPrimaryBank(w http.ResponseWriter, r *http.Request) {

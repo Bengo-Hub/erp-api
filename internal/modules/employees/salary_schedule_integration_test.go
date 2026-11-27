@@ -88,4 +88,25 @@ func TestIntegration_ScheduledSalary(t *testing.T) {
 	if _, err := svc.UpsertSalary(ctx, tenant, emp.ID, SalaryInput{Monthly: amount("1"), EffectiveFrom: &past}); err == nil {
 		t.Error("a change for a month already paid must be refused")
 	}
+
+	// A salary in force (or past) is history and cannot be cancelled; a scheduled one can.
+	thisMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	if _, err := svc.UpsertSalary(ctx, tenant, emp.ID, SalaryInput{Monthly: amount("55000"), EffectiveFrom: &thisMonth}); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.CancelScheduledSalary(ctx, tenant, emp.ID, thisMonth); err == nil {
+		t.Error("the salary in force this month must not be cancellable")
+	}
+	if err := svc.CancelScheduledSalary(ctx, uuid.New(), emp.ID, next); err == nil {
+		t.Error("another tenant must not cancel this employee's salary")
+	}
+	if err := svc.CancelScheduledSalary(ctx, tenant, emp.ID, next); err != nil {
+		t.Fatalf("cancel scheduled: %v", err)
+	}
+	if v, _ := svc.Salary(ctx, tenant, emp.ID); len(v.Scheduled) != 0 || v.BasicSalary != "55000.00" {
+		t.Errorf("after cancel = %+v", v)
+	}
+	if err := svc.CancelScheduledSalary(ctx, tenant, emp.ID, next); err == nil {
+		t.Error("cancelling a month with nothing scheduled must say so")
+	}
 }
