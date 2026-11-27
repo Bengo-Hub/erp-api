@@ -193,6 +193,18 @@ func (_u *ContractUpdate) ClearTermsHTML() *ContractUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *ContractUpdate) SetMetadata(v map[string]interface{}) *ContractUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *ContractUpdate) ClearMetadata() *ContractUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *ContractUpdate) SetUpdatedAt(v time.Time) *ContractUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -293,6 +305,12 @@ func (_u *ContractUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.TermsHTMLCleared() {
 		_spec.ClearField(contract.FieldTermsHTML, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(contract.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(contract.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(contract.FieldUpdatedAt, field.TypeTime, value)
@@ -480,6 +498,18 @@ func (_u *ContractUpdateOne) ClearTermsHTML() *ContractUpdateOne {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *ContractUpdateOne) SetMetadata(v map[string]interface{}) *ContractUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *ContractUpdateOne) ClearMetadata() *ContractUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *ContractUpdateOne) SetUpdatedAt(v time.Time) *ContractUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -610,6 +640,12 @@ func (_u *ContractUpdateOne) sqlSave(ctx context.Context) (_node *Contract, err 
 	}
 	if _u.mutation.TermsHTMLCleared() {
 		_spec.ClearField(contract.FieldTermsHTML, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(contract.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(contract.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(contract.FieldUpdatedAt, field.TypeTime, value)

@@ -24,6 +24,8 @@ const (
 	FieldParentDepartmentID = "parent_department_id"
 	// FieldCostCenterID holds the string denoting the cost_center_id field in the database.
 	FieldCostCenterID = "cost_center_id"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// Table holds the table name of the department in the database.
@@ -38,6 +40,7 @@ var Columns = []string{
 	FieldTitle,
 	FieldParentDepartmentID,
 	FieldCostCenterID,
+	FieldMetadata,
 	FieldCreatedAt,
 }
 

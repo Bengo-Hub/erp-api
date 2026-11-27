@@ -27086,6 +27086,7 @@ type ClaimItemMutation struct {
 	expense_type     *string
 	description      *string
 	amount           *decimal.Decimal
+	item_date        *time.Time
 	created_at       *time.Time
 	updated_at       *time.Time
 	clearedFields    map[string]struct{}
@@ -27404,6 +27405,55 @@ func (m *ClaimItemMutation) ResetAmount() {
 	m.amount = nil
 }
 
+// SetItemDate sets the "item_date" field.
+func (m *ClaimItemMutation) SetItemDate(t time.Time) {
+	m.item_date = &t
+}
+
+// ItemDate returns the value of the "item_date" field in the mutation.
+func (m *ClaimItemMutation) ItemDate() (r time.Time, exists bool) {
+	v := m.item_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldItemDate returns the old "item_date" field's value of the ClaimItem entity.
+// If the ClaimItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ClaimItemMutation) OldItemDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldItemDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldItemDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldItemDate: %w", err)
+	}
+	return oldValue.ItemDate, nil
+}
+
+// ClearItemDate clears the value of the "item_date" field.
+func (m *ClaimItemMutation) ClearItemDate() {
+	m.item_date = nil
+	m.clearedFields[claimitem.FieldItemDate] = struct{}{}
+}
+
+// ItemDateCleared returns if the "item_date" field was cleared in this mutation.
+func (m *ClaimItemMutation) ItemDateCleared() bool {
+	_, ok := m.clearedFields[claimitem.FieldItemDate]
+	return ok
+}
+
+// ResetItemDate resets all changes to the "item_date" field.
+func (m *ClaimItemMutation) ResetItemDate() {
+	m.item_date = nil
+	delete(m.clearedFields, claimitem.FieldItemDate)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *ClaimItemMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -27510,7 +27560,7 @@ func (m *ClaimItemMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ClaimItemMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.tenant_id != nil {
 		fields = append(fields, claimitem.FieldTenantID)
 	}
@@ -27525,6 +27575,9 @@ func (m *ClaimItemMutation) Fields() []string {
 	}
 	if m.amount != nil {
 		fields = append(fields, claimitem.FieldAmount)
+	}
+	if m.item_date != nil {
+		fields = append(fields, claimitem.FieldItemDate)
 	}
 	if m.created_at != nil {
 		fields = append(fields, claimitem.FieldCreatedAt)
@@ -27550,6 +27603,8 @@ func (m *ClaimItemMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case claimitem.FieldAmount:
 		return m.Amount()
+	case claimitem.FieldItemDate:
+		return m.ItemDate()
 	case claimitem.FieldCreatedAt:
 		return m.CreatedAt()
 	case claimitem.FieldUpdatedAt:
@@ -27573,6 +27628,8 @@ func (m *ClaimItemMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldDescription(ctx)
 	case claimitem.FieldAmount:
 		return m.OldAmount(ctx)
+	case claimitem.FieldItemDate:
+		return m.OldItemDate(ctx)
 	case claimitem.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case claimitem.FieldUpdatedAt:
@@ -27620,6 +27677,13 @@ func (m *ClaimItemMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAmount(v)
+		return nil
+	case claimitem.FieldItemDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetItemDate(v)
 		return nil
 	case claimitem.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -27671,6 +27735,9 @@ func (m *ClaimItemMutation) ClearedFields() []string {
 	if m.FieldCleared(claimitem.FieldDescription) {
 		fields = append(fields, claimitem.FieldDescription)
 	}
+	if m.FieldCleared(claimitem.FieldItemDate) {
+		fields = append(fields, claimitem.FieldItemDate)
+	}
 	return fields
 }
 
@@ -27690,6 +27757,9 @@ func (m *ClaimItemMutation) ClearField(name string) error {
 		return nil
 	case claimitem.FieldDescription:
 		m.ClearDescription()
+		return nil
+	case claimitem.FieldItemDate:
+		m.ClearItemDate()
 		return nil
 	}
 	return fmt.Errorf("unknown ClaimItem nullable field %s", name)
@@ -27713,6 +27783,9 @@ func (m *ClaimItemMutation) ResetField(name string) error {
 		return nil
 	case claimitem.FieldAmount:
 		m.ResetAmount()
+		return nil
+	case claimitem.FieldItemDate:
+		m.ResetItemDate()
 		return nil
 	case claimitem.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -31877,6 +31950,7 @@ type ContractMutation struct {
 	salary             *decimal.Decimal
 	status             *string
 	terms_html         *string
+	metadata           *map[string]interface{}
 	created_at         *time.Time
 	updated_at         *time.Time
 	clearedFields      map[string]struct{}
@@ -32399,6 +32473,55 @@ func (m *ContractMutation) ResetTermsHTML() {
 	delete(m.clearedFields, contract.FieldTermsHTML)
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *ContractMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *ContractMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the Contract entity.
+// If the Contract object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ContractMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *ContractMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[contract.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *ContractMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[contract.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *ContractMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, contract.FieldMetadata)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *ContractMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -32505,7 +32628,7 @@ func (m *ContractMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ContractMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.tenant_id != nil {
 		fields = append(fields, contract.FieldTenantID)
 	}
@@ -32532,6 +32655,9 @@ func (m *ContractMutation) Fields() []string {
 	}
 	if m.terms_html != nil {
 		fields = append(fields, contract.FieldTermsHTML)
+	}
+	if m.metadata != nil {
+		fields = append(fields, contract.FieldMetadata)
 	}
 	if m.created_at != nil {
 		fields = append(fields, contract.FieldCreatedAt)
@@ -32565,6 +32691,8 @@ func (m *ContractMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case contract.FieldTermsHTML:
 		return m.TermsHTML()
+	case contract.FieldMetadata:
+		return m.Metadata()
 	case contract.FieldCreatedAt:
 		return m.CreatedAt()
 	case contract.FieldUpdatedAt:
@@ -32596,6 +32724,8 @@ func (m *ContractMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldStatus(ctx)
 	case contract.FieldTermsHTML:
 		return m.OldTermsHTML(ctx)
+	case contract.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case contract.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case contract.FieldUpdatedAt:
@@ -32672,6 +32802,13 @@ func (m *ContractMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTermsHTML(v)
 		return nil
+	case contract.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
+		return nil
 	case contract.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -32746,6 +32883,9 @@ func (m *ContractMutation) ClearedFields() []string {
 	if m.FieldCleared(contract.FieldTermsHTML) {
 		fields = append(fields, contract.FieldTermsHTML)
 	}
+	if m.FieldCleared(contract.FieldMetadata) {
+		fields = append(fields, contract.FieldMetadata)
+	}
 	return fields
 }
 
@@ -32774,6 +32914,9 @@ func (m *ContractMutation) ClearField(name string) error {
 		return nil
 	case contract.FieldTermsHTML:
 		m.ClearTermsHTML()
+		return nil
+	case contract.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	}
 	return fmt.Errorf("unknown Contract nullable field %s", name)
@@ -32809,6 +32952,9 @@ func (m *ContractMutation) ResetField(name string) error {
 		return nil
 	case contract.FieldTermsHTML:
 		m.ResetTermsHTML()
+		return nil
+	case contract.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case contract.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -34250,6 +34396,7 @@ type DepartmentMutation struct {
 	title                *string
 	parent_department_id *uuid.UUID
 	cost_center_id       *uuid.UUID
+	metadata             *map[string]interface{}
 	created_at           *time.Time
 	clearedFields        map[string]struct{}
 	done                 bool
@@ -34593,6 +34740,55 @@ func (m *DepartmentMutation) ResetCostCenterID() {
 	delete(m.clearedFields, department.FieldCostCenterID)
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *DepartmentMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *DepartmentMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the Department entity.
+// If the Department object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DepartmentMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *DepartmentMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[department.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *DepartmentMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[department.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *DepartmentMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, department.FieldMetadata)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *DepartmentMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -34663,7 +34859,7 @@ func (m *DepartmentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DepartmentMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.tenant_id != nil {
 		fields = append(fields, department.FieldTenantID)
 	}
@@ -34678,6 +34874,9 @@ func (m *DepartmentMutation) Fields() []string {
 	}
 	if m.cost_center_id != nil {
 		fields = append(fields, department.FieldCostCenterID)
+	}
+	if m.metadata != nil {
+		fields = append(fields, department.FieldMetadata)
 	}
 	if m.created_at != nil {
 		fields = append(fields, department.FieldCreatedAt)
@@ -34700,6 +34899,8 @@ func (m *DepartmentMutation) Field(name string) (ent.Value, bool) {
 		return m.ParentDepartmentID()
 	case department.FieldCostCenterID:
 		return m.CostCenterID()
+	case department.FieldMetadata:
+		return m.Metadata()
 	case department.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -34721,6 +34922,8 @@ func (m *DepartmentMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldParentDepartmentID(ctx)
 	case department.FieldCostCenterID:
 		return m.OldCostCenterID(ctx)
+	case department.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case department.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -34766,6 +34969,13 @@ func (m *DepartmentMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCostCenterID(v)
+		return nil
+	case department.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case department.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -34816,6 +35026,9 @@ func (m *DepartmentMutation) ClearedFields() []string {
 	if m.FieldCleared(department.FieldCostCenterID) {
 		fields = append(fields, department.FieldCostCenterID)
 	}
+	if m.FieldCleared(department.FieldMetadata) {
+		fields = append(fields, department.FieldMetadata)
+	}
 	return fields
 }
 
@@ -34842,6 +35055,9 @@ func (m *DepartmentMutation) ClearField(name string) error {
 	case department.FieldCostCenterID:
 		m.ClearCostCenterID()
 		return nil
+	case department.FieldMetadata:
+		m.ClearMetadata()
+		return nil
 	}
 	return fmt.Errorf("unknown Department nullable field %s", name)
 }
@@ -34864,6 +35080,9 @@ func (m *DepartmentMutation) ResetField(name string) error {
 		return nil
 	case department.FieldCostCenterID:
 		m.ResetCostCenterID()
+		return nil
+	case department.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case department.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -57374,6 +57593,7 @@ type JobGroupMutation struct {
 	tenant_id     *uuid.UUID
 	title         *string
 	description   *string
+	metadata      *map[string]interface{}
 	created_at    *time.Time
 	updated_at    *time.Time
 	clearedFields map[string]struct{}
@@ -57607,6 +57827,55 @@ func (m *JobGroupMutation) ResetDescription() {
 	delete(m.clearedFields, jobgroup.FieldDescription)
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *JobGroupMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *JobGroupMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the JobGroup entity.
+// If the JobGroup object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobGroupMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *JobGroupMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[jobgroup.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *JobGroupMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[jobgroup.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *JobGroupMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, jobgroup.FieldMetadata)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *JobGroupMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -57713,7 +57982,7 @@ func (m *JobGroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *JobGroupMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.tenant_id != nil {
 		fields = append(fields, jobgroup.FieldTenantID)
 	}
@@ -57722,6 +57991,9 @@ func (m *JobGroupMutation) Fields() []string {
 	}
 	if m.description != nil {
 		fields = append(fields, jobgroup.FieldDescription)
+	}
+	if m.metadata != nil {
+		fields = append(fields, jobgroup.FieldMetadata)
 	}
 	if m.created_at != nil {
 		fields = append(fields, jobgroup.FieldCreatedAt)
@@ -57743,6 +58015,8 @@ func (m *JobGroupMutation) Field(name string) (ent.Value, bool) {
 		return m.Title()
 	case jobgroup.FieldDescription:
 		return m.Description()
+	case jobgroup.FieldMetadata:
+		return m.Metadata()
 	case jobgroup.FieldCreatedAt:
 		return m.CreatedAt()
 	case jobgroup.FieldUpdatedAt:
@@ -57762,6 +58036,8 @@ func (m *JobGroupMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldTitle(ctx)
 	case jobgroup.FieldDescription:
 		return m.OldDescription(ctx)
+	case jobgroup.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case jobgroup.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case jobgroup.FieldUpdatedAt:
@@ -57795,6 +58071,13 @@ func (m *JobGroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDescription(v)
+		return nil
+	case jobgroup.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case jobgroup.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -57843,6 +58126,9 @@ func (m *JobGroupMutation) ClearedFields() []string {
 	if m.FieldCleared(jobgroup.FieldDescription) {
 		fields = append(fields, jobgroup.FieldDescription)
 	}
+	if m.FieldCleared(jobgroup.FieldMetadata) {
+		fields = append(fields, jobgroup.FieldMetadata)
+	}
 	return fields
 }
 
@@ -57860,6 +58146,9 @@ func (m *JobGroupMutation) ClearField(name string) error {
 	case jobgroup.FieldDescription:
 		m.ClearDescription()
 		return nil
+	case jobgroup.FieldMetadata:
+		m.ClearMetadata()
+		return nil
 	}
 	return fmt.Errorf("unknown JobGroup nullable field %s", name)
 }
@@ -57876,6 +58165,9 @@ func (m *JobGroupMutation) ResetField(name string) error {
 		return nil
 	case jobgroup.FieldDescription:
 		m.ResetDescription()
+		return nil
+	case jobgroup.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case jobgroup.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -59569,6 +59861,7 @@ type JobTitleMutation struct {
 	tenant_id     *uuid.UUID
 	title         *string
 	description   *string
+	metadata      *map[string]interface{}
 	created_at    *time.Time
 	updated_at    *time.Time
 	clearedFields map[string]struct{}
@@ -59802,6 +60095,55 @@ func (m *JobTitleMutation) ResetDescription() {
 	delete(m.clearedFields, jobtitle.FieldDescription)
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *JobTitleMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *JobTitleMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the JobTitle entity.
+// If the JobTitle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *JobTitleMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *JobTitleMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[jobtitle.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *JobTitleMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[jobtitle.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *JobTitleMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, jobtitle.FieldMetadata)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *JobTitleMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -59908,7 +60250,7 @@ func (m *JobTitleMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *JobTitleMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.tenant_id != nil {
 		fields = append(fields, jobtitle.FieldTenantID)
 	}
@@ -59917,6 +60259,9 @@ func (m *JobTitleMutation) Fields() []string {
 	}
 	if m.description != nil {
 		fields = append(fields, jobtitle.FieldDescription)
+	}
+	if m.metadata != nil {
+		fields = append(fields, jobtitle.FieldMetadata)
 	}
 	if m.created_at != nil {
 		fields = append(fields, jobtitle.FieldCreatedAt)
@@ -59938,6 +60283,8 @@ func (m *JobTitleMutation) Field(name string) (ent.Value, bool) {
 		return m.Title()
 	case jobtitle.FieldDescription:
 		return m.Description()
+	case jobtitle.FieldMetadata:
+		return m.Metadata()
 	case jobtitle.FieldCreatedAt:
 		return m.CreatedAt()
 	case jobtitle.FieldUpdatedAt:
@@ -59957,6 +60304,8 @@ func (m *JobTitleMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldTitle(ctx)
 	case jobtitle.FieldDescription:
 		return m.OldDescription(ctx)
+	case jobtitle.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case jobtitle.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case jobtitle.FieldUpdatedAt:
@@ -59990,6 +60339,13 @@ func (m *JobTitleMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDescription(v)
+		return nil
+	case jobtitle.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case jobtitle.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -60038,6 +60394,9 @@ func (m *JobTitleMutation) ClearedFields() []string {
 	if m.FieldCleared(jobtitle.FieldDescription) {
 		fields = append(fields, jobtitle.FieldDescription)
 	}
+	if m.FieldCleared(jobtitle.FieldMetadata) {
+		fields = append(fields, jobtitle.FieldMetadata)
+	}
 	return fields
 }
 
@@ -60055,6 +60414,9 @@ func (m *JobTitleMutation) ClearField(name string) error {
 	case jobtitle.FieldDescription:
 		m.ClearDescription()
 		return nil
+	case jobtitle.FieldMetadata:
+		m.ClearMetadata()
+		return nil
 	}
 	return fmt.Errorf("unknown JobTitle nullable field %s", name)
 }
@@ -60071,6 +60433,9 @@ func (m *JobTitleMutation) ResetField(name string) error {
 		return nil
 	case jobtitle.FieldDescription:
 		m.ResetDescription()
+		return nil
+	case jobtitle.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case jobtitle.FieldCreatedAt:
 		m.ResetCreatedAt()
@@ -63116,6 +63481,8 @@ type LeaveRequestMutation struct {
 	category_id      *uuid.UUID
 	start_date       *time.Time
 	end_date         *time.Time
+	start_half_day   *bool
+	end_half_day     *bool
 	days_requested   *decimal.Decimal
 	reason           *string
 	status           *leaverequest.Status
@@ -63412,6 +63779,78 @@ func (m *LeaveRequestMutation) OldEndDate(ctx context.Context) (v time.Time, err
 // ResetEndDate resets all changes to the "end_date" field.
 func (m *LeaveRequestMutation) ResetEndDate() {
 	m.end_date = nil
+}
+
+// SetStartHalfDay sets the "start_half_day" field.
+func (m *LeaveRequestMutation) SetStartHalfDay(b bool) {
+	m.start_half_day = &b
+}
+
+// StartHalfDay returns the value of the "start_half_day" field in the mutation.
+func (m *LeaveRequestMutation) StartHalfDay() (r bool, exists bool) {
+	v := m.start_half_day
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartHalfDay returns the old "start_half_day" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldStartHalfDay(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartHalfDay is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartHalfDay requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartHalfDay: %w", err)
+	}
+	return oldValue.StartHalfDay, nil
+}
+
+// ResetStartHalfDay resets all changes to the "start_half_day" field.
+func (m *LeaveRequestMutation) ResetStartHalfDay() {
+	m.start_half_day = nil
+}
+
+// SetEndHalfDay sets the "end_half_day" field.
+func (m *LeaveRequestMutation) SetEndHalfDay(b bool) {
+	m.end_half_day = &b
+}
+
+// EndHalfDay returns the value of the "end_half_day" field in the mutation.
+func (m *LeaveRequestMutation) EndHalfDay() (r bool, exists bool) {
+	v := m.end_half_day
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndHalfDay returns the old "end_half_day" field's value of the LeaveRequest entity.
+// If the LeaveRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LeaveRequestMutation) OldEndHalfDay(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndHalfDay is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndHalfDay requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndHalfDay: %w", err)
+	}
+	return oldValue.EndHalfDay, nil
+}
+
+// ResetEndHalfDay resets all changes to the "end_half_day" field.
+func (m *LeaveRequestMutation) ResetEndHalfDay() {
+	m.end_half_day = nil
 }
 
 // SetDaysRequested sets the "days_requested" field.
@@ -63788,7 +64227,7 @@ func (m *LeaveRequestMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LeaveRequestMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 15)
 	if m.tenant_id != nil {
 		fields = append(fields, leaverequest.FieldTenantID)
 	}
@@ -63803,6 +64242,12 @@ func (m *LeaveRequestMutation) Fields() []string {
 	}
 	if m.end_date != nil {
 		fields = append(fields, leaverequest.FieldEndDate)
+	}
+	if m.start_half_day != nil {
+		fields = append(fields, leaverequest.FieldStartHalfDay)
+	}
+	if m.end_half_day != nil {
+		fields = append(fields, leaverequest.FieldEndHalfDay)
 	}
 	if m.days_requested != nil {
 		fields = append(fields, leaverequest.FieldDaysRequested)
@@ -63846,6 +64291,10 @@ func (m *LeaveRequestMutation) Field(name string) (ent.Value, bool) {
 		return m.StartDate()
 	case leaverequest.FieldEndDate:
 		return m.EndDate()
+	case leaverequest.FieldStartHalfDay:
+		return m.StartHalfDay()
+	case leaverequest.FieldEndHalfDay:
+		return m.EndHalfDay()
 	case leaverequest.FieldDaysRequested:
 		return m.DaysRequested()
 	case leaverequest.FieldReason:
@@ -63881,6 +64330,10 @@ func (m *LeaveRequestMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldStartDate(ctx)
 	case leaverequest.FieldEndDate:
 		return m.OldEndDate(ctx)
+	case leaverequest.FieldStartHalfDay:
+		return m.OldStartHalfDay(ctx)
+	case leaverequest.FieldEndHalfDay:
+		return m.OldEndHalfDay(ctx)
 	case leaverequest.FieldDaysRequested:
 		return m.OldDaysRequested(ctx)
 	case leaverequest.FieldReason:
@@ -63940,6 +64393,20 @@ func (m *LeaveRequestMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEndDate(v)
+		return nil
+	case leaverequest.FieldStartHalfDay:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartHalfDay(v)
+		return nil
+	case leaverequest.FieldEndHalfDay:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndHalfDay(v)
 		return nil
 	case leaverequest.FieldDaysRequested:
 		v, ok := value.(decimal.Decimal)
@@ -64087,6 +64554,12 @@ func (m *LeaveRequestMutation) ResetField(name string) error {
 		return nil
 	case leaverequest.FieldEndDate:
 		m.ResetEndDate()
+		return nil
+	case leaverequest.FieldStartHalfDay:
+		m.ResetStartHalfDay()
+		return nil
+	case leaverequest.FieldEndHalfDay:
+		m.ResetEndHalfDay()
 		return nil
 	case leaverequest.FieldDaysRequested:
 		m.ResetDaysRequested()

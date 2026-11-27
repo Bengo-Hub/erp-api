@@ -77,6 +77,18 @@ func (_u *JobTitleUpdate) ClearDescription() *JobTitleUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *JobTitleUpdate) SetMetadata(v map[string]interface{}) *JobTitleUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *JobTitleUpdate) ClearMetadata() *JobTitleUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *JobTitleUpdate) SetUpdatedAt(v time.Time) *JobTitleUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -158,6 +170,12 @@ func (_u *JobTitleUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.DescriptionCleared() {
 		_spec.ClearField(jobtitle.FieldDescription, field.TypeString)
 	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(jobtitle.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(jobtitle.FieldMetadata, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(jobtitle.FieldUpdatedAt, field.TypeTime, value)
 	}
@@ -226,6 +244,18 @@ func (_u *JobTitleUpdateOne) SetNillableDescription(v *string) *JobTitleUpdateOn
 // ClearDescription clears the value of the "description" field.
 func (_u *JobTitleUpdateOne) ClearDescription() *JobTitleUpdateOne {
 	_u.mutation.ClearDescription()
+	return _u
+}
+
+// SetMetadata sets the "metadata" field.
+func (_u *JobTitleUpdateOne) SetMetadata(v map[string]interface{}) *JobTitleUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *JobTitleUpdateOne) ClearMetadata() *JobTitleUpdateOne {
+	_u.mutation.ClearMetadata()
 	return _u
 }
 
@@ -339,6 +369,12 @@ func (_u *JobTitleUpdateOne) sqlSave(ctx context.Context) (_node *JobTitle, err 
 	}
 	if _u.mutation.DescriptionCleared() {
 		_spec.ClearField(jobtitle.FieldDescription, field.TypeString)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(jobtitle.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(jobtitle.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(jobtitle.FieldUpdatedAt, field.TypeTime, value)

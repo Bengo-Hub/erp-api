@@ -766,11 +766,11 @@ func init() {
 	// claimitem.DefaultAmount holds the default value on creation for the amount field.
 	claimitem.DefaultAmount = claimitemDescAmount.Default.(decimal.Decimal)
 	// claimitemDescCreatedAt is the schema descriptor for created_at field.
-	claimitemDescCreatedAt := claimitemFields[6].Descriptor()
+	claimitemDescCreatedAt := claimitemFields[7].Descriptor()
 	// claimitem.DefaultCreatedAt holds the default value on creation for the created_at field.
 	claimitem.DefaultCreatedAt = claimitemDescCreatedAt.Default.(func() time.Time)
 	// claimitemDescUpdatedAt is the schema descriptor for updated_at field.
-	claimitemDescUpdatedAt := claimitemFields[7].Descriptor()
+	claimitemDescUpdatedAt := claimitemFields[8].Descriptor()
 	// claimitem.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	claimitem.DefaultUpdatedAt = claimitemDescUpdatedAt.Default.(func() time.Time)
 	// claimitem.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -898,11 +898,11 @@ func init() {
 	// contract.DefaultStatus holds the default value on creation for the status field.
 	contract.DefaultStatus = contractDescStatus.Default.(string)
 	// contractDescCreatedAt is the schema descriptor for created_at field.
-	contractDescCreatedAt := contractFields[10].Descriptor()
+	contractDescCreatedAt := contractFields[11].Descriptor()
 	// contract.DefaultCreatedAt holds the default value on creation for the created_at field.
 	contract.DefaultCreatedAt = contractDescCreatedAt.Default.(func() time.Time)
 	// contractDescUpdatedAt is the schema descriptor for updated_at field.
-	contractDescUpdatedAt := contractFields[11].Descriptor()
+	contractDescUpdatedAt := contractFields[12].Descriptor()
 	// contract.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	contract.DefaultUpdatedAt = contractDescUpdatedAt.Default.(func() time.Time)
 	// contract.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -958,7 +958,7 @@ func init() {
 	// department.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	department.TitleValidator = departmentDescTitle.Validators[0].(func(string) error)
 	// departmentDescCreatedAt is the schema descriptor for created_at field.
-	departmentDescCreatedAt := departmentFields[6].Descriptor()
+	departmentDescCreatedAt := departmentFields[7].Descriptor()
 	// department.DefaultCreatedAt holds the default value on creation for the created_at field.
 	department.DefaultCreatedAt = departmentDescCreatedAt.Default.(func() time.Time)
 	// departmentDescID is the schema descriptor for id field.
@@ -1610,11 +1610,11 @@ func init() {
 	// jobgroup.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	jobgroup.TitleValidator = jobgroupDescTitle.Validators[0].(func(string) error)
 	// jobgroupDescCreatedAt is the schema descriptor for created_at field.
-	jobgroupDescCreatedAt := jobgroupFields[4].Descriptor()
+	jobgroupDescCreatedAt := jobgroupFields[5].Descriptor()
 	// jobgroup.DefaultCreatedAt holds the default value on creation for the created_at field.
 	jobgroup.DefaultCreatedAt = jobgroupDescCreatedAt.Default.(func() time.Time)
 	// jobgroupDescUpdatedAt is the schema descriptor for updated_at field.
-	jobgroupDescUpdatedAt := jobgroupFields[5].Descriptor()
+	jobgroupDescUpdatedAt := jobgroupFields[6].Descriptor()
 	// jobgroup.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	jobgroup.DefaultUpdatedAt = jobgroupDescUpdatedAt.Default.(func() time.Time)
 	// jobgroup.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1658,11 +1658,11 @@ func init() {
 	// jobtitle.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	jobtitle.TitleValidator = jobtitleDescTitle.Validators[0].(func(string) error)
 	// jobtitleDescCreatedAt is the schema descriptor for created_at field.
-	jobtitleDescCreatedAt := jobtitleFields[4].Descriptor()
+	jobtitleDescCreatedAt := jobtitleFields[5].Descriptor()
 	// jobtitle.DefaultCreatedAt holds the default value on creation for the created_at field.
 	jobtitle.DefaultCreatedAt = jobtitleDescCreatedAt.Default.(func() time.Time)
 	// jobtitleDescUpdatedAt is the schema descriptor for updated_at field.
-	jobtitleDescUpdatedAt := jobtitleFields[5].Descriptor()
+	jobtitleDescUpdatedAt := jobtitleFields[6].Descriptor()
 	// jobtitle.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	jobtitle.DefaultUpdatedAt = jobtitleDescUpdatedAt.Default.(func() time.Time)
 	// jobtitle.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1767,16 +1767,24 @@ func init() {
 	leavelog.DefaultID = leavelogDescID.Default.(func() uuid.UUID)
 	leaverequestFields := schema.LeaveRequest{}.Fields()
 	_ = leaverequestFields
+	// leaverequestDescStartHalfDay is the schema descriptor for start_half_day field.
+	leaverequestDescStartHalfDay := leaverequestFields[6].Descriptor()
+	// leaverequest.DefaultStartHalfDay holds the default value on creation for the start_half_day field.
+	leaverequest.DefaultStartHalfDay = leaverequestDescStartHalfDay.Default.(bool)
+	// leaverequestDescEndHalfDay is the schema descriptor for end_half_day field.
+	leaverequestDescEndHalfDay := leaverequestFields[7].Descriptor()
+	// leaverequest.DefaultEndHalfDay holds the default value on creation for the end_half_day field.
+	leaverequest.DefaultEndHalfDay = leaverequestDescEndHalfDay.Default.(bool)
 	// leaverequestDescDaysRequested is the schema descriptor for days_requested field.
-	leaverequestDescDaysRequested := leaverequestFields[6].Descriptor()
+	leaverequestDescDaysRequested := leaverequestFields[8].Descriptor()
 	// leaverequest.DefaultDaysRequested holds the default value on creation for the days_requested field.
 	leaverequest.DefaultDaysRequested = leaverequestDescDaysRequested.Default.(decimal.Decimal)
 	// leaverequestDescCreatedAt is the schema descriptor for created_at field.
-	leaverequestDescCreatedAt := leaverequestFields[12].Descriptor()
+	leaverequestDescCreatedAt := leaverequestFields[14].Descriptor()
 	// leaverequest.DefaultCreatedAt holds the default value on creation for the created_at field.
 	leaverequest.DefaultCreatedAt = leaverequestDescCreatedAt.Default.(func() time.Time)
 	// leaverequestDescUpdatedAt is the schema descriptor for updated_at field.
-	leaverequestDescUpdatedAt := leaverequestFields[13].Descriptor()
+	leaverequestDescUpdatedAt := leaverequestFields[15].Descriptor()
 	// leaverequest.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	leaverequest.DefaultUpdatedAt = leaverequestDescUpdatedAt.Default.(func() time.Time)
 	// leaverequest.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

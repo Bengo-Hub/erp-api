@@ -55,6 +55,34 @@ func (_c *LeaveRequestCreate) SetEndDate(v time.Time) *LeaveRequestCreate {
 	return _c
 }
 
+// SetStartHalfDay sets the "start_half_day" field.
+func (_c *LeaveRequestCreate) SetStartHalfDay(v bool) *LeaveRequestCreate {
+	_c.mutation.SetStartHalfDay(v)
+	return _c
+}
+
+// SetNillableStartHalfDay sets the "start_half_day" field if the given value is not nil.
+func (_c *LeaveRequestCreate) SetNillableStartHalfDay(v *bool) *LeaveRequestCreate {
+	if v != nil {
+		_c.SetStartHalfDay(*v)
+	}
+	return _c
+}
+
+// SetEndHalfDay sets the "end_half_day" field.
+func (_c *LeaveRequestCreate) SetEndHalfDay(v bool) *LeaveRequestCreate {
+	_c.mutation.SetEndHalfDay(v)
+	return _c
+}
+
+// SetNillableEndHalfDay sets the "end_half_day" field if the given value is not nil.
+func (_c *LeaveRequestCreate) SetNillableEndHalfDay(v *bool) *LeaveRequestCreate {
+	if v != nil {
+		_c.SetEndHalfDay(*v)
+	}
+	return _c
+}
+
 // SetDaysRequested sets the "days_requested" field.
 func (_c *LeaveRequestCreate) SetDaysRequested(v decimal.Decimal) *LeaveRequestCreate {
 	_c.mutation.SetDaysRequested(v)
@@ -216,6 +244,14 @@ func (_c *LeaveRequestCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *LeaveRequestCreate) defaults() {
+	if _, ok := _c.mutation.StartHalfDay(); !ok {
+		v := leaverequest.DefaultStartHalfDay
+		_c.mutation.SetStartHalfDay(v)
+	}
+	if _, ok := _c.mutation.EndHalfDay(); !ok {
+		v := leaverequest.DefaultEndHalfDay
+		_c.mutation.SetEndHalfDay(v)
+	}
 	if _, ok := _c.mutation.DaysRequested(); !ok {
 		v := leaverequest.DefaultDaysRequested
 		_c.mutation.SetDaysRequested(v)
@@ -254,6 +290,12 @@ func (_c *LeaveRequestCreate) check() error {
 	}
 	if _, ok := _c.mutation.EndDate(); !ok {
 		return &ValidationError{Name: "end_date", err: errors.New(`ent: missing required field "LeaveRequest.end_date"`)}
+	}
+	if _, ok := _c.mutation.StartHalfDay(); !ok {
+		return &ValidationError{Name: "start_half_day", err: errors.New(`ent: missing required field "LeaveRequest.start_half_day"`)}
+	}
+	if _, ok := _c.mutation.EndHalfDay(); !ok {
+		return &ValidationError{Name: "end_half_day", err: errors.New(`ent: missing required field "LeaveRequest.end_half_day"`)}
 	}
 	if _, ok := _c.mutation.DaysRequested(); !ok {
 		return &ValidationError{Name: "days_requested", err: errors.New(`ent: missing required field "LeaveRequest.days_requested"`)}
@@ -327,6 +369,14 @@ func (_c *LeaveRequestCreate) createSpec() (*LeaveRequest, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.EndDate(); ok {
 		_spec.SetField(leaverequest.FieldEndDate, field.TypeTime, value)
 		_node.EndDate = value
+	}
+	if value, ok := _c.mutation.StartHalfDay(); ok {
+		_spec.SetField(leaverequest.FieldStartHalfDay, field.TypeBool, value)
+		_node.StartHalfDay = value
+	}
+	if value, ok := _c.mutation.EndHalfDay(); ok {
+		_spec.SetField(leaverequest.FieldEndHalfDay, field.TypeBool, value)
+		_node.EndHalfDay = value
 	}
 	if value, ok := _c.mutation.DaysRequested(); ok {
 		_spec.SetField(leaverequest.FieldDaysRequested, field.TypeOther, value)
@@ -469,6 +519,30 @@ func (u *LeaveRequestUpsert) SetEndDate(v time.Time) *LeaveRequestUpsert {
 // UpdateEndDate sets the "end_date" field to the value that was provided on create.
 func (u *LeaveRequestUpsert) UpdateEndDate() *LeaveRequestUpsert {
 	u.SetExcluded(leaverequest.FieldEndDate)
+	return u
+}
+
+// SetStartHalfDay sets the "start_half_day" field.
+func (u *LeaveRequestUpsert) SetStartHalfDay(v bool) *LeaveRequestUpsert {
+	u.Set(leaverequest.FieldStartHalfDay, v)
+	return u
+}
+
+// UpdateStartHalfDay sets the "start_half_day" field to the value that was provided on create.
+func (u *LeaveRequestUpsert) UpdateStartHalfDay() *LeaveRequestUpsert {
+	u.SetExcluded(leaverequest.FieldStartHalfDay)
+	return u
+}
+
+// SetEndHalfDay sets the "end_half_day" field.
+func (u *LeaveRequestUpsert) SetEndHalfDay(v bool) *LeaveRequestUpsert {
+	u.Set(leaverequest.FieldEndHalfDay, v)
+	return u
+}
+
+// UpdateEndHalfDay sets the "end_half_day" field to the value that was provided on create.
+func (u *LeaveRequestUpsert) UpdateEndHalfDay() *LeaveRequestUpsert {
+	u.SetExcluded(leaverequest.FieldEndHalfDay)
 	return u
 }
 
@@ -698,6 +772,34 @@ func (u *LeaveRequestUpsertOne) SetEndDate(v time.Time) *LeaveRequestUpsertOne {
 func (u *LeaveRequestUpsertOne) UpdateEndDate() *LeaveRequestUpsertOne {
 	return u.Update(func(s *LeaveRequestUpsert) {
 		s.UpdateEndDate()
+	})
+}
+
+// SetStartHalfDay sets the "start_half_day" field.
+func (u *LeaveRequestUpsertOne) SetStartHalfDay(v bool) *LeaveRequestUpsertOne {
+	return u.Update(func(s *LeaveRequestUpsert) {
+		s.SetStartHalfDay(v)
+	})
+}
+
+// UpdateStartHalfDay sets the "start_half_day" field to the value that was provided on create.
+func (u *LeaveRequestUpsertOne) UpdateStartHalfDay() *LeaveRequestUpsertOne {
+	return u.Update(func(s *LeaveRequestUpsert) {
+		s.UpdateStartHalfDay()
+	})
+}
+
+// SetEndHalfDay sets the "end_half_day" field.
+func (u *LeaveRequestUpsertOne) SetEndHalfDay(v bool) *LeaveRequestUpsertOne {
+	return u.Update(func(s *LeaveRequestUpsert) {
+		s.SetEndHalfDay(v)
+	})
+}
+
+// UpdateEndHalfDay sets the "end_half_day" field to the value that was provided on create.
+func (u *LeaveRequestUpsertOne) UpdateEndHalfDay() *LeaveRequestUpsertOne {
+	return u.Update(func(s *LeaveRequestUpsert) {
+		s.UpdateEndHalfDay()
 	})
 }
 
@@ -1112,6 +1214,34 @@ func (u *LeaveRequestUpsertBulk) SetEndDate(v time.Time) *LeaveRequestUpsertBulk
 func (u *LeaveRequestUpsertBulk) UpdateEndDate() *LeaveRequestUpsertBulk {
 	return u.Update(func(s *LeaveRequestUpsert) {
 		s.UpdateEndDate()
+	})
+}
+
+// SetStartHalfDay sets the "start_half_day" field.
+func (u *LeaveRequestUpsertBulk) SetStartHalfDay(v bool) *LeaveRequestUpsertBulk {
+	return u.Update(func(s *LeaveRequestUpsert) {
+		s.SetStartHalfDay(v)
+	})
+}
+
+// UpdateStartHalfDay sets the "start_half_day" field to the value that was provided on create.
+func (u *LeaveRequestUpsertBulk) UpdateStartHalfDay() *LeaveRequestUpsertBulk {
+	return u.Update(func(s *LeaveRequestUpsert) {
+		s.UpdateStartHalfDay()
+	})
+}
+
+// SetEndHalfDay sets the "end_half_day" field.
+func (u *LeaveRequestUpsertBulk) SetEndHalfDay(v bool) *LeaveRequestUpsertBulk {
+	return u.Update(func(s *LeaveRequestUpsert) {
+		s.SetEndHalfDay(v)
+	})
+}
+
+// UpdateEndHalfDay sets the "end_half_day" field to the value that was provided on create.
+func (u *LeaveRequestUpsertBulk) UpdateEndHalfDay() *LeaveRequestUpsertBulk {
+	return u.Update(func(s *LeaveRequestUpsert) {
+		s.UpdateEndHalfDay()
 	})
 }
 

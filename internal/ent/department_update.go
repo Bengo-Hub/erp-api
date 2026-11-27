@@ -122,6 +122,18 @@ func (_u *DepartmentUpdate) ClearCostCenterID() *DepartmentUpdate {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *DepartmentUpdate) SetMetadata(v map[string]interface{}) *DepartmentUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *DepartmentUpdate) ClearMetadata() *DepartmentUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // Mutation returns the DepartmentMutation object of the builder.
 func (_u *DepartmentUpdate) Mutation() *DepartmentMutation {
 	return _u.mutation
@@ -202,6 +214,12 @@ func (_u *DepartmentUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.CostCenterIDCleared() {
 		_spec.ClearField(department.FieldCostCenterID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(department.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(department.FieldMetadata, field.TypeJSON)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -317,6 +335,18 @@ func (_u *DepartmentUpdateOne) ClearCostCenterID() *DepartmentUpdateOne {
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *DepartmentUpdateOne) SetMetadata(v map[string]interface{}) *DepartmentUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *DepartmentUpdateOne) ClearMetadata() *DepartmentUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // Mutation returns the DepartmentMutation object of the builder.
 func (_u *DepartmentUpdateOne) Mutation() *DepartmentMutation {
 	return _u.mutation
@@ -427,6 +457,12 @@ func (_u *DepartmentUpdateOne) sqlSave(ctx context.Context) (_node *Department, 
 	}
 	if _u.mutation.CostCenterIDCleared() {
 		_spec.ClearField(department.FieldCostCenterID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(department.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(department.FieldMetadata, field.TypeJSON)
 	}
 	_node = &Department{config: _u.config}
 	_spec.Assign = _node.assignValues

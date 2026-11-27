@@ -32,6 +32,22 @@ var (
 // JobGroupOverride is a company's change to an inherited job group.
 type JobGroupOverride struct {
 	Description *string `json:"description,omitempty"`
+	// Extra holds the company's grade and salary range where they differ from the platform's.
+	Extra map[string]string `json:"extra,omitempty"`
+}
+
+func (o JobGroupOverride) empty() bool { return o.Description == nil && len(o.Extra) == 0 }
+
+// apply returns a copy of the platform job group with the company's changes.
+func (o JobGroupOverride) apply(g *ent.JobGroup) *ent.JobGroup {
+	c := *g
+	if o.Description != nil {
+		c.Description = o.Description
+	}
+	if len(o.Extra) > 0 {
+		c.Metadata = mergeExtra(g.Metadata, o.Extra, jobGroupExtras)
+	}
+	return &c
 }
 
 // JobGroupRow is a job group as a company sees it.
@@ -68,10 +84,8 @@ func (s *Service) JobGroupRows(ctx context.Context, tenantID uuid.UUID) ([]JobGr
 				continue
 			}
 			row.Inherited = true
-			if o, ok := changes[g.ID.String()]; ok && o.Description != nil {
-				c := *g
-				c.Description = o.Description
-				row.JobGroup, row.Customised = &c, true
+			if o, ok := changes[g.ID.String()]; ok && !o.empty() {
+				row.JobGroup, row.Customised = o.apply(g), true
 			}
 		}
 		out = append(out, row)
@@ -116,11 +130,34 @@ func (s *Service) customiseJobGroup(ctx context.Context, tenantID uuid.UUID, row
 	if err != nil {
 		return nil, err
 	}
-	if in.Description == "" || (platform.Description != nil && *platform.Description == in.Description) {
+	// The company's values as they would stand after this save, then only what differs from the
+	// platform is kept. A value not sent keeps the company's current one.
+	cur := m[row.ID.String()]
+	var o JobGroupOverride
+	// An empty description sent means the platform's.
+	if _, sent := in.Extra[ExtraDescription]; sent {
+		if d := in.Description; d != "" && (platform.Description == nil || *platform.Description != d) {
+			o.Description = &d
+		}
+	} else {
+		o.Description = cur.Description
+	}
+	wanted := mergeExtra(cur.apply(platform).Metadata, in.Extra, jobGroupExtras)
+	if err := checkSalaryRange(wanted); err != nil {
+		return nil, err
+	}
+	for _, k := range jobGroupExtras {
+		if v := ExtraOf(wanted, k); v != ExtraOf(platform.Metadata, k) {
+			if o.Extra == nil {
+				o.Extra = map[string]string{}
+			}
+			o.Extra[k] = v
+		}
+	}
+	if o.empty() {
 		delete(m, row.ID.String())
 	} else {
-		d := in.Description
-		m[row.ID.String()] = JobGroupOverride{Description: &d}
+		m[row.ID.String()] = o
 	}
 	if err := inherited.Save(ctx, s.orm, tenantID, JobGroupOverridesKey, m); err != nil {
 		return nil, fmt.Errorf("orgsettings: %w", err)

@@ -29,6 +29,10 @@ type LeaveRequest struct {
 	StartDate time.Time `json:"start_date,omitempty"`
 	// EndDate holds the value of the "end_date" field.
 	EndDate time.Time `json:"end_date,omitempty"`
+	// The leave starts at midday on start_date (on a one-day request: the afternoon off)
+	StartHalfDay bool `json:"start_half_day,omitempty"`
+	// The leave ends at midday on end_date (on a one-day request: the morning off)
+	EndHalfDay bool `json:"end_half_day,omitempty"`
 	// DaysRequested holds the value of the "days_requested" field.
 	DaysRequested decimal.Decimal `json:"days_requested,omitempty"`
 	// Reason holds the value of the "reason" field.
@@ -57,6 +61,8 @@ func (*LeaveRequest) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case leaverequest.FieldDaysRequested:
 			values[i] = new(decimal.Decimal)
+		case leaverequest.FieldStartHalfDay, leaverequest.FieldEndHalfDay:
+			values[i] = new(sql.NullBool)
 		case leaverequest.FieldReason, leaverequest.FieldStatus, leaverequest.FieldRejectionReason:
 			values[i] = new(sql.NullString)
 		case leaverequest.FieldStartDate, leaverequest.FieldEndDate, leaverequest.FieldApprovedAt, leaverequest.FieldCreatedAt, leaverequest.FieldUpdatedAt:
@@ -113,6 +119,18 @@ func (_m *LeaveRequest) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field end_date", values[i])
 			} else if value.Valid {
 				_m.EndDate = value.Time
+			}
+		case leaverequest.FieldStartHalfDay:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field start_half_day", values[i])
+			} else if value.Valid {
+				_m.StartHalfDay = value.Bool
+			}
+		case leaverequest.FieldEndHalfDay:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field end_half_day", values[i])
+			} else if value.Valid {
+				_m.EndHalfDay = value.Bool
 			}
 		case leaverequest.FieldDaysRequested:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
@@ -214,6 +232,12 @@ func (_m *LeaveRequest) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("end_date=")
 	builder.WriteString(_m.EndDate.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("start_half_day=")
+	builder.WriteString(fmt.Sprintf("%v", _m.StartHalfDay))
+	builder.WriteString(", ")
+	builder.WriteString("end_half_day=")
+	builder.WriteString(fmt.Sprintf("%v", _m.EndHalfDay))
 	builder.WriteString(", ")
 	builder.WriteString("days_requested=")
 	builder.WriteString(fmt.Sprintf("%v", _m.DaysRequested))

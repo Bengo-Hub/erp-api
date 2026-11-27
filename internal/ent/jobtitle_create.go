@@ -50,6 +50,12 @@ func (_c *JobTitleCreate) SetNillableDescription(v *string) *JobTitleCreate {
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *JobTitleCreate) SetMetadata(v map[string]interface{}) *JobTitleCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *JobTitleCreate) SetCreatedAt(v time.Time) *JobTitleCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -208,6 +214,10 @@ func (_c *JobTitleCreate) createSpec() (*JobTitle, *sqlgraph.CreateSpec) {
 		_spec.SetField(jobtitle.FieldDescription, field.TypeString, value)
 		_node.Description = &value
 	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(jobtitle.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(jobtitle.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -307,6 +317,24 @@ func (u *JobTitleUpsert) UpdateDescription() *JobTitleUpsert {
 // ClearDescription clears the value of the "description" field.
 func (u *JobTitleUpsert) ClearDescription() *JobTitleUpsert {
 	u.SetNull(jobtitle.FieldDescription)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *JobTitleUpsert) SetMetadata(v map[string]interface{}) *JobTitleUpsert {
+	u.Set(jobtitle.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *JobTitleUpsert) UpdateMetadata() *JobTitleUpsert {
+	u.SetExcluded(jobtitle.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *JobTitleUpsert) ClearMetadata() *JobTitleUpsert {
+	u.SetNull(jobtitle.FieldMetadata)
 	return u
 }
 
@@ -419,6 +447,27 @@ func (u *JobTitleUpsertOne) UpdateDescription() *JobTitleUpsertOne {
 func (u *JobTitleUpsertOne) ClearDescription() *JobTitleUpsertOne {
 	return u.Update(func(s *JobTitleUpsert) {
 		s.ClearDescription()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *JobTitleUpsertOne) SetMetadata(v map[string]interface{}) *JobTitleUpsertOne {
+	return u.Update(func(s *JobTitleUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *JobTitleUpsertOne) UpdateMetadata() *JobTitleUpsertOne {
+	return u.Update(func(s *JobTitleUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *JobTitleUpsertOne) ClearMetadata() *JobTitleUpsertOne {
+	return u.Update(func(s *JobTitleUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -700,6 +749,27 @@ func (u *JobTitleUpsertBulk) UpdateDescription() *JobTitleUpsertBulk {
 func (u *JobTitleUpsertBulk) ClearDescription() *JobTitleUpsertBulk {
 	return u.Update(func(s *JobTitleUpsert) {
 		s.ClearDescription()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *JobTitleUpsertBulk) SetMetadata(v map[string]interface{}) *JobTitleUpsertBulk {
+	return u.Update(func(s *JobTitleUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *JobTitleUpsertBulk) UpdateMetadata() *JobTitleUpsertBulk {
+	return u.Update(func(s *JobTitleUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *JobTitleUpsertBulk) ClearMetadata() *JobTitleUpsertBulk {
+	return u.Update(func(s *JobTitleUpsert) {
+		s.ClearMetadata()
 	})
 }
 

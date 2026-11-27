@@ -955,6 +955,7 @@ var (
 		{Name: "expense_type", Type: field.TypeString, Nullable: true},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
+		{Name: "item_date", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
@@ -1105,6 +1106,7 @@ var (
 		{Name: "salary", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(18,4)"}},
 		{Name: "status", Type: field.TypeString, Default: "active"},
 		{Name: "terms_html", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
@@ -1182,6 +1184,7 @@ var (
 		{Name: "title", Type: field.TypeString},
 		{Name: "parent_department_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "cost_center_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// DepartmentsTable holds the schema information for the "departments" table.
@@ -2003,6 +2006,7 @@ var (
 		{Name: "tenant_id", Type: field.TypeUUID},
 		{Name: "title", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
@@ -2072,6 +2076,7 @@ var (
 		{Name: "tenant_id", Type: field.TypeUUID},
 		{Name: "title", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}
@@ -2226,6 +2231,8 @@ var (
 		{Name: "category_id", Type: field.TypeUUID},
 		{Name: "start_date", Type: field.TypeTime},
 		{Name: "end_date", Type: field.TypeTime},
+		{Name: "start_half_day", Type: field.TypeBool, Default: false},
+		{Name: "end_half_day", Type: field.TypeBool, Default: false},
 		{Name: "days_requested", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric(7,2)"}},
 		{Name: "reason", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "rejected", "cancelled"}, Default: "pending"},
@@ -2254,7 +2261,7 @@ var (
 			{
 				Name:    "leaverequest_tenant_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{LeaveRequestsColumns[1], LeaveRequestsColumns[8]},
+				Columns: []*schema.Column{LeaveRequestsColumns[1], LeaveRequestsColumns[10]},
 			},
 		},
 	}

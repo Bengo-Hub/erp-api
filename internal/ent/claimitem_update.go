@@ -112,6 +112,26 @@ func (_u *ClaimItemUpdate) SetNillableAmount(v *decimal.Decimal) *ClaimItemUpdat
 	return _u
 }
 
+// SetItemDate sets the "item_date" field.
+func (_u *ClaimItemUpdate) SetItemDate(v time.Time) *ClaimItemUpdate {
+	_u.mutation.SetItemDate(v)
+	return _u
+}
+
+// SetNillableItemDate sets the "item_date" field if the given value is not nil.
+func (_u *ClaimItemUpdate) SetNillableItemDate(v *time.Time) *ClaimItemUpdate {
+	if v != nil {
+		_u.SetItemDate(*v)
+	}
+	return _u
+}
+
+// ClearItemDate clears the value of the "item_date" field.
+func (_u *ClaimItemUpdate) ClearItemDate() *ClaimItemUpdate {
+	_u.mutation.ClearItemDate()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *ClaimItemUpdate) SetUpdatedAt(v time.Time) *ClaimItemUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -188,6 +208,12 @@ func (_u *ClaimItemUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(claimitem.FieldAmount, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.ItemDate(); ok {
+		_spec.SetField(claimitem.FieldItemDate, field.TypeTime, value)
+	}
+	if _u.mutation.ItemDateCleared() {
+		_spec.ClearField(claimitem.FieldItemDate, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(claimitem.FieldUpdatedAt, field.TypeTime, value)
@@ -291,6 +317,26 @@ func (_u *ClaimItemUpdateOne) SetNillableAmount(v *decimal.Decimal) *ClaimItemUp
 	if v != nil {
 		_u.SetAmount(*v)
 	}
+	return _u
+}
+
+// SetItemDate sets the "item_date" field.
+func (_u *ClaimItemUpdateOne) SetItemDate(v time.Time) *ClaimItemUpdateOne {
+	_u.mutation.SetItemDate(v)
+	return _u
+}
+
+// SetNillableItemDate sets the "item_date" field if the given value is not nil.
+func (_u *ClaimItemUpdateOne) SetNillableItemDate(v *time.Time) *ClaimItemUpdateOne {
+	if v != nil {
+		_u.SetItemDate(*v)
+	}
+	return _u
+}
+
+// ClearItemDate clears the value of the "item_date" field.
+func (_u *ClaimItemUpdateOne) ClearItemDate() *ClaimItemUpdateOne {
+	_u.mutation.ClearItemDate()
 	return _u
 }
 
@@ -400,6 +446,12 @@ func (_u *ClaimItemUpdateOne) sqlSave(ctx context.Context) (_node *ClaimItem, er
 	}
 	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(claimitem.FieldAmount, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.ItemDate(); ok {
+		_spec.SetField(claimitem.FieldItemDate, field.TypeTime, value)
+	}
+	if _u.mutation.ItemDateCleared() {
+		_spec.ClearField(claimitem.FieldItemDate, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(claimitem.FieldUpdatedAt, field.TypeTime, value)

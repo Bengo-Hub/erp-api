@@ -29,6 +29,8 @@ type ClaimItemInput struct {
 	Quantity    decimal.Decimal
 	UnitCost    decimal.Decimal
 	Amount      decimal.Decimal
+	// Date the expense was incurred; nil when not given.
+	Date *time.Time
 }
 
 // amount resolves the line amount: explicit Amount when > 0, else quantity × unit_cost.
@@ -79,6 +81,9 @@ func (s *Service) CreateClaimItem(ctx context.Context, tenantID, claimID uuid.UU
 	}
 	if in.Description != "" {
 		b = b.SetDescription(in.Description)
+	}
+	if in.Date != nil {
+		b = b.SetItemDate(*in.Date)
 	}
 	row, err := b.Save(ctx)
 	if err != nil {

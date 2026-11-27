@@ -596,6 +596,16 @@ func TermsHTMLContainsFold(v string) predicate.Contract {
 	return predicate.Contract(sql.FieldContainsFold(FieldTermsHTML, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.Contract {
+	return predicate.Contract(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.Contract {
+	return predicate.Contract(sql.FieldNotNull(FieldMetadata))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Contract {
 	return predicate.Contract(sql.FieldEQ(FieldCreatedAt, v))

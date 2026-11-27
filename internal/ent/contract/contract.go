@@ -33,6 +33,8 @@ const (
 	FieldStatus = "status"
 	// FieldTermsHTML holds the string denoting the terms_html field in the database.
 	FieldTermsHTML = "terms_html"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -53,6 +55,7 @@ var Columns = []string{
 	FieldSalary,
 	FieldStatus,
 	FieldTermsHTML,
+	FieldMetadata,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }

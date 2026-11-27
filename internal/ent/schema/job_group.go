@@ -20,6 +20,8 @@ func (JobGroup) Fields() []ent.Field {
 		field.UUID("tenant_id", uuid.UUID{}).Comment("Owning tenant (auth_tenant.id)"),
 		field.String("title").NotEmpty(),
 		field.Text("description").Optional().Nillable(),
+		// metadata holds the grade and the salary range (grade, min_salary, max_salary).
+		field.JSON("metadata", map[string]any{}).Optional(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

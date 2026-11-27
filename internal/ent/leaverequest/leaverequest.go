@@ -26,6 +26,10 @@ const (
 	FieldStartDate = "start_date"
 	// FieldEndDate holds the string denoting the end_date field in the database.
 	FieldEndDate = "end_date"
+	// FieldStartHalfDay holds the string denoting the start_half_day field in the database.
+	FieldStartHalfDay = "start_half_day"
+	// FieldEndHalfDay holds the string denoting the end_half_day field in the database.
+	FieldEndHalfDay = "end_half_day"
 	// FieldDaysRequested holds the string denoting the days_requested field in the database.
 	FieldDaysRequested = "days_requested"
 	// FieldReason holds the string denoting the reason field in the database.
@@ -54,6 +58,8 @@ var Columns = []string{
 	FieldCategoryID,
 	FieldStartDate,
 	FieldEndDate,
+	FieldStartHalfDay,
+	FieldEndHalfDay,
 	FieldDaysRequested,
 	FieldReason,
 	FieldStatus,
@@ -75,6 +81,10 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultStartHalfDay holds the default value on creation for the "start_half_day" field.
+	DefaultStartHalfDay bool
+	// DefaultEndHalfDay holds the default value on creation for the "end_half_day" field.
+	DefaultEndHalfDay bool
 	// DefaultDaysRequested holds the default value on creation for the "days_requested" field.
 	DefaultDaysRequested decimal.Decimal
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -146,6 +156,16 @@ func ByStartDate(opts ...sql.OrderTermOption) OrderOption {
 // ByEndDate orders the results by the end_date field.
 func ByEndDate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEndDate, opts...).ToFunc()
+}
+
+// ByStartHalfDay orders the results by the start_half_day field.
+func ByStartHalfDay(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStartHalfDay, opts...).ToFunc()
+}
+
+// ByEndHalfDay orders the results by the end_half_day field.
+func ByEndHalfDay(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEndHalfDay, opts...).ToFunc()
 }
 
 // ByDaysRequested orders the results by the days_requested field.

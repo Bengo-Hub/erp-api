@@ -29,6 +29,8 @@ type ClaimItem struct {
 	Description *string `json:"description,omitempty"`
 	// Amount holds the value of the "amount" field.
 	Amount decimal.Decimal `json:"amount,omitempty"`
+	// Date the expense was incurred
+	ItemDate *time.Time `json:"item_date,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -45,7 +47,7 @@ func (*ClaimItem) scanValues(columns []string) ([]any, error) {
 			values[i] = new(decimal.Decimal)
 		case claimitem.FieldExpenseType, claimitem.FieldDescription:
 			values[i] = new(sql.NullString)
-		case claimitem.FieldCreatedAt, claimitem.FieldUpdatedAt:
+		case claimitem.FieldItemDate, claimitem.FieldCreatedAt, claimitem.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case claimitem.FieldID, claimitem.FieldTenantID, claimitem.FieldExpenseClaimID:
 			values[i] = new(uuid.UUID)
@@ -100,6 +102,13 @@ func (_m *ClaimItem) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field amount", values[i])
 			} else if value != nil {
 				_m.Amount = *value
+			}
+		case claimitem.FieldItemDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field item_date", values[i])
+			} else if value.Valid {
+				_m.ItemDate = new(time.Time)
+				*_m.ItemDate = value.Time
 			}
 		case claimitem.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -165,6 +174,11 @@ func (_m *ClaimItem) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("amount=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Amount))
+	builder.WriteString(", ")
+	if v := _m.ItemDate; v != nil {
+		builder.WriteString("item_date=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

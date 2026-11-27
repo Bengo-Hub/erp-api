@@ -24,6 +24,10 @@ func (LeaveRequest) Fields() []ent.Field {
 		field.UUID("category_id", uuid.UUID{}).Comment("FK -> leave_categories.id"),
 		field.Time("start_date"),
 		field.Time("end_date"),
+		field.Bool("start_half_day").Default(false).
+			Comment("The leave starts at midday on start_date (on a one-day request: the afternoon off)"),
+		field.Bool("end_half_day").Default(false).
+			Comment("The leave ends at midday on end_date (on a one-day request: the morning off)"),
 		daysField("days_requested"),
 		field.String("reason").Optional(),
 		field.Enum("status").

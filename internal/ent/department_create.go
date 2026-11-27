@@ -86,6 +86,12 @@ func (_c *DepartmentCreate) SetNillableCostCenterID(v *uuid.UUID) *DepartmentCre
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *DepartmentCreate) SetMetadata(v map[string]interface{}) *DepartmentCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *DepartmentCreate) SetCreatedAt(v time.Time) *DepartmentCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -228,6 +234,10 @@ func (_c *DepartmentCreate) createSpec() (*Department, *sqlgraph.CreateSpec) {
 		_spec.SetField(department.FieldCostCenterID, field.TypeUUID, value)
 		_node.CostCenterID = &value
 	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(department.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(department.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -365,6 +375,24 @@ func (u *DepartmentUpsert) UpdateCostCenterID() *DepartmentUpsert {
 // ClearCostCenterID clears the value of the "cost_center_id" field.
 func (u *DepartmentUpsert) ClearCostCenterID() *DepartmentUpsert {
 	u.SetNull(department.FieldCostCenterID)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *DepartmentUpsert) SetMetadata(v map[string]interface{}) *DepartmentUpsert {
+	u.Set(department.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *DepartmentUpsert) UpdateMetadata() *DepartmentUpsert {
+	u.SetExcluded(department.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *DepartmentUpsert) ClearMetadata() *DepartmentUpsert {
+	u.SetNull(department.FieldMetadata)
 	return u
 }
 
@@ -514,6 +542,27 @@ func (u *DepartmentUpsertOne) UpdateCostCenterID() *DepartmentUpsertOne {
 func (u *DepartmentUpsertOne) ClearCostCenterID() *DepartmentUpsertOne {
 	return u.Update(func(s *DepartmentUpsert) {
 		s.ClearCostCenterID()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *DepartmentUpsertOne) SetMetadata(v map[string]interface{}) *DepartmentUpsertOne {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *DepartmentUpsertOne) UpdateMetadata() *DepartmentUpsertOne {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *DepartmentUpsertOne) ClearMetadata() *DepartmentUpsertOne {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -830,6 +879,27 @@ func (u *DepartmentUpsertBulk) UpdateCostCenterID() *DepartmentUpsertBulk {
 func (u *DepartmentUpsertBulk) ClearCostCenterID() *DepartmentUpsertBulk {
 	return u.Update(func(s *DepartmentUpsert) {
 		s.ClearCostCenterID()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *DepartmentUpsertBulk) SetMetadata(v map[string]interface{}) *DepartmentUpsertBulk {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *DepartmentUpsertBulk) UpdateMetadata() *DepartmentUpsertBulk {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *DepartmentUpsertBulk) ClearMetadata() *DepartmentUpsertBulk {
+	return u.Update(func(s *DepartmentUpsert) {
+		s.ClearMetadata()
 	})
 }
 

@@ -81,6 +81,16 @@ func EndDate(v time.Time) predicate.LeaveRequest {
 	return predicate.LeaveRequest(sql.FieldEQ(FieldEndDate, v))
 }
 
+// StartHalfDay applies equality check predicate on the "start_half_day" field. It's identical to StartHalfDayEQ.
+func StartHalfDay(v bool) predicate.LeaveRequest {
+	return predicate.LeaveRequest(sql.FieldEQ(FieldStartHalfDay, v))
+}
+
+// EndHalfDay applies equality check predicate on the "end_half_day" field. It's identical to EndHalfDayEQ.
+func EndHalfDay(v bool) predicate.LeaveRequest {
+	return predicate.LeaveRequest(sql.FieldEQ(FieldEndHalfDay, v))
+}
+
 // DaysRequested applies equality check predicate on the "days_requested" field. It's identical to DaysRequestedEQ.
 func DaysRequested(v decimal.Decimal) predicate.LeaveRequest {
 	return predicate.LeaveRequest(sql.FieldEQ(FieldDaysRequested, v))
@@ -314,6 +324,26 @@ func EndDateLT(v time.Time) predicate.LeaveRequest {
 // EndDateLTE applies the LTE predicate on the "end_date" field.
 func EndDateLTE(v time.Time) predicate.LeaveRequest {
 	return predicate.LeaveRequest(sql.FieldLTE(FieldEndDate, v))
+}
+
+// StartHalfDayEQ applies the EQ predicate on the "start_half_day" field.
+func StartHalfDayEQ(v bool) predicate.LeaveRequest {
+	return predicate.LeaveRequest(sql.FieldEQ(FieldStartHalfDay, v))
+}
+
+// StartHalfDayNEQ applies the NEQ predicate on the "start_half_day" field.
+func StartHalfDayNEQ(v bool) predicate.LeaveRequest {
+	return predicate.LeaveRequest(sql.FieldNEQ(FieldStartHalfDay, v))
+}
+
+// EndHalfDayEQ applies the EQ predicate on the "end_half_day" field.
+func EndHalfDayEQ(v bool) predicate.LeaveRequest {
+	return predicate.LeaveRequest(sql.FieldEQ(FieldEndHalfDay, v))
+}
+
+// EndHalfDayNEQ applies the NEQ predicate on the "end_half_day" field.
+func EndHalfDayNEQ(v bool) predicate.LeaveRequest {
+	return predicate.LeaveRequest(sql.FieldNEQ(FieldEndHalfDay, v))
 }
 
 // DaysRequestedEQ applies the EQ predicate on the "days_requested" field.

@@ -33,6 +33,8 @@ func (Department) Fields() []ent.Field {
 			Optional().
 			Nillable().
 			Comment("treasury cost center for this department's unallocated payroll cost"),
+		// metadata holds the department's description (description).
+		field.JSON("metadata", map[string]any{}).Optional(),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),

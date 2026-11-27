@@ -65,6 +65,7 @@ func (h *LeaveHandler) RegisterRoutes(r chi.Router) {
 		lr.Post("/requests", h.CreateRequest)
 		lr.Get("/requests/preview", h.PreviewRequest)
 		lr.Get("/requests/{id}", h.GetRequest)
+		lr.Put("/requests/{id}", h.UpdateRequest)
 		lr.Post("/requests/{id}/approve", h.ApproveRequest)
 		lr.Post("/requests/{id}/reject", h.RejectRequest)
 		lr.Post("/requests/{id}/cancel", h.CancelRequest)
@@ -618,7 +619,93 @@ type createRequestBody struct {
 	CategoryID string `json:"category_id"`
 	StartDate  string `json:"start_date"`
 	EndDate    string `json:"end_date"`
-	Reason     string `json:"reason"`
+	// StartHalfDay starts the leave at midday on the start date; EndHalfDay ends it at midday on
+	// the end date.
+	StartHalfDay bool   `json:"start_half_day"`
+	EndHalfDay   bool   `json:"end_half_day"`
+	Reason       string `json:"reason"`
+}
+
+// writeRequest sends one leave request as the list shows it (names, and the half-day flags even
+// when false).
+func (h *LeaveHandler) writeRequest(w http.ResponseWriter, r *http.Request, status int, tenantID uuid.UUID, row *ent.LeaveRequest) {
+	views, err := h.svc.RequestViews(r.Context(), tenantID, []*ent.LeaveRequest{row})
+	if err != nil {
+		h.log.Error("leave request view", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "saved, but failed to load the leave request")
+		return
+	}
+	writeJSON(w, status, views[0])
+}
+
+// requestDates reads a body's type and dates, writing the 400 itself on failure.
+func requestDates(w http.ResponseWriter, categoryID, startDate, endDate string) (uuid.UUID, time.Time, time.Time, bool) {
+	catID, err := uuid.Parse(categoryID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid category_id")
+		return uuid.Nil, time.Time{}, time.Time{}, false
+	}
+	start, err := parseDate(startDate)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid start_date")
+		return uuid.Nil, time.Time{}, time.Time{}, false
+	}
+	end, err := parseDate(endDate)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid end_date")
+		return uuid.Nil, time.Time{}, time.Time{}, false
+	}
+	return catID, start, end, true
+}
+
+type updateRequestBody struct {
+	CategoryID   string  `json:"category_id"`
+	StartDate    string  `json:"start_date"`
+	EndDate      string  `json:"end_date"`
+	StartHalfDay bool    `json:"start_half_day"`
+	EndHalfDay   bool    `json:"end_half_day"`
+	Reason       *string `json:"reason"`
+}
+
+// UpdateRequest changes a pending request: HR (leave manage) any, anyone else only their own (404
+// for someone else's). The employee stays; the days and the balance are counted again.
+func (h *LeaveHandler) UpdateRequest(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok {
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	var body updateRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	var own *uuid.UUID
+	if !hasPermission(scope, permLeaveManage) {
+		_, empID, ok := selfEmployee(w, r)
+		if !ok {
+			return
+		}
+		own = &empID
+	}
+	catID, start, end, ok := requestDates(w, body.CategoryID, body.StartDate, body.EndDate)
+	if !ok {
+		return
+	}
+	uid := scope.UserID
+	row, err := h.svc.UpdateRequest(r.Context(), scope.TenantID, id, own, leave.UpdateRequestInput{
+		CategoryID: catID, StartDate: start, EndDate: end, StartHalfDay: body.StartHalfDay, EndHalfDay: body.EndHalfDay,
+		Reason: body.Reason, ActingUserID: &uid,
+	})
+	if err != nil {
+		leaveRequestError(w, "update_failed", err)
+		return
+	}
+	h.writeRequest(w, r, http.StatusOK, scope.TenantID, row)
 }
 
 func (h *LeaveHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
@@ -631,31 +718,21 @@ func (h *LeaveHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	catID, err := uuid.Parse(body.CategoryID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid category_id")
-		return
-	}
-	start, err := parseDate(body.StartDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid start_date")
-		return
-	}
-	end, err := parseDate(body.EndDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "invalid end_date")
+	catID, start, end, ok := requestDates(w, body.CategoryID, body.StartDate, body.EndDate)
+	if !ok {
 		return
 	}
 	uid := scope.UserID
 	row, err := h.svc.CreateRequest(r.Context(), scope.TenantID, leave.CreateRequestInput{
 		EmployeeID: empID, CategoryID: catID, StartDate: start, EndDate: end,
+		StartHalfDay: body.StartHalfDay, EndHalfDay: body.EndHalfDay,
 		Reason: body.Reason, ActingUserID: &uid,
 	})
 	if err != nil {
 		leaveRequestError(w, "create_failed", err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, row)
+	h.writeRequest(w, r, http.StatusCreated, scope.TenantID, row)
 }
 
 func (h *LeaveHandler) ApproveRequest(w http.ResponseWriter, r *http.Request) {

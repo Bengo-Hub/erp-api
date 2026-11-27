@@ -128,6 +128,8 @@ type CreateRequestInput struct {
 	CategoryID   uuid.UUID
 	StartDate    time.Time
 	EndDate      time.Time
+	StartHalfDay bool
+	EndHalfDay   bool
 	Reason       string
 	ActingUserID *uuid.UUID
 }
@@ -137,7 +139,8 @@ type CreateRequestInput struct {
 // and the insert run, so two requests filed at once cannot cover the same dates.
 func (s *Service) CreateRequest(ctx context.Context, tenantID uuid.UUID, in CreateRequestInput) (*ent.LeaveRequest, error) {
 	in.StartDate, in.EndDate = utcDay(in.StartDate), utcDay(in.EndDate)
-	count, err := s.PreviewRequest(ctx, tenantID, in.EmployeeID, in.CategoryID, in.StartDate, in.EndDate)
+	parts := RequestOptions{StartHalfDay: in.StartHalfDay, EndHalfDay: in.EndHalfDay}
+	count, err := s.PreviewRequestWith(ctx, tenantID, in.EmployeeID, in.CategoryID, in.StartDate, in.EndDate, parts)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +160,7 @@ func (s *Service) CreateRequest(ctx context.Context, tenantID uuid.UUID, in Crea
 		ForUpdate().Only(ctx); err != nil {
 		return nil, fmt.Errorf("leave: lock employee: %w", err)
 	}
-	if err := refuseOverlap(ctx, tx, tenantID, in.EmployeeID, in.StartDate, in.EndDate); err != nil {
+	if err := refuseOverlap(ctx, tx, tenantID, in.EmployeeID, in.StartDate, in.EndDate, parts); err != nil {
 		return nil, err
 	}
 	chk, err := s.checkBalance(ctx, tx.Client(), tenantID, in.EmployeeID, count.category, count.BalanceYear, count.Days, true)
@@ -173,6 +176,8 @@ func (s *Service) CreateRequest(ctx context.Context, tenantID uuid.UUID, in Crea
 		SetCategoryID(in.CategoryID).
 		SetStartDate(in.StartDate).
 		SetEndDate(in.EndDate).
+		SetStartHalfDay(in.StartHalfDay).
+		SetEndHalfDay(in.EndHalfDay).
 		SetDaysRequested(count.Days).
 		SetReason(in.Reason).
 		SetStatus(leaverequest.StatusPending).

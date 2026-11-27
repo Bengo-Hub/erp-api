@@ -90,6 +90,9 @@ type RequestView struct {
 	EmployeeNumber    string `json:"employee_number"`
 	LeaveCategoryName string `json:"leave_category_name"`
 	Days              string `json:"days"`
+	// The half-day flags are always sent (ent leaves a false one out).
+	StartHalfDay bool `json:"start_half_day"`
+	EndHalfDay   bool `json:"end_half_day"`
 }
 
 // RequestViews adds names to a page of leave requests.
@@ -108,7 +111,7 @@ func (s *Service) RequestViews(ctx context.Context, tenantID uuid.UUID, rows []*
 	for i, r := range rows {
 		out[i] = RequestView{LeaveRequest: r, EmployeeName: n.employee[r.EmployeeID],
 			EmployeeNumber: n.employeeNumber[r.EmployeeID], LeaveCategoryName: n.category[r.CategoryID],
-			Days: r.DaysRequested.String()}
+			Days: r.DaysRequested.String(), StartHalfDay: r.StartHalfDay, EndHalfDay: r.EndHalfDay}
 	}
 	return out, nil
 }

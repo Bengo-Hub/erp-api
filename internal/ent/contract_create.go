@@ -135,6 +135,12 @@ func (_c *ContractCreate) SetNillableTermsHTML(v *string) *ContractCreate {
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *ContractCreate) SetMetadata(v map[string]interface{}) *ContractCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *ContractCreate) SetCreatedAt(v time.Time) *ContractCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -325,6 +331,10 @@ func (_c *ContractCreate) createSpec() (*Contract, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TermsHTML(); ok {
 		_spec.SetField(contract.FieldTermsHTML, field.TypeString, value)
 		_node.TermsHTML = value
+	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(contract.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(contract.FieldCreatedAt, field.TypeTime, value)
@@ -527,6 +537,24 @@ func (u *ContractUpsert) UpdateTermsHTML() *ContractUpsert {
 // ClearTermsHTML clears the value of the "terms_html" field.
 func (u *ContractUpsert) ClearTermsHTML() *ContractUpsert {
 	u.SetNull(contract.FieldTermsHTML)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *ContractUpsert) SetMetadata(v map[string]interface{}) *ContractUpsert {
+	u.Set(contract.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *ContractUpsert) UpdateMetadata() *ContractUpsert {
+	u.SetExcluded(contract.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *ContractUpsert) ClearMetadata() *ContractUpsert {
+	u.SetNull(contract.FieldMetadata)
 	return u
 }
 
@@ -758,6 +786,27 @@ func (u *ContractUpsertOne) UpdateTermsHTML() *ContractUpsertOne {
 func (u *ContractUpsertOne) ClearTermsHTML() *ContractUpsertOne {
 	return u.Update(func(s *ContractUpsert) {
 		s.ClearTermsHTML()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *ContractUpsertOne) SetMetadata(v map[string]interface{}) *ContractUpsertOne {
+	return u.Update(func(s *ContractUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *ContractUpsertOne) UpdateMetadata() *ContractUpsertOne {
+	return u.Update(func(s *ContractUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *ContractUpsertOne) ClearMetadata() *ContractUpsertOne {
+	return u.Update(func(s *ContractUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -1158,6 +1207,27 @@ func (u *ContractUpsertBulk) UpdateTermsHTML() *ContractUpsertBulk {
 func (u *ContractUpsertBulk) ClearTermsHTML() *ContractUpsertBulk {
 	return u.Update(func(s *ContractUpsert) {
 		s.ClearTermsHTML()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *ContractUpsertBulk) SetMetadata(v map[string]interface{}) *ContractUpsertBulk {
+	return u.Update(func(s *ContractUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *ContractUpsertBulk) UpdateMetadata() *ContractUpsertBulk {
+	return u.Update(func(s *ContractUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *ContractUpsertBulk) ClearMetadata() *ContractUpsertBulk {
+	return u.Update(func(s *ContractUpsert) {
+		s.ClearMetadata()
 	})
 }
 

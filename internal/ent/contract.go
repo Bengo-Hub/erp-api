@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -37,6 +38,8 @@ type Contract struct {
 	Status string `json:"status,omitempty"`
 	// Editable rich-text (HTML) body of the employment terms/contract
 	TermsHTML string `json:"terms_html,omitempty"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -49,6 +52,8 @@ func (*Contract) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case contract.FieldMetadata:
+			values[i] = new([]byte)
 		case contract.FieldSalary:
 			values[i] = new(decimal.Decimal)
 		case contract.FieldDurationMonths:
@@ -136,6 +141,14 @@ func (_m *Contract) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.TermsHTML = value.String
 			}
+		case contract.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
+			}
 		case contract.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -214,6 +227,9 @@ func (_m *Contract) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("terms_html=")
 	builder.WriteString(_m.TermsHTML)
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

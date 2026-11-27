@@ -29,6 +29,8 @@ func (Contract) Fields() []ent.Field {
 		field.String("status").Default("active").Comment("active | expired | terminated"),
 		field.Text("terms_html").Optional().Comment("Editable rich-text (HTML) body of the employment terms/contract"),
 
+		// metadata holds HR's notes on the contract (notes).
+		field.JSON("metadata", map[string]any{}).Optional(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

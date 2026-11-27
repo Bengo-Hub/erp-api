@@ -81,6 +81,11 @@ func Amount(v decimal.Decimal) predicate.ClaimItem {
 	return predicate.ClaimItem(sql.FieldEQ(FieldAmount, v))
 }
 
+// ItemDate applies equality check predicate on the "item_date" field. It's identical to ItemDateEQ.
+func ItemDate(v time.Time) predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldEQ(FieldItemDate, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.ClaimItem {
 	return predicate.ClaimItem(sql.FieldEQ(FieldCreatedAt, v))
@@ -359,6 +364,56 @@ func AmountLT(v decimal.Decimal) predicate.ClaimItem {
 // AmountLTE applies the LTE predicate on the "amount" field.
 func AmountLTE(v decimal.Decimal) predicate.ClaimItem {
 	return predicate.ClaimItem(sql.FieldLTE(FieldAmount, v))
+}
+
+// ItemDateEQ applies the EQ predicate on the "item_date" field.
+func ItemDateEQ(v time.Time) predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldEQ(FieldItemDate, v))
+}
+
+// ItemDateNEQ applies the NEQ predicate on the "item_date" field.
+func ItemDateNEQ(v time.Time) predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldNEQ(FieldItemDate, v))
+}
+
+// ItemDateIn applies the In predicate on the "item_date" field.
+func ItemDateIn(vs ...time.Time) predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldIn(FieldItemDate, vs...))
+}
+
+// ItemDateNotIn applies the NotIn predicate on the "item_date" field.
+func ItemDateNotIn(vs ...time.Time) predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldNotIn(FieldItemDate, vs...))
+}
+
+// ItemDateGT applies the GT predicate on the "item_date" field.
+func ItemDateGT(v time.Time) predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldGT(FieldItemDate, v))
+}
+
+// ItemDateGTE applies the GTE predicate on the "item_date" field.
+func ItemDateGTE(v time.Time) predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldGTE(FieldItemDate, v))
+}
+
+// ItemDateLT applies the LT predicate on the "item_date" field.
+func ItemDateLT(v time.Time) predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldLT(FieldItemDate, v))
+}
+
+// ItemDateLTE applies the LTE predicate on the "item_date" field.
+func ItemDateLTE(v time.Time) predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldLTE(FieldItemDate, v))
+}
+
+// ItemDateIsNil applies the IsNil predicate on the "item_date" field.
+func ItemDateIsNil() predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldIsNull(FieldItemDate))
+}
+
+// ItemDateNotNil applies the NotNil predicate on the "item_date" field.
+func ItemDateNotNil() predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldNotNull(FieldItemDate))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

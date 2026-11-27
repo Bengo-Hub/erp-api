@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -24,6 +25,8 @@ type JobGroup struct {
 	Title string `json:"title,omitempty"`
 	// Description holds the value of the "description" field.
 	Description *string `json:"description,omitempty"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -36,6 +39,8 @@ func (*JobGroup) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case jobgroup.FieldMetadata:
+			values[i] = new([]byte)
 		case jobgroup.FieldTitle, jobgroup.FieldDescription:
 			values[i] = new(sql.NullString)
 		case jobgroup.FieldCreatedAt, jobgroup.FieldUpdatedAt:
@@ -81,6 +86,14 @@ func (_m *JobGroup) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Description = new(string)
 				*_m.Description = value.String
+			}
+		case jobgroup.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
 			}
 		case jobgroup.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -140,6 +153,9 @@ func (_m *JobGroup) String() string {
 		builder.WriteString("description=")
 		builder.WriteString(*v)
 	}
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

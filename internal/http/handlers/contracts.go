@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Bengo-Hub/pagination"
@@ -50,6 +51,7 @@ type contractView struct {
 	Salary            string    `json:"salary"`
 	Status            string    `json:"status,omitempty"`
 	ContractDuration  int       `json:"contract_duration"`
+	Notes             string    `json:"notes,omitempty"`
 	CreatedAt         string    `json:"created_at,omitempty"`
 	// IsCurrent: the contract is in force today. CurrentSalary is what payroll pays now (absent
 	// without a salary) and SalaryDiffers says an in-force contract states another amount.
@@ -96,6 +98,7 @@ func (h *ContractsHandler) view(ctx context.Context, tenantID uuid.UUID, c *ent.
 		Salary:           c.Salary.String(),
 		Status:           c.Status,
 		ContractDuration: c.DurationMonths,
+		Notes:            contracts.Notes(c),
 		CreatedAt:        c.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 	if c.StartDate != nil {
@@ -121,6 +124,8 @@ type contractBody struct {
 	ContractType      string `json:"contract_type"`
 	Salary            string `json:"salary"`
 	Status            string `json:"status"`
+	// Notes: absent keeps them, "" clears them.
+	Notes *string `json:"notes"`
 }
 
 func (b contractBody) toInput() (contracts.Input, error) {
@@ -131,6 +136,10 @@ func (b contractBody) toInput() (contracts.Input, error) {
 	}
 	in.ContractType = ctype
 	in.Status = b.Status
+	if b.Notes != nil {
+		n := strings.TrimSpace(*b.Notes)
+		in.Notes = &n
+	}
 
 	empStr := b.EmployeeID
 	if empStr == "" {

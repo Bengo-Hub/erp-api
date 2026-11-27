@@ -375,6 +375,16 @@ func CostCenterIDNotNil() predicate.Department {
 	return predicate.Department(sql.FieldNotNull(FieldCostCenterID))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.Department {
+	return predicate.Department(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.Department {
+	return predicate.Department(sql.FieldNotNull(FieldMetadata))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Department {
 	return predicate.Department(sql.FieldEQ(FieldCreatedAt, v))

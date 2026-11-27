@@ -35,6 +35,8 @@ type claimItemBody struct {
 	Quantity    string `json:"quantity"`
 	UnitCost    string `json:"unit_cost"`
 	Amount      string `json:"amount"`
+	// Date the expense was incurred (YYYY-MM-DD), optional.
+	Date string `json:"date"`
 }
 
 func claimItemView(it *ent.ClaimItem) map[string]any {
@@ -47,6 +49,9 @@ func claimItemView(it *ent.ClaimItem) map[string]any {
 	}
 	if it.Description != nil {
 		v["description"] = *it.Description
+	}
+	if it.ItemDate != nil {
+		v["date"] = it.ItemDate.Format("2006-01-02")
 	}
 	return v
 }
@@ -92,6 +97,14 @@ func (h *PayrollHandler) CreateClaimItem(w http.ResponseWriter, r *http.Request)
 		Quantity:    parseDec(body.Quantity),
 		UnitCost:    parseDec(body.UnitCost),
 		Amount:      parseDec(body.Amount),
+	}
+	if body.Date != "" {
+		d, err := parseDate(body.Date)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", "invalid date (want YYYY-MM-DD)")
+			return
+		}
+		in.Date = &d
 	}
 	it, err := h.svc.CreateClaimItem(r.Context(), scope.TenantID, id, in)
 	if err != nil {

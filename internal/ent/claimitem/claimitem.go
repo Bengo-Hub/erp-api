@@ -25,6 +25,8 @@ const (
 	FieldDescription = "description"
 	// FieldAmount holds the string denoting the amount field in the database.
 	FieldAmount = "amount"
+	// FieldItemDate holds the string denoting the item_date field in the database.
+	FieldItemDate = "item_date"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -41,6 +43,7 @@ var Columns = []string{
 	FieldExpenseType,
 	FieldDescription,
 	FieldAmount,
+	FieldItemDate,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -99,6 +102,11 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 // ByAmount orders the results by the amount field.
 func ByAmount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAmount, opts...).ToFunc()
+}
+
+// ByItemDate orders the results by the item_date field.
+func ByItemDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldItemDate, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

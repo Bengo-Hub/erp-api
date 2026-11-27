@@ -78,7 +78,15 @@ func (h *LeaveHandler) PreviewRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid end_date")
 		return
 	}
-	out, err := h.svc.PreviewRequest(r.Context(), scope.TenantID, empID, catID, start, end)
+	// request_id: the pending request being edited, whose own days are not counted as pending.
+	o := leave.RequestOptions{StartHalfDay: q.Get("start_half_day") == "true", EndHalfDay: q.Get("end_half_day") == "true"}
+	if v := q.Get("request_id"); v != "" {
+		if o.Excluding, err = uuid.Parse(v); err != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", "invalid request_id")
+			return
+		}
+	}
+	out, err := h.svc.PreviewRequestWith(r.Context(), scope.TenantID, empID, catID, start, end, o)
 	if err != nil {
 		leaveRequestError(w, "preview_failed", err)
 		return

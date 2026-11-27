@@ -71,6 +71,10 @@ type namedView struct {
 	CreatedAt   string    `json:"created_at,omitempty"`
 	// CostCenterID (departments only) is the treasury cost center for unallocated payroll cost.
 	CostCenterID *string `json:"cost_center_id,omitempty"`
+	// Grade and the salary range (job groups only).
+	Grade     string `json:"grade,omitempty"`
+	MinSalary string `json:"min_salary,omitempty"`
+	MaxSalary string `json:"max_salary,omitempty"`
 	// Inherited and Customised (job groups only): a platform job group, and whether the company
 	// changed it.
 	Inherited  bool `json:"inherited"`
@@ -78,7 +82,7 @@ type namedView struct {
 }
 
 func deptView(d *ent.Department) namedView {
-	v := namedView{ID: d.ID, Name: d.Title, Title: d.Title, Code: d.Code}
+	v := namedView{ID: d.ID, Name: d.Title, Title: d.Title, Code: d.Code, Description: orgsettings.ExtraOf(d.Metadata, orgsettings.ExtraDescription)}
 	if d.CostCenterID != nil {
 		v.CostCenterID = strPtr(d.CostCenterID.String())
 	}
@@ -91,7 +95,8 @@ func deptView(d *ent.Department) namedView {
 }
 
 func titleView(t *ent.JobTitle) namedView {
-	v := namedView{ID: t.ID, Name: t.Title, Title: t.Title, TenantID: strPtr(t.TenantID.String())}
+	v := namedView{ID: t.ID, Name: t.Title, Title: t.Title, TenantID: strPtr(t.TenantID.String()),
+		Code: orgsettings.ExtraOf(t.Metadata, orgsettings.ExtraCode)}
 	if t.Description != nil {
 		v.Description = *t.Description
 	}
@@ -100,7 +105,10 @@ func titleView(t *ent.JobTitle) namedView {
 }
 
 func groupView(g *ent.JobGroup) namedView {
-	v := namedView{ID: g.ID, Name: g.Title, Title: g.Title, TenantID: strPtr(g.TenantID.String())}
+	v := namedView{ID: g.ID, Name: g.Title, Title: g.Title, TenantID: strPtr(g.TenantID.String()),
+		Grade:     orgsettings.ExtraOf(g.Metadata, orgsettings.ExtraGrade),
+		MinSalary: orgsettings.ExtraOf(g.Metadata, orgsettings.ExtraMinSalary),
+		MaxSalary: orgsettings.ExtraOf(g.Metadata, orgsettings.ExtraMaxSalary)}
 	if g.Description != nil {
 		v.Description = *g.Description
 	}
@@ -113,10 +121,14 @@ func strPtr(s string) *string { return &s }
 // namedBody is the create/update payload. erp-ui sends `name`; legacy callers
 // may send `title`.
 type namedBody struct {
-	Name        string `json:"name"`
-	Title       string `json:"title"`
-	Code        string `json:"code"`
-	Description string `json:"description"`
+	Name        string  `json:"name"`
+	Title       string  `json:"title"`
+	Code        *string `json:"code"`
+	Description *string `json:"description"`
+	// Grade and the salary range (job groups only).
+	Grade     *string `json:"grade"`
+	MinSalary *string `json:"min_salary"`
+	MaxSalary *string `json:"max_salary"`
 	// CostCenterID (departments only): absent leaves it unchanged, "" clears it, an id sets it.
 	CostCenterID *string `json:"cost_center_id"`
 }
@@ -126,7 +138,19 @@ func (b namedBody) toInput() orgsettings.NamedInput {
 	if title == "" {
 		title = b.Title
 	}
-	in := orgsettings.NamedInput{Title: title, Code: b.Code, Description: b.Description}
+	in := orgsettings.NamedInput{Title: title, Extra: map[string]string{}}
+	for key, v := range map[string]*string{orgsettings.ExtraCode: b.Code, orgsettings.ExtraDescription: b.Description,
+		orgsettings.ExtraGrade: b.Grade, orgsettings.ExtraMinSalary: b.MinSalary, orgsettings.ExtraMaxSalary: b.MaxSalary} {
+		if v != nil {
+			in.Extra[key] = strings.TrimSpace(*v)
+		}
+	}
+	if b.Code != nil {
+		in.Code = strings.TrimSpace(*b.Code)
+	}
+	if b.Description != nil {
+		in.Description = *b.Description
+	}
 	if b.CostCenterID != nil {
 		in.CostCenterSet = true
 		if id, err := uuid.Parse(*b.CostCenterID); err == nil {

@@ -56,6 +56,34 @@ type Input struct {
 	EndDate      *time.Time
 	Salary       decimal.Decimal
 	Status       string
+	// Notes are HR's notes on the contract, kept in its metadata; nil keeps them, "" clears them.
+	Notes *string
+}
+
+// NotesKey is the contract metadata key holding HR's notes.
+const NotesKey = "notes"
+
+// Notes reads a contract's notes ("" when none).
+func Notes(c *ent.Contract) string {
+	n, _ := c.Metadata[NotesKey].(string)
+	return n
+}
+
+// withNotes returns a copy of meta with the notes set or cleared; nil when nothing is left.
+func withNotes(meta map[string]any, notes string) map[string]any {
+	out := map[string]any{}
+	for k, v := range meta {
+		out[k] = v
+	}
+	if notes == "" {
+		delete(out, NotesKey)
+	} else {
+		out[NotesKey] = notes
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // durationMonths recomputes whole months between start and end (rounded down).
@@ -98,6 +126,11 @@ func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, in Input) (*en
 	if in.EndDate != nil {
 		b = b.SetEndDate(*in.EndDate)
 	}
+	if in.Notes != nil {
+		if meta := withNotes(nil, *in.Notes); meta != nil {
+			b = b.SetMetadata(meta)
+		}
+	}
 	row, err := b.Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("contracts: create: %w", err)
@@ -129,6 +162,13 @@ func (s *Service) Update(ctx context.Context, tenantID, id uuid.UUID, in Input) 
 	}
 	if !in.Salary.IsZero() {
 		u = u.SetSalary(in.Salary)
+	}
+	if in.Notes != nil {
+		if meta := withNotes(existing.Metadata, *in.Notes); meta != nil {
+			u = u.SetMetadata(meta)
+		} else {
+			u = u.ClearMetadata()
+		}
 	}
 	u = u.SetDurationMonths(durationMonths(start, end))
 	row, err := u.Save(ctx)

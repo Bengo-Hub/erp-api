@@ -260,6 +260,16 @@ func DescriptionContainsFold(v string) predicate.JobTitle {
 	return predicate.JobTitle(sql.FieldContainsFold(FieldDescription, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.JobTitle {
+	return predicate.JobTitle(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.JobTitle {
+	return predicate.JobTitle(sql.FieldNotNull(FieldMetadata))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.JobTitle {
 	return predicate.JobTitle(sql.FieldEQ(FieldCreatedAt, v))

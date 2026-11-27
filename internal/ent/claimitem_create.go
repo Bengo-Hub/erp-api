@@ -79,6 +79,20 @@ func (_c *ClaimItemCreate) SetNillableAmount(v *decimal.Decimal) *ClaimItemCreat
 	return _c
 }
 
+// SetItemDate sets the "item_date" field.
+func (_c *ClaimItemCreate) SetItemDate(v time.Time) *ClaimItemCreate {
+	_c.mutation.SetItemDate(v)
+	return _c
+}
+
+// SetNillableItemDate sets the "item_date" field if the given value is not nil.
+func (_c *ClaimItemCreate) SetNillableItemDate(v *time.Time) *ClaimItemCreate {
+	if v != nil {
+		_c.SetItemDate(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *ClaimItemCreate) SetCreatedAt(v time.Time) *ClaimItemCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -247,6 +261,10 @@ func (_c *ClaimItemCreate) createSpec() (*ClaimItem, *sqlgraph.CreateSpec) {
 		_spec.SetField(claimitem.FieldAmount, field.TypeOther, value)
 		_node.Amount = value
 	}
+	if value, ok := _c.mutation.ItemDate(); ok {
+		_spec.SetField(claimitem.FieldItemDate, field.TypeTime, value)
+		_node.ItemDate = &value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(claimitem.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -376,6 +394,24 @@ func (u *ClaimItemUpsert) SetAmount(v decimal.Decimal) *ClaimItemUpsert {
 // UpdateAmount sets the "amount" field to the value that was provided on create.
 func (u *ClaimItemUpsert) UpdateAmount() *ClaimItemUpsert {
 	u.SetExcluded(claimitem.FieldAmount)
+	return u
+}
+
+// SetItemDate sets the "item_date" field.
+func (u *ClaimItemUpsert) SetItemDate(v time.Time) *ClaimItemUpsert {
+	u.Set(claimitem.FieldItemDate, v)
+	return u
+}
+
+// UpdateItemDate sets the "item_date" field to the value that was provided on create.
+func (u *ClaimItemUpsert) UpdateItemDate() *ClaimItemUpsert {
+	u.SetExcluded(claimitem.FieldItemDate)
+	return u
+}
+
+// ClearItemDate clears the value of the "item_date" field.
+func (u *ClaimItemUpsert) ClearItemDate() *ClaimItemUpsert {
+	u.SetNull(claimitem.FieldItemDate)
 	return u
 }
 
@@ -523,6 +559,27 @@ func (u *ClaimItemUpsertOne) SetAmount(v decimal.Decimal) *ClaimItemUpsertOne {
 func (u *ClaimItemUpsertOne) UpdateAmount() *ClaimItemUpsertOne {
 	return u.Update(func(s *ClaimItemUpsert) {
 		s.UpdateAmount()
+	})
+}
+
+// SetItemDate sets the "item_date" field.
+func (u *ClaimItemUpsertOne) SetItemDate(v time.Time) *ClaimItemUpsertOne {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.SetItemDate(v)
+	})
+}
+
+// UpdateItemDate sets the "item_date" field to the value that was provided on create.
+func (u *ClaimItemUpsertOne) UpdateItemDate() *ClaimItemUpsertOne {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.UpdateItemDate()
+	})
+}
+
+// ClearItemDate clears the value of the "item_date" field.
+func (u *ClaimItemUpsertOne) ClearItemDate() *ClaimItemUpsertOne {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.ClearItemDate()
 	})
 }
 
@@ -839,6 +896,27 @@ func (u *ClaimItemUpsertBulk) SetAmount(v decimal.Decimal) *ClaimItemUpsertBulk 
 func (u *ClaimItemUpsertBulk) UpdateAmount() *ClaimItemUpsertBulk {
 	return u.Update(func(s *ClaimItemUpsert) {
 		s.UpdateAmount()
+	})
+}
+
+// SetItemDate sets the "item_date" field.
+func (u *ClaimItemUpsertBulk) SetItemDate(v time.Time) *ClaimItemUpsertBulk {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.SetItemDate(v)
+	})
+}
+
+// UpdateItemDate sets the "item_date" field to the value that was provided on create.
+func (u *ClaimItemUpsertBulk) UpdateItemDate() *ClaimItemUpsertBulk {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.UpdateItemDate()
+	})
+}
+
+// ClearItemDate clears the value of the "item_date" field.
+func (u *ClaimItemUpsertBulk) ClearItemDate() *ClaimItemUpsertBulk {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.ClearItemDate()
 	})
 }
 

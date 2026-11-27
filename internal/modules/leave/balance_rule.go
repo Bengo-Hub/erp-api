@@ -124,6 +124,12 @@ func (b balanceCheck) refusal() error {
 // the same type and year. withPending is false at approval, where only the request itself counts.
 // No balance row means no limit.
 func (s *Service) checkBalance(ctx context.Context, c *ent.Client, tenantID, employeeID uuid.UUID, cat *ent.LeaveCategory, year int, days decimal.Decimal, withPending bool) (balanceCheck, error) {
+	return s.checkBalanceExcluding(ctx, c, tenantID, employeeID, cat, year, days, withPending, uuid.Nil)
+}
+
+// checkBalanceExcluding is checkBalance without one pending request (the one being edited) among
+// the pending days.
+func (s *Service) checkBalanceExcluding(ctx context.Context, c *ent.Client, tenantID, employeeID uuid.UUID, cat *ent.LeaveCategory, year int, days decimal.Decimal, withPending bool, excluding uuid.UUID) (balanceCheck, error) {
 	var out balanceCheck
 	rules, err := typeSettings(ctx, c, tenantID, BalanceRulesKey)
 	if err != nil {
@@ -159,7 +165,8 @@ func (s *Service) checkBalance(ctx context.Context, c *ent.Client, tenantID, emp
 		rows, err := c.LeaveRequest.Query().Where(
 			leaverequest.TenantID(tenantID), leaverequest.EmployeeID(employeeID),
 			leaverequest.CategoryID(cat.ID), leaverequest.StatusEQ(leaverequest.StatusPending),
-			leaverequest.StartDateGTE(from), leaverequest.StartDateLT(from.AddDate(1, 0, 0))).All(ctx)
+			leaverequest.StartDateGTE(from), leaverequest.StartDateLT(from.AddDate(1, 0, 0)),
+			leaverequest.IDNEQ(excluding)).All(ctx)
 		if err != nil {
 			return out, fmt.Errorf("leave: load pending requests: %w", err)
 		}

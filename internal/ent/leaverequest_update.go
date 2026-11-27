@@ -100,6 +100,34 @@ func (_u *LeaveRequestUpdate) SetNillableEndDate(v *time.Time) *LeaveRequestUpda
 	return _u
 }
 
+// SetStartHalfDay sets the "start_half_day" field.
+func (_u *LeaveRequestUpdate) SetStartHalfDay(v bool) *LeaveRequestUpdate {
+	_u.mutation.SetStartHalfDay(v)
+	return _u
+}
+
+// SetNillableStartHalfDay sets the "start_half_day" field if the given value is not nil.
+func (_u *LeaveRequestUpdate) SetNillableStartHalfDay(v *bool) *LeaveRequestUpdate {
+	if v != nil {
+		_u.SetStartHalfDay(*v)
+	}
+	return _u
+}
+
+// SetEndHalfDay sets the "end_half_day" field.
+func (_u *LeaveRequestUpdate) SetEndHalfDay(v bool) *LeaveRequestUpdate {
+	_u.mutation.SetEndHalfDay(v)
+	return _u
+}
+
+// SetNillableEndHalfDay sets the "end_half_day" field if the given value is not nil.
+func (_u *LeaveRequestUpdate) SetNillableEndHalfDay(v *bool) *LeaveRequestUpdate {
+	if v != nil {
+		_u.SetEndHalfDay(*v)
+	}
+	return _u
+}
+
 // SetDaysRequested sets the "days_requested" field.
 func (_u *LeaveRequestUpdate) SetDaysRequested(v decimal.Decimal) *LeaveRequestUpdate {
 	_u.mutation.SetDaysRequested(v)
@@ -292,6 +320,12 @@ func (_u *LeaveRequestUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.EndDate(); ok {
 		_spec.SetField(leaverequest.FieldEndDate, field.TypeTime, value)
 	}
+	if value, ok := _u.mutation.StartHalfDay(); ok {
+		_spec.SetField(leaverequest.FieldStartHalfDay, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.EndHalfDay(); ok {
+		_spec.SetField(leaverequest.FieldEndHalfDay, field.TypeBool, value)
+	}
 	if value, ok := _u.mutation.DaysRequested(); ok {
 		_spec.SetField(leaverequest.FieldDaysRequested, field.TypeOther, value)
 	}
@@ -411,6 +445,34 @@ func (_u *LeaveRequestUpdateOne) SetEndDate(v time.Time) *LeaveRequestUpdateOne 
 func (_u *LeaveRequestUpdateOne) SetNillableEndDate(v *time.Time) *LeaveRequestUpdateOne {
 	if v != nil {
 		_u.SetEndDate(*v)
+	}
+	return _u
+}
+
+// SetStartHalfDay sets the "start_half_day" field.
+func (_u *LeaveRequestUpdateOne) SetStartHalfDay(v bool) *LeaveRequestUpdateOne {
+	_u.mutation.SetStartHalfDay(v)
+	return _u
+}
+
+// SetNillableStartHalfDay sets the "start_half_day" field if the given value is not nil.
+func (_u *LeaveRequestUpdateOne) SetNillableStartHalfDay(v *bool) *LeaveRequestUpdateOne {
+	if v != nil {
+		_u.SetStartHalfDay(*v)
+	}
+	return _u
+}
+
+// SetEndHalfDay sets the "end_half_day" field.
+func (_u *LeaveRequestUpdateOne) SetEndHalfDay(v bool) *LeaveRequestUpdateOne {
+	_u.mutation.SetEndHalfDay(v)
+	return _u
+}
+
+// SetNillableEndHalfDay sets the "end_half_day" field if the given value is not nil.
+func (_u *LeaveRequestUpdateOne) SetNillableEndHalfDay(v *bool) *LeaveRequestUpdateOne {
+	if v != nil {
+		_u.SetEndHalfDay(*v)
 	}
 	return _u
 }
@@ -636,6 +698,12 @@ func (_u *LeaveRequestUpdateOne) sqlSave(ctx context.Context) (_node *LeaveReque
 	}
 	if value, ok := _u.mutation.EndDate(); ok {
 		_spec.SetField(leaverequest.FieldEndDate, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.StartHalfDay(); ok {
+		_spec.SetField(leaverequest.FieldStartHalfDay, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.EndHalfDay(); ok {
+		_spec.SetField(leaverequest.FieldEndHalfDay, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.DaysRequested(); ok {
 		_spec.SetField(leaverequest.FieldDaysRequested, field.TypeOther, value)

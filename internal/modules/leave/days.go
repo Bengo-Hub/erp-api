@@ -38,7 +38,25 @@ var (
 	ErrNoDays            = errors.New("these dates have no working days for this employee, so there is nothing to apply for")
 	ErrCountMode         = errors.New("count mode must be working_days or calendar_days")
 	ErrNoCalendar        = errors.New("working days cannot be counted right now")
+	ErrBothHalves        = errors.New("a one-day request is either the morning or the afternoon; for both, ask for the full day")
+	ErrNotPendingEdit    = errors.New("only a pending request can be changed")
 )
+
+// RequestOptions are the parts of a request beyond its dates. StartHalfDay starts the leave at
+// midday on the start date and EndHalfDay ends it at midday on the end date; on a one-day request
+// they are the afternoon off and the morning off. Excluding is a pending request being edited,
+// whose own days are not counted as pending and whose dates it may reuse.
+type RequestOptions struct {
+	StartHalfDay bool
+	EndHalfDay   bool
+	Excluding    uuid.UUID
+}
+
+// halfShare is what a half of a day counts: half of a full day, and never more than the day
+// itself counts (a day off stays at nothing, a half working day at its half).
+func halfShare(share decimal.Decimal) decimal.Decimal {
+	return decimal.Min(share, decimal.NewFromFloat(0.5))
+}
 
 // WorkCalendar answers an employee's planned days; the attendance service implements it. The
 // attendance module does not import leave, so there is no import cycle.
@@ -85,6 +103,8 @@ type Preview struct {
 	AvailableBalance *decimal.Decimal `json:"available_balance"`
 	Refused          bool             `json:"refused"`
 	BalanceMessage   string           `json:"balance_message,omitempty"`
+	StartHalfDay     bool             `json:"start_half_day"`
+	EndHalfDay       bool             `json:"end_half_day"`
 
 	category *ent.LeaveCategory
 }
@@ -158,11 +178,20 @@ func (s *Service) usableCategory(ctx context.Context, tenantID, id uuid.UUID) (*
 	return nil, ErrUnknownCategory
 }
 
-// PreviewRequest counts the days a request would take and reports the dates it skips.
+// PreviewRequest counts the days a request of full days would take and reports the dates it skips.
 func (s *Service) PreviewRequest(ctx context.Context, tenantID, employeeID, categoryID uuid.UUID, start, end time.Time) (*Preview, error) {
+	return s.PreviewRequestWith(ctx, tenantID, employeeID, categoryID, start, end, RequestOptions{})
+}
+
+// PreviewRequestWith counts the days a request would take, its half days included: a half counts
+// half of that day under the type's count mode.
+func (s *Service) PreviewRequestWith(ctx context.Context, tenantID, employeeID, categoryID uuid.UUID, start, end time.Time, o RequestOptions) (*Preview, error) {
 	start, end = utcDay(start), utcDay(end)
 	if end.Before(start) {
 		return nil, ErrDateOrder
+	}
+	if start.Equal(end) && o.StartHalfDay && o.EndHalfDay {
+		return nil, ErrBothHalves
 	}
 	if end.Sub(start) >= attendance.MaxCapacityDays*24*time.Hour {
 		return nil, attendance.ErrPlannedRange
@@ -182,9 +211,19 @@ func (s *Service) PreviewRequest(ctx context.Context, tenantID, employeeID, cate
 	if err != nil {
 		return nil, err
 	}
-	p := &Preview{category: cat, CountMode: modeOf(modes, cat), Skipped: []SkippedDay{}, BalanceYear: start.Year()}
+	p := &Preview{category: cat, CountMode: modeOf(modes, cat), Skipped: []SkippedDay{}, BalanceYear: start.Year(),
+		StartHalfDay: o.StartHalfDay, EndHalfDay: o.EndHalfDay}
+	// share is what one day counts, its half included.
+	share := func(day time.Time, full decimal.Decimal) decimal.Decimal {
+		if (o.StartHalfDay && day.Equal(start)) || (o.EndHalfDay && day.Equal(end)) {
+			return halfShare(full)
+		}
+		return full
+	}
 	if p.CountMode == CountCalendarDays {
-		p.Days = decimal.NewFromInt(int64(end.Sub(start).Hours()/24) + 1)
+		for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
+			p.Days = p.Days.Add(share(d, decimal.NewFromInt(1)))
+		}
 	} else {
 		if s.calendar == nil {
 			return nil, ErrNoCalendar
@@ -194,13 +233,13 @@ func (s *Service) PreviewRequest(ctx context.Context, tenantID, employeeID, cate
 			return nil, err
 		}
 		for _, d := range days {
-			p.Days = p.Days.Add(d.Share)
+			p.Days = p.Days.Add(share(utcDay(d.Date), d.Share))
 			if d.Reason != "" {
 				p.Skipped = append(p.Skipped, SkippedDay{Date: d.Date.Format("2006-01-02"), Reason: d.Reason, Name: d.Name, Share: d.Share})
 			}
 		}
 	}
-	chk, err := s.checkBalance(ctx, s.orm, tenantID, employeeID, cat, p.BalanceYear, p.Days, true)
+	chk, err := s.checkBalanceExcluding(ctx, s.orm, tenantID, employeeID, cat, p.BalanceYear, p.Days, true, o.Excluding)
 	if err != nil {
 		return nil, err
 	}
@@ -209,19 +248,49 @@ func (s *Service) PreviewRequest(ctx context.Context, tenantID, employeeID, cate
 	return p, nil
 }
 
-// refuseOverlap rejects dates that touch another pending or approved request of the employee.
-func refuseOverlap(ctx context.Context, tx *ent.Tx, tenantID, employeeID uuid.UUID, start, end time.Time) error {
-	row, err := tx.LeaveRequest.Query().Where(
+// refuseOverlap rejects dates that touch another pending or approved request of the employee
+// (o.Excluding, the request being edited, aside). The morning of a day and its afternoon may be
+// two requests.
+func refuseOverlap(ctx context.Context, tx *ent.Tx, tenantID, employeeID uuid.UUID, start, end time.Time, o RequestOptions) error {
+	q := tx.LeaveRequest.Query().Where(
 		leaverequest.TenantID(tenantID), leaverequest.EmployeeID(employeeID),
 		leaverequest.StatusIn(leaverequest.StatusPending, leaverequest.StatusApproved),
 		leaverequest.StartDateLT(end.AddDate(0, 0, 1)), leaverequest.EndDateGTE(start),
-	).First(ctx)
-	if ent.IsNotFound(err) {
-		return nil
+	)
+	if o.Excluding != uuid.Nil {
+		q = q.Where(leaverequest.IDNEQ(o.Excluding))
 	}
+	rows, err := q.All(ctx)
 	if err != nil {
 		return fmt.Errorf("leave: check overlap: %w", err)
 	}
-	return fmt.Errorf("these dates overlap %s leave from %s to %s", row.Status,
-		row.StartDate.Format("2006-01-02"), row.EndDate.Format("2006-01-02"))
+	for _, row := range rows {
+		if splitDay(row, start, end, o) {
+			continue
+		}
+		return fmt.Errorf("these dates overlap %s leave from %s to %s", row.Status,
+			row.StartDate.Format("2006-01-02"), row.EndDate.Format("2006-01-02"))
+	}
+	return nil
+}
+
+// splitDay tells whether an existing request and new dates share only one day, one of them
+// taking its morning and the other its afternoon.
+func splitDay(row *ent.LeaveRequest, start, end time.Time, o RequestOptions) bool {
+	rs, re := utcDay(row.StartDate), utcDay(row.EndDate)
+	from, to := rs, re
+	if start.After(from) {
+		from = start
+	}
+	if end.Before(to) {
+		to = end
+	}
+	if !from.Equal(to) {
+		return false
+	}
+	day := from
+	// The morning only: the leave ends at midday that day. The afternoon only: it starts then.
+	rowMorning, rowAfternoon := re.Equal(day) && row.EndHalfDay, rs.Equal(day) && row.StartHalfDay
+	newMorning, newAfternoon := end.Equal(day) && o.EndHalfDay, start.Equal(day) && o.StartHalfDay
+	return (rowMorning && newAfternoon) || (rowAfternoon && newMorning)
 }

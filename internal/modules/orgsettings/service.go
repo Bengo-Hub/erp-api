@@ -54,6 +54,9 @@ type NamedInput struct {
 	// nil then clears the link, otherwise sets it.
 	CostCenterSet bool
 	CostCenterID  *uuid.UUID
+	// Extra holds the sent values kept in the row's metadata (extra.go), by key; each kind keeps
+	// only its own keys.
+	Extra map[string]string
 }
 
 func (s *Service) CreateDepartment(ctx context.Context, tenantID uuid.UUID, in NamedInput) (*ent.Department, error) {
@@ -66,6 +69,9 @@ func (s *Service) CreateDepartment(ctx context.Context, tenantID uuid.UUID, in N
 		}
 	}
 	b := s.orm.Department.Create().SetTenantID(tenantID).SetTitle(in.Title)
+	if meta := mergeExtra(nil, in.Extra, departmentExtras); meta != nil {
+		b = b.SetMetadata(meta)
+	}
 	if in.Code != "" {
 		b = b.SetCode(in.Code)
 	}
@@ -90,6 +96,11 @@ func (s *Service) UpdateDepartment(ctx context.Context, tenantID, id uuid.UUID, 
 	u := s.orm.Department.UpdateOneID(id)
 	if in.Title != "" {
 		u = u.SetTitle(in.Title)
+	}
+	if meta := mergeExtra(cur.Metadata, in.Extra, departmentExtras); meta != nil {
+		u = u.SetMetadata(meta)
+	} else {
+		u = u.ClearMetadata()
 	}
 	if in.Code != "" {
 		u = u.SetCode(in.Code)
@@ -191,16 +202,25 @@ func (s *Service) CreateJobTitle(ctx context.Context, tenantID uuid.UUID, in Nam
 	if in.Description != "" {
 		b = b.SetDescription(in.Description)
 	}
+	if meta := mergeExtra(nil, in.Extra, jobTitleExtras); meta != nil {
+		b = b.SetMetadata(meta)
+	}
 	return b.Save(ctx)
 }
 
 func (s *Service) UpdateJobTitle(ctx context.Context, tenantID, id uuid.UUID, in NamedInput) (*ent.JobTitle, error) {
-	if _, err := s.GetJobTitle(ctx, tenantID, id); err != nil {
+	cur, err := s.GetJobTitle(ctx, tenantID, id)
+	if err != nil {
 		return nil, err
 	}
 	u := s.orm.JobTitle.UpdateOneID(id)
 	if in.Title != "" {
 		u = u.SetTitle(in.Title)
+	}
+	if meta := mergeExtra(cur.Metadata, in.Extra, jobTitleExtras); meta != nil {
+		u = u.SetMetadata(meta)
+	} else {
+		u = u.ClearMetadata()
 	}
 	if in.Description != "" {
 		u = u.SetDescription(in.Description)
@@ -238,6 +258,12 @@ func (s *Service) CreateJobGroup(ctx context.Context, tenantID uuid.UUID, in Nam
 	if in.Description != "" {
 		b = b.SetDescription(in.Description)
 	}
+	if meta := mergeExtra(nil, in.Extra, jobGroupExtras); meta != nil {
+		if err := checkSalaryRange(meta); err != nil {
+			return nil, err
+		}
+		b = b.SetMetadata(meta)
+	}
 	return b.Save(ctx)
 }
 
@@ -250,20 +276,29 @@ func (s *Service) UpdateJobGroup(ctx context.Context, tenantID, id uuid.UUID, in
 	if row.Inherited {
 		return s.customiseJobGroup(ctx, tenantID, row, in)
 	}
-	g, err := s.updateOwnJobGroup(id, in).Save(ctx)
+	meta := mergeExtra(row.Metadata, in.Extra, jobGroupExtras)
+	if err := checkSalaryRange(meta); err != nil {
+		return nil, err
+	}
+	g, err := s.updateOwnJobGroup(id, in, meta).Save(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return &JobGroupRow{JobGroup: g}, nil
 }
 
-func (s *Service) updateOwnJobGroup(id uuid.UUID, in NamedInput) *ent.JobGroupUpdateOne {
+func (s *Service) updateOwnJobGroup(id uuid.UUID, in NamedInput, meta map[string]any) *ent.JobGroupUpdateOne {
 	u := s.orm.JobGroup.UpdateOneID(id)
 	if in.Title != "" {
 		u = u.SetTitle(in.Title)
 	}
 	if in.Description != "" {
 		u = u.SetDescription(in.Description)
+	}
+	if meta != nil {
+		u = u.SetMetadata(meta)
+	} else {
+		u = u.ClearMetadata()
 	}
 	return u
 }

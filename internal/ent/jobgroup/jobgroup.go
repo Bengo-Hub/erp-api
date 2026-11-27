@@ -20,6 +20,8 @@ const (
 	FieldTitle = "title"
 	// FieldDescription holds the string denoting the description field in the database.
 	FieldDescription = "description"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -34,6 +36,7 @@ var Columns = []string{
 	FieldTenantID,
 	FieldTitle,
 	FieldDescription,
+	FieldMetadata,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
