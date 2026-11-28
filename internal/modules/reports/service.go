@@ -44,6 +44,9 @@ type Filter struct {
 	OutletID     *uuid.UUID
 	DepartmentID *uuid.UUID
 	RegionID     *uuid.UUID
+	// Deduction names the deduction of a remittance schedule: its payslip line code (sacco, helb)
+	// or its component id. Other reports ignore it.
+	Deduction string
 }
 
 // ResolvePeriod builds a Filter from year + optional month (1-12). month=0 => full year.

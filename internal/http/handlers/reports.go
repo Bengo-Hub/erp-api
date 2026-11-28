@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -57,6 +58,7 @@ func (h *ReportsHandler) producers() map[string]periodReport {
 		"payroll-summary":  h.svc.PayrollSummary,
 		"muster-roll":      h.svc.MusterRoll,
 		"housing-levy":     h.svc.HousingLevy,
+		"remittance":       h.svc.Remittance,
 	}
 }
 
@@ -78,6 +80,8 @@ func (h *ReportsHandler) RegisterRoutes(r chi.Router) {
 		rr.Get("/payroll-summary", h.period(h.svc.PayrollSummary))
 		rr.Get("/muster-roll", h.period(h.svc.MusterRoll))
 		rr.Get("/housing-levy", h.period(h.svc.HousingLevy))
+		// Check-off remittance schedule for one deduction (?deduction=sacco|helb|<component id>).
+		rr.Get("/remittance", h.period(h.svc.Remittance))
 
 		// Non-period summaries.
 		rr.Get("/headcount-summary", h.Headcount)
@@ -125,8 +129,13 @@ func (h *ReportsHandler) Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f.DepartmentID, f.RegionID = optionalUUIDParam(r, "department_id"), optionalUUIDParam(r, "region_id")
+	f.Deduction = r.URL.Query().Get("deduction")
 
 	rep, err := fn(r.Context(), scope.TenantID, f)
+	if errors.Is(err, reports.ErrBadFilter) {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
 	if err != nil {
 		h.log.Error("report export", zap.Error(err))
 		writeError(w, http.StatusInternalServerError, "internal_error", "failed to generate report")
@@ -207,7 +216,12 @@ func (h *ReportsHandler) period(fn periodReport) http.HandlerFunc {
 			return
 		}
 		f.DepartmentID, f.RegionID = optionalUUIDParam(r, "department_id"), optionalUUIDParam(r, "region_id")
+		f.Deduction = r.URL.Query().Get("deduction")
 		rep, err := fn(r.Context(), scope.TenantID, f)
+		if errors.Is(err, reports.ErrBadFilter) {
+			writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+			return
+		}
 		if err != nil {
 			h.log.Error("report", zap.Error(err))
 			writeError(w, http.StatusInternalServerError, "internal_error", "failed to generate report")
