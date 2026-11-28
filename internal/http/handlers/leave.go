@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Bengo-Hub/pagination"
+	authclient "github.com/Bengo-Hub/shared-auth-client"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -387,7 +388,27 @@ func (h *LeaveHandler) Accrue(w http.ResponseWriter, r *http.Request) {
 
 // ---- Holidays ----
 
+// ListHolidays godoc
+// @Summary A company's public holidays
+// @Description The platform's national holidays (each with its rule key, for example labour_day) and the company's own, with active false for a national one the company switched off. ?year= narrows to one year. notifications-api calls it S2S with X-API-Key and X-Tenant-ID to date its holiday greetings, so there is one calendar.
+// @Tags leave
+// @Produce json
+// @Router /hrm/leave/holidays [get]
 func (h *LeaveHandler) ListHolidays(w http.ResponseWriter, r *http.Request) {
+	if claims, ok := authclient.ClaimsFromContext(r.Context()); ok && claims != nil && claims.IsService {
+		tenantID, ok := resolveTenant(w, r)
+		if !ok {
+			return
+		}
+		year, _ := strconv.Atoi(r.URL.Query().Get("year"))
+		rows, err := h.svc.ListHolidays(r.Context(), tenantID, year)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "internal_error", "failed to list holidays")
+			return
+		}
+		writePagedSlice(w, rows, pagination.Parse(r))
+		return
+	}
 	scope, ok := scopeFromRequest(w, r)
 	if !ok || !requirePermission(w, scope, permLeaveView) {
 		return

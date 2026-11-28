@@ -30,6 +30,9 @@ type Holiday struct {
 	// Inherited marks a platform holiday, which the tenant can only switch on or off.
 	Inherited bool `json:"inherited"`
 	Active    bool `json:"active"`
+	// Key is the calendar rule a platform holiday comes from (new_year, labour_day, ...), the key
+	// notifications-api greets customers by; empty for a tenant's own holiday or one added by hand.
+	Key string `json:"key,omitempty"`
 }
 
 func off(ctx context.Context, c *ent.Client, tenantID uuid.UUID) ([]string, error) {
@@ -77,6 +80,9 @@ func List(ctx context.Context, c *ent.Client, system, tenantID uuid.UUID, from, 
 	for i, r := range rows {
 		h := Holiday{PublicHoliday: r, Inherited: r.TenantID != tenantID}
 		h.Active = !h.Inherited || !slices.Contains(hidden, r.ID.String())
+		if h.Inherited || r.TenantID == system {
+			h.Key = KeyOf(r.Name)
+		}
 		out[i] = h
 	}
 	return out, nil
