@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
+	"github.com/Bengo-Hub/erp-api/internal/modules/holidays"
 	"github.com/Bengo-Hub/erp-api/internal/modules/leave"
 )
 
@@ -445,14 +446,20 @@ func (h *LeaveHandler) SetHolidayActive(w http.ResponseWriter, r *http.Request) 
 	}
 	var body struct {
 		Active *bool `json:"active"`
+		// EveryYear switches the holiday off for every year by its rule, not only for this date.
+		EveryYear bool `json:"every_year"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Active == nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "active (true or false) is required")
 		return
 	}
-	row, err := h.svc.SetHolidayActive(r.Context(), scope.TenantID, id, *body.Active)
+	row, err := h.svc.SetHolidayActive(r.Context(), scope.TenantID, id, *body.Active, body.EveryYear)
 	if errors.Is(err, leave.ErrHolidayNotFound) {
 		writeError(w, http.StatusNotFound, "not_found", "platform holiday not found")
+		return
+	}
+	if errors.Is(err, holidays.ErrNoRule) {
+		writeError(w, http.StatusUnprocessableEntity, "no_rule", err.Error())
 		return
 	}
 	if err != nil {

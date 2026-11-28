@@ -315,8 +315,8 @@ func (s *Service) ListHolidays(ctx context.Context, tenantID uuid.UUID, year int
 }
 
 // SetHolidayActive switches one of the platform's holidays off or back on for the tenant.
-func (s *Service) SetHolidayActive(ctx context.Context, tenantID, id uuid.UUID, active bool) (*holidays.Holiday, error) {
-	h, err := holidays.SetActive(ctx, s.orm, s.systemTenant, tenantID, id, active)
+func (s *Service) SetHolidayActive(ctx context.Context, tenantID, id uuid.UUID, active, everyYear bool) (*holidays.Holiday, error) {
+	h, err := holidays.SetActive(ctx, s.orm, s.systemTenant, tenantID, id, active, everyYear)
 	if errors.Is(err, holidays.ErrNotInherited) {
 		return nil, ErrHolidayNotFound
 	}

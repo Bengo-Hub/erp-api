@@ -169,7 +169,7 @@ func TestPlatformHolidaysInherited(t *testing.T) {
 
 	labour := c.PublicHoliday.Query().Where(publicholiday.TenantID(system), publicholiday.Name("Labour Day"),
 		publicholiday.Date(time.Date(2027, 5, 1, 0, 0, 0, 0, time.UTC))).OnlyX(ctx)
-	if _, err := SetActive(ctx, c, system, tenant, labour.ID, false); err != nil {
+	if _, err := SetActive(ctx, c, system, tenant, labour.ID, false, false); err != nil {
 		t.Fatal(err)
 	}
 	may := func() []string {
@@ -192,14 +192,50 @@ func TestPlatformHolidaysInherited(t *testing.T) {
 	if err != nil || len(other) != 1 {
 		t.Fatalf("other tenant: %v %v", other, err)
 	}
-	if _, err := SetActive(ctx, c, system, tenant, labour.ID, true); err != nil {
+	if _, err := SetActive(ctx, c, system, tenant, labour.ID, true, false); err != nil {
 		t.Fatal(err)
 	}
 	if got := may(); !slices.Equal(got, []string{"Company day", "Easter Monday", "Good Friday", "Labour Day"}) {
 		t.Fatalf("switched on again: %v", got)
 	}
+	// Every year: switching Labour Day off by its rule turns off both years' Labour Day, and
+	// switching either back on ends it for both.
+	if _, err := SetActive(ctx, c, system, tenant, labour.ID, false, true); err != nil {
+		t.Fatal(err)
+	}
+	labourOff := func() (n int) {
+		rows, err := List(ctx, c, system, tenant, time.Time{}, time.Time{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, h := range rows {
+			if h.Key == "labour_day" && !h.Active {
+				if !h.OffEveryYear {
+					t.Errorf("%s %s off but not marked every year", h.Name, h.Date)
+				}
+				n++
+			}
+		}
+		return n
+	}
+	if n := labourOff(); n != 2 {
+		t.Fatalf("every year switched off %d Labour Days, want 2", n)
+	}
+	labour26 := c.PublicHoliday.Query().Where(publicholiday.TenantID(system), publicholiday.Name("Labour Day"),
+		publicholiday.Date(time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC))).OnlyX(ctx)
+	if _, err := SetActive(ctx, c, system, tenant, labour26.ID, true, false); err != nil {
+		t.Fatal(err)
+	}
+	if n := labourOff(); n != 0 {
+		t.Fatalf("switched on again, %d Labour Days still off", n)
+	}
+	// A holiday with no rule can only be switched off for its own date.
+	manual := c.PublicHoliday.Create().SetTenantID(system).SetName("Day of mourning").SetDate(time.Date(2027, 2, 1, 0, 0, 0, 0, time.UTC)).SetIsNational(true).SaveX(ctx)
+	if _, err := SetActive(ctx, c, system, tenant, manual.ID, false, true); err != ErrNoRule {
+		t.Fatalf("every year without a rule: %v", err)
+	}
 	// The tenant's own holiday is not switched; it is edited or deleted.
-	if _, err := SetActive(ctx, c, system, tenant, own.ID, false); err != ErrNotInherited {
+	if _, err := SetActive(ctx, c, system, tenant, own.ID, false, false); err != ErrNotInherited {
 		t.Fatalf("own holiday: %v", err)
 	}
 }
