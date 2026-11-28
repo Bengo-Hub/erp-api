@@ -112,6 +112,18 @@ func (_u *ClaimItemUpdate) SetNillableAmount(v *decimal.Decimal) *ClaimItemUpdat
 	return _u
 }
 
+// SetMetadata sets the "metadata" field.
+func (_u *ClaimItemUpdate) SetMetadata(v map[string]interface{}) *ClaimItemUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *ClaimItemUpdate) ClearMetadata() *ClaimItemUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
+}
+
 // SetItemDate sets the "item_date" field.
 func (_u *ClaimItemUpdate) SetItemDate(v time.Time) *ClaimItemUpdate {
 	_u.mutation.SetItemDate(v)
@@ -208,6 +220,12 @@ func (_u *ClaimItemUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(claimitem.FieldAmount, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(claimitem.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(claimitem.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.ItemDate(); ok {
 		_spec.SetField(claimitem.FieldItemDate, field.TypeTime, value)
@@ -317,6 +335,18 @@ func (_u *ClaimItemUpdateOne) SetNillableAmount(v *decimal.Decimal) *ClaimItemUp
 	if v != nil {
 		_u.SetAmount(*v)
 	}
+	return _u
+}
+
+// SetMetadata sets the "metadata" field.
+func (_u *ClaimItemUpdateOne) SetMetadata(v map[string]interface{}) *ClaimItemUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (_u *ClaimItemUpdateOne) ClearMetadata() *ClaimItemUpdateOne {
+	_u.mutation.ClearMetadata()
 	return _u
 }
 
@@ -446,6 +476,12 @@ func (_u *ClaimItemUpdateOne) sqlSave(ctx context.Context) (_node *ClaimItem, er
 	}
 	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(claimitem.FieldAmount, field.TypeOther, value)
+	}
+	if value, ok := _u.mutation.Metadata(); ok {
+		_spec.SetField(claimitem.FieldMetadata, field.TypeJSON, value)
+	}
+	if _u.mutation.MetadataCleared() {
+		_spec.ClearField(claimitem.FieldMetadata, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.ItemDate(); ok {
 		_spec.SetField(claimitem.FieldItemDate, field.TypeTime, value)

@@ -25,6 +25,8 @@ const (
 	FieldDescription = "description"
 	// FieldAmount holds the string denoting the amount field in the database.
 	FieldAmount = "amount"
+	// FieldMetadata holds the string denoting the metadata field in the database.
+	FieldMetadata = "metadata"
 	// FieldItemDate holds the string denoting the item_date field in the database.
 	FieldItemDate = "item_date"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -43,6 +45,7 @@ var Columns = []string{
 	FieldExpenseType,
 	FieldDescription,
 	FieldAmount,
+	FieldMetadata,
 	FieldItemDate,
 	FieldCreatedAt,
 	FieldUpdatedAt,

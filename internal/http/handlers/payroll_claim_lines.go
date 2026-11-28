@@ -53,6 +53,11 @@ func claimItemView(it *ent.ClaimItem) map[string]any {
 	if it.ItemDate != nil {
 		v["date"] = it.ItemDate.Format("2006-01-02")
 	}
+	for _, k := range []string{"quantity", "unit_cost"} {
+		if s, ok := it.Metadata[k].(string); ok && s != "" {
+			v[k] = s
+		}
+	}
 	return v
 }
 

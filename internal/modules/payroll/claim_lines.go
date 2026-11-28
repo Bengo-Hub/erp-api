@@ -33,6 +33,43 @@ type ClaimItemInput struct {
 	Date *time.Time
 }
 
+// ErrClaimLineAmountMismatch: a line gave a quantity, a unit cost and an amount that is not their
+// product. The error text is shown to the user as it is.
+type ErrClaimLineAmountMismatch struct{ Amount, Expected decimal.Decimal }
+
+func (e ErrClaimLineAmountMismatch) Error() string {
+	return fmt.Sprintf("the amount %s is not the quantity times the unit cost (%s); correct one of the three",
+		e.Amount.StringFixed(2), e.Expected.StringFixed(2))
+}
+
+// checkAmount refuses an amount that differs from quantity × unit_cost to 2 decimals when all three
+// are given. With either figure missing the amount stands alone.
+func (in ClaimItemInput) checkAmount() error {
+	if !in.Quantity.GreaterThan(decimal.Zero) || !in.UnitCost.GreaterThan(decimal.Zero) || !in.Amount.GreaterThan(decimal.Zero) {
+		return nil
+	}
+	want := in.Quantity.Mul(in.UnitCost).Round(2)
+	if !in.Amount.Round(2).Equal(want) {
+		return ErrClaimLineAmountMismatch{Amount: in.Amount, Expected: want}
+	}
+	return nil
+}
+
+// metadata keeps whichever of quantity and unit cost were given; nil when neither was.
+func (in ClaimItemInput) metadata() map[string]any {
+	m := map[string]any{}
+	if in.Quantity.GreaterThan(decimal.Zero) {
+		m["quantity"] = in.Quantity.String()
+	}
+	if in.UnitCost.GreaterThan(decimal.Zero) {
+		m["unit_cost"] = in.UnitCost.StringFixed(2)
+	}
+	if len(m) == 0 {
+		return nil
+	}
+	return m
+}
+
 // amount resolves the line amount: explicit Amount when > 0, else quantity × unit_cost.
 func (in ClaimItemInput) amount() decimal.Decimal {
 	if in.Amount.GreaterThan(decimal.Zero) {
@@ -84,6 +121,12 @@ func (s *Service) CreateClaimItem(ctx context.Context, tenantID, claimID uuid.UU
 	}
 	if in.Date != nil {
 		b = b.SetItemDate(*in.Date)
+	}
+	if err := in.checkAmount(); err != nil {
+		return nil, err
+	}
+	if meta := in.metadata(); meta != nil {
+		b = b.SetMetadata(meta)
 	}
 	row, err := b.Save(ctx)
 	if err != nil {

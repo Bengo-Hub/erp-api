@@ -79,6 +79,12 @@ func (_c *ClaimItemCreate) SetNillableAmount(v *decimal.Decimal) *ClaimItemCreat
 	return _c
 }
 
+// SetMetadata sets the "metadata" field.
+func (_c *ClaimItemCreate) SetMetadata(v map[string]interface{}) *ClaimItemCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
+}
+
 // SetItemDate sets the "item_date" field.
 func (_c *ClaimItemCreate) SetItemDate(v time.Time) *ClaimItemCreate {
 	_c.mutation.SetItemDate(v)
@@ -261,6 +267,10 @@ func (_c *ClaimItemCreate) createSpec() (*ClaimItem, *sqlgraph.CreateSpec) {
 		_spec.SetField(claimitem.FieldAmount, field.TypeOther, value)
 		_node.Amount = value
 	}
+	if value, ok := _c.mutation.Metadata(); ok {
+		_spec.SetField(claimitem.FieldMetadata, field.TypeJSON, value)
+		_node.Metadata = value
+	}
 	if value, ok := _c.mutation.ItemDate(); ok {
 		_spec.SetField(claimitem.FieldItemDate, field.TypeTime, value)
 		_node.ItemDate = &value
@@ -394,6 +404,24 @@ func (u *ClaimItemUpsert) SetAmount(v decimal.Decimal) *ClaimItemUpsert {
 // UpdateAmount sets the "amount" field to the value that was provided on create.
 func (u *ClaimItemUpsert) UpdateAmount() *ClaimItemUpsert {
 	u.SetExcluded(claimitem.FieldAmount)
+	return u
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *ClaimItemUpsert) SetMetadata(v map[string]interface{}) *ClaimItemUpsert {
+	u.Set(claimitem.FieldMetadata, v)
+	return u
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *ClaimItemUpsert) UpdateMetadata() *ClaimItemUpsert {
+	u.SetExcluded(claimitem.FieldMetadata)
+	return u
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *ClaimItemUpsert) ClearMetadata() *ClaimItemUpsert {
+	u.SetNull(claimitem.FieldMetadata)
 	return u
 }
 
@@ -559,6 +587,27 @@ func (u *ClaimItemUpsertOne) SetAmount(v decimal.Decimal) *ClaimItemUpsertOne {
 func (u *ClaimItemUpsertOne) UpdateAmount() *ClaimItemUpsertOne {
 	return u.Update(func(s *ClaimItemUpsert) {
 		s.UpdateAmount()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *ClaimItemUpsertOne) SetMetadata(v map[string]interface{}) *ClaimItemUpsertOne {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *ClaimItemUpsertOne) UpdateMetadata() *ClaimItemUpsertOne {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *ClaimItemUpsertOne) ClearMetadata() *ClaimItemUpsertOne {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.ClearMetadata()
 	})
 }
 
@@ -896,6 +945,27 @@ func (u *ClaimItemUpsertBulk) SetAmount(v decimal.Decimal) *ClaimItemUpsertBulk 
 func (u *ClaimItemUpsertBulk) UpdateAmount() *ClaimItemUpsertBulk {
 	return u.Update(func(s *ClaimItemUpsert) {
 		s.UpdateAmount()
+	})
+}
+
+// SetMetadata sets the "metadata" field.
+func (u *ClaimItemUpsertBulk) SetMetadata(v map[string]interface{}) *ClaimItemUpsertBulk {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.SetMetadata(v)
+	})
+}
+
+// UpdateMetadata sets the "metadata" field to the value that was provided on create.
+func (u *ClaimItemUpsertBulk) UpdateMetadata() *ClaimItemUpsertBulk {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.UpdateMetadata()
+	})
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (u *ClaimItemUpsertBulk) ClearMetadata() *ClaimItemUpsertBulk {
+	return u.Update(func(s *ClaimItemUpsert) {
+		s.ClearMetadata()
 	})
 }
 

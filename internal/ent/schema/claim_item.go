@@ -23,6 +23,8 @@ func (ClaimItem) Fields() []ent.Field {
 		field.String("expense_type").Optional().Comment("tt | ac | ml | jm | os | mh | tr | mlg"),
 		field.String("description").Optional().Nillable(),
 		moneyField("amount"),
+		// metadata holds the quantity and unit cost that explain the amount (quantity, unit_cost).
+		field.JSON("metadata", map[string]any{}).Optional(),
 
 		field.Time("item_date").Optional().Nillable().Comment("Date the expense was incurred"),
 		field.Time("created_at").Default(time.Now).Immutable(),

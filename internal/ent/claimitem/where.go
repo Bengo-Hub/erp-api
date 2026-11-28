@@ -366,6 +366,16 @@ func AmountLTE(v decimal.Decimal) predicate.ClaimItem {
 	return predicate.ClaimItem(sql.FieldLTE(FieldAmount, v))
 }
 
+// MetadataIsNil applies the IsNil predicate on the "metadata" field.
+func MetadataIsNil() predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldIsNull(FieldMetadata))
+}
+
+// MetadataNotNil applies the NotNil predicate on the "metadata" field.
+func MetadataNotNil() predicate.ClaimItem {
+	return predicate.ClaimItem(sql.FieldNotNull(FieldMetadata))
+}
+
 // ItemDateEQ applies the EQ predicate on the "item_date" field.
 func ItemDateEQ(v time.Time) predicate.ClaimItem {
 	return predicate.ClaimItem(sql.FieldEQ(FieldItemDate, v))

@@ -766,11 +766,11 @@ func init() {
 	// claimitem.DefaultAmount holds the default value on creation for the amount field.
 	claimitem.DefaultAmount = claimitemDescAmount.Default.(decimal.Decimal)
 	// claimitemDescCreatedAt is the schema descriptor for created_at field.
-	claimitemDescCreatedAt := claimitemFields[7].Descriptor()
+	claimitemDescCreatedAt := claimitemFields[8].Descriptor()
 	// claimitem.DefaultCreatedAt holds the default value on creation for the created_at field.
 	claimitem.DefaultCreatedAt = claimitemDescCreatedAt.Default.(func() time.Time)
 	// claimitemDescUpdatedAt is the schema descriptor for updated_at field.
-	claimitemDescUpdatedAt := claimitemFields[8].Descriptor()
+	claimitemDescUpdatedAt := claimitemFields[9].Descriptor()
 	// claimitem.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	claimitem.DefaultUpdatedAt = claimitemDescUpdatedAt.Default.(func() time.Time)
 	// claimitem.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

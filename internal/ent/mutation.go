@@ -27086,6 +27086,7 @@ type ClaimItemMutation struct {
 	expense_type     *string
 	description      *string
 	amount           *decimal.Decimal
+	metadata         *map[string]interface{}
 	item_date        *time.Time
 	created_at       *time.Time
 	updated_at       *time.Time
@@ -27405,6 +27406,55 @@ func (m *ClaimItemMutation) ResetAmount() {
 	m.amount = nil
 }
 
+// SetMetadata sets the "metadata" field.
+func (m *ClaimItemMutation) SetMetadata(value map[string]interface{}) {
+	m.metadata = &value
+}
+
+// Metadata returns the value of the "metadata" field in the mutation.
+func (m *ClaimItemMutation) Metadata() (r map[string]interface{}, exists bool) {
+	v := m.metadata
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMetadata returns the old "metadata" field's value of the ClaimItem entity.
+// If the ClaimItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ClaimItemMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMetadata requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
+	}
+	return oldValue.Metadata, nil
+}
+
+// ClearMetadata clears the value of the "metadata" field.
+func (m *ClaimItemMutation) ClearMetadata() {
+	m.metadata = nil
+	m.clearedFields[claimitem.FieldMetadata] = struct{}{}
+}
+
+// MetadataCleared returns if the "metadata" field was cleared in this mutation.
+func (m *ClaimItemMutation) MetadataCleared() bool {
+	_, ok := m.clearedFields[claimitem.FieldMetadata]
+	return ok
+}
+
+// ResetMetadata resets all changes to the "metadata" field.
+func (m *ClaimItemMutation) ResetMetadata() {
+	m.metadata = nil
+	delete(m.clearedFields, claimitem.FieldMetadata)
+}
+
 // SetItemDate sets the "item_date" field.
 func (m *ClaimItemMutation) SetItemDate(t time.Time) {
 	m.item_date = &t
@@ -27560,7 +27610,7 @@ func (m *ClaimItemMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ClaimItemMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.tenant_id != nil {
 		fields = append(fields, claimitem.FieldTenantID)
 	}
@@ -27575,6 +27625,9 @@ func (m *ClaimItemMutation) Fields() []string {
 	}
 	if m.amount != nil {
 		fields = append(fields, claimitem.FieldAmount)
+	}
+	if m.metadata != nil {
+		fields = append(fields, claimitem.FieldMetadata)
 	}
 	if m.item_date != nil {
 		fields = append(fields, claimitem.FieldItemDate)
@@ -27603,6 +27656,8 @@ func (m *ClaimItemMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case claimitem.FieldAmount:
 		return m.Amount()
+	case claimitem.FieldMetadata:
+		return m.Metadata()
 	case claimitem.FieldItemDate:
 		return m.ItemDate()
 	case claimitem.FieldCreatedAt:
@@ -27628,6 +27683,8 @@ func (m *ClaimItemMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldDescription(ctx)
 	case claimitem.FieldAmount:
 		return m.OldAmount(ctx)
+	case claimitem.FieldMetadata:
+		return m.OldMetadata(ctx)
 	case claimitem.FieldItemDate:
 		return m.OldItemDate(ctx)
 	case claimitem.FieldCreatedAt:
@@ -27677,6 +27734,13 @@ func (m *ClaimItemMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAmount(v)
+		return nil
+	case claimitem.FieldMetadata:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMetadata(v)
 		return nil
 	case claimitem.FieldItemDate:
 		v, ok := value.(time.Time)
@@ -27735,6 +27799,9 @@ func (m *ClaimItemMutation) ClearedFields() []string {
 	if m.FieldCleared(claimitem.FieldDescription) {
 		fields = append(fields, claimitem.FieldDescription)
 	}
+	if m.FieldCleared(claimitem.FieldMetadata) {
+		fields = append(fields, claimitem.FieldMetadata)
+	}
 	if m.FieldCleared(claimitem.FieldItemDate) {
 		fields = append(fields, claimitem.FieldItemDate)
 	}
@@ -27757,6 +27824,9 @@ func (m *ClaimItemMutation) ClearField(name string) error {
 		return nil
 	case claimitem.FieldDescription:
 		m.ClearDescription()
+		return nil
+	case claimitem.FieldMetadata:
+		m.ClearMetadata()
 		return nil
 	case claimitem.FieldItemDate:
 		m.ClearItemDate()
@@ -27783,6 +27853,9 @@ func (m *ClaimItemMutation) ResetField(name string) error {
 		return nil
 	case claimitem.FieldAmount:
 		m.ResetAmount()
+		return nil
+	case claimitem.FieldMetadata:
+		m.ResetMetadata()
 		return nil
 	case claimitem.FieldItemDate:
 		m.ResetItemDate()

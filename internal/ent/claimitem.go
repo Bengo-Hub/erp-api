@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -29,6 +30,8 @@ type ClaimItem struct {
 	Description *string `json:"description,omitempty"`
 	// Amount holds the value of the "amount" field.
 	Amount decimal.Decimal `json:"amount,omitempty"`
+	// Metadata holds the value of the "metadata" field.
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// Date the expense was incurred
 	ItemDate *time.Time `json:"item_date,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -43,6 +46,8 @@ func (*ClaimItem) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case claimitem.FieldMetadata:
+			values[i] = new([]byte)
 		case claimitem.FieldAmount:
 			values[i] = new(decimal.Decimal)
 		case claimitem.FieldExpenseType, claimitem.FieldDescription:
@@ -102,6 +107,14 @@ func (_m *ClaimItem) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field amount", values[i])
 			} else if value != nil {
 				_m.Amount = *value
+			}
+		case claimitem.FieldMetadata:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
+					return fmt.Errorf("unmarshal field metadata: %w", err)
+				}
 			}
 		case claimitem.FieldItemDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -174,6 +187,9 @@ func (_m *ClaimItem) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("amount=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Amount))
+	builder.WriteString(", ")
+	builder.WriteString("metadata=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	if v := _m.ItemDate; v != nil {
 		builder.WriteString("item_date=")
