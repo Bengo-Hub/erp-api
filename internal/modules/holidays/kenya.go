@@ -66,16 +66,24 @@ var kenya = []rule{
 	{key: "boxing_day", name: "Boxing Day", month: 12, day: 26},
 }
 
-// KeyOf is the rule key of a platform holiday by its name, "(observed)" ignored; empty when no rule
-// has that name (one the platform owner added or renamed by hand).
+// gazetted are the keys of the days the platform owner adds by hand once the Kenya Gazette
+// declares them, by name; notifications-api dates its Idd greetings from them.
+var gazetted = map[string]string{"idd ul fitr": "idd_ul_fitr", "idd ul azha": "idd_ul_azha", "idd ul adha": "idd_ul_azha"}
+
+// KeyOf is the key of a platform holiday by its name, with "(observed)", capitals and hyphens
+// ignored; empty for a name that is neither a rule nor a gazetted day.
 func KeyOf(name string) string {
-	name = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(name), "(observed)"))
+	norm := func(s string) string {
+		s = strings.TrimSuffix(strings.TrimSpace(strings.ToLower(s)), "(observed)")
+		return strings.Join(strings.Fields(strings.ReplaceAll(s, "-", " ")), " ")
+	}
+	name = norm(name)
 	for _, r := range kenya {
-		if strings.EqualFold(r.name, name) {
+		if norm(r.name) == name {
 			return r.key
 		}
 	}
-	return ""
+	return gazetted[name]
 }
 
 // easterSunday is Western (Gregorian) Easter Sunday, by the anonymous Gregorian algorithm.

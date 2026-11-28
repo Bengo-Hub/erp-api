@@ -116,7 +116,7 @@ func TestCalendarRules(t *testing.T) {
 			t.Errorf("%s = %s, want %s", k, byKey[k], v)
 		}
 	}
-	for name, want := range map[string]string{"Boxing Day (observed)": "boxing_day", "labour day": "labour_day", "Company day": ""} {
+	for name, want := range map[string]string{"Boxing Day (observed)": "boxing_day", "labour day": "labour_day", "Company day": "", "Idd-ul-Fitr": "idd_ul_fitr", "Idd ul Azha": "idd_ul_azha"} {
 		if got := KeyOf(name); got != want {
 			t.Errorf("KeyOf(%q) = %q, want %q", name, got, want)
 		}
