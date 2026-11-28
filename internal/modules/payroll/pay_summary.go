@@ -58,7 +58,7 @@ type PaySummary struct {
 // statutoryLines maps a statutory component code to its payslip line codes.
 var statutoryLines = map[string][]string{
 	"paye": {"paye"}, "nssf": {"nssf_t1", "nssf_t2", "nssf_employer"}, "shif": {"shif"},
-	"housing_levy": {"housing_levy"}, "nita": {"nita"},
+	"housing_levy": {"housing_levy", "housing_levy_employer"}, "nita": {"nita"},
 }
 
 var statutoryLineCodes = func() map[string]bool {
@@ -146,13 +146,68 @@ func (s *Service) EmployeePaySummary(ctx context.Context, tenantID, employeeID u
 			out.Lines = append(out.Lines, PaySummaryLine{Code: x.code, Label: x.label, Kind: "relief", Origin: OriginStatutory, Employee: &v})
 		}
 	}
-	if r.HousingLevyEmployer.IsPositive() {
-		v := r.HousingLevyEmployer
-		out.Lines = append(out.Lines, PaySummaryLine{Code: "housing_levy_employer", Label: "Housing Levy Employer",
-			Kind: "employer", Origin: OriginStatutory, Employer: &v})
-	}
+	out.attachEmployerShares(r.NSSFEmployeeTier1, r.NSSFEmployeeTier2, r.NSSFEmployer, r.HousingLevyEmployer)
 	out.addStatutory(statutory, seen)
 	return out, nil
+}
+
+// attachEmployerShares shows a shared deduction's employer part on the employee's own row, so
+// the Employee and Employer columns read across one line: NSSF, matched per tier (NSSF Act 2013),
+// and the Housing Levy, matched 1.5% (Affordable Housing Act s.4). The separate employer row the
+// share came from is then dropped. Employer-only items (NITA) keep their own row, and a share whose
+// employee row is missing (the deduction was not charged) keeps its separate row too.
+func (o *PaySummary) attachEmployerShares(t1, t2, nssfEmployer, ahlEmployer decimal.Decimal) {
+	idx := map[string]int{}
+	for i, l := range o.Lines {
+		idx[l.Code] = i
+	}
+	drop := map[string]bool{}
+	set := func(code string, v decimal.Decimal) {
+		if i, ok := idx[code]; ok {
+			o.Lines[i].Employer = &v
+		}
+	}
+	_, hasT1 := idx["nssf_t1"]
+	_, hasT2 := idx["nssf_t2"]
+	if nssfEmployer.IsPositive() && (hasT1 || hasT2) {
+		// The employer total split across the tiers in the employee's proportion; under the
+		// matched rule this is exactly each tier's employee amount.
+		employee := t1.Add(t2)
+		er1 := nssfEmployer
+		if employee.IsPositive() && hasT2 {
+			er1 = nssfEmployer.Mul(t1).Div(employee).Round(2)
+		}
+		if hasT1 {
+			set("nssf_t1", er1)
+		}
+		if hasT2 {
+			set("nssf_t2", nssfEmployer.Sub(er1))
+			if !hasT1 {
+				set("nssf_t2", nssfEmployer)
+			}
+		}
+		drop["nssf_employer"] = true
+	}
+	if ahlEmployer.IsPositive() {
+		if _, ok := idx["housing_levy"]; ok {
+			set("housing_levy", ahlEmployer)
+			drop["housing_levy_employer"] = true
+		} else {
+			v := ahlEmployer
+			o.Lines = append(o.Lines, PaySummaryLine{Code: "housing_levy_employer", Label: "Housing Levy Employer",
+				Kind: "employer", Origin: OriginStatutory, Employer: &v})
+		}
+	}
+	if len(drop) == 0 {
+		return
+	}
+	kept := o.Lines[:0]
+	for _, l := range o.Lines {
+		if !drop[l.Code] {
+			kept = append(kept, l)
+		}
+	}
+	o.Lines = kept
 }
 
 // addStatutory lists the statutory components that have no line in seen: switched off ones as

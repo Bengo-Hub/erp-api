@@ -52,16 +52,22 @@ func TestIntegration_EmployeePaySummary(t *testing.T) {
 	}
 	for code, want := range map[string]struct{ origin, employee, employer string }{
 		"basic": {OriginAutomatic, "100000", ""}, "paye": {OriginStatutory, "19812.35", ""},
-		"nssf_t1": {OriginStatutory, "480", ""}, "nssf_t2": {OriginStatutory, "3840", ""},
-		"shif": {OriginStatutory, "2750", ""}, "housing_levy": {OriginStatutory, "1500", ""},
+		// Shared deductions read across one row: the employer's matching share sits beside the
+		// employee's (NSSF per tier, the Housing Levy), with no separate employer rows.
+		"nssf_t1": {OriginStatutory, "480", "480"}, "nssf_t2": {OriginStatutory, "3840", "3840"},
+		"shif": {OriginStatutory, "2750", ""}, "housing_levy": {OriginStatutory, "1500", "1500"},
 		"personal_relief": {OriginStatutory, "2400", ""}, "loan": {OriginAutomatic, "1000", ""},
-		"nssf_employer": {OriginStatutory, "", "4320"}, "housing_levy_employer": {OriginStatutory, "", "1500"},
 	} {
 		l, ok := byCode(s)[code]
 		if !ok || l.Origin != want.origin ||
 			(want.employee != "" && (l.Employee == nil || !l.Employee.Equal(d(want.employee)))) ||
 			(want.employer != "" && (l.Employer == nil || !l.Employer.Equal(d(want.employer)))) {
 			t.Errorf("%s = %+v, want %+v", code, l, want)
+		}
+	}
+	for _, code := range []string{"nssf_employer", "housing_levy_employer"} {
+		if _, ok := byCode(s)[code]; ok {
+			t.Errorf("%s is shown as its own row; it belongs on its deduction row", code)
 		}
 	}
 	if n := client.Payslip.Query().Where(payslip.TenantID(tenant)).CountX(ctx); n != 0 {
