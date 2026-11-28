@@ -91,6 +91,29 @@ func TestIntegration_NSSFReturnFields(t *testing.T) {
 	}
 }
 
+// The NSSF portal upload has the portal's headers in order and carries the pay, not the tiers.
+func TestIntegration_NSSFUploadFile(t *testing.T) {
+	fx := newReturnsFixture(t)
+	rep, err := NewService(fx.client).NSSFUpload(context.Background(), fx.tenant, fx.octF)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rep.Rows) != 2 || len(rep.Columns) != 8 || rep.Columns[0] != "PAYROLL NUMBER" || rep.Columns[7] != "VOLUNTARY" {
+		t.Fatalf("upload = %v %v", rep.Columns, rep.Rows)
+	}
+	r := rep.Rows[0]
+	if r["SURNAME"] != "Otieno" {
+		r = rep.Rows[1]
+	}
+	if r["SURNAME"] != "Otieno" || r["OTHER NAMES"] != "Amina" || r["KRA PIN"] != "A001" || r["NSSF NO"] != "N-1" ||
+		r["GROSS PAY"] != "50000.00" || r["VOLUNTARY"] != "0.00" {
+		t.Fatalf("upload row = %v", r)
+	}
+	if rep.Totals["count"] != 2 {
+		t.Fatalf("totals = %v", rep.Totals)
+	}
+}
+
 // A department filter narrows a payroll return to that department's employees (hr_details).
 func TestIntegration_ReturnDepartmentFilter(t *testing.T) {
 	fx := newReturnsFixture(t)

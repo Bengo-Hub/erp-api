@@ -85,6 +85,43 @@ func (s *Service) NSSF(ctx context.Context, tenantID uuid.UUID, f Filter) (*Repo
 	return rep, nil
 }
 
+// NSSFUpload is the NSSF employer portal's bulk upload file: one row per payslip, with the pay
+// NSSF contributions were charged on under GROSS PAY (the pensionable earnings, which is gross pay
+// unless the company set a narrower NSSF base), so the portal's tiers match what payroll deducted.
+// VOLUNTARY is 0: the ERP takes no voluntary NSSF contribution.
+func (s *Service) NSSFUpload(ctx context.Context, tenantID uuid.UUID, f Filter) (*Report, error) {
+	slips, err := s.fetchPayslips(ctx, tenantID, f)
+	if err != nil {
+		return nil, err
+	}
+	emps, err := s.employeeMap(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
+	}
+	levies, err := s.levyLines(ctx, tenantID, slips)
+	if err != nil {
+		return nil, err
+	}
+	rep := &Report{Report: "nssf-upload", Period: periodMeta(f), Columns: nssfUploadColumns, Rows: []map[string]any{}}
+	total := d()
+	for _, p := range slips {
+		e := emps[p.EmployeeID]
+		pay := base(levies[p.ID].nssfBase, p.GrossPay)
+		total = total.Add(pay)
+		row := map[string]any{"GROSS PAY": money(pay), "VOLUNTARY": money(d())}
+		if e != nil {
+			if e.EmployeeNumber != nil {
+				row["PAYROLL NUMBER"] = *e.EmployeeNumber
+			}
+			row["SURNAME"], row["OTHER NAMES"] = e.LastName, e.FirstName
+			row["ID NO"], row["KRA PIN"], row["NSSF NO"] = e.NationalID, e.PinNo, e.NssfNo
+		}
+		rep.Rows = append(rep.Rows, row)
+	}
+	rep.Totals = map[string]any{"count": len(slips), "GROSS PAY": money(total)}
+	return rep, nil
+}
+
 // HousingLevy is the Affordable Housing Levy return: 1.5% of the employee's gross salary, matched
 // by the employer. gross_salary is the base the levy was charged on; the employer share is the
 // run's employer line (the employee share for payslips run before that line existed).

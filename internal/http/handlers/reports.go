@@ -51,6 +51,7 @@ func (h *ReportsHandler) producers() map[string]periodReport {
 		"nhif":             h.svc.NHIF,
 		"nssf":             h.svc.NSSF,
 		"nssf-sf24":        h.svc.NSSF,
+		"nssf-upload":      h.svc.NSSFUpload,
 		"nita":             h.svc.NITA,
 		"withholding-tax":  h.svc.WithholdingTax,
 		"bank-schedule":    h.svc.BankSchedule,
@@ -73,6 +74,7 @@ func (h *ReportsHandler) RegisterRoutes(r chi.Router) {
 		rr.Get("/shif", h.period(h.svc.SHIF))
 		rr.Get("/nhif", h.period(h.svc.NHIF))
 		rr.Get("/nssf", h.period(h.svc.NSSF))
+		rr.Get("/nssf-upload", h.period(h.svc.NSSFUpload))
 		rr.Get("/nita", h.period(h.svc.NITA))
 		rr.Get("/withholding-tax", h.period(h.svc.WithholdingTax))
 		rr.Get("/bank-schedule", h.period(h.svc.BankSchedule))
