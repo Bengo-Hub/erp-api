@@ -171,10 +171,11 @@ func TestIntegration_AssignedComponentsInRun(t *testing.T) {
 		t.Errorf("per diem line must be non-taxable")
 	}
 
-	// B's SACCO (50,000) is larger than the net pay left: capped, the remainder on its own line.
+	// B's SACCO (50,000) is larger than the pay left: all deductions are capped at two thirds of
+	// the 20,000 wages (Employment Act s.19(3)), the remainder on its own line.
 	gotB := results[b.ID]
-	if !gotB.NetPay.IsZero() || !gotB.DeductionShortfall.IsPositive() {
-		t.Errorf("B: net %s shortfall %s, want 0 and a shortfall", gotB.NetPay, gotB.DeductionShortfall)
+	if !gotB.NetPay.Equal(d("6666.67")) || !gotB.DeductionShortfall.IsPositive() {
+		t.Errorf("B: net %s shortfall %s, want 6666.67 (a third kept) and a shortfall", gotB.NetPay, gotB.DeductionShortfall)
 	}
 	bLines := payslipLines(t, ctx, client, tenant, b.ID, sep)
 	if l := bLines["SACCO Contribution (not deducted)"]; l == nil || !l.CashAmount.Equal(gotB.DeductionShortfall) {

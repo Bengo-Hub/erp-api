@@ -46,6 +46,13 @@ func (s *Service) BuildEngineConfig(ctx context.Context, tenantID uuid.UUID, per
 	}
 	cfg.Disabled = toggles.disabledComponents()
 
+	// Employment Act s.19 limits on what deductions may take (platform data, tenant override).
+	limits, err := s.DeductionLimitsFor(ctx, tenantID)
+	if err != nil {
+		return cfg, fmt.Errorf("deduction limits: %w", err)
+	}
+	cfg.MaxDeductionShare, cfg.LoanShare = limits.MaxShare, limits.LoanShare
+
 	set, err := s.loadFormulaSet(ctx, tenantID)
 	if err != nil {
 		return cfg, fmt.Errorf("formulas: %w", err)

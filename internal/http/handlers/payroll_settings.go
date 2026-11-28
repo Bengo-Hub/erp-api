@@ -81,6 +81,8 @@ func (h *PayrollSettingsHandler) RegisterRoutes(r chi.Router) {
 		pr.Get("/levy-bases", h.ListLevyBases)
 		pr.Put("/levy-bases/{code}", h.SetLevyRule)
 		pr.Delete("/levy-bases/{code}/{from}", h.CancelLevyRule)
+		pr.Get("/deduction-limits", h.GetDeductionLimits)
+		pr.Put("/deduction-limits", h.SetDeductionLimits)
 		pr.Post("/formula-management", h.FormulaManagement)
 		pr.Post("/formulas", h.CreateFormula)
 		pr.Get("/formulas/{id}", h.GetFormula)
@@ -1029,6 +1031,61 @@ func (h *PayrollSettingsHandler) CancelLevyRule(w http.ResponseWriter, r *http.R
 	h.log.Info("audit: levy rule cancelled", zap.String("tenant_id", tenant.String()), zap.String("code", code),
 		zap.String("from", from), zap.String("by", scope.UserID.String()))
 	writeJSON(w, http.StatusOK, map[string]any{"own": bases})
+}
+
+// GetDeductionLimits returns the Employment Act s.19 deduction limits: the tenant's own values
+// ("own", fields left out inherit), the platform's ("platform") and those in force ("effective").
+func (h *PayrollSettingsHandler) GetDeductionLimits(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollView) {
+		return
+	}
+	tenant := h.settingsTenant(r, scope)
+	own, err := h.svc.DeductionLimitsDocFor(r.Context(), tenant)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to read deduction limits")
+		return
+	}
+	platform := payrollsettings.DeductionLimitsDoc{}
+	if tenant != h.svc.SystemTenant() {
+		if platform, err = h.svc.DeductionLimitsDocFor(r.Context(), h.svc.SystemTenant()); err != nil {
+			writeError(w, http.StatusInternalServerError, "internal_error", "failed to read deduction limits")
+			return
+		}
+	}
+	eff, err := h.svc.DeductionLimitsFor(r.Context(), tenant)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to read deduction limits")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"own": own, "platform": platform, "effective": eff})
+}
+
+// SetDeductionLimits replaces the tenant's own deduction limits: {"max_share": "2/3",
+// "loan_share": "0.5", "by_law": ["helb", "court_order"]}. A field left out inherits.
+func (h *PayrollSettingsHandler) SetDeductionLimits(w http.ResponseWriter, r *http.Request) {
+	scope, ok := scopeFromRequest(w, r)
+	if !ok || !requirePermission(w, scope, permPayrollManage) {
+		return
+	}
+	var doc payrollsettings.DeductionLimitsDoc
+	if err := json.NewDecoder(r.Body).Decode(&doc); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON body")
+		return
+	}
+	tenant := h.settingsTenant(r, scope)
+	saved, err := h.svc.SetDeductionLimits(r.Context(), tenant, doc)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "update_failed", err.Error())
+		return
+	}
+	h.log.Info("audit: deduction limits set", zap.String("tenant_id", tenant.String()), zap.String("by", scope.UserID.String()))
+	eff, err := h.svc.DeductionLimitsFor(r.Context(), tenant)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "failed to read deduction limits")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"own": saved, "effective": eff})
 }
 
 func (h *PayrollSettingsHandler) ListReliefs(w http.ResponseWriter, r *http.Request) {

@@ -48,11 +48,25 @@ type PayslipResult struct {
 	NonTaxableEarnings decimal.Decimal
 	// OtherDeductions is the total of the opt-in component deductions taken, and
 	// OtherDeductionsApplied the amount taken for each EmployeeInput.OtherDeductions entry (same
-	// order). DeductionShortfall is what could not be taken because net pay ran out: an opt-in
-	// deduction never takes net pay below zero, the remainder is reported here, not carried.
+	// order). DeductionShortfall is what could not be taken because net pay or the deduction
+	// limit ran out: the remainder is reported here, not carried.
 	OtherDeductions        decimal.Decimal
 	OtherDeductionsApplied []decimal.Decimal
 	DeductionShortfall     decimal.Decimal
+	// LoansApplied, AdvancesApplied, LossDamagesApplied and StaffPurchasesApplied are the amounts
+	// recovered for each EmployeeInput recoverable (same order). RecoveryDeferred is the part of
+	// this month's installments the deduction limits or net pay left unrecovered: the balances
+	// keep it, so it is recovered in later months.
+	LoansApplied          []decimal.Decimal
+	AdvancesApplied       []decimal.Decimal
+	LossDamagesApplied    []decimal.Decimal
+	StaffPurchasesApplied []decimal.Decimal
+	RecoveryDeferred      decimal.Decimal
+	// DeductionCap is the most all deductions may take this month (Config.MaxDeductionShare of
+	// gross; zero when no share is set). CapExceeded reports that the statutory deductions and
+	// those required by law already pass it, so nothing else was recovered.
+	DeductionCap decimal.Decimal
+	CapExceeded  bool
 
 	DeductionsBeforeTax decimal.Decimal
 	DeductionsAfterTax  decimal.Decimal
@@ -93,6 +107,9 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 	}
 	res := PayslipResult{GrossPay: gross, UnpaidTime: unpaid}
 	var nssf NSSFResult
+	// Recoverables are taken after the other deductions, within the deduction limits
+	// (applyDeductionLimits); the phase loop only notes the phase each one belongs to.
+	recPhase := map[string]string{}
 
 	for _, phase := range order {
 		for _, comp := range phase.Components {
@@ -158,18 +175,14 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 					return PayslipResult{}, err
 				}
 
-			case CompLoans:
-				addPhase(&res, phase.Name, sumRecoverables(in.Loans))
+			case CompLoans, CompLossDamages, CompStaffPurchase:
+				// Staff purchases are POS credit or layaway funded from salary, recovered like
+				// any other installment recoverable.
+				recPhase[comp] = phase.Name
 			case CompAdvances:
 				if cfg.RecoverAdvances {
-					addPhase(&res, phase.Name, sumRecoverables(in.Advances))
+					recPhase[comp] = phase.Name
 				}
-			case CompLossDamages:
-				addPhase(&res, phase.Name, sumRecoverables(in.LossDamages))
-			case CompStaffPurchase:
-				// POS-origin staff purchases (goods taken on credit/layaway, funded from salary),
-				// recovered like any other installment recoverable.
-				addPhase(&res, phase.Name, sumRecoverables(in.StaffPurchases))
 			case CompNonCash:
 				// When NonCashAsTaxable, the benefit is in-kind: it is taxed via the taxable
 				// add-back in applyPAYE and must NOT be deducted from cash net pay. Legacy mode
@@ -203,7 +216,7 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 		gross = gross.Add(res.NonTaxableEarnings)
 		res.GrossPay = gross
 	}
-	applyOtherDeductions(&res, order, gross, in.OtherDeductions)
+	applyDeductionLimits(&res, cfg, order, gross, in, recPhase)
 
 	totalDeductions := res.DeductionsBeforeTax.
 		Add(res.DeductionsAfterTax).
@@ -217,15 +230,107 @@ func Compute(cfg Config, in EmployeeInput) (PayslipResult, error) {
 	return res, nil
 }
 
-// applyOtherDeductions takes the opt-in component deductions after everything else (statutory,
-// PAYE, loans, advances and the other recoverables), in deduction-order phase then priority
-// order. Each is capped at the cash net pay still left, so these deductions never push net pay
-// below zero; whatever could not be taken is reported in DeductionShortfall and is not carried
-// to the next period. Loans and advances are untouched by this rule.
-func applyOtherDeductions(res *PayslipResult, order []Phase, gross decimal.Decimal, ds []Deduction) {
-	if len(ds) == 0 {
-		return
+// applyDeductionLimits takes everything after the statutory deductions and PAYE, within the
+// Employment Act s.19 limits (Config.MaxDeductionShare, Config.LoanShare), in this order:
+//
+//  1. opt-in deductions required by law (HELB, a court order), never cut to the limit;
+//  2. the other opt-in deductions (SACCO, union dues), in phase then priority order;
+//  3. losses and damages, staff purchases, advances and, last, employer loans, the loans also
+//     within their own s.19(1)(h) limit.
+//
+// Nothing ever takes net pay below zero. An opt-in deduction not taken is reported in
+// DeductionShortfall (not carried); a recovery not taken is RecoveryDeferred and stays on the
+// balance for later months.
+func applyDeductionLimits(res *PayslipResult, cfg Config, order []Phase, gross decimal.Decimal, in EmployeeInput, recPhase map[string]string) {
+	taken := res.DeductionsBeforeTax.Add(res.DeductionsAfterTax).Add(res.DeductionsAfterPAYE).Add(res.DeductionsFinal)
+	cash := decimal.Max(gross.Sub(taken), decimal.Zero)
+	ds := orderedDeductions(order, in.OtherDeductions)
+	res.OtherDeductionsApplied = make([]decimal.Decimal, len(in.OtherDeductions))
+	takeOther := func(i int, limit decimal.Decimal) decimal.Decimal {
+		want := round2(in.OtherDeductions[i].Amount)
+		if !want.IsPositive() {
+			return decimal.Zero
+		}
+		take := round2(decimal.Max(decimal.Min(want, limit), decimal.Zero))
+		res.OtherDeductionsApplied[i] = take
+		res.DeductionShortfall = res.DeductionShortfall.Add(want.Sub(take))
+		res.OtherDeductions = res.OtherDeductions.Add(take)
+		// The before-tax and after-tax totals stay statutory only: those fed taxable pay.
+		phase := PhaseAfterPAYE
+		if in.OtherDeductions[i].Phase == PhaseFinal {
+			phase = PhaseFinal
+		}
+		addPhase(res, phase, take)
+		taken = taken.Add(take)
+		cash = cash.Sub(take)
+		return take
 	}
+	for _, i := range ds {
+		if in.OtherDeductions[i].ByLaw {
+			takeOther(i, cash)
+		}
+	}
+
+	// What the limit leaves for everything else.
+	room := cash
+	if cfg.MaxDeductionShare.IsPositive() {
+		res.DeductionCap = gross.Mul(cfg.MaxDeductionShare).Truncate(2)
+		left := res.DeductionCap.Sub(taken)
+		if left.IsNegative() {
+			res.CapExceeded = true
+			left = decimal.Zero
+		}
+		room = decimal.Min(room, left)
+	}
+	for _, i := range ds {
+		if !in.OtherDeductions[i].ByLaw {
+			room = room.Sub(takeOther(i, room))
+		}
+	}
+
+	takeRecoverables := func(comp string, items []Recoverable) []decimal.Decimal {
+		applied := make([]decimal.Decimal, len(items))
+		phase, ok := recPhase[comp]
+		if !ok {
+			return applied // not in the tenant's deduction order (or advances not recovered this run)
+		}
+		loansTaken := decimal.Zero
+		for i, r := range items {
+			want := decimal.Zero
+			if r.Outstanding.IsPositive() && r.Installment.IsPositive() {
+				want = round2(decimalMin(r.Installment, r.Outstanding))
+			}
+			if !want.IsPositive() {
+				continue
+			}
+			limit := room
+			if comp == CompLoans && cfg.LoanShare.IsPositive() {
+				// s.19(1)(h): the loan repayment at most LoanShare of the wages left after the
+				// other deductions (every other deduction is already taken by now).
+				own := gross.Sub(taken.Sub(loansTaken)).Mul(cfg.LoanShare).Truncate(2).Sub(loansTaken)
+				limit = decimal.Min(limit, decimal.Max(own, decimal.Zero))
+			}
+			take := round2(decimal.Max(decimal.Min(want, limit), decimal.Zero))
+			applied[i] = take
+			res.RecoveryDeferred = res.RecoveryDeferred.Add(want.Sub(take))
+			addPhase(res, phase, take)
+			taken = taken.Add(take)
+			room = room.Sub(take)
+			if comp == CompLoans {
+				loansTaken = loansTaken.Add(take)
+			}
+		}
+		return applied
+	}
+	res.LossDamagesApplied = takeRecoverables(CompLossDamages, in.LossDamages)
+	res.StaffPurchasesApplied = takeRecoverables(CompStaffPurchase, in.StaffPurchases)
+	res.AdvancesApplied = takeRecoverables(CompAdvances, in.Advances)
+	res.LoansApplied = takeRecoverables(CompLoans, in.Loans)
+}
+
+// orderedDeductions returns the indexes of the opt-in deductions in deduction-order phase, then
+// priority order.
+func orderedDeductions(order []Phase, ds []Deduction) []int {
 	phaseRank := map[string]int{}
 	for i, p := range order {
 		phaseRank[p.Name] = i
@@ -247,32 +352,7 @@ func applyOtherDeductions(res *PayslipResult, order []Phase, gross decimal.Decim
 		}
 		return da.Priority < db.Priority
 	})
-
-	left := gross.Sub(res.DeductionsBeforeTax).Sub(res.DeductionsAfterTax).
-		Sub(res.DeductionsAfterPAYE).Sub(res.DeductionsFinal)
-	res.OtherDeductionsApplied = make([]decimal.Decimal, len(ds))
-	for _, i := range idx {
-		want := round2(ds[i].Amount)
-		if !want.IsPositive() {
-			res.OtherDeductionsApplied[i] = decimal.Zero
-			continue
-		}
-		take := want
-		if left.LessThan(take) {
-			take = decimal.Max(left, decimal.Zero)
-		}
-		take = round2(take)
-		res.OtherDeductionsApplied[i] = take
-		res.DeductionShortfall = res.DeductionShortfall.Add(want.Sub(take))
-		res.OtherDeductions = res.OtherDeductions.Add(take)
-		left = left.Sub(take)
-		// The before-tax and after-tax totals stay statutory only: those fed taxable pay.
-		phase := PhaseAfterPAYE
-		if ds[i].Phase == PhaseFinal {
-			phase = PhaseFinal
-		}
-		addPhase(res, phase, take)
-	}
+	return idx
 }
 
 // levyBase is gross moved by a levy's adjustment, never below zero.
@@ -426,16 +506,4 @@ func addPhase(res *PayslipResult, phase string, amt decimal.Decimal) {
 	case PhaseFinal:
 		res.DeductionsFinal = res.DeductionsFinal.Add(amt)
 	}
-}
-
-// sumRecoverables returns the total recovered this period: sum of min(installment, outstanding).
-func sumRecoverables(items []Recoverable) decimal.Decimal {
-	total := decimal.Zero
-	for _, r := range items {
-		if r.Outstanding.LessThanOrEqual(decimal.Zero) || r.Installment.LessThanOrEqual(decimal.Zero) {
-			continue
-		}
-		total = total.Add(decimalMin(r.Installment, r.Outstanding))
-	}
-	return total
 }

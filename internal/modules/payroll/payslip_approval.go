@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 
 	"github.com/Bengo-Hub/erp-api/internal/ent"
 	"github.com/Bengo-Hub/erp-api/internal/ent/approvalrequest"
 	"github.com/Bengo-Hub/erp-api/internal/ent/payslip"
+	"github.com/Bengo-Hub/erp-api/internal/ent/payslipline"
 	"github.com/Bengo-Hub/erp-api/internal/ent/predicate"
 	"github.com/Bengo-Hub/erp-api/internal/modules/approvals"
 )
@@ -220,6 +222,58 @@ type RunStatus struct {
 	CanSubmit         bool       `json:"can_submit"`
 	CanDisburse       bool       `json:"can_disburse"`
 	CanReverse        bool       `json:"can_reverse"`
+	// Shortfalls lists what the run could not deduct: recoveries the deduction limits deferred to
+	// later months (kind "deferred", the balance keeps them) and assigned deductions net pay or
+	// the limit could not cover (kind "not_deducted").
+	Shortfalls    []RunShortfall `json:"shortfalls"`
+	DeferredTotal string         `json:"deferred_total"`
+}
+
+// RunShortfall is one payslip's deferred recovery or deduction not taken.
+type RunShortfall struct {
+	EmployeeID   uuid.UUID `json:"employee_id"`
+	EmployeeName string    `json:"employee_name"`
+	Kind         string    `json:"kind"` // deferred | not_deducted
+	Code         string    `json:"code"`
+	Label        string    `json:"label"`
+	Amount       string    `json:"amount"`
+}
+
+// recoveryCodes (gl_breakdown.go) lists the recoverables, which are the deferred kind here.
+
+// runShortfalls reads the informational shortfall lines of a run's payslips.
+func (s *Service) runShortfalls(ctx context.Context, tenantID uuid.UUID, rows []*ent.Payslip) ([]RunShortfall, decimal.Decimal, error) {
+	out := []RunShortfall{}
+	total := decimal.Zero
+	if len(rows) == 0 {
+		return out, total, nil
+	}
+	emp := make(map[uuid.UUID]uuid.UUID, len(rows))
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		emp[r.ID] = r.EmployeeID
+		ids = append(ids, r.ID)
+	}
+	lines, err := s.orm.PayslipLine.Query().Where(payslipline.TenantID(tenantID), payslipline.PayslipIDIn(ids...),
+		payslipline.Section(secShortfall)).Order(ent.Asc(payslipline.FieldSortOrder)).All(ctx)
+	if err != nil {
+		return nil, total, fmt.Errorf("payroll: run shortfalls: %w", err)
+	}
+	names := map[uuid.UUID]string{}
+	for _, l := range lines {
+		eid := emp[l.PayslipID]
+		if _, ok := names[eid]; !ok {
+			names[eid], _ = s.EmployeeLabel(ctx, tenantID, eid)
+		}
+		kind := "not_deducted"
+		if recoveryCodes[l.Code] {
+			kind = "deferred"
+			total = total.Add(l.CashAmount)
+		}
+		out = append(out, RunShortfall{EmployeeID: eid, EmployeeName: names[eid], Kind: kind, Code: l.Code,
+			Label: l.Label, Amount: l.CashAmount.StringFixed(2)})
+	}
+	return out, total, nil
 }
 
 // GetRunStatus summarises a run's payslips by approval and payment state.
@@ -229,11 +283,16 @@ func (s *Service) GetRunStatus(ctx context.Context, tenantID uuid.UUID, period t
 	if outletID != uuid.Nil {
 		q = q.Where(payslip.OutletID(outletID))
 	}
-	rows, err := q.Select(payslip.FieldApprovalStatus, payslip.FieldPublished, payslip.FieldBatchRef).All(ctx)
+	rows, err := q.Select(payslip.FieldID, payslip.FieldEmployeeID, payslip.FieldApprovalStatus, payslip.FieldPublished, payslip.FieldBatchRef).All(ctx)
 	if err != nil {
 		return RunStatus{}, fmt.Errorf("payroll: run status: %w", err)
 	}
 	st := RunStatus{Period: period.Format("2006-01"), Payslips: len(rows)}
+	short, deferred, err := s.runShortfalls(ctx, tenantID, rows)
+	if err != nil {
+		return RunStatus{}, err
+	}
+	st.Shortfalls, st.DeferredTotal = short, deferred.StringFixed(2)
 	for _, r := range rows {
 		posted := r.BatchRef != nil && r.ApprovalStatus == "approved"
 		switch {

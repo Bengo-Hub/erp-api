@@ -61,6 +61,9 @@ type EmployeeItemized struct {
 	// is non-taxable), and OtherDeductions the opt-in deductions (assigned_components.go).
 	Allowances      []LabeledAmount
 	OtherDeductions []DeductionLine
+	// Deferred is the part of each recovery the deduction limits left for later months
+	// (deduction_limits.go).
+	Deferred []DeferredLine
 }
 
 // payslip_line sections (mirror schema).
@@ -75,8 +78,9 @@ const (
 	// secReimbursement is a non-taxable expense claim repaid with net pay. It is not part of
 	// gross, so earnings plus reimbursements minus deductions equals net pay.
 	secReimbursement = "reimbursement"
-	// secShortfall records the part of an assigned deduction net pay could not cover. It is
-	// informational: breakdowns and reports do not count it.
+	// secShortfall records the part of an assigned deduction net pay could not cover, and the part
+	// of a recovery deferred to later months by the deduction limits. It is informational:
+	// breakdowns and reports do not count it.
 	secShortfall = "deduction_shortfall"
 )
 
@@ -220,6 +224,10 @@ func composeLines(basic decimal.Decimal, res payrollengine.PayslipResult, items 
 	}
 	for _, sp := range items.StaffPurchases {
 		add(secAfterPaye, "staff_purchase", sp.Label, sp.Amount, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseAfterPAYE, sp.ComponentID)
+	}
+	// Recoveries the deduction limits deferred: the balance keeps them for later months.
+	for _, d := range items.Deferred {
+		add(secShortfall, d.Code, d.Label+" (deferred to next month)", d.Amount, decimal.Zero, decimal.Zero, false, false, payrollengine.PhaseAfterPAYE, nil)
 	}
 	// Opt-in deductions assigned to the employee, at the amount the engine took (capped at the
 	// net pay left). They sit with the non-statutory deductions whatever their phase. What could

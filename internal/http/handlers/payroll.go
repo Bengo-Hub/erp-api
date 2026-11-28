@@ -468,6 +468,11 @@ func (h *PayrollHandler) Preview(w http.ResponseWriter, r *http.Request) {
 			// Assigned opt-in deductions taken, and what could not be taken because net pay ran out.
 			"other_deductions":    res.OtherDeductions.StringFixed(2),
 			"deduction_shortfall": res.DeductionShortfall.StringFixed(2),
+			// Recoveries the Employment Act s.19 limits deferred to later months, the limit itself,
+			// and whether the statutory and by-law deductions alone already pass it.
+			"recovery_deferred": res.RecoveryDeferred.StringFixed(2),
+			"deduction_cap":     res.DeductionCap.StringFixed(2),
+			"cap_exceeded":      res.CapExceeded,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"results": rows, "data": rows})

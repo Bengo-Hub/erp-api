@@ -143,6 +143,8 @@ func (s *Service) Run(ctx context.Context, p RunParams) ([]LineResult, error) {
 		if cerr != nil {
 			return nil, fmt.Errorf("payroll: employee %s: %w", emp.ID, cerr)
 		}
+		// The payslip lines and the frozen recoveries carry what the deduction limits let through.
+		capRecoveries(in, res, &items)
 		line := LineResult{EmployeeID: emp.ID, Result: res}
 		if !p.Persist && len(p.EmployeeIDs) > 0 {
 			line.Lines = composeLines(in.GrossPay, res, items)
@@ -307,7 +309,8 @@ func contractCovers(c *ent.Contract, period time.Time) bool {
 }
 
 // recovered returns the amount actually recovered this period: min(installment, outstanding),
-// or zero when either is non-positive (mirrors payrollengine.sumRecoverables).
+// or zero when either is non-positive (what the engine wants to recover before the deduction
+// limits; the engine's *Applied amounts are what is actually taken).
 func recovered(installment, outstanding decimal.Decimal) decimal.Decimal {
 	if installment.LessThanOrEqual(decimal.Zero) || outstanding.LessThanOrEqual(decimal.Zero) {
 		return decimal.Zero

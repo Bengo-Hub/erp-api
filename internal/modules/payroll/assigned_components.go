@@ -161,6 +161,7 @@ func (in *runInputs) applyAssignedComponents(p RunParams, empID uuid.UUID, basic
 		})
 		ei.OtherDeductions = append(ei.OtherDeductions, payrollengine.Deduction{
 			Phase: phase, Priority: d.rc.Component.DeductionPriority, Amount: amt,
+			ByLaw: in.limits.IsByLaw(d.rc.Code, d.rc.Component.ID),
 		})
 	}
 	// The salary tab may already carry the same contribution for relief only, so the larger of

@@ -47,6 +47,10 @@ type Deduction struct {
 	Phase    string // the component's deduction phase; orders it after the statutory deductions
 	Priority int    // order within the phase (lower first)
 	Amount   decimal.Decimal
+	// ByLaw marks a deduction a written law or court order requires (HELB, a garnishee order).
+	// Like the statutory deductions it is taken first and never cut to the deduction limit,
+	// though it still counts towards it.
+	ByLaw bool
 }
 
 // LevyAdjust moves each levy's base away from gross for the earnings that count differently:
@@ -101,8 +105,9 @@ type EmployeeInput struct {
 	// statutory bases. Taxable component earnings go in TaxableAllowances. Zero by default.
 	NonTaxableEarnings decimal.Decimal
 	// OtherDeductions are the opt-in component deductions assigned to the employee. They come off
-	// after the statutory deductions, PAYE and the recoverables, in phase then priority order, and
-	// each is capped at the net pay left (see PayslipResult.DeductionShortfall).
+	// after the statutory deductions and PAYE (those required by law first), in phase then
+	// priority order, before the recoverables, each capped at the net pay and deduction limit
+	// left (see PayslipResult.DeductionShortfall).
 	OtherDeductions []Deduction
 
 	// --- KRA reliefs (per-employee actual amounts; all additive, zero by default) ---
@@ -175,6 +180,12 @@ type Config struct {
 	DeductionOrder []Phase
 	// RecoverAdvances gates salary-advance recovery for this run.
 	RecoverAdvances bool
+	// MaxDeductionShare is the most all deductions together may take of the month's wages
+	// (Employment Act s.19(3): two thirds). LoanShare is the most an employer loan repayment may
+	// take of the wages left after every other deduction (s.19(1)(h): half). Zero means no such
+	// limit; net pay never goes below zero either way. Recoveries cut to a limit are deferred.
+	MaxDeductionShare decimal.Decimal
+	LoanShare         decimal.Decimal
 	// NonCashAsTaxable corrects non-cash benefit handling: when true the taxable EXCESS of
 	// non-cash benefits over NonCashMonthlyExemption is ADDED to taxable pay (so PAYE is charged
 	// on the benefit) and the benefit is NOT deducted from cash net pay (it is in-kind). Default

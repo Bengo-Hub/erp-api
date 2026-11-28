@@ -87,8 +87,8 @@ func TestOtherDeductions_AfterStatutory(t *testing.T) {
 	}
 }
 
-// A deduction larger than the net pay left is capped at it and the remainder reported; loans are
-// recovered in full first, exactly as before.
+// The opt-in deductions come before the loan; the loan takes the net pay left and the rest of
+// its installment is deferred, so net pay never goes below zero.
 func TestOtherDeductions_CappedAtNet(t *testing.T) {
 	cfg := kra2025Config()
 	res, err := Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary",
@@ -100,22 +100,22 @@ func TestOtherDeductions_CappedAtNet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// After statutory, PAYE and the 60,000 loan, 11,617.65 is left: HELB 5,000 in full, then
-	// SACCO 6,617.65 of 10,000.
-	if !res.OtherDeductionsApplied[1].Equal(d("5000")) || !res.OtherDeductionsApplied[0].Equal(d("6617.65")) {
-		t.Errorf("applied = %v, want [6617.65 5000]", res.OtherDeductionsApplied)
+	// After statutory and PAYE 71,617.65 is left: HELB 5,000 and SACCO 10,000 in full, then the
+	// loan 56,617.65 of 60,000.
+	if !res.OtherDeductionsApplied[1].Equal(d("5000")) || !res.OtherDeductionsApplied[0].Equal(d("10000")) {
+		t.Errorf("applied = %v, want [10000 5000]", res.OtherDeductionsApplied)
 	}
-	if !res.DeductionShortfall.Equal(d("3382.35")) || !res.NetPay.IsZero() {
-		t.Errorf("shortfall %s net %s, want 3382.35 / 0", res.DeductionShortfall, res.NetPay)
+	if !res.LoansApplied[0].Equal(d("56617.65")) || !res.RecoveryDeferred.Equal(d("3382.35")) || !res.NetPay.IsZero() {
+		t.Errorf("loan %s deferred %s net %s, want 56617.65 / 3382.35 / 0", res.LoansApplied[0], res.RecoveryDeferred, res.NetPay)
 	}
-	if !res.DeductionsAfterPAYE.Equal(d("71617.65")) {
-		t.Errorf("after-PAYE = %s, want the loan 60000 plus 11617.65", res.DeductionsAfterPAYE)
+	if !res.DeductionShortfall.IsZero() || !res.DeductionsAfterPAYE.Equal(d("71617.65")) {
+		t.Errorf("shortfall %s after-PAYE %s, want 0 / 71617.65", res.DeductionShortfall, res.DeductionsAfterPAYE)
 	}
-	// Loans already beyond net pay: the opt-in deductions take nothing, the loan is unchanged.
+	// A loan beyond net pay: the opt-in deduction is taken, the loan takes the rest.
 	res, _ = Compute(cfg, EmployeeInput{GrossPay: d("100000"), TaxCategory: "primary",
 		Loans:           []Recoverable{{Installment: d("80000"), Outstanding: d("100000")}},
 		OtherDeductions: []Deduction{{Phase: PhaseAfterPAYE, Amount: d("1000")}}})
-	if !res.OtherDeductions.IsZero() || !res.DeductionShortfall.Equal(d("1000")) || !res.NetPay.Equal(d("-8382.35")) {
-		t.Errorf("loan beyond net: other %s short %s net %s", res.OtherDeductions, res.DeductionShortfall, res.NetPay)
+	if !res.OtherDeductions.Equal(d("1000")) || !res.LoansApplied[0].Equal(d("70617.65")) || !res.NetPay.IsZero() {
+		t.Errorf("loan beyond net: other %s loan %s net %s", res.OtherDeductions, res.LoansApplied[0], res.NetPay)
 	}
 }

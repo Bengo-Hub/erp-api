@@ -45,6 +45,9 @@ type runInputs struct {
 	gratuity map[uuid.UUID]*gratuityHistory
 	// levy answers which levies each earning counts for this run's month (nil: the defaults).
 	levy *payrollsettings.LevyResolver
+	// limits are the Employment Act s.19 deduction limits in force; their ByLaw list marks the
+	// assigned deductions a law or court order requires.
+	limits payrollsettings.DeductionLimits
 }
 
 // loadRunInputs reads salaries, active recoverables, non-cash benefits, their repay options and
@@ -177,6 +180,11 @@ func (s *Service) loadRunInputs(ctx context.Context, tenantID uuid.UUID, emps []
 	if err := s.loadGratuityHistory(ctx, tenantID, in); err != nil {
 		return nil, err
 	}
+	limits, err := resolver.DeductionLimitsFor(ctx, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("deduction limits: %w", err)
+	}
+	in.limits = limits
 	return in, nil
 }
 
